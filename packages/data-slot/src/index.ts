@@ -1,0 +1,39 @@
+// Convenience re-exports from @data-slot/* packages
+// For tree-shaking, prefer importing from specific packages:
+//   import { create } from "@data-slot/tabs"
+//
+// Or use subpath imports:
+//   import { create } from "data-slot/tabs"
+
+export * from "@data-slot/core";
+
+export { createDisclosure } from "@data-slot/disclosure";
+export type {
+  DisclosureOptions,
+  DisclosureController,
+} from "@data-slot/disclosure";
+
+export { createTabs } from "@data-slot/tabs";
+export type { TabsOptions, TabsController } from "@data-slot/tabs";
+
+export { createAccordion } from "@data-slot/accordion";
+export type {
+  AccordionOptions,
+  AccordionController,
+} from "@data-slot/accordion";
+
+export { createPopover } from "@data-slot/popover";
+export type { PopoverOptions, PopoverController } from "@data-slot/popover";
+
+export { createTooltip } from "@data-slot/tooltip";
+export type { TooltipOptions, TooltipController } from "@data-slot/tooltip";
+
+export { createDialog } from "@data-slot/dialog";
+export type { DialogOptions, DialogController } from "@data-slot/dialog";
+
+export { createNavigationMenu } from "@data-slot/navigation-menu";
+export type {
+  NavigationMenuOptions,
+  NavigationMenuController,
+} from "@data-slot/navigation-menu";
+

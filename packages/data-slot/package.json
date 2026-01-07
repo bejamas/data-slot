@@ -1,0 +1,40 @@
+{
+  "name": "data-slot",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "description": "Headless UI components for vanilla JavaScript. Convenience re-exports from @data-slot/* packages.",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./core": "./src/core.ts",
+    "./tabs": "./src/tabs.ts",
+    "./dialog": "./src/dialog.ts",
+    "./accordion": "./src/accordion.ts",
+    "./popover": "./src/popover.ts",
+    "./tooltip": "./src/tooltip.ts",
+    "./disclosure": "./src/disclosure.ts",
+    "./navigation-menu": "./src/navigation-menu.ts"
+  },
+  "files": ["src"],
+  "dependencies": {
+    "@data-slot/core": "workspace:*",
+    "@data-slot/tabs": "workspace:*",
+    "@data-slot/dialog": "workspace:*",
+    "@data-slot/accordion": "workspace:*",
+    "@data-slot/popover": "workspace:*",
+    "@data-slot/tooltip": "workspace:*",
+    "@data-slot/disclosure": "workspace:*",
+    "@data-slot/navigation-menu": "workspace:*"
+  },
+  "keywords": ["headless", "ui", "components", "vanilla", "data-slot"],
+  "license": "MIT",
+  "homepage": "https://github.com/your-org/data-slot",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/data-slot"
+  }
+}
+

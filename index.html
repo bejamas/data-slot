@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>data-slot — Headless UI for Vanilla JavaScript</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg: #faf9f7;
+        --text: #1a1a1a;
+        --muted: #666;
+        --border: #ccc;
+        --accent: #0066cc;
+        --code-bg: #f0eeeb;
+        --keyword: #d73a49;
+        --string: #22863a;
+        --comment: #6a737d;
+        --function: #6f42c1;
+      }
+
+      html {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 15px;
+        line-height: 1.7;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      body {
+        max-width: 72ch;
+        margin: 0 auto;
+        padding: 3rem 1.5rem;
+      }
+
+      /* Header */
+      .header {
+        margin-bottom: 3rem;
+      }
+
+      .logo {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .tagline {
+        color: var(--muted);
+        margin-top: 0.5rem;
+      }
+
+      .badge {
+        display: inline-block;
+        margin-top: 1rem;
+        padding: 0.25rem 0.5rem;
+        background: var(--code-bg);
+        border: 1px dashed var(--border);
+        font-size: 0.85rem;
+      }
+
+      /* Section headers */
+      h2 {
+        font-size: 1rem;
+        font-weight: 500;
+        margin-top: 3rem;
+        margin-bottom: 1rem;
+        color: var(--muted);
+      }
+
+      h2::before {
+        content: "## ";
+        color: var(--border);
+      }
+
+      h3 {
+        font-size: 1rem;
+        font-weight: 500;
+        margin-top: 2rem;
+        margin-bottom: 0.75rem;
+      }
+
+      h3::before {
+        content: "### ";
+        color: var(--border);
+      }
+
+      /* Separator */
+      .sep {
+        color: var(--border);
+        margin: 2rem 0;
+      }
+
+      /* ASCII Table */
+      .ascii-table {
+        margin: 1rem 0;
+        overflow-x: auto;
+      }
+
+      .ascii-table pre {
+        font-family: inherit;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      /* Code blocks */
+      pre.code {
+        background: var(--code-bg);
+        padding: 1rem;
+        overflow-x: auto;
+        margin: 1rem 0;
+        border-left: 3px solid var(--border);
+      }
+
+      code {
+        font-family: inherit;
+        background: var(--code-bg);
+        padding: 0.15rem 0.35rem;
+      }
+
+      pre.code code {
+        background: none;
+        padding: 0;
+      }
+
+      /* Syntax highlighting */
+      .kw {
+        color: var(--keyword);
+      }
+      .str {
+        color: var(--string);
+      }
+      .cmt {
+        color: var(--comment);
+      }
+      .fn {
+        color: var(--function);
+      }
+
+      /* Paragraph */
+      p {
+        margin: 1rem 0;
+      }
+
+      /* Links */
+      a {
+        color: var(--text);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      a:hover {
+        color: var(--accent);
+      }
+
+      /* Demo sections */
+      .demo-box {
+        border: 1px dashed var(--border);
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+      }
+
+      .demo-label {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* Tabs demo styling */
+      .tabs-list {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 1rem;
+      }
+
+      .tabs-trigger {
+        font-family: inherit;
+        font-size: inherit;
+        padding: 0.5rem 1rem;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        color: var(--muted);
+        margin-bottom: -1px;
+        transition: color 0.15s, border-color 0.15s;
+      }
+
+      .tabs-trigger[data-state="active"] {
+        color: var(--text);
+        border-bottom-color: var(--text);
+        font-weight: 500;
+      }
+
+      .tabs-content {
+        padding: 1rem 0;
+        animation: fadeIn 0.2s ease-out;
+      }
+
+      /* Tabs with animated indicator */
+      .tabs-list-indicator {
+        position: relative;
+        display: flex;
+        gap: 0.25rem;
+        padding: 0.25rem;
+        background: var(--code-bg);
+        border-radius: 6px;
+        margin-bottom: 1rem;
+      }
+
+      .tabs-list-indicator .tabs-trigger {
+        position: relative;
+        z-index: 1;
+        padding: 0.4rem 0.8rem;
+        border: none;
+        background: none;
+        margin-bottom: 0;
+        border-radius: 4px;
+        transition: color 0.2s;
+      }
+
+      .tabs-list-indicator .tabs-trigger[data-state="active"] {
+        border-bottom: none;
+      }
+
+      .tabs-indicator {
+        position: absolute;
+        top: 0.25rem;
+        left: 0;
+        height: calc(100% - 0.5rem);
+        background: #fff;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+        transform: translateX(var(--active-tab-left, 0));
+        width: var(--active-tab-width, 0);
+        transition: transform 0.2s ease-out, width 0.2s ease-out;
+      }
+
+      .tabs-content[hidden] {
+        display: none;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Accordion demo styling - with CSS Grid height animation */
+      .accordion-item {
+        border-bottom: 1px dashed var(--border);
+      }
+
+      .accordion-item:last-child {
+        border-bottom: none;
+      }
+
+      .accordion-trigger {
+        font-family: inherit;
+        font-size: inherit;
+        width: 100%;
+        padding: 0.75rem 0;
+        background: none;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .accordion-trigger::after {
+        content: "+";
+        color: var(--muted);
+        transition: transform 0.25s ease;
+      }
+
+      .accordion-trigger[aria-expanded="true"]::after {
+        content: "+";
+        transform: rotate(45deg);
+      }
+
+      /* Grid-based height animation for accordion */
+      .accordion-content-wrapper {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.3s ease-out;
+      }
+
+      .accordion-item[data-state="open"] .accordion-content-wrapper {
+        grid-template-rows: 1fr;
+      }
+
+      .accordion-content {
+        overflow: hidden;
+        min-height: 0;
+      }
+
+      /* Override library's hidden attribute - let grid control visibility */
+      .accordion-content[hidden] {
+        display: block !important;
+      }
+
+      .accordion-content-inner {
+        padding: 0 0 1rem 0;
+        color: var(--muted);
+      }
+
+      /* Dialog demo styling - with entry/exit animations */
+      .dialog-trigger-btn {
+        font-family: inherit;
+        font-size: inherit;
+        padding: 0.5rem 1rem;
+        background: var(--text);
+        color: var(--bg);
+        border: none;
+        cursor: pointer;
+        transition: opacity 0.15s;
+      }
+
+      .dialog-trigger-btn:hover {
+        opacity: 0.9;
+      }
+
+      .dialog-content-wrapper {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        opacity: 1;
+        transition: opacity 0.2s ease-out, display 0.2s ease-out allow-discrete;
+      }
+
+      .dialog-content-wrapper[hidden] {
+        display: none;
+        opacity: 0;
+      }
+
+      /* Entry animation for dialog */
+      @starting-style {
+        .dialog-content-wrapper:not([hidden]) {
+          opacity: 0;
+        }
+        .dialog-content-wrapper:not([hidden]) .dialog-panel {
+          transform: scale(0.95) translateY(-10px);
+        }
+      }
+
+      .dialog-panel {
+        background: var(--bg);
+        padding: 2rem;
+        max-width: 400px;
+        width: 90%;
+        border: 1px solid var(--border);
+        transform: scale(1) translateY(0);
+        transition: transform 0.2s ease-out;
+      }
+
+      .dialog-content-wrapper[hidden] .dialog-panel {
+        transform: scale(0.95) translateY(-10px);
+      }
+
+      .dialog-title {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      .dialog-description {
+        color: var(--muted);
+        margin-bottom: 1.5rem;
+      }
+
+      .dialog-close-btn {
+        font-family: inherit;
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+        background: none;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      .dialog-close-btn:hover {
+        background: var(--code-bg);
+      }
+
+      /* Disclosure demo styling - with CSS Grid height animation */
+      .disclosure-trigger-btn {
+        font-family: inherit;
+        font-size: inherit;
+        padding: 0.5rem 1rem;
+        background: none;
+        border: 1px dashed var(--border);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: background 0.15s;
+      }
+
+      .disclosure-trigger-btn:hover {
+        background: var(--code-bg);
+      }
+
+      .disclosure-trigger-btn::before {
+        content: "▶";
+        font-size: 0.7rem;
+        transition: transform 0.2s ease;
+      }
+
+      .disclosure-trigger-btn[aria-expanded="true"]::before {
+        transform: rotate(90deg);
+      }
+
+      /* Grid-based height animation for disclosure */
+      .disclosure-content-wrapper {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.3s ease-out;
+      }
+
+      [data-slot="disclosure"][data-state="open"] .disclosure-content-wrapper {
+        grid-template-rows: 1fr;
+      }
+
+      .disclosure-content {
+        overflow: hidden;
+        min-height: 0;
+      }
+
+      /* Override library's hidden attribute - let grid control visibility */
+      .disclosure-content[hidden] {
+        display: block !important;
+      }
+
+      .disclosure-content-inner {
+        padding: 1rem;
+        margin-top: 0.5rem;
+        background: var(--code-bg);
+      }
+
+      /* Tooltip demo styling */
+      .tooltip-root {
+        position: relative;
+        display: inline-block;
+      }
+
+      .tooltip-trigger-btn {
+        font-family: inherit;
+        font-size: inherit;
+        padding: 0.5rem 1rem;
+        background: none;
+        border: 1px dashed var(--border);
+        cursor: help;
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-underline-offset: 3px;
+      }
+
+      .tooltip-content {
+        position: absolute;
+        background: var(--text);
+        color: var(--bg);
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        z-index: 50;
+        opacity: 1;
+        transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+      }
+
+      /* Tooltip positions */
+      .tooltip-content[data-position="top"] {
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%) translateY(-8px);
+      }
+      .tooltip-content[data-position="bottom"] {
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%) translateY(8px);
+      }
+      .tooltip-content[data-position="left"] {
+        right: 100%;
+        top: 50%;
+        transform: translateX(-8px) translateY(-50%);
+      }
+      .tooltip-content[data-position="right"] {
+        left: 100%;
+        top: 50%;
+        transform: translateX(8px) translateY(-50%);
+      }
+
+      .tooltip-content[hidden] {
+        display: block !important;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .tooltip-content[hidden][data-position="top"] {
+        transform: translateX(-50%) translateY(-4px);
+      }
+      .tooltip-content[hidden][data-position="bottom"] {
+        transform: translateX(-50%) translateY(4px);
+      }
+      .tooltip-content[hidden][data-position="left"] {
+        transform: translateX(-4px) translateY(-50%);
+      }
+      .tooltip-content[hidden][data-position="right"] {
+        transform: translateX(4px) translateY(-50%);
+      }
+
+      /* Skip transition for instant (warm-up) tooltips */
+      .tooltip-content[data-instant] {
+        transition: none;
+      }
+
+      .tooltip-group {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .demo-note {
+        margin-top: 1rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      /* Tooltip arrows based on position */
+      .tooltip-content::after {
+        content: "";
+        position: absolute;
+        border: 6px solid transparent;
+      }
+      .tooltip-content[data-position="top"]::after {
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-top-color: var(--text);
+      }
+      .tooltip-content[data-position="bottom"]::after {
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-bottom-color: var(--text);
+      }
+      .tooltip-content[data-position="left"]::after {
+        left: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        border-left-color: var(--text);
+      }
+      .tooltip-content[data-position="right"]::after {
+        right: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        border-right-color: var(--text);
+      }
+
+      /* Popover demo styling */
+      .popover-root {
+        position: relative;
+        display: inline-block;
+      }
+
+      .popover-trigger-btn {
+        font-family: inherit;
+        font-size: inherit;
+        padding: 0.5rem 1rem;
+        background: var(--text);
+        color: var(--bg);
+        border: none;
+        cursor: pointer;
+      }
+
+      .popover-trigger-btn:hover {
+        opacity: 0.9;
+      }
+
+      .popover-content {
+        position: absolute;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        min-width: 200px;
+        z-index: 50;
+        opacity: 1;
+        transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+      }
+
+      /* Popover positions */
+      .popover-content[data-position="bottom"] {
+        top: 100%;
+        left: 0;
+        margin-top: 0.5rem;
+        transform: translateY(0);
+      }
+      .popover-content[data-position="top"] {
+        bottom: 100%;
+        left: 0;
+        margin-bottom: 0.5rem;
+        transform: translateY(0);
+      }
+      .popover-content[data-position="left"] {
+        right: 100%;
+        top: 0;
+        margin-right: 0.5rem;
+        transform: translateX(0);
+      }
+      .popover-content[data-position="right"] {
+        left: 100%;
+        top: 0;
+        margin-left: 0.5rem;
+        transform: translateX(0);
+      }
+
+      .popover-content[hidden] {
+        display: block !important;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .popover-content[hidden][data-position="bottom"] {
+        transform: translateY(-4px);
+      }
+      .popover-content[hidden][data-position="top"] {
+        transform: translateY(4px);
+      }
+      .popover-content[hidden][data-position="left"] {
+        transform: translateX(4px);
+      }
+      .popover-content[hidden][data-position="right"] {
+        transform: translateX(-4px);
+      }
+
+      .popover-title {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      .popover-text {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .popover-close-btn {
+        font-family: inherit;
+        font-size: 0.85rem;
+        padding: 0.3rem 0.6rem;
+        background: none;
+        border: 1px solid var(--border);
+        cursor: pointer;
+      }
+
+      .popover-close-btn:hover {
+        background: var(--code-bg);
+      }
+
+      /* Source code toggle */
+      .source-toggle {
+        margin-top: 1rem;
+        border-top: 1px dashed var(--border);
+        padding-top: 0.75rem;
+      }
+
+      .source-toggle summary {
+        cursor: pointer;
+        font-size: 0.85rem;
+        color: var(--muted);
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .source-toggle summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .source-toggle summary::before {
+        content: "▶";
+        font-size: 0.7rem;
+        transition: transform 0.15s ease;
+      }
+
+      .source-toggle[open] summary::before {
+        transform: rotate(90deg);
+      }
+
+      .source-toggle summary:hover {
+        color: var(--text);
+      }
+
+      .source-toggle pre {
+        margin-top: 0.75rem;
+        font-size: 0.85rem;
+        background: var(--code-bg);
+        padding: 1rem;
+        overflow-x: auto;
+        border-left: 3px solid var(--border);
+      }
+
+      .source-toggle code {
+        background: none;
+        padding: 0;
+      }
+
+      /* Footer */
+      .footer {
+        margin-top: 4rem;
+        padding-top: 2rem;
+        border-top: 1px dashed var(--border);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .footer-links {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+      }
+
+      /* Navigation Menu demo styling */
+      .nav-menu {
+        position: relative;
+      }
+
+      .nav-menu-list {
+        display: flex;
+        list-style: none;
+        gap: 0;
+        position: relative;
+      }
+
+      .nav-menu-item {
+        position: static;
+      }
+
+      /* Hover indicator */
+      .nav-menu-indicator {
+        position: absolute;
+        left: var(--indicator-left, 0);
+        top: var(--indicator-top, 0);
+        width: var(--indicator-width, 0);
+        height: var(--indicator-height, 0);
+        background: var(--code-bg);
+        border-radius: 6px;
+        transition: all 0.15s ease;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .nav-menu-indicator[data-state="hidden"] {
+        opacity: 0;
+      }
+
+      .nav-menu-indicator[data-state="visible"] {
+        opacity: 1;
+      }
+
+      .nav-menu-trigger {
+        font-family: inherit;
+        font-size: inherit;
+        padding: 0.6rem 1rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        transition: color 0.15s;
+        position: relative;
+        z-index: 1;
+      }
+
+      .nav-menu-trigger:hover,
+      .nav-menu-trigger[data-state="open"] {
+        color: var(--accent);
+      }
+
+      .nav-menu-trigger::after {
+        content: "▼";
+        font-size: 0.6rem;
+        transition: transform 0.2s ease;
+      }
+
+      .nav-menu-trigger[data-state="open"]::after {
+        transform: rotate(180deg);
+      }
+
+      /* Viewport - the animated container */
+      .nav-menu-viewport {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: var(--bg);
+        border-radius: 8px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border);
+        overflow: hidden;
+        width: var(--viewport-width, 0);
+        height: var(--viewport-height, 0);
+        transition: width 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+          height 0.25s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s ease;
+        opacity: 1;
+        pointer-events: none;
+        will-change: width, height;
+        margin-top: 0.5rem;
+      }
+
+      .nav-menu-viewport[data-state="closed"] {
+        opacity: 0;
+      }
+
+      .nav-menu-viewport[data-state="open"] {
+        pointer-events: auto;
+      }
+
+      /* Skip size animation on initial open */
+      .nav-menu-viewport[data-instant] {
+        transition: opacity 0.15s ease;
+      }
+
+      /* Content panels - positioned relative to nav-menu root */
+      .nav-menu-content {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        padding: 1.5rem 1rem 0rem;
+        opacity: 1;
+        z-index: 10;
+      }
+
+      .nav-menu-content[data-state="inactive"] {
+        opacity: 0;
+        pointer-events: none;
+        visibility: hidden;
+      }
+
+      .nav-menu-content[data-state="active"] {
+        visibility: visible;
+      }
+
+      /* Direction-aware animations */
+      .nav-menu-content[data-motion="from-right"] {
+        animation: navEnterFromRight 0.25s ease;
+      }
+
+      .nav-menu-content[data-motion="from-left"] {
+        animation: navEnterFromLeft 0.25s ease;
+      }
+
+      .nav-menu-content[data-motion="to-right"] {
+        animation: navExitToRight 0.25s ease forwards;
+      }
+
+      .nav-menu-content[data-motion="to-left"] {
+        animation: navExitToLeft 0.25s ease forwards;
+      }
+
+      @keyframes navEnterFromRight {
+        from {
+          opacity: 0;
+          /* filter: blur(3px); */
+          transform: translateX(24px);
+        }
+        to {
+          opacity: 1;
+          /* filter: blur(0px); */
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes navEnterFromLeft {
+        from {
+          opacity: 0;
+          /* filter: blur(3px); */
+          transform: translateX(-24px);
+        }
+        to {
+          opacity: 1;
+          /* filter: blur(0px); */
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes navExitToRight {
+        from {
+          /* opacity: 1; */
+          filter: blur(0px);
+          transform: translateX(0);
+        }
+        to {
+          /* opacity: 0; */
+          filter: blur(0px);
+          transform: translateX(24px);
+        }
+      }
+
+      @keyframes navExitToLeft {
+        from {
+          /* opacity: 1; */
+          filter: blur(0px);
+          transform: translateX(0);
+        }
+        to {
+          /* opacity: 0; */
+          filter: blur(0px);
+          transform: translateX(-24px);
+        }
+      }
+
+      /* Content grid layouts */
+      .nav-menu-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        width: 380px;
+      }
+
+      .nav-menu-grid-wide {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+        width: 520px;
+      }
+
+      .nav-menu-link {
+        display: block;
+        padding: 0.75rem;
+        text-decoration: none;
+        color: inherit;
+        border-radius: 4px;
+        transition: background 0.15s;
+      }
+
+      .nav-menu-link:hover {
+        background: var(--code-bg);
+        color: inherit;
+      }
+
+      .nav-menu-link-title {
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+      }
+
+      .nav-menu-link-desc {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">data-slot</div>
+      <p class="tagline">Headless UI components for vanilla JavaScript.</p>
+      <p class="tagline">Tiny. Accessible. Unstyled.</p>
+      <span class="badge"
+        >~3KB gzipped · zero dependencies · tree-shakeable</span
+      >
+    </header>
+
+    <div class="sep">~~~</div>
+
+    <!-- Packages Table -->
+    <h2>PACKAGES</h2>
+    <div class="ascii-table">
+      <pre>
++-------------------------+--------+-------------------------------+
+| Package                 | Size   | Description                   |
+|-------------------------+--------+-------------------------------|
+| @data-slot/dialog       | 1.2 KB | Modal dialogs, focus trap     |
+| @data-slot/tabs         | 1.1 KB | Tabbed interfaces, kbd nav    |
+| @data-slot/accordion    | 938 B  | Collapsible sections          |
+| @data-slot/popover      | 856 B  | Anchored floating content     |
+| @data-slot/tooltip      | 772 B  | Hover/focus tooltips          |
+| @data-slot/disclosure   | 710 B  | Simple show/hide toggle       |
+| @data-slot/core         | 452 B  | Shared utilities              |
++-------------------------+--------+-------------------------------+</pre
+      >
+    </div>
+
+    <!-- Installation -->
+    <h2>INSTALLATION</h2>
+    <p>Install only what you need:</p>
+    <pre class="code"><code><span class="fn">bun</span> add @data-slot/tabs
+<span class="fn">bun</span> add @data-slot/dialog</code></pre>
+
+    <!-- Quick Start -->
+    <h2>QUICK START</h2>
+    <p>
+      Components use <code>data-slot</code> attributes for markup. Import and
+      call <code>create()</code> to bind behavior:
+    </p>
+    <pre
+      class="code"
+    ><code><span class="cmt">// Auto-discover all instances</span>
+<span class="kw">import</span> { create } <span class="kw">from</span> <span class="str">"@data-slot/tabs"</span>;
+<span class="kw">const</span> controllers = <span class="fn">create</span>();
+
+<span class="cmt">// Or target a specific element</span>
+<span class="kw">import</span> { createTabs } <span class="kw">from</span> <span class="str">"@data-slot/tabs"</span>;
+<span class="kw">const</span> tabs = <span class="fn">createTabs</span>(element);
+
+tabs.<span class="fn">select</span>(<span class="str">"news"</span>);  <span class="cmt">// programmatic control</span>
+tabs.<span class="fn">destroy</span>();       <span class="cmt">// cleanup</span></code></pre>
+
+    <div class="sep">~~~</div>
+
+    <!-- Live Demos -->
+    <h2>LIVE DEMOS</h2>
+    <p>
+      Interactive examples using the library. Inspect the source for markup
+      patterns.
+    </p>
+
+    <!-- Tabs Demo -->
+    <h3>Tabs</h3>
+    <div class="demo-box">
+      <div class="demo-label">↓ interactive</div>
+      <div data-slot="tabs" data-default-value="html">
+        <div data-slot="tabs-list" class="tabs-list">
+          <button
+            data-slot="tabs-trigger"
+            data-value="html"
+            class="tabs-trigger"
+          >
+            HTML
+          </button>
+          <button
+            data-slot="tabs-trigger"
+            data-value="css"
+            class="tabs-trigger"
+          >
+            CSS
+          </button>
+          <button data-slot="tabs-trigger" data-value="js" class="tabs-trigger">
+            JS
+          </button>
+        </div>
+        <div data-slot="tabs-content" data-value="html" class="tabs-content">
+          <pre
+            class="code"
+          ><code><span class="kw">&lt;div</span> <span class="fn">data-slot</span>=<span class="str">"tabs"</span><span class="kw">&gt;</span>
+  <span class="kw">&lt;div</span> <span class="fn">data-slot</span>=<span class="str">"tabs-list"</span><span class="kw">&gt;</span>
+    <span class="kw">&lt;button</span> <span class="fn">data-slot</span>=<span class="str">"tabs-trigger"</span> <span class="fn">data-value</span>=<span class="str">"one"</span><span class="kw">&gt;</span>Tab<span class="kw">&lt;/button&gt;</span>
+  <span class="kw">&lt;/div&gt;</span>
+  <span class="kw">&lt;div</span> <span class="fn">data-slot</span>=<span class="str">"tabs-content"</span> <span class="fn">data-value</span>=<span class="str">"one"</span><span class="kw">&gt;</span>...<span class="kw">&lt;/div&gt;</span>
+<span class="kw">&lt;/div&gt;</span></code></pre>
+        </div>
+        <div data-slot="tabs-content" data-value="css" class="tabs-content">
+          <pre
+            class="code"
+          ><code><span class="cmt">/* Use data-state for styling */</span>
+[<span class="fn">data-slot</span>=<span class="str">"tabs-trigger"</span>][<span class="fn">data-state</span>=<span class="str">"active"</span>] {
+  <span class="kw">font-weight</span>: bold;
+  <span class="kw">border-bottom</span>: 2px solid;
+}</code></pre>
+        </div>
+        <div data-slot="tabs-content" data-value="js" class="tabs-content">
+          <pre
+            class="code"
+          ><code><span class="kw">import</span> { create } <span class="kw">from</span> <span class="str">"@data-slot/tabs"</span>;
+
+<span class="kw">const</span> [tabs] = <span class="fn">create</span>();
+tabs.<span class="fn">select</span>(<span class="str">"css"</span>);
+<span class="fn">console.log</span>(tabs.value); <span class="cmt">// "css"</span></code></pre>
+        </div>
+      </div>
+      <details class="source-toggle">
+        <summary>View source</summary>
+        <pre><code>&lt;div data-slot="tabs" data-default-value="one"&gt;
+  &lt;div data-slot="tabs-list"&gt;
+    &lt;button data-slot="tabs-trigger" data-value="one"&gt;Tab One&lt;/button&gt;
+    &lt;button data-slot="tabs-trigger" data-value="two"&gt;Tab Two&lt;/button&gt;
+  &lt;/div&gt;
+  &lt;div data-slot="tabs-content" data-value="one"&gt;Content One&lt;/div&gt;
+  &lt;div data-slot="tabs-content" data-value="two"&gt;Content Two&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script type="module"&gt;
+  import { createTabs } from '@data-slot/tabs';
+  document.querySelectorAll('[data-slot="tabs"]').forEach(el =&gt; createTabs(el));
+&lt;/script&gt;</code></pre>
+      </details>
+    </div>
+
+    <div class="demo-box">
+      <div class="demo-label">↓ with animated indicator</div>
+      <div
+        data-slot="tabs"
+        id="tabs-indicator-demo"
+        data-default-value="overview"
+      >
+        <div data-slot="tabs-list" class="tabs-list-indicator">
+          <div data-slot="tabs-indicator" class="tabs-indicator"></div>
+          <button
+            data-slot="tabs-trigger"
+            data-value="overview"
+            class="tabs-trigger"
+          >
+            Overview
+          </button>
+          <button
+            data-slot="tabs-trigger"
+            data-value="features"
+            class="tabs-trigger"
+          >
+            Features
+          </button>
+          <button
+            data-slot="tabs-trigger"
+            data-value="api"
+            class="tabs-trigger"
+          >
+            API
+          </button>
+        </div>
+        <div
+          data-slot="tabs-content"
+          data-value="overview"
+          class="tabs-content"
+        >
+          The indicator slides smoothly to the active tab using CSS transitions.
+          Position is set via CSS variables: <code>--active-tab-left</code> and
+          <code>--active-tab-width</code>.
+        </div>
+        <div
+          data-slot="tabs-content"
+          data-value="features"
+          class="tabs-content"
+        >
+          Zero JavaScript for animation — just CSS <code>transition</code> on
+          <code>transform</code> and <code>width</code>. Works with keyboard
+          navigation too.
+        </div>
+        <div data-slot="tabs-content" data-value="api" class="tabs-content">
+          Add <code>data-slot="tabs-indicator"</code> inside your tabs-list. The
+          component sets CSS variables automatically.
+        </div>
+      </div>
+      <details class="source-toggle">
+        <summary>View source</summary>
+        <pre><code>&lt;div data-slot="tabs-list" class="tabs-list"&gt;
+  &lt;!-- The indicator element --&gt;
+  &lt;div data-slot="tabs-indicator" class="indicator"&gt;&lt;/div&gt;
+  &lt;button data-slot="tabs-trigger" data-value="one"&gt;Tab&lt;/button&gt;
+  ...
+&lt;/div&gt;
+
+&lt;style&gt;
+  .tabs-list { position: relative; }
+  .indicator {
+    position: absolute;
+    background: white;
+    border-radius: 4px;
+    /* Use CSS variables set by the component */
+    transform: translateX(var(--active-tab-left, 0));
+    width: var(--active-tab-width, 0);
+    transition: transform 0.2s, width 0.2s;
+  }
+&lt;/style&gt;</code></pre>
+      </details>
+    </div>
+
+    <!-- Accordion Demo -->
+    <h3>Accordion</h3>
+    <div class="demo-box">
+      <div class="demo-label">↓ single mode (default)</div>
+      <div
+        data-slot="accordion"
+        id="accordion-single"
+        data-default-value="features"
+      >
+        <div
+          data-slot="accordion-item"
+          data-value="features"
+          class="accordion-item"
+        >
+          <button data-slot="accordion-trigger" class="accordion-trigger">
+            What makes data-slot different?
+          </button>
+          <div class="accordion-content-wrapper">
+            <div data-slot="accordion-content" class="accordion-content">
+              <div class="accordion-content-inner">
+                Unlike React-based headless libraries, data-slot works with
+                vanilla HTML. Just add <code>data-slot</code> attributes to your
+                markup and call <code>create()</code>. No framework, no virtual
+                DOM, no build step required.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          data-slot="accordion-item"
+          data-value="accessibility"
+          class="accordion-item"
+        >
+          <button data-slot="accordion-trigger" class="accordion-trigger">
+            Is it accessible?
+          </button>
+          <div class="accordion-content-wrapper">
+            <div data-slot="accordion-content" class="accordion-content">
+              <div class="accordion-content-inner">
+                Yes. All components implement WAI-ARIA patterns with proper
+                roles, keyboard navigation, and focus management out of the box.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          data-slot="accordion-item"
+          data-value="size"
+          class="accordion-item"
+        >
+          <button data-slot="accordion-trigger" class="accordion-trigger">
+            How is it so small?
+          </button>
+          <div class="accordion-content-wrapper">
+            <div data-slot="accordion-content" class="accordion-content">
+              <div class="accordion-content-inner">
+                No dependencies. Each component is standalone and
+                tree-shakeable. The full bundle is ~3KB gzipped. Individual
+                components are under 1KB.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-label" style="margin-top: 1.5rem">↓ multiple mode</div>
+      <div data-slot="accordion" id="accordion-multiple">
+        <div
+          data-slot="accordion-item"
+          data-value="item1"
+          class="accordion-item"
+        >
+          <button data-slot="accordion-trigger" class="accordion-trigger">
+            First item
+          </button>
+          <div class="accordion-content-wrapper">
+            <div data-slot="accordion-content" class="accordion-content">
+              <div class="accordion-content-inner">
+                With <code>multiple: true</code>, multiple items can be open
+                simultaneously.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          data-slot="accordion-item"
+          data-value="item2"
+          class="accordion-item"
+        >
+          <button data-slot="accordion-trigger" class="accordion-trigger">
+            Second item
+          </button>
+          <div class="accordion-content-wrapper">
+            <div data-slot="accordion-content" class="accordion-content">
+              <div class="accordion-content-inner">
+                Try clicking both items — they stay open independently.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <details class="source-toggle">
+        <summary>View source</summary>
+        <pre><code>&lt;div data-slot="accordion"&gt;
+  &lt;div data-slot="accordion-item" data-value="one"&gt;
+    &lt;button data-slot="accordion-trigger"&gt;Item One&lt;/button&gt;
+    &lt;div data-slot="accordion-content"&gt;Content One&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div data-slot="accordion-item" data-value="two"&gt;
+    &lt;button data-slot="accordion-trigger"&gt;Item Two&lt;/button&gt;
+    &lt;div data-slot="accordion-content"&gt;Content Two&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script type="module"&gt;
+  import { createAccordion } from '@data-slot/accordion';
+  
+  // Single mode (default) - only one item open at a time
+  createAccordion(element);
+  
+  // Multiple mode - allow multiple items open
+  createAccordion(element, { multiple: true });
+  
+  // Non-collapsible - at least one item must stay open
+  createAccordion(element, { collapsible: false });
+&lt;/script&gt;</code></pre>
+      </details>
+    </div>
+
+    <!-- Dialog Demo -->
+    <h3>Dialog</h3>
+    <div class="demo-box">
+      <div class="demo-label">↓ interactive</div>
+      <div data-slot="dialog" id="demo-dialog">
+        <button data-slot="dialog-trigger" class="dialog-trigger-btn">
+          Open Dialog
+        </button>
+        <div data-slot="dialog-content" class="dialog-content-wrapper" hidden>
+          <div class="dialog-panel">
+            <div class="dialog-title" data-slot="dialog-title">
+              Confirm Action
+            </div>
+            <p class="dialog-description" data-slot="dialog-description">
+              This dialog traps focus and can be closed with Escape or clicking
+              outside.
+            </p>
+            <button data-slot="dialog-close" class="dialog-close-btn">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+      <details class="source-toggle">
+        <summary>View source</summary>
+        <pre><code>&lt;div data-slot="dialog"&gt;
+  &lt;button data-slot="dialog-trigger"&gt;Open&lt;/button&gt;
+  &lt;div data-slot="dialog-content" hidden&gt;
+    &lt;h2 data-slot="dialog-title"&gt;Title&lt;/h2&gt;
+    &lt;p data-slot="dialog-description"&gt;Description&lt;/p&gt;
+    &lt;button data-slot="dialog-close"&gt;Close&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script type="module"&gt;
+  import { createDialog } from '@data-slot/dialog';
+  document.querySelectorAll('[data-slot="dialog"]').forEach(el =&gt; createDialog(el));
+&lt;/script&gt;</code></pre>
+      </details>
+    </div>
+
+    <!-- Disclosure Demo -->
+    <h3>Disclosure</h3>
+    <div class="demo-box">
+      <div class="demo-label">↓ interactive</div>
+      <div data-slot="disclosure">
+        <button data-slot="disclosure-trigger" class="disclosure-trigger-btn">
+          Show more details
+        </button>
+        <div class="disclosure-content-wrapper">
+          <div data-slot="disclosure-content" class="disclosure-content">
+            <div class="disclosure-content-inner">
+              <p>
+                Disclosure is the simplest component — just a trigger and
+                content.
+              </p>
+              <p style="margin-top: 0.5rem">
+                Perfect for FAQ items, collapsible sections, or any show/hide
+                pattern.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <details class="source-toggle">
+        <summary>View source</summary>
+        <pre><code>&lt;div data-slot="disclosure"&gt;
+  &lt;button data-slot="disclosure-trigger"&gt;Toggle&lt;/button&gt;
+  &lt;div data-slot="disclosure-content" hidden&gt;
+    Content here
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script type="module"&gt;
+  import { createDisclosure } from '@data-slot/disclosure';
+  document.querySelectorAll('[data-slot="disclosure"]').forEach(el =&gt; createDisclosure(el));
+&lt;/script&gt;</code></pre>
+      </details>
+    </div>
+
+    <!-- Tooltip Demo -->
+    <h3>Tooltip</h3>
+    <div class="demo-box">
+      <div class="demo-label">
+        ↓ positions: top, bottom, left, right (+ warm-up behavior)
+      </div>
+      <div class="tooltip-group">
+        <div data-slot="tooltip" class="tooltip-root">
+          <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">
+            Top
+          </button>
+          <div
+            data-slot="tooltip-content"
+            data-position="top"
+            class="tooltip-content"
+            hidden
+          >
+            Position: top (default)
+          </div>
+        </div>
+        <div data-slot="tooltip" class="tooltip-root">
+          <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">
+            Bottom
+          </button>
+          <div
+            data-slot="tooltip-content"
+            data-position="bottom"
+            class="tooltip-content"
+            hidden
+          >
+            Position: bottom
+          </div>
+        </div>
+        <div data-slot="tooltip" class="tooltip-root">
+          <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">
+            Left
+          </button>
+          <div
+            data-slot="tooltip-content"
+            data-position="left"
+            class="tooltip-content"
+            hidden
+          >
+            Position: left
+          </div>
+        </div>
+        <div data-slot="tooltip" class="tooltip-root">
+          <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">
+            Right
+          </button>
+          <div
+            data-slot="tooltip-content"
+            data-position="right"
+            class="tooltip-content"
+            hidden
+          >
+            Position: right
+          </div>
+        </div>
+      </div>
+      <p class="demo-note">
+        Position via <code>data-position</code> attribute or JS option. Hover
+        across quickly — warm-up skips delay for adjacent tooltips.
+      </p>
+      <details class="source-toggle">
+        <summary>View source</summary>
+        <pre><code>&lt;!-- Position via data attribute --&gt;
+&lt;div data-slot="tooltip"&gt;
+  &lt;button data-slot="tooltip-trigger"&gt;Hover&lt;/button&gt;
+  &lt;div data-slot="tooltip-content" data-position="bottom" hidden&gt;
+    Tooltip below
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script type="module"&gt;
+  import { createTooltip } from '@data-slot/tooltip';
+  
+  // Position via JS option (overrides data-position)
+  createTooltip(el, { position: 'right' });
+  
+  // Positions: 'top' | 'bottom' | 'left' | 'right'
+&lt;/script&gt;</code></pre>
+      </details>
+    </div>
+
+    <!-- Popover Demo -->
+    <h3>Popover</h3>
+    <div class="demo-box">
+      <div class="demo-label">↓ interactive</div>
+      <div data-slot="popover" class="popover-root">
+        <button data-slot="popover-trigger" class="popover-trigger-btn">
+          Open Popover
+        </button>
+        <div data-slot="popover-content" class="popover-content" hidden>
+          <div class="popover-title">Popover Panel</div>
+          <p class="popover-text">
+            Unlike tooltips, popovers stay open until dismissed. Click outside
+            or press Escape to close.
+          </p>
+          <button data-slot="popover-close" class="popover-close-btn">
+            Got it
+          </button>
+        </div>
+      </div>
+      <details class="source-toggle">
+        <summary>View source</summary>
+        <pre><code>&lt;div data-slot="popover"&gt;
+  &lt;button data-slot="popover-trigger"&gt;Open&lt;/button&gt;
+  &lt;!-- Position via data attribute --&gt;
+  &lt;div data-slot="popover-content" data-position="bottom" hidden&gt;
+    Popover content
+    &lt;button data-slot="popover-close"&gt;Close&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script type="module"&gt;
+  import { createPopover } from '@data-slot/popover';
+  
+  // Position via JS option (overrides data-position)
+  createPopover(el, { position: 'right' });
+  
+  // Positions: 'top' | 'bottom' | 'left' | 'right'
+&lt;/script&gt;</code></pre>
+      </details>
+    </div>
+
+    <!-- Navigation Menu Demo -->
+    <h3>Navigation Menu</h3>
+    <div class="demo-box">
+      <div class="demo-label">↓ mega menu with directional animations</div>
+      <nav data-slot="navigation-menu" class="nav-menu">
+        <ul data-slot="navigation-menu-list" class="nav-menu-list">
+          <li
+            data-slot="navigation-menu-item"
+            data-value="products"
+            class="nav-menu-item"
+          >
+            <button
+              data-slot="navigation-menu-trigger"
+              class="nav-menu-trigger"
+            >
+              Products
+            </button>
+            <div
+              data-slot="navigation-menu-content"
+              class="nav-menu-content"
+              hidden
+            >
+              <div class="nav-menu-grid">
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Analytics</div>
+                  <div class="nav-menu-link-desc">Real-time metrics</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Automation</div>
+                  <div class="nav-menu-link-desc">Workflow tools</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Security</div>
+                  <div class="nav-menu-link-desc">Enterprise-grade</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Integrations</div>
+                  <div class="nav-menu-link-desc">Connect everything</div>
+                </a>
+              </div>
+            </div>
+          </li>
+          <li
+            data-slot="navigation-menu-item"
+            data-value="solutions"
+            class="nav-menu-item"
+          >
+            <button
+              data-slot="navigation-menu-trigger"
+              class="nav-menu-trigger"
+            >
+              Solutions
+            </button>
+            <div
+              data-slot="navigation-menu-content"
+              class="nav-menu-content"
+              hidden
+            >
+              <div class="nav-menu-grid">
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Startups</div>
+                  <div class="nav-menu-link-desc">Move fast</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Enterprise</div>
+                  <div class="nav-menu-link-desc">Scale securely</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Agencies</div>
+                  <div class="nav-menu-link-desc">Client projects</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">E-commerce</div>
+                  <div class="nav-menu-link-desc">Sell online</div>
+                </a>
+              </div>
+            </div>
+          </li>
+          <li
+            data-slot="navigation-menu-item"
+            data-value="resources"
+            class="nav-menu-item"
+          >
+            <button
+              data-slot="navigation-menu-trigger"
+              class="nav-menu-trigger"
+            >
+              Resources
+            </button>
+            <div
+              data-slot="navigation-menu-content"
+              class="nav-menu-content"
+              hidden
+            >
+              <div class="nav-menu-grid-wide">
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Documentation</div>
+                  <div class="nav-menu-link-desc">Get started</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Blog</div>
+                  <div class="nav-menu-link-desc">Latest updates</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Contact</div>
+                  <div class="nav-menu-link-desc">Get in touch</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Support</div>
+                  <div class="nav-menu-link-desc">Get help</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Training</div>
+                  <div class="nav-menu-link-desc">Learn new skills</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Events</div>
+                  <div class="nav-menu-link-desc">Upcoming webinars</div>
+                </a>
+              </div>
+            </div>
+          </li>
+          <!-- Hover indicator -->
+          <div
+            data-slot="navigation-menu-indicator"
+            class="nav-menu-indicator"
+          ></div>
+        </ul>
+        <div
+          data-slot="navigation-menu-viewport"
+          class="nav-menu-viewport"
+        ></div>
+      </nav>
+      <p class="demo-note">
+        Hover between items — content slides with direction. Viewport width
+        animates smoothly. CSS variables: <code>--viewport-width</code>,
+        <code>--viewport-height</code>, <code>--motion-direction</code>.
+      </p>
+      <details class="source-toggle">
+        <summary>View source</summary>
+        <pre><code>&lt;nav data-slot="navigation-menu"&gt;
+  &lt;ul data-slot="navigation-menu-list"&gt;
+    &lt;li data-slot="navigation-menu-item" data-value="products"&gt;
+      &lt;button data-slot="navigation-menu-trigger"&gt;Products&lt;/button&gt;
+      &lt;div data-slot="navigation-menu-content"&gt;
+        &lt;!-- Content panel --&gt;
+      &lt;/div&gt;
+    &lt;/li&gt;
+    &lt;!-- More items... --&gt;
+  &lt;/ul&gt;
+  &lt;div data-slot="navigation-menu-viewport"&gt;&lt;/div&gt;
+&lt;/nav&gt;
+
+&lt;style&gt;
+  /* Viewport animates size */
+  .viewport {
+    width: var(--viewport-width);
+    height: var(--viewport-height);
+    transition: width 0.25s, height 0.25s;
+  }
+
+  /* Direction-aware content animations */
+  .content[data-motion="from-right"] {
+    animation: enterFromRight 0.2s ease;
+  }
+  .content[data-motion="from-left"] {
+    animation: enterFromLeft 0.2s ease;
+  }
+&lt;/style&gt;
+
+&lt;script type="module"&gt;
+  import { createNavigationMenu } from '@data-slot/navigation-menu';
+  createNavigationMenu(el, { delayOpen: 200, delayClose: 150 });
+&lt;/script&gt;</code></pre>
+      </details>
+    </div>
+
+    <div class="sep">~~~</div>
+
+    <!-- Styling Guide -->
+    <h2>STYLING</h2>
+    <p>
+      Components expose <code>data-state</code> and ARIA attributes for CSS
+      hooks:
+    </p>
+    <pre class="code"><code><span class="cmt">/* State-based styling */</span>
+[<span class="fn">data-state</span>=<span class="str">"active"</span>]   { ... }
+[<span class="fn">data-state</span>=<span class="str">"open"</span>]     { ... }
+[<span class="fn">aria-expanded</span>=<span class="str">"true"</span>] { ... }
+[<span class="fn">aria-selected</span>=<span class="str">"true"</span>] { ... }
+
+<span class="cmt">/* With Tailwind */</span>
+<span class="kw">&lt;button</span> <span class="fn">class</span>=<span class="str">"aria-selected:font-bold"</span><span class="kw">&gt;</span>Tab<span class="kw">&lt;/button&gt;</span></code></pre>
+
+    <!-- API Reference -->
+    <h2>API</h2>
+    <p>All components follow the same pattern:</p>
+    <pre class="code"><code><span class="cmt">// Auto-bind all instances</span>
+<span class="kw">import</span> { create } <span class="kw">from</span> <span class="str">"@data-slot/[component]"</span>;
+<span class="kw">const</span> controllers = <span class="fn">create</span>(scope?);
+
+<span class="cmt">// Create for specific element</span>
+<span class="kw">import</span> { createDialog } <span class="kw">from</span> <span class="str">"@data-slot/dialog"</span>;
+<span class="kw">const</span> dialog = <span class="fn">createDialog</span>(element, options?);
+
+<span class="cmt">// Common controller methods</span>
+controller.<span class="fn">destroy</span>(); <span class="cmt">// cleanup listeners</span></code></pre>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-links">
+        <a href="https://github.com/data-slot">GitHub</a>
+        <a href="https://npmjs.com/org/data-slot">npm</a>
+      </div>
+      <p>MIT License · Made for the vanilla web.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script type="module">
+      import { createTabs } from "./dist/tabs.js";
+      import { createAccordion } from "./dist/accordion.js";
+      import { createDialog } from "./dist/dialog.js";
+      import { createDisclosure } from "./dist/disclosure.js";
+      import { createTooltip } from "./dist/tooltip.js";
+      import { createPopover } from "./dist/popover.js";
+      import { createNavigationMenu } from "./dist/navigation-menu.js";
+
+      // Initialize all components by selecting data-slot roots
+      document
+        .querySelectorAll('[data-slot="tabs"]')
+        .forEach((el) => createTabs(el));
+
+      // Accordions: single mode (default) vs multiple mode
+      createAccordion(document.getElementById("accordion-single"));
+      createAccordion(document.getElementById("accordion-multiple"), {
+        multiple: true,
+      });
+      // Disable closeOnClickOutside to prevent immediate close on trigger click
+      document
+        .querySelectorAll('[data-slot="dialog"]')
+        .forEach((el) => createDialog(el, { closeOnClickOutside: false }));
+      document
+        .querySelectorAll('[data-slot="disclosure"]')
+        .forEach((el) => createDisclosure(el));
+      document
+        .querySelectorAll('[data-slot="tooltip"]')
+        .forEach((el) => createTooltip(el, { delay: 300 }));
+      document
+        .querySelectorAll('[data-slot="popover"]')
+        .forEach((el) => createPopover(el));
+      document
+        .querySelectorAll('[data-slot="navigation-menu"]')
+        .forEach((el) => createNavigationMenu(el));
+    </script>
+  </body>
+</html>

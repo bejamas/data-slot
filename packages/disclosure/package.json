@@ -1,0 +1,22 @@
+{
+  "name": "@data-slot/disclosure",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["src"],
+  "scripts": {
+    "build": "bun build src/index.ts --outfile ../../dist/disclosure.js --format esm --minify --target browser"
+  },
+  "dependencies": {
+    "@data-slot/core": "workspace:*"
+  },
+  "keywords": ["headless", "ui", "disclosure", "vanilla", "data-slot"],
+  "license": "MIT"
+}
+

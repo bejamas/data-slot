@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Headless Vanilla UI Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 2rem; }
+    
+    /* Tabs styling */
+    [data-slot="tabs-list"] {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 1rem;
+    }
+    [data-slot="tabs-trigger"] {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    [data-slot="tabs-trigger"][data-state="active"] {
+      border-bottom-color: blue;
+      font-weight: bold;
+    }
+    [data-slot="tabs-content"] {
+      padding: 1rem;
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>@data-slot Test</h1>
+  
+  <div data-slot="tabs" id="my-tabs" data-default-value="one">
+    <div data-slot="tabs-list">
+      <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+      <button data-slot="tabs-trigger" data-value="two">Tab Two</button>
+      <button data-slot="tabs-trigger" data-value="three">Tab Three</button>
+    </div>
+    <div data-slot="tabs-content" data-value="one">
+      <h2>Content One</h2>
+      <p>This is the first tab content.</p>
+    </div>
+    <div data-slot="tabs-content" data-value="two">
+      <h2>Content Two</h2>
+      <p>This is the second tab content.</p>
+    </div>
+    <div data-slot="tabs-content" data-value="three">
+      <h2>Content Three</h2>
+      <p>This is the third tab content.</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { create, createTabs } from './src/tabs/index.ts'
+    
+    // Auto-discover and bind all tabs
+    const controllers = create()
+    console.log('Controllers:', controllers)
+    console.log('Initial value:', controllers[0]?.value)
+    
+    // Programmatic control example
+    window.selectTab = (value) => controllers[0]?.select(value)
+  </script>
+</body>
+</html>
+

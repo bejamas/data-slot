@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "allowJs": true,
+
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    "paths": {
+      "@data-slot/core": ["./packages/core/src/index.ts"],
+      "@data-slot/tabs": ["./packages/tabs/src/index.ts"],
+      "@data-slot/dialog": ["./packages/dialog/src/index.ts"],
+      "@data-slot/accordion": ["./packages/accordion/src/index.ts"],
+      "@data-slot/popover": ["./packages/popover/src/index.ts"],
+      "@data-slot/tooltip": ["./packages/tooltip/src/index.ts"],
+      "@data-slot/disclosure": ["./packages/disclosure/src/index.ts"],
+      "data-slot": ["./packages/data-slot/src/index.ts"],
+      "data-slot/*": ["./packages/data-slot/src/*.ts"]
+    }
+  },
+  "include": ["packages/**/*.ts"]
+}
