@@ -1,0 +1,101 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div data-slot="disclosure">
+  <button data-slot="disclosure-trigger" class="disclosure-trigger-btn">
+    Show more details
+  </button>
+  <div class="disclosure-content-wrapper">
+    <div data-slot="disclosure-content" class="disclosure-content">
+      <div class="disclosure-content-inner">
+        <p>Disclosure is the simplest component — just a trigger and content.</p>
+        <p>Perfect for FAQ items, collapsible sections, or any show/hide pattern.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .disclosure-trigger-btn {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: 1px dashed #ccc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .disclosure-trigger-btn::before {
+    content: "▶";
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+  }
+  .disclosure-trigger-btn[aria-expanded="true"]::before {
+    transform: rotate(90deg);
+  }
+  .disclosure-content-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s;
+  }
+  [data-slot="disclosure"][data-state="open"] .disclosure-content-wrapper {
+    grid-template-rows: 1fr;
+  }
+  .disclosure-content {
+    overflow: hidden;
+    min-height: 0;
+  }
+  .disclosure-content[hidden] { display: block !important; }
+  .disclosure-content-inner {
+    padding: 1rem;
+    margin-top: 0.5rem;
+    background: #f0eeeb;
+  }
+</style>`;
+
+const tailwindCode = `<div data-slot="disclosure" class="group">
+  <button
+    data-slot="disclosure-trigger"
+    class="px-4 py-2 bg-transparent border border-dashed border-gray-300
+           cursor-pointer flex items-center gap-2 hover:bg-gray-100
+           before:content-['▶'] before:text-[0.7rem]
+           before:transition-transform before:duration-200
+           aria-expanded:before:rotate-90"
+  >
+    Show more details
+  </button>
+  <div
+    class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300
+           group-data-[state=open]:grid-rows-[1fr]"
+  >
+    <div data-slot="disclosure-content" class="overflow-hidden min-h-0">
+      <div class="p-4 mt-2 bg-gray-100">
+        <p>Disclosure is the simplest component — just a trigger and content.</p>
+        <p class="mt-2">Perfect for FAQ items, collapsible sections, or any show/hide pattern.</p>
+      </div>
+    </div>
+  </div>
+</div>`;
+---
+
+<ExampleBlock>
+  <div slot="preview" data-slot="disclosure">
+    <button data-slot="disclosure-trigger" class="disclosure-trigger-btn">
+      Show more details
+    </button>
+    <div class="disclosure-content-wrapper">
+      <div data-slot="disclosure-content" class="disclosure-content">
+        <div class="disclosure-content-inner">
+          <p>Disclosure is the simplest component — just a trigger and content.</p>
+          <p style="margin-top: 0.5rem">
+            Perfect for FAQ items, collapsible sections, or any show/hide pattern.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+

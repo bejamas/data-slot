@@ -1,0 +1,19 @@
+{
+  "name": "data-slot-docs",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "check-sizes": "bun run scripts/check-sizes.ts",
+    "dev": "bun run check-sizes && astro dev",
+    "start": "bun run check-sizes && astro dev",
+    "build": "bun run check-sizes && astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^4.16.0",
+    "@astrojs/tailwind": "^5.1.0",
+    "tailwindcss": "^3.4.0"
+  }
+}
+

@@ -1,0 +1,113 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div data-slot="tooltip" class="tooltip-root">
+  <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Hover me</button>
+  <div data-slot="tooltip-content" data-position="top" class="tooltip-content" hidden>
+    Tooltip content
+  </div>
+</div>
+
+<style>
+  .tooltip-root { position: relative; display: inline-block; }
+  .tooltip-trigger-btn {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: 1px dashed #ccc;
+    cursor: help;
+  }
+  .tooltip-content {
+    position: absolute;
+    background: #1a1a1a;
+    color: #faf9f7;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    z-index: 50;
+    opacity: 1;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .tooltip-content[data-position="top"] {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+  }
+  .tooltip-content[hidden] {
+    display: block !important;
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* Arrow */
+  .tooltip-content::after {
+    content: "";
+    position: absolute;
+    border: 6px solid transparent;
+  }
+  .tooltip-content[data-position="top"]::after {
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-top-color: #1a1a1a;
+  }
+</style>`;
+
+const tailwindCode = `<div data-slot="tooltip" class="relative inline-block">
+  <button
+    data-slot="tooltip-trigger"
+    class="px-4 py-2 bg-transparent border border-dashed border-gray-300
+           cursor-help underline decoration-dotted underline-offset-2"
+  >
+    Hover me
+  </button>
+  <div
+    data-slot="tooltip-content"
+    data-position="top"
+    class="absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-2
+           bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50
+           opacity-100 transition-opacity duration-150
+           hidden:opacity-0 hidden:pointer-events-none
+           after:content-[''] after:absolute after:top-full after:left-1/2
+           after:-translate-x-1/2 after:border-[6px] after:border-transparent
+           after:border-t-gray-900"
+    hidden
+  >
+    Tooltip content
+  </div>
+</div>`;
+---
+
+<ExampleBlock label="positions: top, bottom, left, right (+ warm-up behavior)">
+  <div slot="preview" class="tooltip-group">
+    <div data-slot="tooltip" class="tooltip-root">
+      <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Top</button>
+      <div data-slot="tooltip-content" data-position="top" class="tooltip-content" hidden>
+        Position: top (default)
+      </div>
+    </div>
+    <div data-slot="tooltip" class="tooltip-root">
+      <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Bottom</button>
+      <div data-slot="tooltip-content" data-position="bottom" class="tooltip-content" hidden>
+        Position: bottom
+      </div>
+    </div>
+    <div data-slot="tooltip" class="tooltip-root">
+      <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Left</button>
+      <div data-slot="tooltip-content" data-position="left" class="tooltip-content" hidden>
+        Position: left
+      </div>
+    </div>
+    <div data-slot="tooltip" class="tooltip-root">
+      <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Right</button>
+      <div data-slot="tooltip-content" data-position="right" class="tooltip-content" hidden>
+        Position: right
+      </div>
+    </div>
+  </div>
+  <p slot="note" class="demo-note">
+    Position via <code>data-position</code> attribute or JS option. Hover across quickly — warm-up skips delay for adjacent tooltips.
+  </p>
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+

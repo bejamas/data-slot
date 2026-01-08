@@ -1,0 +1,104 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div data-slot="popover" class="popover-root">
+  <button data-slot="popover-trigger" class="popover-trigger-btn">Open Popover</button>
+  <div data-slot="popover-content" data-position="bottom" class="popover-content" hidden>
+    <div class="popover-title">Popover Panel</div>
+    <p class="popover-text">
+      Unlike tooltips, popovers stay open until dismissed.
+      Click outside or press Escape to close.
+    </p>
+    <button data-slot="popover-close" class="popover-close-btn">Got it</button>
+  </div>
+</div>
+
+<style>
+  .popover-root { position: relative; display: inline-block; }
+  .popover-trigger-btn {
+    padding: 0.5rem 1rem;
+    background: #1a1a1a;
+    color: #faf9f7;
+    border: none;
+    cursor: pointer;
+  }
+  .popover-content {
+    position: absolute;
+    background: #faf9f7;
+    border: 1px solid #ccc;
+    padding: 1rem;
+    min-width: 200px;
+    z-index: 50;
+    opacity: 1;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .popover-content[data-position="bottom"] {
+    top: 100%;
+    left: 0;
+    margin-top: 0.5rem;
+  }
+  .popover-content[hidden] {
+    display: block !important;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .popover-title { font-weight: 700; margin-bottom: 0.5rem; }
+  .popover-text { color: #666; font-size: 0.9rem; margin-bottom: 0.75rem; }
+  .popover-close-btn {
+    padding: 0.3rem 0.6rem;
+    background: none;
+    border: 1px solid #ccc;
+    cursor: pointer;
+  }
+</style>`;
+
+const tailwindCode = `<div data-slot="popover" class="relative inline-block">
+  <button
+    data-slot="popover-trigger"
+    class="px-4 py-2 bg-gray-900 text-white border-none cursor-pointer
+           hover:opacity-90 transition-opacity"
+  >
+    Open Popover
+  </button>
+  <div
+    data-slot="popover-content"
+    data-position="bottom"
+    class="absolute top-full left-0 mt-2 bg-white border border-gray-300
+           p-4 min-w-[200px] z-50 opacity-100
+           transition-opacity duration-200
+           hidden:opacity-0 hidden:pointer-events-none"
+    hidden
+  >
+    <div class="font-bold mb-2">Popover Panel</div>
+    <p class="text-gray-500 text-sm mb-3">
+      Unlike tooltips, popovers stay open until dismissed.
+      Click outside or press Escape to close.
+    </p>
+    <button
+      data-slot="popover-close"
+      class="px-2.5 py-1 bg-transparent border border-gray-300
+             cursor-pointer hover:bg-gray-100 transition-colors"
+    >
+      Got it
+    </button>
+  </div>
+</div>`;
+---
+
+<ExampleBlock>
+  <div slot="preview" data-slot="popover" class="popover-root">
+    <button data-slot="popover-trigger" class="popover-trigger-btn">Open Popover</button>
+    <div data-slot="popover-content" class="popover-content" hidden>
+      <div class="popover-title">Popover Panel</div>
+      <p class="popover-text">
+        Unlike tooltips, popovers stay open until dismissed.
+        Click outside or press Escape to close.
+      </p>
+      <button data-slot="popover-close" class="popover-close-btn">Got it</button>
+    </div>
+  </div>
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+

@@ -1,0 +1,100 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div data-slot="dialog">
+  <button data-slot="dialog-trigger" class="dialog-trigger-btn">Open Dialog</button>
+  <div data-slot="dialog-content" class="dialog-content-wrapper" hidden>
+    <div class="dialog-panel">
+      <h2 data-slot="dialog-title" class="dialog-title">Confirm Action</h2>
+      <p data-slot="dialog-description" class="dialog-description">
+        This dialog traps focus and can be closed with Escape or clicking outside.
+      </p>
+      <button data-slot="dialog-close" class="dialog-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .dialog-trigger-btn {
+    padding: 0.5rem 1rem;
+    background: #1a1a1a;
+    color: #faf9f7;
+    border: none;
+    cursor: pointer;
+  }
+  .dialog-content-wrapper {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .dialog-content-wrapper[hidden] { display: none; }
+  .dialog-panel {
+    background: #faf9f7;
+    padding: 2rem;
+    max-width: 400px;
+    width: 90%;
+    border: 1px solid #ccc;
+  }
+  .dialog-title { font-weight: 700; margin-bottom: 0.5rem; }
+  .dialog-description { color: #666; margin-bottom: 1.5rem; }
+  .dialog-close-btn {
+    padding: 0.4rem 0.8rem;
+    background: none;
+    border: 1px solid #ccc;
+    cursor: pointer;
+  }
+</style>`;
+
+const tailwindCode = `<div data-slot="dialog">
+  <button
+    data-slot="dialog-trigger"
+    class="px-4 py-2 bg-gray-900 text-white border-none cursor-pointer
+           hover:opacity-90 transition-opacity"
+  >
+    Open Dialog
+  </button>
+  <div
+    data-slot="dialog-content"
+    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50
+           hidden data-[state=open]:flex"
+    hidden
+  >
+    <div class="bg-white p-8 max-w-md w-[90%] border border-gray-300 rounded">
+      <h2 data-slot="dialog-title" class="font-bold mb-2">Confirm Action</h2>
+      <p data-slot="dialog-description" class="text-gray-500 mb-6">
+        This dialog traps focus and can be closed with Escape or clicking outside.
+      </p>
+      <button
+        data-slot="dialog-close"
+        class="px-3 py-1.5 bg-transparent border border-gray-300 cursor-pointer
+               hover:bg-gray-100 transition-colors"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+</div>`;
+---
+
+<ExampleBlock>
+  <div slot="preview" data-slot="dialog" id="demo-dialog">
+    <button data-slot="dialog-trigger" class="dialog-trigger-btn">Open Dialog</button>
+    <div data-slot="dialog-content" class="dialog-content-wrapper" hidden>
+      <div class="dialog-panel">
+        <div class="dialog-title" data-slot="dialog-title">Confirm Action</div>
+        <p class="dialog-description" data-slot="dialog-description">
+          This dialog traps focus and can be closed with Escape or clicking outside.
+        </p>
+        <button data-slot="dialog-close" class="dialog-close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+

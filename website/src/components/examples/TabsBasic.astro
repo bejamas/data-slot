@@ -1,0 +1,112 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div data-slot="tabs" data-default-value="one">
+  <div data-slot="tabs-list" class="tabs-list">
+    <button data-slot="tabs-trigger" data-value="one" class="tabs-trigger">Tab One</button>
+    <button data-slot="tabs-trigger" data-value="two" class="tabs-trigger">Tab Two</button>
+  </div>
+  <div data-slot="tabs-content" data-value="one" class="tabs-content">Content One</div>
+  <div data-slot="tabs-content" data-value="two" class="tabs-content">Content Two</div>
+</div>
+
+<style>
+  .tabs-list {
+    display: flex;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 1rem;
+  }
+  .tabs-trigger {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    color: #666;
+  }
+  .tabs-trigger[data-state="active"] {
+    color: #1a1a1a;
+    border-bottom-color: #1a1a1a;
+    font-weight: 500;
+  }
+  .tabs-content { padding: 1rem 0; }
+  .tabs-content[hidden] { display: none; }
+</style>`;
+
+const tailwindCode = `<div data-slot="tabs" data-default-value="one">
+  <div data-slot="tabs-list" class="flex border-b border-gray-300 mb-4">
+    <button
+      data-slot="tabs-trigger"
+      data-value="one"
+      class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer
+             data-[state=active]:text-gray-900 data-[state=active]:border-gray-900
+             data-[state=active]:font-medium"
+    >
+      Tab One
+    </button>
+    <button
+      data-slot="tabs-trigger"
+      data-value="two"
+      class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer
+             data-[state=active]:text-gray-900 data-[state=active]:border-gray-900
+             data-[state=active]:font-medium"
+    >
+      Tab Two
+    </button>
+  </div>
+  <div data-slot="tabs-content" data-value="one" class="py-4 hidden data-[state=active]:block">
+    Content One
+  </div>
+  <div data-slot="tabs-content" data-value="two" class="py-4 hidden data-[state=active]:block">
+    Content Two
+  </div>
+</div>`;
+---
+
+<ExampleBlock>
+  <div slot="preview" data-slot="tabs" data-default-value="html">
+    <div data-slot="tabs-list" class="tabs-list">
+      <button data-slot="tabs-trigger" data-value="html" class="tabs-trigger">HTML</button>
+      <button data-slot="tabs-trigger" data-value="css" class="tabs-trigger">CSS</button>
+      <button data-slot="tabs-trigger" data-value="js" class="tabs-trigger">JS</button>
+    </div>
+    <div data-slot="tabs-content" data-value="html" class="tabs-content">
+      <Code
+        code={`<div data-slot="tabs">
+  <div data-slot="tabs-list">
+    <button data-slot="tabs-trigger" data-value="one">Tab</button>
+  </div>
+  <div data-slot="tabs-content" data-value="one">...</div>
+</div>`}
+        lang="html"
+        theme="vitesse-light"
+      />
+    </div>
+    <div data-slot="tabs-content" data-value="css" class="tabs-content">
+      <Code
+        code={`/* Use data-state for styling */
+[data-slot="tabs-trigger"][data-state="active"] {
+  font-weight: bold;
+  border-bottom: 2px solid;
+}`}
+        lang="css"
+        theme="vitesse-light"
+      />
+    </div>
+    <div data-slot="tabs-content" data-value="js" class="tabs-content">
+      <Code
+        code={`import { create } from "@data-slot/tabs";
+
+const [tabs] = create();
+tabs.select("css");
+console.log(tabs.value); // "css"`}
+        lang="javascript"
+        theme="vitesse-light"
+      />
+    </div>
+  </div>
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+

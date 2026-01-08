@@ -1,0 +1,107 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div data-slot="tabs" data-default-value="overview">
+  <div data-slot="tabs-list" class="tabs-list-indicator">
+    <div data-slot="tabs-indicator" class="tabs-indicator"></div>
+    <button data-slot="tabs-trigger" data-value="overview" class="tabs-trigger">Overview</button>
+    <button data-slot="tabs-trigger" data-value="features" class="tabs-trigger">Features</button>
+    <button data-slot="tabs-trigger" data-value="api" class="tabs-trigger">API</button>
+  </div>
+  <div data-slot="tabs-content" data-value="overview">Content</div>
+</div>
+
+<style>
+  .tabs-list-indicator {
+    position: relative;
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    background: #f0eeeb;
+    border-radius: 6px;
+  }
+  .tabs-indicator {
+    position: absolute;
+    top: 0.25rem;
+    height: calc(100% - 0.5rem);
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    transform: translateX(var(--active-tab-left, 0));
+    width: var(--active-tab-width, 0);
+    transition: transform 0.2s, width 0.2s;
+  }
+  .tabs-trigger {
+    position: relative;
+    z-index: 1;
+    padding: 0.4rem 0.8rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+</style>`;
+
+const tailwindCode = `<div data-slot="tabs" data-default-value="overview">
+  <div
+    data-slot="tabs-list"
+    class="relative flex gap-1 p-1 bg-gray-100 rounded-md mb-4"
+  >
+    <div
+      data-slot="tabs-indicator"
+      class="absolute top-1 h-[calc(100%-0.5rem)] bg-white rounded shadow
+             transition-all duration-200
+             [transform:translateX(var(--active-tab-left,0))]
+             [width:var(--active-tab-width,0)]"
+    ></div>
+    <button
+      data-slot="tabs-trigger"
+      data-value="overview"
+      class="relative z-10 px-3 py-1.5 bg-transparent border-none cursor-pointer"
+    >
+      Overview
+    </button>
+    <button
+      data-slot="tabs-trigger"
+      data-value="features"
+      class="relative z-10 px-3 py-1.5 bg-transparent border-none cursor-pointer"
+    >
+      Features
+    </button>
+    <button
+      data-slot="tabs-trigger"
+      data-value="api"
+      class="relative z-10 px-3 py-1.5 bg-transparent border-none cursor-pointer"
+    >
+      API
+    </button>
+  </div>
+  <div data-slot="tabs-content" data-value="overview">Content</div>
+</div>`;
+---
+
+<ExampleBlock label="with animated indicator">
+  <div slot="preview" data-slot="tabs" id="tabs-indicator-demo" data-default-value="overview">
+    <div data-slot="tabs-list" class="tabs-list-indicator">
+      <div data-slot="tabs-indicator" class="tabs-indicator"></div>
+      <button data-slot="tabs-trigger" data-value="overview" class="tabs-trigger">Overview</button>
+      <button data-slot="tabs-trigger" data-value="features" class="tabs-trigger">Features</button>
+      <button data-slot="tabs-trigger" data-value="api" class="tabs-trigger">API</button>
+    </div>
+    <div data-slot="tabs-content" data-value="overview" class="tabs-content">
+      The indicator slides smoothly to the active tab using CSS transitions.
+      Position is set via CSS variables: <code>--active-tab-left</code> and <code>--active-tab-width</code>.
+    </div>
+    <div data-slot="tabs-content" data-value="features" class="tabs-content">
+      Zero JavaScript for animation — just CSS <code>transition</code> on <code>transform</code> and <code>width</code>.
+      Works with keyboard navigation too.
+    </div>
+    <div data-slot="tabs-content" data-value="api" class="tabs-content">
+      Add <code>data-slot="tabs-indicator"</code> inside your tabs-list.
+      The component sets CSS variables automatically.
+    </div>
+  </div>
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+

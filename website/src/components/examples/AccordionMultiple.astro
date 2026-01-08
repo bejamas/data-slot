@@ -1,0 +1,120 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div data-slot="accordion">
+  <div data-slot="accordion-item" data-value="item1" class="accordion-item">
+    <button data-slot="accordion-trigger" class="accordion-trigger">First item</button>
+    <div class="accordion-content-wrapper">
+      <div data-slot="accordion-content" class="accordion-content">
+        <div class="accordion-content-inner">
+          With <code>multiple: true</code>, multiple items can be open simultaneously.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div data-slot="accordion-item" data-value="item2" class="accordion-item">
+    <button data-slot="accordion-trigger" class="accordion-trigger">Second item</button>
+    <div class="accordion-content-wrapper">
+      <div data-slot="accordion-content" class="accordion-content">
+        <div class="accordion-content-inner">
+          Try clicking both items — they stay open independently.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { createAccordion } from '@data-slot/accordion';
+  createAccordion(element, { multiple: true });
+</script>`;
+
+const tailwindCode = `<div data-slot="accordion">
+  <div
+    data-slot="accordion-item"
+    data-value="item1"
+    class="border-b border-dashed border-gray-300 last:border-b-0 group"
+  >
+    <button
+      data-slot="accordion-trigger"
+      class="w-full py-3 bg-transparent border-none text-left cursor-pointer
+             flex justify-between items-center
+             after:content-['+'] after:text-gray-500
+             after:transition-transform after:duration-300
+             aria-expanded:after:rotate-45"
+    >
+      First item
+    </button>
+    <div
+      class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300
+             group-data-[state=open]:grid-rows-[1fr]"
+    >
+      <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+        <div class="pb-4 text-gray-500">
+          With <code>multiple: true</code>, multiple items can be open simultaneously.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-slot="accordion-item"
+    data-value="item2"
+    class="border-b border-dashed border-gray-300 last:border-b-0 group"
+  >
+    <button
+      data-slot="accordion-trigger"
+      class="w-full py-3 bg-transparent border-none text-left cursor-pointer
+             flex justify-between items-center
+             after:content-['+'] after:text-gray-500
+             after:transition-transform after:duration-300
+             aria-expanded:after:rotate-45"
+    >
+      Second item
+    </button>
+    <div
+      class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300
+             group-data-[state=open]:grid-rows-[1fr]"
+    >
+      <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+        <div class="pb-4 text-gray-500">
+          Try clicking both items — they stay open independently.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { createAccordion } from '@data-slot/accordion';
+  createAccordion(element, { multiple: true });
+</script>`;
+---
+
+<ExampleBlock label="multiple mode">
+  <div slot="preview" data-slot="accordion" id="accordion-multiple">
+    <div data-slot="accordion-item" data-value="item1" class="accordion-item">
+      <button data-slot="accordion-trigger" class="accordion-trigger">First item</button>
+      <div class="accordion-content-wrapper">
+        <div data-slot="accordion-content" class="accordion-content">
+          <div class="accordion-content-inner">
+            With <code>multiple: true</code>, multiple items can be open simultaneously.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div data-slot="accordion-item" data-value="item2" class="accordion-item">
+      <button data-slot="accordion-trigger" class="accordion-trigger">Second item</button>
+      <div class="accordion-content-wrapper">
+        <div data-slot="accordion-content" class="accordion-content">
+          <div class="accordion-content-inner">
+            Try clicking both items — they stay open independently.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+

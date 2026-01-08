@@ -1,0 +1,37 @@
+---
+import packageSizes from "../data/package-sizes.json";
+
+interface PackageInfo {
+  name: string;
+  size: number;
+  sizeFormatted: string;
+  description: string;
+}
+
+const packages = packageSizes as PackageInfo[];
+
+// Calculate column widths dynamically
+const nameWidth = Math.max(7, ...packages.map(p => p.name.length));
+const sizeWidth = Math.max(4, ...packages.map(p => p.sizeFormatted.length));
+const descWidth = Math.max(11, ...packages.map(p => p.description.length));
+
+function pad(str: string, width: number): string {
+  return str.padEnd(width);
+}
+
+function padStart(str: string, width: number): string {
+  return str.padStart(width);
+}
+
+const border = `+${"-".repeat(nameWidth + 2)}+${"-".repeat(sizeWidth + 2)}+${"-".repeat(descWidth + 2)}+`;
+const separator = `|${"-".repeat(nameWidth + 2)}+${"-".repeat(sizeWidth + 2)}+${"-".repeat(descWidth + 2)}|`;
+---
+
+<div class="ascii-table">
+  <pre>{border}
+| {pad("Package", nameWidth)} | {padStart("Size", sizeWidth)} | {pad("Description", descWidth)} |
+{separator}
+{packages.map((pkg) => `| ${pad(pkg.name, nameWidth)} | ${padStart(pkg.sizeFormatted, sizeWidth)} | ${pad(pkg.description, descWidth)} |`).join("\n")}
+{border}</pre>
+</div>
+

@@ -1,0 +1,23 @@
+---
+interface Props {
+  label?: string;
+}
+
+const { label = "interactive" } = Astro.props;
+---
+
+<div class="demo-box">
+  <div class="demo-label">↓ {label}</div>
+  <slot name="preview" />
+  <slot name="note" />
+  <details class="source-toggle">
+    <summary>View source</summary>
+    <div class="code-css">
+      <slot name="code-css" />
+    </div>
+    <div class="code-tailwind">
+      <slot name="code-tailwind" />
+    </div>
+  </details>
+</div>
+

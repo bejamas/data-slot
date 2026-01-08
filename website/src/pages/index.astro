@@ -1,0 +1,169 @@
+---
+import { Code } from "astro:components";
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import PackagesTable from "../components/PackagesTable.astro";
+
+// Example components
+import TabsBasic from "../components/examples/TabsBasic.astro";
+import TabsIndicator from "../components/examples/TabsIndicator.astro";
+import AccordionSingle from "../components/examples/AccordionSingle.astro";
+import AccordionMultiple from "../components/examples/AccordionMultiple.astro";
+import Dialog from "../components/examples/Dialog.astro";
+import Disclosure from "../components/examples/Disclosure.astro";
+import Tooltip from "../components/examples/Tooltip.astro";
+import Popover from "../components/examples/Popover.astro";
+import NavigationMenu from "../components/examples/NavigationMenu.astro";
+
+const quickStartCode = `// Auto-discover all instances
+import { create } from "@data-slot/tabs";
+const controllers = create();
+
+// Or target a specific element
+import { createTabs } from "@data-slot/tabs";
+const tabs = createTabs(element);
+
+tabs.select("news");  // programmatic control
+tabs.destroy();       // cleanup`;
+
+const stylingCode = `/* State-based styling */
+[data-state="active"]   { ... }
+[data-state="open"]     { ... }
+[aria-expanded="true"] { ... }
+[aria-selected="true"] { ... }
+
+/* With Tailwind */
+<button class="aria-selected:font-bold">Tab</button>`;
+
+const apiCode = `// Auto-bind all instances
+import { create } from "@data-slot/[component]";
+const controllers = create(scope?);
+
+// Create for specific element
+import { createDialog } from "@data-slot/dialog";
+const dialog = createDialog(element, options?);
+
+// Common controller methods
+controller.destroy(); // cleanup listeners`;
+---
+
+<Layout title="data-slot — Headless UI for Vanilla JavaScript">
+  <Header />
+
+  <div class="sep">~~~</div>
+
+  <!-- Packages Table -->
+  <h2>PACKAGES</h2>
+  <PackagesTable />
+
+  <!-- Installation -->
+  <h2>INSTALLATION</h2>
+  <p>Install only what you need:</p>
+  <Code
+    code={`bun add @data-slot/tabs
+bun add @data-slot/dialog`}
+    lang="bash"
+    theme="vitesse-light"
+  />
+
+  <!-- Quick Start -->
+  <h2>QUICK START</h2>
+  <p>
+    Components use <code>data-slot</code> attributes for markup. Import and
+    call <code>create()</code> to bind behavior:
+  </p>
+  <Code code={quickStartCode} lang="javascript" theme="vitesse-light" />
+
+  <div class="sep">~~~</div>
+
+  <!-- Live Demos -->
+  <h2>LIVE DEMOS</h2>
+  <p>Interactive examples using the library. Inspect the source for markup patterns.</p>
+
+  <!-- Tabs -->
+  <h3>Tabs</h3>
+  <TabsBasic />
+  <TabsIndicator />
+
+  <!-- Accordion -->
+  <h3>Accordion</h3>
+  <AccordionSingle />
+  <AccordionMultiple />
+
+  <!-- Dialog -->
+  <h3>Dialog</h3>
+  <Dialog />
+
+  <!-- Disclosure -->
+  <h3>Disclosure</h3>
+  <Disclosure />
+
+  <!-- Tooltip -->
+  <h3>Tooltip</h3>
+  <Tooltip />
+
+  <!-- Popover -->
+  <h3>Popover</h3>
+  <Popover />
+
+  <!-- Navigation Menu -->
+  <h3>Navigation Menu</h3>
+  <NavigationMenu />
+
+  <div class="sep">~~~</div>
+
+  <!-- Styling Guide -->
+  <h2>STYLING</h2>
+  <p>
+    Components expose <code>data-state</code> and ARIA attributes for CSS hooks:
+  </p>
+  <Code code={stylingCode} lang="css" theme="vitesse-light" />
+
+  <!-- API Reference -->
+  <h2>API</h2>
+  <p>All components follow the same pattern:</p>
+  <Code code={apiCode} lang="javascript" theme="vitesse-light" />
+
+  <Footer />
+</Layout>
+
+<script>
+  // Import component libraries from parent dist
+  import { createTabs } from "../../../dist/tabs.js";
+  import { createAccordion } from "../../../dist/accordion.js";
+  import { createDialog } from "../../../dist/dialog.js";
+  import { createDisclosure } from "../../../dist/disclosure.js";
+  import { createTooltip } from "../../../dist/tooltip.js";
+  import { createPopover } from "../../../dist/popover.js";
+  import { createNavigationMenu } from "../../../dist/navigation-menu.js";
+
+  // Initialize all components
+  document.querySelectorAll('[data-slot="tabs"]').forEach((el) => createTabs(el as HTMLElement));
+
+  // Accordions: single mode (default) vs multiple mode
+  const accordionSingle = document.getElementById("accordion-single");
+  const accordionMultiple = document.getElementById("accordion-multiple");
+  if (accordionSingle) createAccordion(accordionSingle);
+  if (accordionMultiple) createAccordion(accordionMultiple, { multiple: true });
+
+  // Dialogs
+  document.querySelectorAll('[data-slot="dialog"]').forEach((el) =>
+    createDialog(el as HTMLElement, { closeOnClickOutside: true })
+  );
+
+  // Other components
+  document.querySelectorAll('[data-slot="disclosure"]').forEach((el) =>
+    createDisclosure(el as HTMLElement)
+  );
+  document.querySelectorAll('[data-slot="tooltip"]').forEach((el) =>
+    createTooltip(el as HTMLElement, { delay: 300 })
+  );
+  document.querySelectorAll('[data-slot="popover"]').forEach((el) =>
+    createPopover(el as HTMLElement)
+  );
+  document.querySelectorAll('[data-slot="navigation-menu"]').forEach((el) =>
+    createNavigationMenu(el as HTMLElement)
+  );
+</script>
+

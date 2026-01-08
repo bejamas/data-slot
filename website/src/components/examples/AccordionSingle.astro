@@ -1,0 +1,166 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div data-slot="accordion" data-default-value="features">
+  <div data-slot="accordion-item" data-value="features" class="accordion-item">
+    <button data-slot="accordion-trigger" class="accordion-trigger">
+      What makes data-slot different?
+    </button>
+    <div class="accordion-content-wrapper">
+      <div data-slot="accordion-content" class="accordion-content">
+        <div class="accordion-content-inner">
+          Unlike React-based headless libraries, data-slot works with vanilla HTML.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div data-slot="accordion-item" data-value="accessibility" class="accordion-item">
+    <button data-slot="accordion-trigger" class="accordion-trigger">Is it accessible?</button>
+    <div class="accordion-content-wrapper">
+      <div data-slot="accordion-content" class="accordion-content">
+        <div class="accordion-content-inner">
+          Yes. All components implement WAI-ARIA patterns.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .accordion-item { border-bottom: 1px dashed #ccc; }
+  .accordion-item:last-child { border-bottom: none; }
+  .accordion-trigger {
+    width: 100%;
+    padding: 0.75rem 0;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+  }
+  .accordion-trigger::after {
+    content: "+";
+    color: #666;
+    transition: transform 0.25s;
+  }
+  .accordion-trigger[aria-expanded="true"]::after {
+    transform: rotate(45deg);
+  }
+  .accordion-content-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s;
+  }
+  .accordion-item[data-state="open"] .accordion-content-wrapper {
+    grid-template-rows: 1fr;
+  }
+  .accordion-content {
+    overflow: hidden;
+    min-height: 0;
+  }
+  .accordion-content[hidden] { display: block !important; }
+  .accordion-content-inner { padding: 0 0 1rem; color: #666; }
+</style>`;
+
+const tailwindCode = `<div data-slot="accordion" data-default-value="features">
+  <div
+    data-slot="accordion-item"
+    data-value="features"
+    class="border-b border-dashed border-gray-300 last:border-b-0
+           group"
+  >
+    <button
+      data-slot="accordion-trigger"
+      class="w-full py-3 bg-transparent border-none text-left cursor-pointer
+             flex justify-between items-center
+             after:content-['+'] after:text-gray-500
+             after:transition-transform after:duration-300
+             aria-expanded:after:rotate-45"
+    >
+      What makes data-slot different?
+    </button>
+    <div
+      class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300
+             group-data-[state=open]:grid-rows-[1fr]"
+    >
+      <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+        <div class="pb-4 text-gray-500">
+          Unlike React-based headless libraries, data-slot works with vanilla HTML.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-slot="accordion-item"
+    data-value="accessibility"
+    class="border-b border-dashed border-gray-300 last:border-b-0
+           group"
+  >
+    <button
+      data-slot="accordion-trigger"
+      class="w-full py-3 bg-transparent border-none text-left cursor-pointer
+             flex justify-between items-center
+             after:content-['+'] after:text-gray-500
+             after:transition-transform after:duration-300
+             aria-expanded:after:rotate-45"
+    >
+      Is it accessible?
+    </button>
+    <div
+      class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300
+             group-data-[state=open]:grid-rows-[1fr]"
+    >
+      <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+        <div class="pb-4 text-gray-500">
+          Yes. All components implement WAI-ARIA patterns.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+---
+
+<ExampleBlock label="single mode (default)">
+  <div slot="preview" data-slot="accordion" id="accordion-single" data-default-value="features">
+    <div data-slot="accordion-item" data-value="features" class="accordion-item">
+      <button data-slot="accordion-trigger" class="accordion-trigger">
+        What makes data-slot different?
+      </button>
+      <div class="accordion-content-wrapper">
+        <div data-slot="accordion-content" class="accordion-content">
+          <div class="accordion-content-inner">
+            Unlike React-based headless libraries, data-slot works with vanilla HTML.
+            Just add <code>data-slot</code> attributes to your markup and call <code>create()</code>.
+            No framework, no virtual DOM, no build step required.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div data-slot="accordion-item" data-value="accessibility" class="accordion-item">
+      <button data-slot="accordion-trigger" class="accordion-trigger">Is it accessible?</button>
+      <div class="accordion-content-wrapper">
+        <div data-slot="accordion-content" class="accordion-content">
+          <div class="accordion-content-inner">
+            Yes. All components implement WAI-ARIA patterns with proper roles,
+            keyboard navigation, and focus management out of the box.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div data-slot="accordion-item" data-value="size" class="accordion-item">
+      <button data-slot="accordion-trigger" class="accordion-trigger">How is it so small?</button>
+      <div class="accordion-content-wrapper">
+        <div data-slot="accordion-content" class="accordion-content">
+          <div class="accordion-content-inner">
+            No dependencies. Each component is standalone and tree-shakeable.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+

@@ -1,0 +1,50 @@
+[
+  {
+    "name": "@data-slot/navigation-menu",
+    "size": 2419,
+    "sizeFormatted": "2.4 KB",
+    "description": "Dropdown navigation menus"
+  },
+  {
+    "name": "@data-slot/dialog",
+    "size": 1208,
+    "sizeFormatted": "1.2 KB",
+    "description": "Modal dialogs, focus trap"
+  },
+  {
+    "name": "@data-slot/tabs",
+    "size": 1112,
+    "sizeFormatted": "1.1 KB",
+    "description": "Tabbed interfaces, kbd nav"
+  },
+  {
+    "name": "@data-slot/accordion",
+    "size": 938,
+    "sizeFormatted": "938 B",
+    "description": "Collapsible sections"
+  },
+  {
+    "name": "@data-slot/popover",
+    "size": 856,
+    "sizeFormatted": "856 B",
+    "description": "Anchored floating content"
+  },
+  {
+    "name": "@data-slot/tooltip",
+    "size": 772,
+    "sizeFormatted": "772 B",
+    "description": "Hover/focus tooltips"
+  },
+  {
+    "name": "@data-slot/disclosure",
+    "size": 710,
+    "sizeFormatted": "710 B",
+    "description": "Simple show/hide toggle"
+  },
+  {
+    "name": "@data-slot/core",
+    "size": 452,
+    "sizeFormatted": "452 B",
+    "description": "Shared utilities"
+  }
+]
