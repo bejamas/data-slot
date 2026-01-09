@@ -7,12 +7,14 @@ export interface DialogOptions {
   defaultOpen?: boolean;
   /** Callback when open state changes */
   onOpenChange?: (open: boolean) => void;
-  /** Close when clicking outside content */
+  /** Close when clicking overlay */
   closeOnClickOutside?: boolean;
   /** Close when pressing Escape */
   closeOnEscape?: boolean;
   /** Lock body scroll when open */
   lockScroll?: boolean;
+  /** Use alertdialog role for blocking confirmations */
+  alertDialog?: boolean;
 }
 
 export interface DialogController {
@@ -29,14 +31,8 @@ export interface DialogController {
 }
 
 // Focusable element selector
-const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])',
-].join(",");
+const FOCUSABLE =
+  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 /**
  * Create a dialog controller for a root element
@@ -45,13 +41,17 @@ const FOCUSABLE_SELECTOR = [
  * ```html
  * <div data-slot="dialog">
  *   <button data-slot="dialog-trigger">Open</button>
- *   <div data-slot="dialog-content" role="dialog">
+ *   <div data-slot="dialog-overlay"></div>
+ *   <div data-slot="dialog-content">
  *     <h2 data-slot="dialog-title">Title</h2>
  *     <p data-slot="dialog-description">Description</p>
  *     <button data-slot="dialog-close">Close</button>
  *   </div>
  * </div>
  * ```
+ *
+ * Note: Overlay is required. For modal behavior with inert backgrounds,
+ * mount dialogs as direct children of document.body (portal pattern).
  */
 export function createDialog(
   root: Element,
@@ -63,9 +63,11 @@ export function createDialog(
     closeOnClickOutside = true,
     closeOnEscape = true,
     lockScroll = true,
+    alertDialog = false,
   } = options;
 
   const trigger = getPart<HTMLElement>(root, "dialog-trigger");
+  const overlay = getPart<HTMLElement>(root, "dialog-overlay");
   const content = getPart<HTMLElement>(root, "dialog-content");
   const closeBtn = getPart<HTMLElement>(root, "dialog-close");
   const title = getPart<HTMLElement>(root, "dialog-title");
@@ -74,52 +76,63 @@ export function createDialog(
   if (!content) {
     throw new Error("Dialog requires dialog-content slot");
   }
+  if (!overlay) {
+    throw new Error("Dialog requires dialog-overlay slot");
+  }
 
-  let isOpen = defaultOpen;
+  let isOpen = false;
   let previousActiveElement: HTMLElement | null = null;
-  let scrollLockCleanup: (() => void) | null = null;
+  let savedOverflow = "";
+  let savedPaddingRight = "";
   const cleanups: Array<() => void> = [];
 
   // ARIA setup
   ensureId(content, "dialog-content");
-  content.setAttribute("role", "dialog");
+  content.setAttribute("role", alertDialog ? "alertdialog" : "dialog");
   setAria(content, "modal", true);
   linkLabelledBy(content, title, description);
+
+  // Overlay is purely presentational
+  overlay.setAttribute("role", "presentation");
+  overlay.setAttribute("aria-hidden", "true");
+  overlay.tabIndex = -1;
 
   if (trigger) {
     trigger.setAttribute("aria-haspopup", "dialog");
     trigger.setAttribute("aria-controls", content.id);
+    setAria(trigger, "expanded", false);
   }
 
-  const lockBodyScroll = () => {
-    const scrollbarWidth =
-      window.innerWidth - document.documentElement.clientWidth;
-    const originalPaddingRight = document.body.style.paddingRight;
-    const originalOverflow = document.body.style.overflow;
+  // Track if we added tabindex (so we can clean it up)
+  let addedTabIndex = false;
 
-    document.body.style.paddingRight = `${scrollbarWidth}px`;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.paddingRight = originalPaddingRight;
-      document.body.style.overflow = originalOverflow;
-    };
-  };
-
-  const focusFirst = () => {
-    const focusable = content.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-    const first = focusable[0];
-    if (first) {
-      first.focus();
-    } else {
-      // Make content focusable and focus it
+  const ensureContentFocusable = () => {
+    if (!content.hasAttribute("tabindex")) {
       content.tabIndex = -1;
-      content.focus();
+      addedTabIndex = true;
     }
   };
 
-  const updateState = (open: boolean) => {
-    if (isOpen === open) return;
+  const cleanupContentFocusable = () => {
+    if (addedTabIndex) {
+      content.removeAttribute("tabindex");
+      addedTabIndex = false;
+    }
+  };
+
+  const focusFirst = () => {
+    const autofocusEl = content.querySelector<HTMLElement>("[autofocus]");
+    if (autofocusEl) return autofocusEl.focus();
+
+    const first = content.querySelector<HTMLElement>(FOCUSABLE);
+    if (first) return first.focus();
+
+    ensureContentFocusable();
+    content.focus();
+  };
+
+  const updateState = (open: boolean, force = false) => {
+    if (isOpen === open && !force) return;
 
     if (open) {
       // Store current focus
@@ -127,24 +140,40 @@ export function createDialog(
 
       // Lock scroll
       if (lockScroll) {
-        scrollLockCleanup = lockBodyScroll();
+        const scrollbarWidth =
+          window.innerWidth - document.documentElement.clientWidth;
+        savedOverflow = document.body.style.overflow;
+        savedPaddingRight = document.body.style.paddingRight;
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+        document.body.style.overflow = "hidden";
       }
     } else {
       // Unlock scroll
-      if (scrollLockCleanup) {
-        scrollLockCleanup();
-        scrollLockCleanup = null;
+      if (lockScroll) {
+        document.body.style.overflow = savedOverflow;
+        document.body.style.paddingRight = savedPaddingRight;
       }
 
+      // Clean up tabindex we may have added
+      cleanupContentFocusable();
+
       // Restore focus
-      if (previousActiveElement) {
-        previousActiveElement.focus();
-        previousActiveElement = null;
-      }
+      const elementToFocus = previousActiveElement;
+      previousActiveElement = null;
+      requestAnimationFrame(() => {
+        if (
+          elementToFocus &&
+          document.contains(elementToFocus) &&
+          typeof elementToFocus.focus === "function"
+        ) {
+          elementToFocus.focus();
+        }
+      });
     }
 
     isOpen = open;
     content.hidden = !isOpen;
+    overlay.hidden = !isOpen;
     if (trigger) {
       setAria(trigger, "expanded", isOpen);
     }
@@ -154,21 +183,25 @@ export function createDialog(
     onOpenChange?.(isOpen);
 
     if (open) {
-      // Focus first element after state update
       requestAnimationFrame(focusFirst);
     }
   };
 
   // Initialize state
-  content.hidden = !isOpen;
-  if (trigger) {
-    setAria(trigger, "expanded", isOpen);
+  if (defaultOpen) {
+    content.hidden = false;
+    overlay.hidden = false;
+    root.setAttribute("data-state", "open");
+    updateState(true, true);
+  } else {
+    content.hidden = true;
+    overlay.hidden = true;
+    root.setAttribute("data-state", "closed");
   }
-  root.setAttribute("data-state", isOpen ? "open" : "closed");
 
-  // Trigger click
+  // Trigger click - toggle behavior
   if (trigger) {
-    cleanups.push(on(trigger, "click", () => updateState(true)));
+    cleanups.push(on(trigger, "click", () => updateState(!isOpen)));
   }
 
   // Close button click
@@ -176,34 +209,74 @@ export function createDialog(
     cleanups.push(on(closeBtn, "click", () => updateState(false)));
   }
 
-  // Click outside (on the backdrop/overlay)
+  // Click on overlay to close
   if (closeOnClickOutside) {
     cleanups.push(
-      on(document, "pointerdown", (e) => {
-        if (!isOpen) return;
-        const target = e.target as Node;
-
-        // Close if clicking outside content but inside root (backdrop click)
-        // or clicking completely outside root
-        if (!content.contains(target)) {
+      on(overlay, "pointerdown", (e) => {
+        if (e.target === overlay && isOpen) {
           updateState(false);
         }
       })
     );
   }
 
-  // Escape key
-  if (closeOnEscape) {
-    cleanups.push(
-      on(document, "keydown", (e) => {
-        if (!isOpen) return;
-        if (e.key === "Escape") {
+  // Keydown handler for Escape and Tab
+  cleanups.push(
+    on(document, "keydown", (e) => {
+      if (!isOpen) return;
+
+      // Escape key
+      if (e.key === "Escape" && closeOnEscape) {
+        e.preventDefault();
+        updateState(false);
+        return;
+      }
+
+      // Tab key - focus trap
+      if (e.key === "Tab") {
+        const focusables = content.querySelectorAll<HTMLElement>(FOCUSABLE);
+
+        // If no focusables, prevent Tab from escaping
+        if (focusables.length === 0) {
           e.preventDefault();
-          updateState(false);
+          ensureContentFocusable();
+          content.focus();
+          return;
         }
-      })
-    );
-  }
+
+        const first = focusables[0]!;
+        const last = focusables[focusables.length - 1]!;
+        const active = document.activeElement;
+
+        // If focus is outside the dialog, bring it back
+        if (!content.contains(active)) {
+          e.preventDefault();
+          first.focus();
+          return;
+        }
+
+        // Handle single focusable element
+        if (first === last) {
+          e.preventDefault();
+          return;
+        }
+
+        if (e.shiftKey) {
+          // Shift+Tab: if on first element, wrap to last
+          if (active === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          // Tab: if on last element, wrap to first
+          if (active === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    })
+  );
 
   const controller: DialogController = {
     open: () => updateState(true),
@@ -213,10 +286,10 @@ export function createDialog(
       return isOpen;
     },
     destroy: () => {
-      if (scrollLockCleanup) {
-        scrollLockCleanup();
-        scrollLockCleanup = null;
+      if (isOpen) {
+        updateState(false, true);
       }
+      cleanupContentFocusable();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
     },

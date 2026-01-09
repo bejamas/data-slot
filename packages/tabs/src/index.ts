@@ -9,6 +9,12 @@ export interface TabsOptions {
   onValueChange?: (value: string) => void;
   /** Tab orientation for keyboard navigation */
   orientation?: "horizontal" | "vertical";
+  /**
+   * Activation mode for keyboard navigation
+   * - "auto": Arrow keys select tabs immediately (default)
+   * - "manual": Arrow keys move focus, Enter/Space activates
+   */
+  activationMode?: "auto" | "manual";
 }
 
 export interface TabsController {
@@ -16,8 +22,21 @@ export interface TabsController {
   select(value: string): void;
   /** Currently selected value */
   readonly value: string;
+  /** Update indicator position (call after layout changes) */
+  updateIndicator(): void;
   /** Cleanup all event listeners */
   destroy(): void;
+}
+
+// Focusable selector constant (shared with other components)
+const FOCUSABLE =
+  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+interface TabItem {
+  el: HTMLElement;
+  value: string;
+  disabled: boolean;
+  panel?: HTMLElement;
 }
 
 /**
@@ -39,7 +58,11 @@ export function createTabs(
   root: Element,
   options: TabsOptions = {}
 ): TabsController {
-  const { onValueChange, orientation = "horizontal" } = options;
+  const {
+    onValueChange,
+    orientation = "horizontal",
+    activationMode = "auto",
+  } = options;
 
   const list = getPart<HTMLElement>(root, "tabs-list");
   const triggers = getParts<HTMLElement>(root, "tabs-trigger");
@@ -50,91 +73,100 @@ export function createTabs(
     throw new Error("Tabs requires tabs-list and at least one tabs-trigger");
   }
 
-  // Get default value: JS option > data-default-value attribute > first trigger
+  // Build panel lookup map once (value -> panel)
+  const panelByValue = new Map<string, HTMLElement>();
+  for (const p of panels) {
+    const v = (p.dataset["value"] || "").trim();
+    if (v) panelByValue.set(v, p);
+  }
+
+  // Build trigger items once: only those with a value
+  const items: TabItem[] = [];
+  const itemByValue = new Map<string, TabItem>();
+  const itemByEl = new Map<HTMLElement, TabItem>();
+
+  for (const el of triggers) {
+    const value = (el.dataset["value"] || "").trim();
+    if (!value) continue;
+
+    const disabled =
+      el.hasAttribute("disabled") ||
+      el.dataset["disabled"] !== undefined ||
+      el.getAttribute("aria-disabled") === "true";
+    const panel = panelByValue.get(value);
+    const item: TabItem = { el, value, disabled, panel };
+
+    items.push(item);
+    itemByValue.set(value, item);
+    itemByEl.set(el, item);
+  }
+
+  // Precompute enabled triggers array and index map for O(1) lookup
+  const enabled = items.filter((i) => !i.disabled);
+  const enabledIndexByValue = new Map<string, number>();
+  enabled.forEach((i, idx) => enabledIndexByValue.set(i.value, idx));
+  const firstValue = enabled[0]?.value || "";
+
+  // Get default value: JS option > data-default-value attribute > first enabled
   const rootEl = root as HTMLElement;
-  const defaultValue =
+  const requestedValue = (
     options.defaultValue ??
     rootEl.dataset["defaultValue"] ??
-    triggers[0]?.dataset["value"] ??
-    "";
-  let currentValue = defaultValue;
+    ""
+  ).trim();
+
+  // Validate: ensure requested value exists on an enabled trigger
+  const requestedItem = itemByValue.get(requestedValue);
+  let currentValue =
+    requestedItem && !requestedItem.disabled ? requestedValue : firstValue;
 
   const cleanups: Array<() => void> = [];
 
   // Setup ARIA for list
   list.setAttribute("role", "tablist");
-  setAria(list, "orientation", orientation);
+  if (orientation === "vertical") {
+    setAria(list, "orientation", "vertical");
+  }
 
   // Setup ARIA for triggers and panels
-  triggers.forEach((trigger) => {
-    const value = trigger.dataset["value"];
-    if (!value) return;
+  for (const item of items) {
+    const { el, disabled, panel } = item;
 
-    trigger.setAttribute("role", "tab");
-    const triggerId = ensureId(trigger, "tab");
+    el.setAttribute("role", "tab");
+    const triggerId = ensureId(el, "tab");
 
-    // Find matching panel
-    const panel = panels.find((p) => p.dataset["value"] === value);
+    // Set type="button" on button elements to prevent form submission
+    if (el.tagName === "BUTTON" && !el.hasAttribute("type")) {
+      (el as HTMLButtonElement).type = "button";
+    }
+
+    // Set aria-disabled and native disabled for disabled triggers
+    if (disabled) {
+      el.setAttribute("aria-disabled", "true");
+      if (el.tagName === "BUTTON") {
+        (el as HTMLButtonElement).disabled = true;
+      }
+    }
+
+    // Link trigger and panel
     if (panel) {
       panel.setAttribute("role", "tabpanel");
+      panel.tabIndex = -1;
       const panelId = ensureId(panel, "tabpanel");
-      trigger.setAttribute("aria-controls", panelId);
+      el.setAttribute("aria-controls", panelId);
       panel.setAttribute("aria-labelledby", triggerId);
     }
-  });
-
-  const updateState = (value: string) => {
-    if (currentValue === value) return;
-
-    currentValue = value;
-
-    triggers.forEach((trigger) => {
-      const isSelected = trigger.dataset["value"] === value;
-      setAria(trigger, "selected", isSelected);
-      trigger.tabIndex = isSelected ? 0 : -1;
-      trigger.setAttribute("data-state", isSelected ? "active" : "inactive");
-    });
-
-    panels.forEach((panel) => {
-      const isSelected = panel.dataset["value"] === value;
-      panel.hidden = !isSelected;
-      panel.setAttribute("data-state", isSelected ? "active" : "inactive");
-    });
-
-    root.setAttribute("data-value", value);
-    updateIndicator();
-    emit(root, "tabs:change", { value });
-    onValueChange?.(value);
-  };
-
-  // Initialize state
-  triggers.forEach((trigger) => {
-    const isSelected = trigger.dataset["value"] === currentValue;
-    setAria(trigger, "selected", isSelected);
-    trigger.tabIndex = isSelected ? 0 : -1;
-    trigger.setAttribute("data-state", isSelected ? "active" : "inactive");
-  });
-
-  panels.forEach((panel) => {
-    const isSelected = panel.dataset["value"] === currentValue;
-    panel.hidden = !isSelected;
-    panel.setAttribute("data-state", isSelected ? "active" : "inactive");
-  });
-
-  root.setAttribute("data-value", currentValue);
+  }
 
   // Update indicator position (CSS variables for smooth animation)
   const updateIndicator = () => {
     if (!indicator) return;
-    const activeTrigger = triggers.find(
-      (t) => t.dataset["value"] === currentValue
-    );
-    if (!activeTrigger) return;
+    const item = itemByValue.get(currentValue);
+    if (!item) return;
 
     const listRect = list.getBoundingClientRect();
-    const triggerRect = activeTrigger.getBoundingClientRect();
+    const triggerRect = item.el.getBoundingClientRect();
 
-    // Set CSS variables on the indicator element
     indicator.style.setProperty(
       "--active-tab-left",
       `${triggerRect.left - listRect.left}px`
@@ -150,69 +182,159 @@ export function createTabs(
     );
   };
 
-  // Initial indicator position
-  updateIndicator();
+  // Unified state application
+  const applyState = (value: string, init = false) => {
+    value = value.trim();
+    if (currentValue === value && !init) return;
 
-  // Click handlers for triggers
-  triggers.forEach((trigger) => {
-    cleanups.push(
-      on(trigger, "click", () => {
-        const value = trigger.dataset["value"];
-        if (value) updateState(value);
-      })
-    );
-  });
+    // Validate: value must exist on an enabled trigger
+    const targetItem = itemByValue.get(value);
+    if (!targetItem || targetItem.disabled) {
+      if (init) {
+        value = firstValue;
+        if (!value) return;
+      } else return;
+    }
+
+    const changed = currentValue !== value;
+    currentValue = value;
+
+    for (const item of items) {
+      const isSelected = item.value === value;
+      setAria(item.el, "selected", isSelected);
+      item.el.tabIndex = isSelected && !item.disabled ? 0 : -1;
+      item.el.dataset["state"] = isSelected ? "active" : "inactive";
+    }
+
+    for (const panel of panels) {
+      const v = (panel.dataset["value"] || "").trim();
+      if (!v) continue;
+      const isSelected = v === value;
+      panel.hidden = !isSelected;
+      panel.dataset["state"] = isSelected ? "active" : "inactive";
+    }
+
+    root.setAttribute("data-value", value);
+    if (indicator) updateIndicator();
+
+    if (changed && !init) {
+      emit(root, "tabs:change", { value });
+      onValueChange?.(value);
+    }
+  };
+
+  // Initialize state
+  applyState(currentValue, true);
+
+  // Keep indicator in sync with layout changes (only if indicator exists)
+  if (indicator) {
+    const indicatorTick = () => requestAnimationFrame(updateIndicator);
+    cleanups.push(on(window, "resize", indicatorTick));
+    cleanups.push(on(list, "scroll", indicatorTick));
+    const ro = new ResizeObserver(indicatorTick);
+    ro.observe(list);
+    cleanups.push(() => ro.disconnect());
+  }
+
+  // Delegated click handler on list
+  cleanups.push(
+    on(list, "click", (e) => {
+      const target = (e.target as HTMLElement).closest?.(
+        '[data-slot="tabs-trigger"]'
+      ) as HTMLElement | null;
+      if (!target) return;
+      const item = itemByEl.get(target);
+      if (item && !item.disabled) applyState(item.value);
+    })
+  );
 
   // Keyboard navigation
+  const isHorizontal = orientation === "horizontal";
+  const prevKey = isHorizontal ? "ArrowLeft" : "ArrowUp";
+  const nextKey = isHorizontal ? "ArrowRight" : "ArrowDown";
+
   cleanups.push(
     on(list, "keydown", (e) => {
-      const target = e.target as HTMLElement;
-      if (!triggers.includes(target)) return;
+      const target = (e.target as HTMLElement).closest?.(
+        '[data-slot="tabs-trigger"]'
+      ) as HTMLElement | null;
+      if (!target) return;
 
-      const currentIndex = triggers.indexOf(target);
-      let nextIndex = currentIndex;
+      const item = itemByEl.get(target);
+      if (!item) return;
 
-      const isHorizontal = orientation === "horizontal";
-      const prevKey = isHorizontal ? "ArrowLeft" : "ArrowUp";
-      const nextKey = isHorizontal ? "ArrowRight" : "ArrowDown";
+      // Early return if no enabled triggers
+      if (enabled.length === 0) return;
+
+      // Handle Enter/Space activation
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        if (!item.disabled) applyState(item.value);
+        return;
+      }
+
+      // ArrowDown from active tab focuses the panel (horizontal mode only)
+      if (
+        isHorizontal &&
+        e.key === "ArrowDown" &&
+        item.value === currentValue
+      ) {
+        const panel = item.panel;
+        if (panel) {
+          e.preventDefault();
+          const focusable = panel.querySelector<HTMLElement>(FOCUSABLE);
+          (focusable || panel).focus();
+          return;
+        }
+      }
+
+      // Get current index in enabled array (O(1) via map)
+      let idx = enabledIndexByValue.get(item.value) ?? -1;
+      if (idx === -1) {
+        // Target is disabled; base nav off currently selected tab
+        idx = enabledIndexByValue.get(currentValue) ?? 0;
+      }
+
+      let nextIdx = idx;
 
       switch (e.key) {
         case prevKey:
-          nextIndex = currentIndex - 1;
-          if (nextIndex < 0) nextIndex = triggers.length - 1;
+          nextIdx = idx - 1;
+          if (nextIdx < 0) nextIdx = enabled.length - 1;
           break;
         case nextKey:
-          nextIndex = currentIndex + 1;
-          if (nextIndex >= triggers.length) nextIndex = 0;
+          nextIdx = idx + 1;
+          if (nextIdx >= enabled.length) nextIdx = 0;
           break;
         case "Home":
-          nextIndex = 0;
+          nextIdx = 0;
           break;
         case "End":
-          nextIndex = triggers.length - 1;
+          nextIdx = enabled.length - 1;
           break;
         default:
           return;
       }
 
       e.preventDefault();
-      const nextTrigger = triggers[nextIndex];
-      if (nextTrigger) {
-        nextTrigger.focus();
-        const value = nextTrigger.dataset["value"];
-        if (value) updateState(value);
+      const next = enabled[nextIdx];
+      if (next) {
+        next.el.focus();
+        if (activationMode === "auto") applyState(next.value);
       }
     })
   );
 
   const controller: TabsController = {
-    select: (value: string) => updateState(value),
+    select: (value: string) => applyState(value),
     get value() {
       return currentValue;
     },
+    updateIndicator,
     destroy: () => {
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
+      bound.delete(root);
     },
   };
 

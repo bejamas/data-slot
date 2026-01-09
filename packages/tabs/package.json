@@ -3,15 +3,24 @@
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
   },
-  "files": ["src"],
+  "files": ["dist"],
   "scripts": {
-    "build": "bun build src/index.ts --outfile ../../dist/tabs.js --format esm --minify --target browser"
+    "build": "tsdown"
   },
   "dependencies": {
     "@data-slot/core": "workspace:*"
@@ -19,4 +28,3 @@
   "keywords": ["headless", "ui", "tabs", "vanilla", "data-slot"],
   "license": "MIT"
 }
-
