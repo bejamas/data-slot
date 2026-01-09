@@ -35,7 +35,16 @@ jobs:
         run: bun run build
 
       - name: Setup npm auth
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "ERROR: NPM_TOKEN secret is not set!"
+            exit 1
+          fi
+          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
+          # Verify npm can authenticate (this will fail if token is invalid)
+          npm whoami
 
       - name: Publish packages
         if: ${{ !inputs.dry_run }}
