@@ -4,6 +4,7 @@
     "": {
       "name": "data-slot-docs",
       "dependencies": {
+        "@data-slot/dialog": "^0.1.2",
         "astro": "^5.0.0",
       },
       "devDependencies": {
@@ -33,6 +34,8 @@
     "@babel/types": ["@babel/types@7.28.5", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-qQ5m48eI/MFLQ5PxQj4PFaprjyCTLI37ElWMmNs0K8Lk3dVeOdNpB3ks8jc7yM5CDmVC73eMVk/trk3fgmrUpA=="],
 
     "@capsizecss/unpack": ["@capsizecss/unpack@4.0.0", "", { "dependencies": { "fontkitten": "^1.0.0" } }, "sha512-VERIM64vtTP1C4mxQ5thVT9fK0apjPFobqybMtA1UdUujWka24ERHbRHFGmpbbhp73MhV+KSsHQH9C6uOTdEQA=="],
+
+    "@data-slot/dialog": ["@data-slot/dialog@0.1.2", "", {}, "sha512-l4actn1oGWOMwEaJreHgpz9FEHbazWaS4Ub4a0MH50EMT+wqfdoA9rmXQnZx4bwpWc5a+JHf4W/4jj/jB9qoZA=="],
 
     "@emnapi/runtime": ["@emnapi/runtime@1.8.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-mehfKSMWjjNol8659Z8KxEMrdSJDDot5SXMq00dM8BN4o+CLNXQ0xH2V7EchNHV4RmbZLmmPdEaXZc5H2FXmDg=="],
 

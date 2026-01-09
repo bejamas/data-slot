@@ -123,7 +123,6 @@ export function createNavigationMenu(
       const contentId = ensureId(content, `nav-menu-content-${safe}`);
       trigger.setAttribute("aria-haspopup", "true");
       trigger.setAttribute("aria-controls", contentId);
-      content.setAttribute("role", "region");
       content.setAttribute("aria-labelledby", triggerId);
     }
   });

@@ -2,7 +2,8 @@
   "name": "data-slot-monorepo",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "website"
   ],
   "scripts": {
     "test": "bun test",
