@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 
 @theme {
-  --font-mono: "JetBrains Mono", monospace;
+  --font-mono: "Geist Mono", monospace;
   --color-bg: #faf9f7;
   --color-text: #1a1a1a;
   --color-muted: #666;
@@ -25,6 +25,10 @@
   --string: #22863a;
   --comment: #6a737d;
   --function: #6f42c1;
+}
+
+html {
+  font-family: var(--font-mono);
 }
 
 /* ============================================

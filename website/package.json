@@ -18,6 +18,7 @@
     "@data-slot/popover": "^0.1.2",
     "@data-slot/tabs": "^0.1.2",
     "@data-slot/tooltip": "^0.1.2",
+    "@fontsource/geist-mono": "^5.2.7",
     "astro": "^5.0.0"
   },
   "devDependencies": {

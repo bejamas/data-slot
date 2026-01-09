@@ -1,5 +1,9 @@
 ---
+import '@fontsource/geist-mono';
+
 import SettingsPanel from "../components/SettingsPanel.astro";
+
+import "../styles/demo.css";
 
 interface Props {
   title: string;
@@ -7,36 +11,43 @@ interface Props {
 }
 
 const { title, description } = Astro.props;
+
 ---
 
 <!doctype html>
 <html lang="en" class="mode-css bg-[#faf9f7] text-[#1a1a1a]">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon shortcut" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="robots" content="index, max-image-preview:large">
+    
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="canonical" href="https://data-slot.com">
+
+    <meta property="og:locale" content="en_US">
+    <meta property="og:site_name" content="data-slot" />
+    <meta property="og:title" content={`${title} - data-slot`} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://data-slot.com" />
+    <meta property="og:image" content="https://data-slot.com/og-image.png" />
+    <meta property="og:description" content={description} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="data-slot" />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content="https://data-slot.com/og-image-x.png" />
+
+    <meta name="apple-mobile-web-app-title" content="data-slot" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
   </head>
   <body class="max-w-[72ch] mx-auto px-6 py-12 font-mono text-[15px] leading-relaxed">
     <SettingsPanel />
     <slot />
   </body>
 </html>
-
-<style is:global>
-  @import "../styles/demo.css";
-
-  /* Font family override for JetBrains Mono */
-  html {
-    font-family: "JetBrains Mono", monospace;
-  }
-</style>
 
 <script is:inline>
   // Restore code mode preference from localStorage
