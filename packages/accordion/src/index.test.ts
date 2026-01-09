@@ -64,7 +64,8 @@ describe('Accordion', () => {
     const { triggers, contents, controller } = setup({ defaultValue: 'one' })
 
     triggers[1]?.click()
-    expect(contents[0]?.hidden).toBe(true)
+    // data-state is set immediately; hidden is delayed for animation
+    expect(contents[0]?.getAttribute('data-state')).toBe('closed')
     expect(contents[1]?.hidden).toBe(false)
     expect(controller.value).toEqual(['two'])
 
@@ -90,7 +91,8 @@ describe('Accordion', () => {
     expect(contents[0]?.hidden).toBe(false)
 
     triggers[0]?.click()
-    expect(contents[0]?.hidden).toBe(true)
+    // data-state is set immediately; hidden is delayed for animation
+    expect(contents[0]?.getAttribute('data-state')).toBe('closed')
 
     controller.destroy()
   })

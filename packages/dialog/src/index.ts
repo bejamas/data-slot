@@ -34,6 +34,12 @@ export interface DialogController {
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
+// Dialog stack for managing Escape key and scroll lock with ref counting
+const dialogStack: DialogController[] = [];
+let scrollLockCount = 0;
+let savedBodyOverflow = "";
+let savedBodyPaddingRight = "";
+
 /**
  * Create a dialog controller for a root element
  *
@@ -82,8 +88,6 @@ export function createDialog(
 
   let isOpen = false;
   let previousActiveElement: HTMLElement | null = null;
-  let savedOverflow = "";
-  let savedPaddingRight = "";
   const cleanups: Array<() => void> = [];
 
   // ARIA setup
@@ -138,20 +142,33 @@ export function createDialog(
       // Store current focus
       previousActiveElement = document.activeElement as HTMLElement;
 
-      // Lock scroll
+      // Add to dialog stack
+      dialogStack.push(controller);
+
+      // Lock scroll with ref counting
       if (lockScroll) {
-        const scrollbarWidth =
-          window.innerWidth - document.documentElement.clientWidth;
-        savedOverflow = document.body.style.overflow;
-        savedPaddingRight = document.body.style.paddingRight;
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
-        document.body.style.overflow = "hidden";
+        if (scrollLockCount === 0) {
+          const scrollbarWidth =
+            window.innerWidth - document.documentElement.clientWidth;
+          savedBodyOverflow = document.body.style.overflow;
+          savedBodyPaddingRight = document.body.style.paddingRight;
+          document.body.style.paddingRight = `${scrollbarWidth}px`;
+          document.body.style.overflow = "hidden";
+        }
+        scrollLockCount++;
       }
     } else {
-      // Unlock scroll
+      // Remove from dialog stack
+      const idx = dialogStack.indexOf(controller);
+      if (idx !== -1) dialogStack.splice(idx, 1);
+
+      // Unlock scroll with ref counting
       if (lockScroll) {
-        document.body.style.overflow = savedOverflow;
-        document.body.style.paddingRight = savedPaddingRight;
+        scrollLockCount--;
+        if (scrollLockCount === 0) {
+          document.body.style.overflow = savedBodyOverflow;
+          document.body.style.paddingRight = savedBodyPaddingRight;
+        }
       }
 
       // Clean up tabindex we may have added
@@ -225,10 +242,13 @@ export function createDialog(
     on(document, "keydown", (e) => {
       if (!isOpen) return;
 
-      // Escape key
+      // Escape key - only topmost dialog responds
       if (e.key === "Escape" && closeOnEscape) {
-        e.preventDefault();
-        updateState(false);
+        const topmost = dialogStack[dialogStack.length - 1];
+        if (topmost === controller) {
+          e.preventDefault();
+          updateState(false);
+        }
         return;
       }
 

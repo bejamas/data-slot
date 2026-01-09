@@ -6,6 +6,7 @@ describe("Dialog", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="root">
         <button data-slot="dialog-trigger">Open Dialog</button>
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">
           <h2 data-slot="dialog-title">Dialog Title</h2>
           <p data-slot="dialog-description">Dialog description text.</p>
@@ -116,17 +117,15 @@ describe("Dialog", () => {
 
   it("closes on click outside content", () => {
     const { controller } = setup();
+    const overlay = document.querySelector(
+      '[data-slot="dialog-overlay"]'
+    ) as HTMLElement;
 
     controller.open();
     expect(controller.isOpen).toBe(true);
 
-    // Click outside (need both pointerdown and pointerup to complete click)
-    document.body.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true })
-    );
-    document.body.dispatchEvent(
-      new PointerEvent("pointerup", { bubbles: true })
-    );
+    // Click on overlay closes the dialog
+    overlay.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     expect(controller.isOpen).toBe(false);
 
     controller.destroy();
@@ -231,6 +230,7 @@ describe("Dialog", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="root">
         <button data-slot="dialog-trigger">Open</button>
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">Content</div>
       </div>
     `;
@@ -267,6 +267,7 @@ describe("Dialog", () => {
   it("works without a trigger", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="root">
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">
           <button data-slot="dialog-close">Close</button>
         </div>
@@ -292,6 +293,7 @@ describe("Dialog", () => {
     document.body.innerHTML = `
       <div data-slot="dialog">
         <button data-slot="dialog-trigger">Open</button>
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">Content</div>
       </div>
     `;
@@ -331,9 +333,11 @@ describe("Dialog", () => {
   it("handles stacked dialogs - only topmost responds to Escape", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="dialog1">
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">Dialog 1</div>
       </div>
       <div data-slot="dialog" id="dialog2">
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">Dialog 2</div>
       </div>
     `;
@@ -367,9 +371,11 @@ describe("Dialog", () => {
   it("handles stacked dialogs - scroll lock uses ref counting", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="dialog1">
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">Dialog 1</div>
       </div>
       <div data-slot="dialog" id="dialog2">
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">Dialog 2</div>
       </div>
     `;
@@ -399,6 +405,7 @@ describe("Dialog", () => {
   it("supports alertDialog role option", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="root">
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">Alert content</div>
       </div>
     `;
@@ -416,6 +423,7 @@ describe("Dialog", () => {
   it("prioritizes [autofocus] element when opening", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="root">
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">
           <input type="text" placeholder="First input" />
           <input type="text" placeholder="Autofocus input" autofocus />
@@ -466,6 +474,7 @@ describe("Dialog", () => {
   it("handles double open() calls without duplicating stack entries", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="root">
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">Content</div>
       </div>
     `;
@@ -507,6 +516,7 @@ describe("Dialog", () => {
     document.body.innerHTML = `
       <button id="outside-btn">Outside</button>
       <div data-slot="dialog" id="root">
+        <div data-slot="dialog-overlay"></div>
         <div data-slot="dialog-content">
           <button>Inside</button>
         </div>

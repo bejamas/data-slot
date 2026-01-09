@@ -227,8 +227,10 @@ describe("NavigationMenu", () => {
   });
 
   it("closes on Escape key", () => {
-    const { controller } = setup();
+    const { triggers, controller } = setup();
 
+    // Focus trigger so isMenuActive() returns true
+    triggers[0]?.focus();
     controller.open("products");
     expect(controller.value).toBe("products");
 
@@ -241,8 +243,10 @@ describe("NavigationMenu", () => {
   });
 
   it("closes on click outside", () => {
-    const { controller } = setup();
+    const { triggers, controller } = setup();
 
+    // Focus trigger so isMenuActive() returns true
+    triggers[0]?.focus();
     controller.open("products");
     expect(controller.value).toBe("products");
 
@@ -361,6 +365,10 @@ describe("NavigationMenu", () => {
 
   // Content keyboard navigation tests
   describe("content keyboard navigation", () => {
+    // Helper to flush requestAnimationFrame
+    const flushRAF = () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
     const setupWithLinks = () => {
       document.body.innerHTML = `
         <nav data-slot="navigation-menu" id="root">
@@ -402,7 +410,7 @@ describe("NavigationMenu", () => {
       return { root, triggers, contents, link1, link2, link3, controller };
     };
 
-    it("ArrowDown from trigger moves focus to first content element", () => {
+    it("ArrowDown from trigger moves focus to first content element", async () => {
       const { triggers, link1, controller } = setupWithLinks();
 
       triggers[0]?.focus();
@@ -412,12 +420,14 @@ describe("NavigationMenu", () => {
         new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
       );
 
+      // Focus happens in requestAnimationFrame
+      await flushRAF();
       expect(document.activeElement).toBe(link1);
 
       controller.destroy();
     });
 
-    it("ArrowDown navigates through content elements", () => {
+    it("ArrowDown navigates through content elements", async () => {
       const { triggers, link1, link2, link3, controller } = setupWithLinks();
 
       triggers[0]?.focus();
@@ -427,6 +437,7 @@ describe("NavigationMenu", () => {
       triggers[0]?.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
       );
+      await flushRAF();
       expect(document.activeElement).toBe(link1);
 
       // Navigate to second link
@@ -444,7 +455,7 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
 
-    it("ArrowUp from first content element returns focus to trigger", () => {
+    it("ArrowUp from first content element returns focus to trigger", async () => {
       const { triggers, link1, controller } = setupWithLinks();
 
       triggers[0]?.focus();
@@ -454,6 +465,7 @@ describe("NavigationMenu", () => {
       triggers[0]?.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
       );
+      await flushRAF();
       expect(document.activeElement).toBe(link1);
 
       // ArrowUp should return to trigger
@@ -465,7 +477,7 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
 
-    it("ArrowUp navigates backwards through content elements", () => {
+    it("ArrowUp navigates backwards through content elements", async () => {
       const { triggers, link1, link2, link3, controller } = setupWithLinks();
 
       triggers[0]?.focus();
@@ -475,6 +487,7 @@ describe("NavigationMenu", () => {
       triggers[0]?.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
       );
+      await flushRAF();
       link1.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
       );
@@ -497,7 +510,7 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
 
-    it("Escape from content closes menu and returns focus to trigger", () => {
+    it("Escape from content closes menu and returns focus to trigger", async () => {
       const { triggers, link1, controller } = setupWithLinks();
 
       triggers[0]?.focus();
@@ -507,6 +520,7 @@ describe("NavigationMenu", () => {
       triggers[0]?.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
       );
+      await flushRAF();
       expect(document.activeElement).toBe(link1);
 
       // Escape should close and return to trigger
@@ -536,7 +550,7 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
 
-    it("ArrowRight navigates through content elements", () => {
+    it("ArrowRight navigates through content elements", async () => {
       const { triggers, link1, link2, link3, controller } = setupWithLinks();
 
       triggers[0]?.focus();
@@ -546,6 +560,7 @@ describe("NavigationMenu", () => {
       triggers[0]?.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
       );
+      await flushRAF();
       expect(document.activeElement).toBe(link1);
 
       // Navigate with ArrowRight
@@ -562,7 +577,7 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
 
-    it("ArrowLeft navigates backwards through content elements", () => {
+    it("ArrowLeft navigates backwards through content elements", async () => {
       const { triggers, link1, link2, link3, controller } = setupWithLinks();
 
       triggers[0]?.focus();
@@ -572,6 +587,7 @@ describe("NavigationMenu", () => {
       triggers[0]?.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
       );
+      await flushRAF();
       link1.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
       );
@@ -594,7 +610,7 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
 
-    it("ArrowLeft from first content element returns focus to trigger", () => {
+    it("ArrowLeft from first content element returns focus to trigger", async () => {
       const { triggers, link1, controller } = setupWithLinks();
 
       triggers[0]?.focus();
@@ -604,6 +620,7 @@ describe("NavigationMenu", () => {
       triggers[0]?.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
       );
+      await flushRAF();
       expect(document.activeElement).toBe(link1);
 
       // ArrowLeft should return to trigger

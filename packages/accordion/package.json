@@ -18,13 +18,21 @@
       }
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsdown"
   },
   "dependencies": {
     "@data-slot/core": "workspace:*"
   },
-  "keywords": ["headless", "ui", "accordion", "vanilla", "data-slot"],
+  "keywords": [
+    "headless",
+    "ui",
+    "accordion",
+    "vanilla",
+    "data-slot"
+  ],
   "license": "MIT"
 }

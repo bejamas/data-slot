@@ -24,7 +24,7 @@ npm install @data-slot/accordion
 
 <script type="module">
   import { create } from "@data-slot/accordion";
-  
+
   const controllers = create();
 </script>
 ```
@@ -58,22 +58,22 @@ const accordion = createAccordion(element, {
 
 ### Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `multiple` | `boolean` | `false` | Allow multiple items open at once |
-| `defaultValue` | `string \| string[]` | `undefined` | Initially expanded item(s) |
-| `collapsible` | `boolean` | `true` | Whether items can be fully collapsed (single mode only) |
-| `onValueChange` | `(value: string[]) => void` | `undefined` | Callback when expanded items change |
+| Option          | Type                        | Default     | Description                                             |
+| --------------- | --------------------------- | ----------- | ------------------------------------------------------- |
+| `multiple`      | `boolean`                   | `false`     | Allow multiple items open at once                       |
+| `defaultValue`  | `string \| string[]`        | `undefined` | Initially expanded item(s)                              |
+| `collapsible`   | `boolean`                   | `true`      | Whether items can be fully collapsed (single mode only) |
+| `onValueChange` | `(value: string[]) => void` | `undefined` | Callback when expanded items change                     |
 
 ### Controller
 
-| Method/Property | Description |
-|-----------------|-------------|
-| `expand(value)` | Expand an item by value |
-| `collapse(value)` | Collapse an item by value |
-| `toggle(value)` | Toggle an item by value |
-| `value` | Currently expanded values (readonly `string[]`) |
-| `destroy()` | Cleanup all event listeners |
+| Method/Property   | Description                                     |
+| ----------------- | ----------------------------------------------- |
+| `expand(value)`   | Expand an item by value                         |
+| `collapse(value)` | Collapse an item by value                       |
+| `toggle(value)`   | Toggle an item by value                         |
+| `value`           | Currently expanded values (readonly `string[]`) |
+| `destroy()`       | Cleanup all event listeners                     |
 
 ## Markup Structure
 
@@ -120,7 +120,10 @@ Use `data-state` attributes for CSS styling:
 With Tailwind:
 
 ```html
-<div data-slot="accordion-item" class="grid grid-rows-[auto_0fr] data-[state=open]:grid-rows-[auto_1fr] transition-[grid-template-rows]">
+<div
+  data-slot="accordion-item"
+  class="grid grid-rows-[auto_0fr] data-[state=open]:grid-rows-[auto_1fr] transition-[grid-template-rows]"
+>
   <button data-slot="accordion-trigger">...</button>
   <div data-slot="accordion-content" class="overflow-hidden">...</div>
 </div>
@@ -128,13 +131,13 @@ With Tailwind:
 
 ## Keyboard Navigation
 
-| Key | Action |
-|-----|--------|
-| `Enter` / `Space` | Toggle focused item |
-| `ArrowDown` | Move focus to next trigger |
-| `ArrowUp` | Move focus to previous trigger |
-| `Home` | Move focus to first trigger |
-| `End` | Move focus to last trigger |
+| Key               | Action                         |
+| ----------------- | ------------------------------ |
+| `Enter` / `Space` | Toggle focused item            |
+| `ArrowDown`       | Move focus to next trigger     |
+| `ArrowUp`         | Move focus to previous trigger |
+| `Home`            | Move focus to first trigger    |
+| `End`             | Move focus to last trigger     |
 
 ## Events
 
@@ -149,4 +152,3 @@ element.addEventListener("accordion:change", (e) => {
 ## License
 
 MIT
-
