@@ -52,6 +52,14 @@ const { title, description } = Astro.props;
 
     <meta name="apple-mobile-web-app-title" content="data-slot" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <!-- Privacy-friendly analytics by Plausible -->
+    <script async src="https://plausible.io/js/pa-zvT90o__72pucRtEL557X.js"></script>
+    <script>
+      window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+      plausible.init()
+    </script>
+
   </head>
   <body class="max-w-[72ch] mx-auto px-6 py-12 font-mono text-[15px] leading-relaxed">
     <SettingsPanel />
