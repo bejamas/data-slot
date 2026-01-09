@@ -1,6 +1,6 @@
 {
   "name": "@data-slot/disclosure",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
@@ -18,13 +18,21 @@
       }
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsdown"
   },
   "dependencies": {
     "@data-slot/core": "workspace:*"
   },
-  "keywords": ["headless", "ui", "disclosure", "vanilla", "data-slot"],
+  "keywords": [
+    "headless",
+    "ui",
+    "disclosure",
+    "vanilla",
+    "data-slot"
+  ],
   "license": "MIT"
 }

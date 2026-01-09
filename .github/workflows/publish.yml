@@ -15,6 +15,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -37,15 +40,24 @@ jobs:
       - name: Publish packages
         if: ${{ !inputs.dry_run }}
         run: |
+          # Helper function: pack with bun (resolves workspace:*), publish with npm (supports provenance)
+          publish_pkg() {
+            cd "$1"
+            bun pm pack
+            npm publish *.tgz --access public --provenance
+            rm *.tgz
+            cd - > /dev/null
+          }
+
           # Publish in dependency order: core first, then the rest
-          cd packages/core && npm publish --access public
-          cd ../accordion && npm publish --access public
-          cd ../dialog && npm publish --access public
-          cd ../disclosure && npm publish --access public
-          cd ../navigation-menu && npm publish --access public
-          cd ../popover && npm publish --access public
-          cd ../tabs && npm publish --access public
-          cd ../tooltip && npm publish --access public
+          publish_pkg packages/core
+          publish_pkg packages/accordion
+          publish_pkg packages/dialog
+          publish_pkg packages/disclosure
+          publish_pkg packages/navigation-menu
+          publish_pkg packages/popover
+          publish_pkg packages/tabs
+          publish_pkg packages/tooltip
 
       - name: Dry run - show what would be published
         if: ${{ inputs.dry_run }}
@@ -56,3 +68,9 @@ jobs:
             version=$(jq -r .version "$pkg/package.json")
             echo "  $name@$version"
           done
+
+      - name: Create GitHub Release
+        if: ${{ !inputs.dry_run && startsWith(github.ref, 'refs/tags/') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

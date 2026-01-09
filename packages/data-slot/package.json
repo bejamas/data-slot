@@ -1,6 +1,6 @@
 {
   "name": "data-slot",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "sideEffects": false,
   "description": "Headless UI components for vanilla JavaScript. Convenience re-exports from @data-slot/* packages.",
@@ -99,7 +99,9 @@
       }
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsdown"
   },
@@ -113,7 +115,13 @@
     "@data-slot/disclosure": "workspace:*",
     "@data-slot/navigation-menu": "workspace:*"
   },
-  "keywords": ["headless", "ui", "components", "vanilla", "data-slot"],
+  "keywords": [
+    "headless",
+    "ui",
+    "components",
+    "vanilla",
+    "data-slot"
+  ],
   "license": "MIT",
   "homepage": "https://github.com/user/data-slot",
   "repository": {
