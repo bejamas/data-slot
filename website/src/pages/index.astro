@@ -16,15 +16,25 @@ import Tooltip from "../components/examples/Tooltip.astro";
 import Popover from "../components/examples/Popover.astro";
 import NavigationMenu from "../components/examples/NavigationMenu.astro";
 
-const quickStartCode = `// Auto-discover all instances
-import { create } from "@data-slot/tabs";
+const quickStartHtml = `<div data-slot="tabs" data-default-value="one">
+  <div data-slot="tabs-list">
+    <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+    <button data-slot="tabs-trigger" data-value="two">Tab Two</button>
+  </div>
+  <div data-slot="tabs-content" data-value="one">Content One</div>
+  <div data-slot="tabs-content" data-value="two">Content Two</div>
+</div>`;
+
+const quickStartCode = `import { create } from "@data-slot/tabs";
+
+// Auto-discover and bind all [data-slot="tabs"] elements
 const controllers = create();
 
 // Or target a specific element
 import { createTabs } from "@data-slot/tabs";
 const tabs = createTabs(element);
 
-tabs.select("news");  // programmatic control
+tabs.select("two");   // programmatic control
 tabs.destroy();       // cleanup`;
 
 const stylingCode = `/* State-based styling */
@@ -75,8 +85,13 @@ bun add @data-slot/dialog`}
   <!-- Quick Start -->
   <h2 class="text-base font-medium mt-12 mb-4 text-[#666] before:content-['##_'] before:text-border">QUICK START</h2>
   <p class="my-4">
-    Components use <code class="bg-[#f0eeeb] px-1.5 py-0.5">data-slot</code> attributes for markup. Import and
-    call <code class="bg-[#f0eeeb] px-1.5 py-0.5">create()</code> to bind behavior:
+    Components use <code class="bg-[#f0eeeb] px-1.5 py-0.5">data-slot</code> attributes for markup:
+  </p>
+  <div class="code-block">
+    <Code code={quickStartHtml} lang="html" theme="vitesse-light" />
+  </div>
+  <p class="my-4">
+    Import and call <code class="bg-[#f0eeeb] px-1.5 py-0.5">create()</code> to bind behavior:
   </p>
   <div class="code-block">
     <Code code={quickStartCode} lang="javascript" theme="vitesse-light" />
