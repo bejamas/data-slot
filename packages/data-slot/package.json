@@ -105,7 +105,7 @@
   "scripts": {
     "build": "tsdown"
   },
-  "dependencies": {
+  "devDependencies": {
     "@data-slot/core": "workspace:*",
     "@data-slot/tabs": "workspace:*",
     "@data-slot/dialog": "workspace:*",

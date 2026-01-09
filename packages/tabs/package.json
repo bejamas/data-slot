@@ -24,7 +24,7 @@
   "scripts": {
     "build": "tsdown"
   },
-  "dependencies": {
+  "devDependencies": {
     "@data-slot/core": "workspace:*"
   },
   "repository": {
