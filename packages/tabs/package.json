@@ -27,6 +27,11 @@
   "dependencies": {
     "@data-slot/core": "workspace:*"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bejamas/data-slot",
+    "directory": "packages/tabs"
+  },
   "keywords": [
     "headless",
     "ui",

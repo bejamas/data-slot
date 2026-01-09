@@ -123,9 +123,10 @@
     "data-slot"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/user/data-slot",
+  "homepage": "https://github.com/bejamas/data-slot",
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/data-slot"
+    "url": "https://github.com/bejamas/data-slot",
+    "directory": "packages/data-slot"
   }
 }

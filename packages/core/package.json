@@ -24,6 +24,11 @@
   "scripts": {
     "build": "tsdown"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bejamas/data-slot",
+    "directory": "packages/core"
+  },
   "keywords": [
     "headless",
     "ui",
