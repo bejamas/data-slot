@@ -18,11 +18,21 @@ const { title, description } = Astro.props;
 <html lang="en" class="mode-css bg-[#faf9f7] text-[#1a1a1a]">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="icon shortcut" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="manifest.json">
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="data-slot">
+    <meta name="apple-mobile-web-app-title" content="data-slot">
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="msapplication-navbutton-color" content="#1a1a1a">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="msapplication-starturl" content="https://data-slot.com">
     <meta name="generator" content={Astro.generator} />
     <meta name="robots" content="index, max-image-preview:large">
-    
+
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href="https://data-slot.com">
