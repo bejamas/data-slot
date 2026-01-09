@@ -7,11 +7,14 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun run --filter './packages/*' build"
+    "build": "bun run --filter './packages/*' build",
+    "version": "bun run scripts/version.ts",
+    "release": "bun run version"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@happy-dom/global-registrator": "^16.0.0",
+    "tsdown": "^0.12.3",
     "typescript": "^5"
   }
 }

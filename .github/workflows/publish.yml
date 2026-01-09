@@ -1,0 +1,58 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (skip actual publish)"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests
+        run: bun test
+
+      - name: Build packages
+        run: bun run build
+
+      - name: Setup npm auth
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
+      - name: Publish packages
+        if: ${{ !inputs.dry_run }}
+        run: |
+          # Publish in dependency order: core first, then the rest
+          cd packages/core && npm publish --access public
+          cd ../accordion && npm publish --access public
+          cd ../dialog && npm publish --access public
+          cd ../disclosure && npm publish --access public
+          cd ../navigation-menu && npm publish --access public
+          cd ../popover && npm publish --access public
+          cd ../tabs && npm publish --access public
+          cd ../tooltip && npm publish --access public
+
+      - name: Dry run - show what would be published
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "Would publish the following packages:"
+          for pkg in packages/*/; do
+            name=$(jq -r .name "$pkg/package.json")
+            version=$(jq -r .version "$pkg/package.json")
+            echo "  $name@$version"
+          done
