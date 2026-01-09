@@ -92,7 +92,7 @@ const tailwindCode = `<div data-slot="accordion">
 ---
 
 <ExampleBlock label="multiple mode">
-  <div slot="preview" data-slot="accordion" id="accordion-multiple">
+  <div slot="preview-css" data-slot="accordion" id="accordion-multiple-css">
     <div data-slot="accordion-item" data-value="item1" class="accordion-item">
       <button data-slot="accordion-trigger" class="accordion-trigger">First item</button>
       <div class="accordion-content-wrapper">
@@ -108,6 +108,38 @@ const tailwindCode = `<div data-slot="accordion">
       <div class="accordion-content-wrapper">
         <div data-slot="accordion-content" class="accordion-content">
           <div class="accordion-content-inner">
+            Try clicking both items — they stay open independently.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div slot="preview-tailwind" data-slot="accordion" id="accordion-multiple-tw">
+    <div data-slot="accordion-item" data-value="item1" class="border-b border-dashed border-gray-300 last:border-b-0 group">
+      <button
+        data-slot="accordion-trigger"
+        class="w-full py-3 bg-transparent border-none text-left cursor-pointer flex justify-between items-center after:content-['+'] after:text-gray-500 after:transition-transform after:duration-300 aria-expanded:after:rotate-45"
+      >
+        First item
+      </button>
+      <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-data-[state=open]:grid-rows-[1fr]">
+        <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+          <div class="pb-4 text-gray-500">
+            With <code>multiple: true</code>, multiple items can be open simultaneously.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div data-slot="accordion-item" data-value="item2" class="border-b border-dashed border-gray-300 last:border-b-0 group">
+      <button
+        data-slot="accordion-trigger"
+        class="w-full py-3 bg-transparent border-none text-left cursor-pointer flex justify-between items-center after:content-['+'] after:text-gray-500 after:transition-transform after:duration-300 aria-expanded:after:rotate-45"
+      >
+        Second item
+      </button>
+      <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-data-[state=open]:grid-rows-[1fr]">
+        <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+          <div class="pb-4 text-gray-500">
             Try clicking both items — they stay open independently.
           </div>
         </div>

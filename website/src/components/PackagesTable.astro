@@ -27,11 +27,10 @@ const border = `+${"-".repeat(nameWidth + 2)}+${"-".repeat(sizeWidth + 2)}+${"-"
 const separator = `|${"-".repeat(nameWidth + 2)}+${"-".repeat(sizeWidth + 2)}+${"-".repeat(descWidth + 2)}|`;
 ---
 
-<div class="ascii-table">
-  <pre>{border}
+<div class="my-4 overflow-x-auto">
+  <pre class="text-sm leading-normal">{border}
 | {pad("Package", nameWidth)} | {padStart("Size", sizeWidth)} | {pad("Description", descWidth)} |
 {separator}
 {packages.map((pkg) => `| ${pad(pkg.name, nameWidth)} | ${padStart(pkg.sizeFormatted, sizeWidth)} | ${pad(pkg.description, descWidth)} |`).join("\n")}
 {border}</pre>
 </div>
-

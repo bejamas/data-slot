@@ -65,12 +65,11 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
     data-slot="popover-content"
     data-position="bottom"
     class="absolute top-full left-0 mt-2 bg-white border border-gray-300
-           p-4 min-w-[200px] z-50 opacity-100
-           transition-opacity duration-200
-           hidden:opacity-0 hidden:pointer-events-none"
+           p-4 min-w-[200px] z-50 rounded-lg shadow-lg
+           opacity-100 transition-opacity duration-200"
     hidden
   >
-    <div class="font-bold mb-2">Popover Panel</div>
+    <div class="font-bold mb-2 mt-0">Popover Panel</div>
     <p class="text-gray-500 text-sm mb-3">
       Unlike tooltips, popovers stay open until dismissed.
       Click outside or press Escape to close.
@@ -78,16 +77,23 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
     <button
       data-slot="popover-close"
       class="px-2.5 py-1 bg-transparent border border-gray-300
-             cursor-pointer hover:bg-gray-100 transition-colors"
+             cursor-pointer hover:bg-code-bg transition-colors"
     >
       Got it
     </button>
   </div>
-</div>`;
+</div>
+
+/* Note: Add this CSS override to allow transitions with hidden attribute */
+[data-slot="popover-content"][hidden] {
+  display: block !important;
+  opacity: 0;
+  pointer-events: none;
+}`;
 ---
 
 <ExampleBlock>
-  <div slot="preview" data-slot="popover" class="popover-root">
+  <div slot="preview-css" data-slot="popover" class="popover-root" id="popover-css">
     <button data-slot="popover-trigger" class="popover-trigger-btn">Open Popover</button>
     <div data-slot="popover-content" class="popover-content" hidden>
       <div class="popover-title">Popover Panel</div>
@@ -96,6 +102,32 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
         Click outside or press Escape to close.
       </p>
       <button data-slot="popover-close" class="popover-close-btn">Got it</button>
+    </div>
+  </div>
+  <div slot="preview-tailwind" data-slot="popover" class="relative inline-block" id="popover-tw">
+    <button
+      data-slot="popover-trigger"
+      class="px-4 py-2 bg-gray-900 text-white border-none cursor-pointer hover:opacity-90 transition-opacity"
+    >
+      Open Popover
+    </button>
+    <div
+      data-slot="popover-content"
+      data-position="bottom"
+      class="absolute top-full left-0 mt-2 bg-white border border-gray-300 p-4 min-w-[200px] z-50 rounded-lg shadow-lg opacity-100 transition-opacity duration-200"
+      hidden
+    >
+      <div class="font-bold mb-2 mt-0">Popover Panel</div>
+      <p class="text-gray-500 text-sm mb-3">
+        Unlike tooltips, popovers stay open until dismissed.
+        Click outside or press Escape to close.
+      </p>
+      <button
+        data-slot="popover-close"
+        class="px-2.5 py-1 bg-transparent border border-gray-300 cursor-pointer hover:bg-code-bg transition-colors"
+      >
+        Got it
+      </button>
     </div>
   </div>
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />

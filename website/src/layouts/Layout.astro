@@ -3,17 +3,19 @@ import SettingsPanel from "../components/SettingsPanel.astro";
 
 interface Props {
   title: string;
+  description: string;
 }
 
-const { title } = Astro.props;
+const { title, description } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en" class="mode-css">
+<html lang="en" class="mode-css bg-[#faf9f7] text-[#1a1a1a]">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
+    <meta name="description" content={description} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -21,7 +23,7 @@ const { title } = Astro.props;
       rel="stylesheet"
     />
   </head>
-  <body>
+  <body class="max-w-[72ch] mx-auto px-6 py-12 font-mono text-[15px] leading-relaxed">
     <SettingsPanel />
     <slot />
   </body>
@@ -29,6 +31,11 @@ const { title } = Astro.props;
 
 <style is:global>
   @import "../styles/demo.css";
+
+  /* Font family override for JetBrains Mono */
+  html {
+    font-family: "JetBrains Mono", monospace;
+  }
 </style>
 
 <script is:inline>
@@ -39,4 +46,3 @@ const { title } = Astro.props;
     document.documentElement.classList.add("mode-tailwind");
   }
 </script>
-

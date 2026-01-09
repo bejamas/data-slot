@@ -65,7 +65,7 @@ const tailwindCode = `<div data-slot="tabs" data-default-value="one">
 ---
 
 <ExampleBlock>
-  <div slot="preview" data-slot="tabs" data-default-value="html">
+  <div slot="preview-css" data-slot="tabs" data-default-value="html" id="tabs-basic-css">
     <div data-slot="tabs-list" class="tabs-list">
       <button data-slot="tabs-trigger" data-value="html" class="tabs-trigger">HTML</button>
       <button data-slot="tabs-trigger" data-value="css" class="tabs-trigger">CSS</button>
@@ -95,6 +95,65 @@ const tailwindCode = `<div data-slot="tabs" data-default-value="one">
       />
     </div>
     <div data-slot="tabs-content" data-value="js" class="tabs-content">
+      <Code
+        code={`import { create } from "@data-slot/tabs";
+
+const [tabs] = create();
+tabs.select("css");
+console.log(tabs.value); // "css"`}
+        lang="javascript"
+        theme="vitesse-light"
+      />
+    </div>
+  </div>
+  <div slot="preview-tailwind" data-slot="tabs" data-default-value="html" id="tabs-basic-tw">
+    <div data-slot="tabs-list" class="flex border-b border-gray-300 mb-4">
+      <button
+        data-slot="tabs-trigger"
+        data-value="html"
+        class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer data-[state=active]:text-gray-900 data-[state=active]:border-gray-900 data-[state=active]:font-medium"
+      >
+        HTML
+      </button>
+      <button
+        data-slot="tabs-trigger"
+        data-value="css"
+        class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer data-[state=active]:text-gray-900 data-[state=active]:border-gray-900 data-[state=active]:font-medium"
+      >
+        CSS
+      </button>
+      <button
+        data-slot="tabs-trigger"
+        data-value="js"
+        class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer data-[state=active]:text-gray-900 data-[state=active]:border-gray-900 data-[state=active]:font-medium"
+      >
+        JS
+      </button>
+    </div>
+    <div data-slot="tabs-content" data-value="html" class="py-4 hidden data-[state=active]:block">
+      <Code
+        code={`<div data-slot="tabs">
+  <div data-slot="tabs-list">
+    <button data-slot="tabs-trigger" data-value="one">Tab</button>
+  </div>
+  <div data-slot="tabs-content" data-value="one">...</div>
+</div>`}
+        lang="html"
+        theme="vitesse-light"
+      />
+    </div>
+    <div data-slot="tabs-content" data-value="css" class="py-4 hidden data-[state=active]:block">
+      <Code
+        code={`/* Use data-state for styling */
+[data-slot="tabs-trigger"][data-state="active"] {
+  font-weight: bold;
+  border-bottom: 2px solid;
+}`}
+        lang="css"
+        theme="vitesse-light"
+      />
+    </div>
+    <div data-slot="tabs-content" data-value="js" class="py-4 hidden data-[state=active]:block">
       <Code
         code={`import { create } from "@data-slot/tabs";
 

@@ -1,164 +1,41 @@
 ---
-import packageJson from "../../../../package.json";
-
 // Get version from the main package.json
 const version = "0.1.0"; // We'll use a fixed version for the docs
 ---
 
-<div class="settings-panel" id="settings-panel">
-  <div class="settings-header">
-    <span class="settings-icon">⚙</span>
-    <span class="settings-title">settings</span>
+<div class="fixed top-4 right-4 z-10 text-xs bg-[#faf9f7] border border-[#ccc] min-w-[180px] max-md:top-auto max-md:bottom-4 max-md:right-4 max-md:left-4 max-md:min-w-0" id="settings-panel">
+  <div class="flex items-center gap-2 px-2.5 py-1.5 border-b border-dashed border-[#ccc] bg-[#f0eeeb]">
+    <span class="opacity-60">⚙</span>
+    <span class="text-[#666] lowercase">settings</span>
   </div>
-  <div class="settings-body">
-    <div class="settings-row">
-      <span class="settings-label">examples mode:</span>
-      <div class="settings-toggle">
-        <button type="button" class="toggle-btn" data-mode="css" aria-pressed="true">
+  <div class="px-2.5 py-2">
+    <div class="flex justify-between items-center py-1">
+      <span class="text-[#666] mr-2 before:content-['//_'] before:text-[#ccc]">examples mode:</span>
+      <div class="flex items-center gap-1">
+        <button type="button" class="toggle-btn font-mono text-xs bg-transparent border-none cursor-pointer text-[#666] px-1.5 py-0.5 rounded-sm transition-colors hover:text-[#1a1a1a] aria-pressed:text-[#faf9f7] aria-pressed:bg-[#1a1a1a]" data-mode="css" aria-pressed="true">
           css
         </button>
-        <span class="toggle-sep">/</span>
-        <button type="button" class="toggle-btn" data-mode="tailwind" aria-pressed="false">
+        <span class="text-[#ccc]">/</span>
+        <button type="button" class="toggle-btn font-mono text-xs bg-transparent border-none cursor-pointer text-[#666] px-1.5 py-0.5 rounded-sm transition-colors hover:text-[#1a1a1a] aria-pressed:text-[#faf9f7] aria-pressed:bg-[#1a1a1a]" data-mode="tailwind" aria-pressed="false">
           tailwind
         </button>
       </div>
     </div>
-    <div class="settings-row">
-      <span class="settings-label">ver:</span>
-      <span class="settings-value">{version}</span>
+    <div class="flex justify-between items-center py-1">
+      <span class="text-[#666] mr-2 before:content-['//_'] before:text-[#ccc]">ver:</span>
+      <span class="text-[#22863a]">{version}</span>
     </div>
   </div>
-  <div class="settings-footer">
-    <a href="https://github.com/user/data-slot" class="settings-link">github</a>
-    <span class="settings-sep">·</span>
-    <a href="https://npmjs.com/org/data-slot" class="settings-link">npm</a>
+  <div class="px-2.5 py-1.5 border-t border-dashed border-[#ccc] flex gap-2 items-center">
+    <a href="https://github.com/user/data-slot" class="text-[#666] no-underline text-[0.75rem] hover:text-[#0066cc]">github</a>
+    <span class="text-[#ccc] text-[0.75rem]">·</span>
+    <a href="https://npmjs.com/org/data-slot" class="text-[#666] no-underline text-[0.75rem] hover:text-[#0066cc]">npm</a>
   </div>
 </div>
 
-<style>
-  .settings-panel {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 10;
-    font-size: 0.8rem;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    min-width: 180px;
-  }
-
-  .settings-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.6rem;
-    border-bottom: 1px dashed var(--border);
-    background: var(--code-bg);
-  }
-
-  .settings-icon {
-    opacity: 0.6;
-  }
-
-  .settings-title {
-    color: var(--muted);
-    text-transform: lowercase;
-  }
-
-  .settings-body {
-    padding: 0.5rem 0.6rem;
-  }
-
-  .settings-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.25rem 0;
-  }
-
-  .settings-label {
-    color: var(--muted);
-    margin-right: 0.5rem;
-  }
-
-  .settings-label::before {
-    content: "// ";
-    color: var(--border);
-  }
-
-  .settings-value {
-    color: var(--string);
-  }
-
-  .settings-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-
-  .toggle-btn {
-    font-family: inherit;
-    font-size: inherit;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--muted);
-    padding: 0.15rem 0.35rem;
-    transition: color 0.15s, background 0.15s;
-    border-radius: 2px;
-  }
-
-  .toggle-btn:hover {
-    color: var(--text);
-  }
-
-  .toggle-btn[aria-pressed="true"] {
-    color: var(--bg);
-    background: var(--text);
-  }
-
-  .toggle-sep {
-    color: var(--border);
-  }
-
-  .settings-footer {
-    padding: 0.4rem 0.6rem;
-    border-top: 1px dashed var(--border);
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-  }
-
-  .settings-link {
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 0.75rem;
-  }
-
-  .settings-link:hover {
-    color: var(--accent);
-  }
-
-  .settings-sep {
-    color: var(--border);
-    font-size: 0.75rem;
-  }
-
-  /* Responsive - hide on very small screens */
-  @media (max-width: 600px) {
-    .settings-panel {
-      top: auto;
-      bottom: 1rem;
-      right: 1rem;
-      left: 1rem;
-      min-width: auto;
-    }
-  }
-</style>
-
 <script>
   function initSettingsPanel() {
-    const buttons = document.querySelectorAll(".settings-panel .toggle-btn");
+    const buttons = document.querySelectorAll("#settings-panel .toggle-btn");
 
     buttons.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -174,7 +51,7 @@ const version = "0.1.0"; // We'll use a fixed version for the docs
         document.documentElement.classList.add(`mode-${mode}`);
 
         // Persist preference
-        localStorage.setItem("code-mode", mode);
+        localStorage.setItem("code-mode", mode ?? "");
       });
     });
 
@@ -182,7 +59,7 @@ const version = "0.1.0"; // We'll use a fixed version for the docs
     const savedMode = localStorage.getItem("code-mode");
     if (savedMode) {
       const activeBtn = document.querySelector(
-        `.settings-panel .toggle-btn[data-mode="${savedMode}"]`
+        `#settings-panel .toggle-btn[data-mode="${savedMode}"]`
       );
       if (activeBtn) {
         buttons.forEach((b) => {
@@ -194,4 +71,3 @@ const version = "0.1.0"; // We'll use a fixed version for the docs
 
   initSettingsPanel();
 </script>
-

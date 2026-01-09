@@ -6,18 +6,46 @@ interface Props {
 const { label = "interactive" } = Astro.props;
 ---
 
-<div class="demo-box">
-  <div class="demo-label">↓ {label}</div>
-  <slot name="preview" />
+<div class="border border-dashed border-[#ccc] p-6 my-6">
+  <div class="text-xs text-[#666] mb-4 uppercase tracking-wider">↓ {label}</div>
+  <div class="preview-css">
+    <slot name="preview-css"><slot name="preview" /></slot>
+  </div>
+  <div class="preview-tailwind">
+    <slot name="preview-tailwind" />
+  </div>
   <slot name="note" />
-  <details class="source-toggle">
-    <summary>View source</summary>
-    <div class="code-css">
+  <details class="mt-4 border-t border-dashed border-[#ccc] pt-3 group">
+    <summary class="cursor-pointer text-sm text-[#666] list-none flex items-center gap-2 hover:text-[#1a1a1a]">
+      <span class="text-[0.7rem] transition-transform duration-150 group-open:rotate-90">▶</span>
+      View source
+    </summary>
+    <div class="code-css mt-3">
       <slot name="code-css" />
     </div>
-    <div class="code-tailwind">
+    <div class="code-tailwind mt-3">
       <slot name="code-tailwind" />
     </div>
   </details>
 </div>
 
+<style>
+  /* Override webkit marker */
+  details summary::-webkit-details-marker {
+    display: none;
+  }
+  
+  /* Shiki code block styling */
+  details :global(.astro-code) {
+    background: #f0eeeb !important;
+    padding: 1rem;
+    overflow-x: auto;
+    border-left: 3px solid #ccc;
+    font-size: 0.85rem;
+  }
+
+  details :global(.astro-code code) {
+    background: none;
+    padding: 0;
+  }
+</style>

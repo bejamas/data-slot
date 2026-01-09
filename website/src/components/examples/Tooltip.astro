@@ -66,7 +66,6 @@ const tailwindCode = `<div data-slot="tooltip" class="relative inline-block">
     class="absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-2
            bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50
            opacity-100 transition-opacity duration-150
-           hidden:opacity-0 hidden:pointer-events-none
            after:content-[''] after:absolute after:top-full after:left-1/2
            after:-translate-x-1/2 after:border-[6px] after:border-transparent
            after:border-t-gray-900"
@@ -74,11 +73,18 @@ const tailwindCode = `<div data-slot="tooltip" class="relative inline-block">
   >
     Tooltip content
   </div>
-</div>`;
+</div>
+
+/* Note: Add this CSS override to allow transitions with hidden attribute */
+[data-slot="tooltip-content"][hidden] {
+  display: block !important;
+  opacity: 0;
+  pointer-events: none;
+}`;
 ---
 
 <ExampleBlock label="positions: top, bottom, left, right (+ warm-up behavior)">
-  <div slot="preview" class="tooltip-group">
+  <div slot="preview-css" class="tooltip-group" id="tooltip-css">
     <div data-slot="tooltip" class="tooltip-root">
       <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Top</button>
       <div data-slot="tooltip-content" data-position="top" class="tooltip-content" hidden>
@@ -104,7 +110,73 @@ const tailwindCode = `<div data-slot="tooltip" class="relative inline-block">
       </div>
     </div>
   </div>
-  <p slot="note" class="demo-note">
+  <div slot="preview-tailwind" class="flex gap-2" id="tooltip-tw">
+    <div data-slot="tooltip" class="relative inline-block">
+      <button
+        data-slot="tooltip-trigger"
+        class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
+      >
+        Top
+      </button>
+      <div
+        data-slot="tooltip-content"
+        data-position="top"
+        class="absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-2 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-100 transition-opacity duration-150 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-t-gray-900"
+        hidden
+      >
+        Position: top (default)
+      </div>
+    </div>
+    <div data-slot="tooltip" class="relative inline-block">
+      <button
+        data-slot="tooltip-trigger"
+        class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
+      >
+        Bottom
+      </button>
+      <div
+        data-slot="tooltip-content"
+        data-position="bottom"
+        class="absolute top-full left-1/2 -translate-x-1/2 translate-y-2 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-100 transition-opacity duration-150 after:content-[''] after:absolute after:bottom-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-b-gray-900"
+        hidden
+      >
+        Position: bottom
+      </div>
+    </div>
+    <div data-slot="tooltip" class="relative inline-block">
+      <button
+        data-slot="tooltip-trigger"
+        class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
+      >
+        Left
+      </button>
+      <div
+        data-slot="tooltip-content"
+        data-position="left"
+        class="absolute right-full top-1/2 -translate-y-1/2 -translate-x-2 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-100 transition-opacity duration-150 after:content-[''] after:absolute after:left-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-l-gray-900"
+        hidden
+      >
+        Position: left
+      </div>
+    </div>
+    <div data-slot="tooltip" class="relative inline-block">
+      <button
+        data-slot="tooltip-trigger"
+        class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
+      >
+        Right
+      </button>
+      <div
+        data-slot="tooltip-content"
+        data-position="right"
+        class="absolute left-full top-1/2 -translate-y-1/2 translate-x-2 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-100 transition-opacity duration-150 after:content-[''] after:absolute after:right-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-r-gray-900"
+        hidden
+      >
+        Position: right
+      </div>
+    </div>
+  </div>
+  <p slot="note" class="mt-3">
     Position via <code>data-position</code> attribute or JS option. Hover across quickly — warm-up skips delay for adjacent tooltips.
   </p>
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />

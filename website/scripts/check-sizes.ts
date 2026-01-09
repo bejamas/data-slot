@@ -1,5 +1,11 @@
-import { readdirSync, statSync, writeFileSync, existsSync, mkdirSync } from "fs";
-import { join, basename } from "path";
+import {
+  readdirSync,
+  statSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+} from "fs";
+import { join } from "path";
 import { gzipSync } from "zlib";
 import { readFileSync } from "fs";
 
@@ -22,6 +28,18 @@ const descriptions: Record<string, string> = {
   "navigation-menu": "Dropdown navigation menus",
 };
 
+// Packages to check (order doesn't matter, we sort by size)
+const packageNames = [
+  "core",
+  "accordion",
+  "dialog",
+  "disclosure",
+  "navigation-menu",
+  "popover",
+  "tabs",
+  "tooltip",
+];
+
 function formatSize(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -30,34 +48,29 @@ function formatSize(bytes: number): string {
 }
 
 function getPackageSizes(): PackageInfo[] {
-  const distPath = join(process.cwd(), "..", "dist");
+  const packagesPath = join(process.cwd(), "..", "packages");
   const packages: PackageInfo[] = [];
 
-  if (!existsSync(distPath)) {
-    console.error("dist/ folder not found. Run build first.");
+  if (!existsSync(packagesPath)) {
+    console.error("packages/ folder not found.");
     process.exit(1);
   }
 
-  const files = readdirSync(distPath);
+  for (const name of packageNames) {
+    const distPath = join(packagesPath, name, "dist");
+    const filePath = join(distPath, "index.js");
 
-  for (const file of files) {
-    // Skip non-js files and index.js (the combined bundle)
-    if (!file.endsWith(".js") || file === "index.js") continue;
-
-    const name = basename(file, ".js");
-    const filePath = join(distPath, file);
-    const gzPath = join(distPath, `${file}.gz`);
-
-    let size: number;
-
-    // Use pre-compressed .gz file if available, otherwise compress on the fly
-    if (existsSync(gzPath)) {
-      size = statSync(gzPath).size;
-    } else {
-      const content = readFileSync(filePath);
-      const compressed = gzipSync(content);
-      size = compressed.length;
+    if (!existsSync(filePath)) {
+      console.warn(
+        `Warning: ${name}/dist/index.js not found. Run build first.`
+      );
+      continue;
     }
+
+    // Read and compress to get gzipped size
+    const content = readFileSync(filePath);
+    const compressed = gzipSync(content);
+    const size = compressed.length;
 
     packages.push({
       name: `@data-slot/${name}`,
@@ -76,6 +89,11 @@ function getPackageSizes(): PackageInfo[] {
 function main() {
   const packages = getPackageSizes();
 
+  if (packages.length === 0) {
+    console.error("No packages found. Run 'bun run build' first.");
+    process.exit(1);
+  }
+
   // Ensure data directory exists
   const dataDir = join(process.cwd(), "src", "data");
   if (!existsSync(dataDir)) {
@@ -86,7 +104,7 @@ function main() {
   const outputPath = join(dataDir, "package-sizes.json");
   writeFileSync(outputPath, JSON.stringify(packages, null, 2));
 
-  console.log("Package sizes:");
+  console.log("Package sizes (gzipped ESM):");
   console.log("─".repeat(60));
 
   let maxNameLen = 0;
@@ -98,7 +116,9 @@ function main() {
 
   for (const pkg of packages) {
     console.log(
-      `${pkg.name.padEnd(maxNameLen)}  ${pkg.sizeFormatted.padStart(maxSizeLen)}  ${pkg.description}`
+      `${pkg.name.padEnd(maxNameLen)}  ${pkg.sizeFormatted.padStart(
+        maxSizeLen
+      )}  ${pkg.description}`
     );
   }
 
@@ -107,4 +127,3 @@ function main() {
 }
 
 main();
-

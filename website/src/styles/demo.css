@@ -1,13 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@theme {
+  --font-mono: "JetBrains Mono", monospace;
+  --color-bg: #faf9f7;
+  --color-text: #1a1a1a;
+  --color-muted: #666;
+  --color-border: #ccc;
+  --color-accent: #0066cc;
+  --color-code-bg: #f0eeeb;
 }
 
+/* ============================================
+   CSS Variables for CSS Example Styles
+   ============================================ */
 :root {
   --bg: #faf9f7;
   --text: #1a1a1a;
@@ -21,141 +27,9 @@
   --function: #6f42c1;
 }
 
-html {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 15px;
-  line-height: 1.7;
-  background: var(--bg);
-  color: var(--text);
-}
-
-body {
-  max-width: 72ch;
-  margin: 0 auto;
-  padding: 3rem 1.5rem;
-}
-
-/* Header */
-.header {
-  margin-bottom: 3rem;
-}
-
-.logo {
-  font-size: 2rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.tagline {
-  color: var(--muted);
-  margin-top: 0.5rem;
-}
-
-.badge {
-  display: inline-block;
-  margin-top: 1rem;
-  padding: 0.25rem 0.5rem;
-  background: var(--code-bg);
-  border: 1px dashed var(--border);
-  font-size: 0.85rem;
-}
-
-/* Section headers */
-h2 {
-  font-size: 1rem;
-  font-weight: 500;
-  margin-top: 3rem;
-  margin-bottom: 1rem;
-  color: var(--muted);
-}
-
-h2::before {
-  content: "## ";
-  color: var(--border);
-}
-
-h3 {
-  font-size: 1rem;
-  font-weight: 500;
-  margin-top: 2rem;
-  margin-bottom: 0.75rem;
-}
-
-h3::before {
-  content: "### ";
-  color: var(--border);
-}
-
-/* Separator */
-.sep {
-  color: var(--border);
-  margin: 2rem 0;
-}
-
-/* ASCII Table */
-.ascii-table {
-  margin: 1rem 0;
-  overflow-x: auto;
-}
-
-.ascii-table pre {
-  font-family: inherit;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-/* Code blocks */
-pre.code {
-  background: var(--code-bg);
-  padding: 1rem;
-  overflow-x: auto;
-  margin: 1rem 0;
-  border-left: 3px solid var(--border);
-}
-
-code {
-  font-family: inherit;
-  background: var(--code-bg);
-  padding: 0.15rem 0.35rem;
-}
-
-pre.code code {
-  background: none;
-  padding: 0;
-}
-
-/* Paragraph */
-p {
-  margin: 1rem 0;
-}
-
-/* Links */
-a {
-  color: var(--text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-a:hover {
-  color: var(--accent);
-}
-
-/* Demo sections */
-.demo-box {
-  border: 1px dashed var(--border);
-  padding: 1.5rem;
-  margin: 1.5rem 0;
-}
-
-.demo-label {
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin-bottom: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Tabs demo styling */
+/* ============================================
+   CSS Example: Tabs
+   ============================================ */
 .tabs-list {
   display: flex;
   gap: 0;
@@ -185,6 +59,21 @@ a:hover {
 .tabs-content {
   padding: 1rem 0;
   animation: fadeIn 0.2s ease-out;
+}
+
+.tabs-content[hidden] {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Tabs with animated indicator */
@@ -226,22 +115,9 @@ a:hover {
   transition: transform 0.2s ease-out, width 0.2s ease-out;
 }
 
-.tabs-content[hidden] {
-  display: none;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Accordion demo styling - with CSS Grid height animation */
+/* ============================================
+   CSS Example: Accordion
+   ============================================ */
 .accordion-item {
   border-bottom: 1px dashed var(--border);
 }
@@ -301,7 +177,9 @@ a:hover {
   color: var(--muted);
 }
 
-/* Dialog demo styling - with entry/exit animations */
+/* ============================================
+   CSS Example: Dialog
+   ============================================ */
 .dialog-trigger-btn {
   font-family: inherit;
   font-size: inherit;
@@ -317,45 +195,51 @@ a:hover {
   opacity: 0.9;
 }
 
-.dialog-content-wrapper {
+.dialog-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 100;
   opacity: 1;
   transition: opacity 0.2s ease-out, display 0.2s ease-out allow-discrete;
 }
 
-.dialog-content-wrapper[hidden] {
+.dialog-overlay[hidden] {
   display: none;
   opacity: 0;
 }
 
-/* Entry animation for dialog */
-@starting-style {
-  .dialog-content-wrapper:not([hidden]) {
-    opacity: 0;
-  }
-  .dialog-content-wrapper:not([hidden]) .dialog-panel {
-    transform: scale(0.95) translateY(-10px);
-  }
-}
-
 .dialog-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
   background: var(--bg);
   padding: 2rem;
   max-width: 400px;
-  width: 90%;
+  width: calc(100% - 2rem);
   border: 1px solid var(--border);
-  transform: scale(1) translateY(0);
-  transition: transform 0.2s ease-out;
+  z-index: 101;
+  opacity: 1;
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out,
+    display 0.2s ease-out allow-discrete;
 }
 
-.dialog-content-wrapper[hidden] .dialog-panel {
-  transform: scale(0.95) translateY(-10px);
+.dialog-panel[hidden] {
+  display: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+/* Entry animation for dialog */
+@starting-style {
+  .dialog-overlay:not([hidden]) {
+    opacity: 0;
+  }
+  .dialog-panel:not([hidden]) {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
 }
 
 .dialog-title {
@@ -382,7 +266,9 @@ a:hover {
   background: var(--code-bg);
 }
 
-/* Disclosure demo styling - with CSS Grid height animation */
+/* ============================================
+   CSS Example: Disclosure
+   ============================================ */
 .disclosure-trigger-btn {
   font-family: inherit;
   font-size: inherit;
@@ -437,7 +323,9 @@ a:hover {
   background: var(--code-bg);
 }
 
-/* Tooltip demo styling */
+/* ============================================
+   CSS Example: Tooltip
+   ============================================ */
 .tooltip-root {
   position: relative;
   display: inline-block;
@@ -517,12 +405,6 @@ a:hover {
   gap: 0.5rem;
 }
 
-.demo-note {
-  margin-top: 1rem;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
 /* Tooltip arrows based on position */
 .tooltip-content::after {
   content: "";
@@ -554,7 +436,9 @@ a:hover {
   border-right-color: var(--text);
 }
 
-/* Popover demo styling */
+/* ============================================
+   CSS Example: Popover
+   ============================================ */
 .popover-root {
   position: relative;
   display: inline-block;
@@ -653,71 +537,9 @@ a:hover {
   background: var(--code-bg);
 }
 
-/* Source code toggle */
-.source-toggle {
-  margin-top: 1rem;
-  border-top: 1px dashed var(--border);
-  padding-top: 0.75rem;
-}
-
-.source-toggle summary {
-  cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--muted);
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.source-toggle summary::-webkit-details-marker {
-  display: none;
-}
-
-.source-toggle summary::before {
-  content: "▶";
-  font-size: 0.7rem;
-  transition: transform 0.15s ease;
-}
-
-.source-toggle[open] summary::before {
-  transform: rotate(90deg);
-}
-
-.source-toggle summary:hover {
-  color: var(--text);
-}
-
-.source-toggle pre {
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
-  background: var(--code-bg);
-  padding: 1rem;
-  overflow-x: auto;
-  border-left: 3px solid var(--border);
-}
-
-.source-toggle code {
-  background: none;
-  padding: 0;
-}
-
-/* Footer */
-.footer {
-  margin-top: 4rem;
-  padding-top: 2rem;
-  border-top: 1px dashed var(--border);
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.footer-links {
-  display: flex;
-  gap: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-/* Navigation Menu demo styling */
+/* ============================================
+   CSS Example: Navigation Menu
+   ============================================ */
 .nav-menu {
   position: relative;
 }
@@ -937,7 +759,9 @@ a:hover {
   color: var(--muted);
 }
 
-/* Code switcher visibility */
+/* ============================================
+   Code/Preview Mode Switcher
+   ============================================ */
 html.mode-css .code-tailwind,
 html:not(.mode-tailwind) .code-tailwind {
   display: none;
@@ -947,18 +771,100 @@ html.mode-tailwind .code-css {
   display: none;
 }
 
-/* Shiki code block styling */
-.astro-code {
-  background: var(--code-bg) !important;
-  padding: 1rem;
-  overflow-x: auto;
-  margin: 0.5rem 0;
-  border-left: 3px solid var(--border);
-  font-size: 0.85rem;
+html.mode-css .preview-tailwind,
+html:not(.mode-tailwind) .preview-tailwind {
+  display: none;
 }
 
-.astro-code code {
-  background: none;
-  padding: 0;
+html.mode-tailwind .preview-css {
+  display: none;
 }
 
+/* ============================================
+   Tailwind Preview: Override hidden for animations
+   ============================================ */
+
+/* Dialog: allow transitions with hidden attribute */
+/* .preview-tailwind [data-slot="dialog-overlay"][hidden],
+.preview-tailwind [data-slot="dialog-content"][hidden] {
+  display: block !important;
+  pointer-events: none;
+} */
+
+/* Dialog: entry animation using @starting-style */
+@starting-style {
+  .preview-tailwind [data-slot="dialog-overlay"]:not([hidden]) {
+    opacity: 0;
+  }
+  .preview-tailwind [data-slot="dialog-content"]:not([hidden]) {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* Tooltip: allow fade transitions */
+.preview-tailwind [data-slot="tooltip-content"][hidden] {
+  display: block !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Popover: allow fade transitions */
+.preview-tailwind [data-slot="popover-content"][hidden] {
+  display: block !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Disclosure: allow grid height animation */
+.preview-tailwind [data-slot="disclosure-content"][hidden] {
+  display: block !important;
+}
+
+/* Navigation Menu: proper viewport transitions */
+.preview-tailwind [data-slot="navigation-menu-viewport"] {
+  transition-property: width, height, opacity !important;
+  transition-duration: 0.25s, 0.25s, 0.15s !important;
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1),
+    cubic-bezier(0.32, 0.72, 0, 1), ease !important;
+  will-change: width, height;
+}
+
+/* Navigation Menu: skip width/height animation on initial open */
+.preview-tailwind [data-slot="navigation-menu-viewport"][data-instant] {
+  transition-property: opacity !important;
+  transition-duration: 0.15s !important;
+  transition-timing-function: ease !important;
+}
+
+/* Navigation Menu: content direction-aware animations */
+.preview-tailwind [data-slot="navigation-menu-content"] {
+  z-index: 10;
+}
+
+.preview-tailwind [data-slot="navigation-menu-content"][data-state="inactive"] {
+  visibility: hidden;
+}
+
+.preview-tailwind [data-slot="navigation-menu-content"][data-state="active"] {
+  visibility: visible;
+}
+
+.preview-tailwind
+  [data-slot="navigation-menu-content"][data-motion="from-right"] {
+  animation: navEnterFromRight 0.25s ease;
+}
+
+.preview-tailwind
+  [data-slot="navigation-menu-content"][data-motion="from-left"] {
+  animation: navEnterFromLeft 0.25s ease;
+}
+
+.preview-tailwind
+  [data-slot="navigation-menu-content"][data-motion="to-right"] {
+  animation: navExitToRight 0.25s ease forwards;
+}
+
+.preview-tailwind [data-slot="navigation-menu-content"][data-motion="to-left"] {
+  animation: navExitToLeft 0.25s ease forwards;
+}

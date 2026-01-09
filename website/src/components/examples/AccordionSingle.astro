@@ -123,7 +123,7 @@ const tailwindCode = `<div data-slot="accordion" data-default-value="features">
 ---
 
 <ExampleBlock label="single mode (default)">
-  <div slot="preview" data-slot="accordion" id="accordion-single" data-default-value="features">
+  <div slot="preview-css" data-slot="accordion" id="accordion-single-css" data-default-value="features">
     <div data-slot="accordion-item" data-value="features" class="accordion-item">
       <button data-slot="accordion-trigger" class="accordion-trigger">
         What makes data-slot different?
@@ -154,6 +154,56 @@ const tailwindCode = `<div data-slot="accordion" data-default-value="features">
       <div class="accordion-content-wrapper">
         <div data-slot="accordion-content" class="accordion-content">
           <div class="accordion-content-inner">
+            No dependencies. Each component is standalone and tree-shakeable.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div slot="preview-tailwind" data-slot="accordion" id="accordion-single-tw" data-default-value="features">
+    <div data-slot="accordion-item" data-value="features" class="border-b border-dashed border-gray-300 last:border-b-0 group">
+      <button
+        data-slot="accordion-trigger"
+        class="w-full py-3 bg-transparent border-none text-left cursor-pointer flex justify-between items-center after:content-['+'] after:text-gray-500 after:transition-transform after:duration-300 aria-expanded:after:rotate-45"
+      >
+        What makes data-slot different?
+      </button>
+      <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-data-[state=open]:grid-rows-[1fr]">
+        <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+          <div class="pb-4 text-gray-500">
+            Unlike React-based headless libraries, data-slot works with vanilla HTML.
+            Just add <code>data-slot</code> attributes to your markup and call <code>create()</code>.
+            No framework, no virtual DOM, no build step required.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div data-slot="accordion-item" data-value="accessibility" class="border-b border-dashed border-gray-300 last:border-b-0 group">
+      <button
+        data-slot="accordion-trigger"
+        class="w-full py-3 bg-transparent border-none text-left cursor-pointer flex justify-between items-center after:content-['+'] after:text-gray-500 after:transition-transform after:duration-300 aria-expanded:after:rotate-45"
+      >
+        Is it accessible?
+      </button>
+      <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-data-[state=open]:grid-rows-[1fr]">
+        <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+          <div class="pb-4 text-gray-500">
+            Yes. All components implement WAI-ARIA patterns with proper roles,
+            keyboard navigation, and focus management out of the box.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div data-slot="accordion-item" data-value="size" class="border-b border-dashed border-gray-300 last:border-b-0 group">
+      <button
+        data-slot="accordion-trigger"
+        class="w-full py-3 bg-transparent border-none text-left cursor-pointer flex justify-between items-center after:content-['+'] after:text-gray-500 after:transition-transform after:duration-300 aria-expanded:after:rotate-45"
+      >
+        How is it so small?
+      </button>
+      <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-data-[state=open]:grid-rows-[1fr]">
+        <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+          <div class="pb-4 text-gray-500">
             No dependencies. Each component is standalone and tree-shakeable.
           </div>
         </div>

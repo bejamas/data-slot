@@ -48,104 +48,138 @@ const dialog = createDialog(element, options?);
 controller.destroy(); // cleanup listeners`;
 ---
 
-<Layout title="data-slot — Headless UI for Vanilla JavaScript">
+<Layout
+  title="data-slot — headless UI for vanilla JavaScript"
+  description="Headless UI components for vanilla JavaScript. Tiny, accessible, unstyled."
+>
   <Header />
 
-  <div class="sep">~~~</div>
+  <div class="text-[#ccc] my-8">~~~</div>
 
   <!-- Packages Table -->
-  <h2>PACKAGES</h2>
+  <h2 class="text-base font-medium mt-12 mb-4 text-[#666] before:content-['##_'] before:text-[#ccc]">PACKAGES</h2>
   <PackagesTable />
 
   <!-- Installation -->
-  <h2>INSTALLATION</h2>
-  <p>Install only what you need:</p>
-  <Code
-    code={`bun add @data-slot/tabs
+  <h2 class="text-base font-medium mt-12 mb-4 text-[#666] before:content-['##_'] before:text-[#ccc]">INSTALLATION</h2>
+  <p class="my-4">Install only what you need:</p>
+  <div class="code-block">
+    <Code
+      code={`bun add @data-slot/tabs
 bun add @data-slot/dialog`}
-    lang="bash"
-    theme="vitesse-light"
-  />
+      lang="bash"
+      theme="vitesse-light"
+    />
+  </div>
 
   <!-- Quick Start -->
-  <h2>QUICK START</h2>
-  <p>
-    Components use <code>data-slot</code> attributes for markup. Import and
-    call <code>create()</code> to bind behavior:
+  <h2 class="text-base font-medium mt-12 mb-4 text-[#666] before:content-['##_'] before:text-[#ccc]">QUICK START</h2>
+  <p class="my-4">
+    Components use <code class="bg-[#f0eeeb] px-1.5 py-0.5">data-slot</code> attributes for markup. Import and
+    call <code class="bg-[#f0eeeb] px-1.5 py-0.5">create()</code> to bind behavior:
   </p>
-  <Code code={quickStartCode} lang="javascript" theme="vitesse-light" />
+  <div class="code-block">
+    <Code code={quickStartCode} lang="javascript" theme="vitesse-light" />
+  </div>
 
-  <div class="sep">~~~</div>
+  <div class="text-[#ccc] my-8">~~~</div>
 
   <!-- Live Demos -->
-  <h2>LIVE DEMOS</h2>
-  <p>Interactive examples using the library. Inspect the source for markup patterns.</p>
+  <h2 class="text-base font-medium mt-12 mb-4 text-[#666] before:content-['##_'] before:text-[#ccc]">LIVE DEMOS</h2>
+  <p class="my-4">Interactive examples using the library. Inspect the source for markup patterns.</p>
 
   <!-- Tabs -->
-  <h3>Tabs</h3>
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-[#ccc]">Tabs</h3>
   <TabsBasic />
   <TabsIndicator />
 
   <!-- Accordion -->
-  <h3>Accordion</h3>
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-[#ccc]">Accordion</h3>
   <AccordionSingle />
   <AccordionMultiple />
 
   <!-- Dialog -->
-  <h3>Dialog</h3>
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-[#ccc]">Dialog</h3>
   <Dialog />
 
   <!-- Disclosure -->
-  <h3>Disclosure</h3>
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-[#ccc]">Disclosure</h3>
   <Disclosure />
 
   <!-- Tooltip -->
-  <h3>Tooltip</h3>
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-[#ccc]">Tooltip</h3>
   <Tooltip />
 
   <!-- Popover -->
-  <h3>Popover</h3>
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-[#ccc]">Popover</h3>
   <Popover />
 
   <!-- Navigation Menu -->
-  <h3>Navigation Menu</h3>
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-[#ccc]">Navigation Menu</h3>
   <NavigationMenu />
 
-  <div class="sep">~~~</div>
+  <div class="text-[#ccc] my-8">~~~</div>
 
   <!-- Styling Guide -->
-  <h2>STYLING</h2>
-  <p>
-    Components expose <code>data-state</code> and ARIA attributes for CSS hooks:
+  <h2 class="text-base font-medium mt-12 mb-4 text-[#666] before:content-['##_'] before:text-[#ccc]">STYLING</h2>
+  <p class="my-4">
+    Components expose <code class="bg-[#f0eeeb] px-1.5 py-0.5">data-state</code> and ARIA attributes for CSS hooks:
   </p>
-  <Code code={stylingCode} lang="css" theme="vitesse-light" />
+  <div class="code-block">
+    <Code code={stylingCode} lang="css" theme="vitesse-light" />
+  </div>
 
   <!-- API Reference -->
-  <h2>API</h2>
-  <p>All components follow the same pattern:</p>
-  <Code code={apiCode} lang="javascript" theme="vitesse-light" />
+  <h2 class="text-base font-medium mt-12 mb-4 text-[#666] before:content-['##_'] before:text-[#ccc]">API</h2>
+  <p class="my-4">All components follow the same pattern:</p>
+  <div class="code-block">
+    <Code code={apiCode} lang="javascript" theme="vitesse-light" />
+  </div>
 
   <Footer />
 </Layout>
 
+<style>
+  /* Shiki code blocks styling */
+  .code-block :global(.astro-code) {
+    background: #f0eeeb !important;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+    border-left: 3px solid #ccc;
+    font-size: 0.85rem;
+  }
+
+  .code-block :global(.astro-code code) {
+    background: none;
+    padding: 0;
+  }
+</style>
+
 <script>
   // Import component libraries from parent dist
-  import { createTabs } from "../../../dist/tabs.js";
-  import { createAccordion } from "../../../dist/accordion.js";
-  import { createDialog } from "../../../dist/dialog.js";
-  import { createDisclosure } from "../../../dist/disclosure.js";
-  import { createTooltip } from "../../../dist/tooltip.js";
-  import { createPopover } from "../../../dist/popover.js";
-  import { createNavigationMenu } from "../../../dist/navigation-menu.js";
+  import { createTabs } from "../../../packages/tabs/dist/index.js";
+  import { createAccordion } from "../../../packages/accordion/dist/index.js";
+  import { createDialog } from "../../../packages/dialog/dist/index.js";
+  import { createDisclosure } from "../../../packages/disclosure/dist/index.js";
+  import { createTooltip } from "../../../packages/tooltip/dist/index.js";
+  import { createPopover } from "../../../packages/popover/dist/index.js";
+  import { createNavigationMenu } from "../../../packages/navigation-menu/dist/index.js";
 
   // Initialize all components
   document.querySelectorAll('[data-slot="tabs"]').forEach((el) => createTabs(el as HTMLElement));
 
   // Accordions: single mode (default) vs multiple mode
-  const accordionSingle = document.getElementById("accordion-single");
-  const accordionMultiple = document.getElementById("accordion-multiple");
-  if (accordionSingle) createAccordion(accordionSingle);
-  if (accordionMultiple) createAccordion(accordionMultiple, { multiple: true });
+  // CSS versions
+  const accordionSingleCss = document.getElementById("accordion-single-css");
+  const accordionMultipleCss = document.getElementById("accordion-multiple-css");
+  if (accordionSingleCss) createAccordion(accordionSingleCss);
+  if (accordionMultipleCss) createAccordion(accordionMultipleCss, { multiple: true });
+  // Tailwind versions
+  const accordionSingleTw = document.getElementById("accordion-single-tw");
+  const accordionMultipleTw = document.getElementById("accordion-multiple-tw");
+  if (accordionSingleTw) createAccordion(accordionSingleTw);
+  if (accordionMultipleTw) createAccordion(accordionMultipleTw, { multiple: true });
 
   // Dialogs
   document.querySelectorAll('[data-slot="dialog"]').forEach((el) =>
@@ -166,4 +200,3 @@ bun add @data-slot/dialog`}
     createNavigationMenu(el as HTMLElement)
   );
 </script>
-

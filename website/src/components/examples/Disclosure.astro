@@ -58,7 +58,7 @@ const tailwindCode = `<div data-slot="disclosure" class="group">
   <button
     data-slot="disclosure-trigger"
     class="px-4 py-2 bg-transparent border border-dashed border-gray-300
-           cursor-pointer flex items-center gap-2 hover:bg-gray-100
+           cursor-pointer flex items-center gap-2 hover:bg-code-bg
            before:content-['▶'] before:text-[0.7rem]
            before:transition-transform before:duration-200
            aria-expanded:before:rotate-90"
@@ -70,7 +70,7 @@ const tailwindCode = `<div data-slot="disclosure" class="group">
            group-data-[state=open]:grid-rows-[1fr]"
   >
     <div data-slot="disclosure-content" class="overflow-hidden min-h-0">
-      <div class="p-4 mt-2 bg-gray-100">
+      <div class="p-4 mt-2 bg-code-bg">
         <p>Disclosure is the simplest component — just a trigger and content.</p>
         <p class="mt-2">Perfect for FAQ items, collapsible sections, or any show/hide pattern.</p>
       </div>
@@ -80,7 +80,7 @@ const tailwindCode = `<div data-slot="disclosure" class="group">
 ---
 
 <ExampleBlock>
-  <div slot="preview" data-slot="disclosure">
+  <div slot="preview-css" data-slot="disclosure" id="disclosure-css">
     <button data-slot="disclosure-trigger" class="disclosure-trigger-btn">
       Show more details
     </button>
@@ -91,6 +91,22 @@ const tailwindCode = `<div data-slot="disclosure" class="group">
           <p style="margin-top: 0.5rem">
             Perfect for FAQ items, collapsible sections, or any show/hide pattern.
           </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div slot="preview-tailwind" data-slot="disclosure" id="disclosure-tw" class="group">
+    <button
+      data-slot="disclosure-trigger"
+      class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-pointer flex items-center gap-2 hover:bg-code-bg before:content-['▶'] before:text-[0.7rem] before:transition-transform before:duration-200 aria-expanded:before:rotate-90"
+    >
+      Show more details
+    </button>
+    <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-data-[state=open]:grid-rows-[1fr]">
+      <div data-slot="disclosure-content" class="overflow-hidden min-h-0">
+        <div class="p-4 mt-2 bg-code-bg">
+          <p>Disclosure is the simplest component — just a trigger and content.</p>
+          <p class="mt-2">Perfect for FAQ items, collapsible sections, or any show/hide pattern.</p>
         </div>
       </div>
     </div>

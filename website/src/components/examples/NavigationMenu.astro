@@ -56,8 +56,8 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
       <button
         data-slot="navigation-menu-trigger"
         class="px-4 py-2.5 bg-transparent border-none cursor-pointer
-               flex items-center gap-1.5 transition-colors
-               hover:text-blue-600 data-[state=open]:text-blue-600
+               flex items-center gap-1.5 transition-colors relative z-1
+               hover:text-accent data-[state=open]:text-accent
                after:content-['▼'] after:text-[0.6rem]
                after:transition-transform after:duration-200
                data-[state=open]:after:rotate-180"
@@ -66,14 +66,16 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
       </button>
       <div
         data-slot="navigation-menu-content"
-        class="absolute top-full left-0 p-6 opacity-100
-               data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+        class="absolute top-full left-0 pt-6 px-4 pb-0
+               data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4
+               data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none
+               data-[state=inactive]:invisible data-[state=active]:visible"
         hidden
       >
         <div class="grid grid-cols-2 gap-3 w-[380px]">
-          <a href="#" class="block p-3 rounded hover:bg-gray-100 transition-colors">
+          <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
             <div class="font-medium mb-1">Analytics</div>
-            <div class="text-sm text-gray-500">Real-time metrics</div>
+            <div class="text-sm text-muted">Real-time metrics</div>
           </a>
           <!-- More links... -->
         </div>
@@ -82,25 +84,41 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
     <!-- More items... -->
     <div
       data-slot="navigation-menu-indicator"
-      class="absolute bg-gray-100 rounded-md transition-all duration-150
-             pointer-events-none z-0
-             [left:var(--indicator-left,0)] [top:var(--indicator-top,0)]
-             [width:var(--indicator-width,0)] [height:var(--indicator-height,0)]
-             data-[state=hidden]:opacity-0 data-[state=visible]:opacity-100"
+      class="absolute bg-code-bg z-0 rounded-md transition-all duration-150
+             pointer-events-none opacity-0 data-[state=visible]:opacity-100"
+      style="left: var(--indicator-left, 0); top: var(--indicator-top, 0);
+             width: var(--indicator-width, 0); height: var(--indicator-height, 0);"
     ></div>
   </ul>
   <div
     data-slot="navigation-menu-viewport"
-    class="absolute top-full left-0 bg-white rounded-lg shadow-lg
-           overflow-hidden mt-2 transition-all duration-300
-           [width:var(--viewport-width,0)] [height:var(--viewport-height,0)]
-           data-[state=closed]:opacity-0 data-[state=open]:pointer-events-auto"
+    class="absolute top-full left-0 bg-bg rounded-lg shadow-lg
+           overflow-hidden mt-2 opacity-0 pointer-events-none
+           data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
+    style="width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
   ></div>
-</nav>`;
+</nav>
+
+/* CSS needed for animations (viewport size + content direction) */
+[data-slot="navigation-menu-viewport"] {
+  transition: width 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+              height 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+              opacity 0.15s ease;
+  will-change: width, height;
+}
+[data-slot="navigation-menu-viewport"][data-instant] {
+  transition: opacity 0.15s ease;
+}
+[data-slot="navigation-menu-content"][data-motion="from-right"] {
+  animation: slideFromRight 0.25s ease;
+}
+[data-slot="navigation-menu-content"][data-motion="from-left"] {
+  animation: slideFromLeft 0.25s ease;
+}`;
 ---
 
 <ExampleBlock label="mega menu with directional animations">
-  <nav slot="preview" data-slot="navigation-menu" class="nav-menu">
+  <nav slot="preview-css" data-slot="navigation-menu" class="nav-menu" id="nav-menu-css">
     <ul data-slot="navigation-menu-list" class="nav-menu-list">
       <li data-slot="navigation-menu-item" data-value="products" class="nav-menu-item">
         <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Products</button>
@@ -183,7 +201,135 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
     </ul>
     <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
   </nav>
-  <p slot="note" class="demo-note">
+  
+  <nav slot="preview-tailwind" data-slot="navigation-menu" class="relative" id="nav-menu-tw">
+    <ul data-slot="navigation-menu-list" class="
+      flex list-none relative z-10
+      [&_[data-slot='navigation-menu-content'][data-state='active']]:animate-in
+[&_[data-slot='navigation-menu-content'][data-state='inactive']]:animate-out
+[&_[data-slot='navigation-menu-content'][data-motion='from-right']]:slide-in-from-right-4
+[&_[data-slot='navigation-menu-content'][data-motion='from-left']]:slide-in-from-left-4
+[&_[data-slot='navigation-menu-content'][data-motion='to-right']]:slide-to-right-4
+[&_[data-slot='navigation-menu-content'][data-motion='to-left']]:slide-to-left-4
+      "
+    >
+      <li data-slot="navigation-menu-item" data-value="products" class="static">
+        <button
+          data-slot="navigation-menu-trigger"
+          class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent data-[state=open]:text-accent after:content-['▼'] after:text-[0.6rem] after:transition-transform after:duration-200 data-[state=open]:after:rotate-180"
+        >
+          Products
+        </button>
+        <div
+          data-slot="navigation-menu-content"
+          class="absolute top-full left-0 pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4 data-[motion='from-left']:slide-in-from-left-4 data-motion[to-right]:animate-slide-to-right-4 data-[state=active]:animate-in data-[state=inactive]:animate-out "
+          hidden
+        >
+          <div class="grid grid-cols-2 gap-3 w-[380px]">
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors no-underline text-inherit">
+              <div class="font-medium mb-1">Analytics</div>
+              <div class="text-sm text-muted">Real-time metrics</div>
+            </a>
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Automation</div>
+              <div class="text-sm text-muted">Workflow tools</div>
+            </a>
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Security</div>
+              <div class="text-sm text-muted">Enterprise-grade</div>
+            </a>
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Integrations</div>
+              <div class="text-sm text-muted">Connect everything</div>
+            </a>
+          </div>
+        </div>
+      </li>
+      <li data-slot="navigation-menu-item" data-value="solutions" class="static">
+        <button
+          data-slot="navigation-menu-trigger"
+          class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent data-[state=open]:text-accent after:content-['▼'] after:text-[0.6rem] after:transition-transform after:duration-200 data-[state=open]:after:rotate-180"
+        >
+          Solutions
+        </button>
+        <div
+          data-slot="navigation-menu-content"
+          class="absolute top-full left-0 pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+          hidden
+        >
+          <div class="grid grid-cols-2 gap-3 w-[380px]">
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Startups</div>
+              <div class="text-sm text-muted">Move fast</div>
+            </a>
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Enterprise</div>
+              <div class="text-sm text-muted">Scale securely</div>
+            </a>
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Agencies</div>
+              <div class="text-sm text-muted">Client projects</div>
+            </a>
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">E-commerce</div>
+              <div class="text-sm text-muted">Sell online</div>
+            </a>
+          </div>
+        </div>
+      </li>
+      <li data-slot="navigation-menu-item" data-value="resources" class="static">
+        <button
+          data-slot="navigation-menu-trigger"
+          class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent data-[state=open]:text-accent after:content-['▼'] after:text-[0.6rem] after:transition-transform after:duration-200 data-[state=open]:after:rotate-180"
+        >
+          Resources
+        </button>
+        <div
+          data-slot="navigation-menu-content"
+          class="absolute top-full left-0 pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+          hidden
+        >
+          <div class="grid grid-cols-3 gap-3 w-[520px]">
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Documentation</div>
+              <div class="text-sm text-muted">Get started</div>
+            </a>
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Blog</div>
+              <div class="text-sm text-muted">Latest updates</div>
+            </a>
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Contact</div>
+              <div class="text-sm text-muted">Get in touch</div>
+            </a>
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Support</div>
+              <div class="text-sm text-muted">Get help</div>
+            </a>
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Training</div>
+              <div class="text-sm text-muted">Learn new skills</div>
+            </a>
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">Events</div>
+              <div class="text-sm text-muted">Upcoming webinars</div>
+            </a>
+          </div>
+        </div>
+      </li>
+      <div
+        data-slot="navigation-menu-indicator"
+        class="absolute bg-code-bg z-0 rounded-md transition-all duration-150 pointer-events-none opacity-0 data-[state=visible]:opacity-100"
+        style="left: var(--indicator-left, 0); top: var(--indicator-top, 0); width: var(--indicator-width, 0); height: var(--indicator-height, 0);"
+      ></div>
+    </ul>
+    <div
+      data-slot="navigation-menu-viewport"
+      class="absolute data-instant:transition-opacity duration-150 top-full left-0 bg-bg rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12),0_0_0_1px_var(--color-border)] overflow-hidden mt-2 opacity-0 pointer-events-none data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
+      style="width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
+    ></div>
+  </nav>
+  <p slot="note" class="mt-3 text-muted">
     Hover between items — content slides with direction. Viewport width animates smoothly.
     CSS variables: <code>--viewport-width</code>, <code>--viewport-height</code>, <code>--motion-direction</code>.
   </p>
