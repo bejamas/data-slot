@@ -78,8 +78,23 @@ jobs:
             echo "  $name@$version"
           done
 
+      - name: Generate Release Notes
+        if: ${{ !inputs.dry_run && startsWith(github.ref, 'refs/tags/') }}
+        id: release_notes
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY not set, using default release notes"
+            echo "use_default=true" >> $GITHUB_OUTPUT
+          else
+            bun run scripts/generate-release-notes.ts ${{ github.ref_name }} > release-notes.md
+            echo "use_default=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run && startsWith(github.ref, 'refs/tags/') }}
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: ${{ steps.release_notes.outputs.use_default == 'false' && 'release-notes.md' || '' }}
+          generate_release_notes: ${{ steps.release_notes.outputs.use_default == 'true' }}
