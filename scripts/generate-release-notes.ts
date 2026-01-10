@@ -23,12 +23,26 @@ function getPreviousTag(currentTag: string): string | null {
       .split("\n")
       .filter(Boolean);
 
+    console.error(
+      `All tags (sorted): ${tags.slice(0, 5).join(", ")}${
+        tags.length > 5 ? "..." : ""
+      }`
+    );
+
     const currentIndex = tags.indexOf(currentTag);
-    if (currentIndex === -1 || currentIndex === tags.length - 1) {
+    if (currentIndex === -1) {
+      console.error(`Tag ${currentTag} not found in tags list`);
       return null;
     }
-    return tags[currentIndex + 1];
-  } catch {
+    if (currentIndex === tags.length - 1) {
+      console.error(`Tag ${currentTag} is the oldest tag`);
+      return null;
+    }
+    const previousTag = tags[currentIndex + 1];
+    console.error(`Previous tag: ${previousTag}`);
+    return previousTag;
+  } catch (error) {
+    console.error(`Error getting previous tag: ${error}`);
     return null;
   }
 }
@@ -67,12 +81,16 @@ function getChangedFiles(
     const previousTag = getPreviousTag(tag);
     const range = previousTag ? `${previousTag}..${tag}` : tag;
 
+    console.error(`Comparing: ${range}`);
+
     const files = execSync(`git diff --name-only ${range}`, {
       encoding: "utf-8",
     })
       .trim()
       .split("\n")
       .filter(Boolean);
+
+    console.error(`All changed files: ${files.length}`);
 
     const changes: Array<{
       file: string;
@@ -81,42 +99,43 @@ function getChangedFiles(
     }> = [];
 
     for (const file of files) {
-      // Only include package source files (skip dist, node_modules, tests, etc.)
-      if (
-        file.startsWith("packages/") &&
+      // Extract package name from path: packages/<name>/...
+      const match = file.match(/^packages\/([^/]+)\//);
+      if (!match) continue;
+      const packageName = match[1];
+
+      // Include source files (skip dist, node_modules, tests)
+      const isSourceFile =
         file.includes("/src/") &&
         (file.endsWith(".ts") || file.endsWith(".tsx")) &&
-        !file.includes(".test.")
-      ) {
-        // Extract package name from path: packages/<name>/src/...
-        const match = file.match(/^packages\/([^/]+)\/src\//);
-        if (!match) continue;
-        const packageName = match[1];
+        !file.includes(".test.");
 
-        try {
-          const diff = execSync(
-            `git diff ${previousTag || "HEAD~1"}..${tag} -- "${file}"`,
-            {
-              encoding: "utf-8",
-              maxBuffer: 1024 * 1024,
-            }
-          );
+      if (!isSourceFile) continue;
 
-          if (diff.trim()) {
-            changes.push({
-              file,
-              changes: diff.substring(0, 4000),
-              packageName,
-            });
+      try {
+        const diff = execSync(
+          `git diff ${previousTag || "HEAD~1"}..${tag} -- "${file}"`,
+          {
+            encoding: "utf-8",
+            maxBuffer: 1024 * 1024,
           }
-        } catch {
-          // Skip files that can't be diffed
+        );
+
+        if (diff.trim()) {
+          changes.push({
+            file,
+            changes: diff.substring(0, 4000),
+            packageName,
+          });
         }
+      } catch {
+        // Skip files that can't be diffed
       }
     }
 
     return changes.slice(0, 20);
-  } catch {
+  } catch (error) {
+    console.error(`Error getting changed files: ${error}`);
     return [];
   }
 }
