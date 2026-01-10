@@ -1,21 +1,21 @@
 [
   {
     "name": "@data-slot/navigation-menu",
-    "size": 2815,
+    "size": 2802,
     "sizeFormatted": "2.7 KB",
     "description": "Dropdown navigation menus"
+  },
+  {
+    "name": "@data-slot/dialog",
+    "size": 1836,
+    "sizeFormatted": "1.8 KB",
+    "description": "Modal dialogs, focus trap"
   },
   {
     "name": "@data-slot/tabs",
     "size": 1744,
     "sizeFormatted": "1.7 KB",
     "description": "Tabbed interfaces, kbd nav"
-  },
-  {
-    "name": "@data-slot/dialog",
-    "size": 1459,
-    "sizeFormatted": "1.4 KB",
-    "description": "Modal dialogs, focus trap"
   },
   {
     "name": "@data-slot/accordion",
