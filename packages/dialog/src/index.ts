@@ -28,6 +28,14 @@ export interface DialogController {
   readonly isOpen: boolean;
   /** Cleanup all event listeners */
   destroy(): void;
+  /** Internal: handle keydown for focus trap (used by global handler) */
+  _handleKeydown?(e: KeyboardEvent): void;
+  /** Internal: options for global handler */
+  _closeOnEscape?: boolean;
+  /** Internal: content element for focus trap */
+  _content?: HTMLElement;
+  /** Internal: overlay element for z-index */
+  _overlay?: HTMLElement;
 }
 
 // Focusable element selector
@@ -40,6 +48,54 @@ let scrollLockCount = 0;
 let savedBodyOverflow = "";
 let savedBodyPaddingRight = "";
 
+// Single global keydown handler
+let globalKeydownCleanup: (() => void) | null = null;
+
+// Reindex z-index for all dialogs in stack
+function reindexStack() {
+  const zBase = 1000;
+  dialogStack.forEach((d, idx) => {
+    const z = zBase + idx * 10;
+    if (d._overlay) d._overlay.style.zIndex = String(z);
+    if (d._content) d._content.style.zIndex = String(z + 1);
+  });
+}
+
+function setupGlobalKeydownHandler() {
+  if (globalKeydownCleanup) return;
+
+  const handler = (e: KeyboardEvent) => {
+    if (dialogStack.length === 0) return;
+
+    const topmost = dialogStack[dialogStack.length - 1];
+    if (!topmost || !topmost.isOpen) return;
+
+    // Escape key - only topmost dialog responds
+    if (e.key === "Escape" && topmost._closeOnEscape) {
+      e.preventDefault();
+      topmost.close();
+      return;
+    }
+
+    // Tab key - focus trap handled by each dialog
+    if (e.key === "Tab" && topmost._handleKeydown) {
+      topmost._handleKeydown(e);
+    }
+  };
+
+  const cleanup = on(document, "keydown", handler);
+  globalKeydownCleanup = () => {
+    cleanup();
+    globalKeydownCleanup = null;
+  };
+}
+
+function teardownGlobalKeydownHandler() {
+  if (dialogStack.length === 0 && globalKeydownCleanup) {
+    globalKeydownCleanup();
+  }
+}
+
 /**
  * Create a dialog controller for a root element
  *
@@ -47,17 +103,19 @@ let savedBodyPaddingRight = "";
  * ```html
  * <div data-slot="dialog">
  *   <button data-slot="dialog-trigger">Open</button>
- *   <div data-slot="dialog-overlay"></div>
- *   <div data-slot="dialog-content">
- *     <h2 data-slot="dialog-title">Title</h2>
- *     <p data-slot="dialog-description">Description</p>
- *     <button data-slot="dialog-close">Close</button>
+ *   <div data-slot="dialog-portal">
+ *     <div data-slot="dialog-overlay"></div>
+ *     <div data-slot="dialog-content">
+ *       <h2 data-slot="dialog-title">Title</h2>
+ *       <p data-slot="dialog-description">Description</p>
+ *       <button data-slot="dialog-close">Close</button>
+ *     </div>
  *   </div>
  * </div>
  * ```
  *
- * Note: Overlay is required. For modal behavior with inert backgrounds,
- * mount dialogs as direct children of document.body (portal pattern).
+ * Note: Overlay is required. The optional dialog-portal slot will be
+ * automatically moved to document.body to escape stacking context issues.
  */
 export function createDialog(
   root: Element,
@@ -73,9 +131,9 @@ export function createDialog(
   } = options;
 
   const trigger = getPart<HTMLElement>(root, "dialog-trigger");
+  const portal = getPart<HTMLElement>(root, "dialog-portal");
   const overlay = getPart<HTMLElement>(root, "dialog-overlay");
   const content = getPart<HTMLElement>(root, "dialog-content");
-  const closeBtn = getPart<HTMLElement>(root, "dialog-close");
   const title = getPart<HTMLElement>(root, "dialog-title");
   const description = getPart<HTMLElement>(root, "dialog-description");
 
@@ -89,6 +147,14 @@ export function createDialog(
   let isOpen = false;
   let previousActiveElement: HTMLElement | null = null;
   const cleanups: Array<() => void> = [];
+
+  // Portal: track original position (move to body on first open)
+  let portalOriginalParent: ParentNode | null = null;
+  let portalOriginalNextSibling: ChildNode | null = null;
+  let portalMoved = false;
+
+  // Track if this dialog locked scroll (prevent underflow)
+  let didLockScroll = false;
 
   // ARIA setup
   ensureId(content, "dialog-content");
@@ -135,18 +201,51 @@ export function createDialog(
     content.focus();
   };
 
+  // Move portal to body (called on first open)
+  const movePortalToBody = () => {
+    if (portal && !portalMoved) {
+      portalOriginalParent = portal.parentNode;
+      portalOriginalNextSibling = portal.nextSibling;
+      document.body.appendChild(portal);
+      portalMoved = true;
+    }
+  };
+
+  // Helper to set data-state on all relevant elements
+  const setDataState = (state: "open" | "closed") => {
+    root.setAttribute("data-state", state);
+    if (portal) portal.setAttribute("data-state", state);
+    overlay.setAttribute("data-state", state);
+    content.setAttribute("data-state", state);
+  };
+
+  // Clear z-index on close
+  const clearZIndex = () => {
+    overlay.style.zIndex = "";
+    content.style.zIndex = "";
+  };
+
   const updateState = (open: boolean, force = false) => {
     if (isOpen === open && !force) return;
 
     if (open) {
+      // Move portal to body on first open
+      movePortalToBody();
+
       // Store current focus
       previousActiveElement = document.activeElement as HTMLElement;
 
       // Add to dialog stack
       dialogStack.push(controller);
 
+      // Setup global keydown handler if needed
+      setupGlobalKeydownHandler();
+
+      // Reindex all dialogs
+      reindexStack();
+
       // Lock scroll with ref counting
-      if (lockScroll) {
+      if (lockScroll && !didLockScroll) {
         if (scrollLockCount === 0) {
           const scrollbarWidth =
             window.innerWidth - document.documentElement.clientWidth;
@@ -156,15 +255,24 @@ export function createDialog(
           document.body.style.overflow = "hidden";
         }
         scrollLockCount++;
+        didLockScroll = true;
       }
     } else {
       // Remove from dialog stack
       const idx = dialogStack.indexOf(controller);
       if (idx !== -1) dialogStack.splice(idx, 1);
 
-      // Unlock scroll with ref counting
-      if (lockScroll) {
-        scrollLockCount--;
+      // Teardown global handler if no dialogs left
+      teardownGlobalKeydownHandler();
+
+      // Clear z-index and reindex remaining
+      clearZIndex();
+      reindexStack();
+
+      // Unlock scroll with ref counting (only if we locked it)
+      if (didLockScroll) {
+        scrollLockCount = Math.max(0, scrollLockCount - 1);
+        didLockScroll = false;
         if (scrollLockCount === 0) {
           document.body.style.overflow = savedBodyOverflow;
           document.body.style.paddingRight = savedBodyPaddingRight;
@@ -174,7 +282,7 @@ export function createDialog(
       // Clean up tabindex we may have added
       cleanupContentFocusable();
 
-      // Restore focus
+      // Restore focus with fallback to trigger
       const elementToFocus = previousActiveElement;
       previousActiveElement = null;
       requestAnimationFrame(() => {
@@ -184,7 +292,10 @@ export function createDialog(
           typeof elementToFocus.focus === "function"
         ) {
           elementToFocus.focus();
+        } else if (trigger && document.contains(trigger)) {
+          trigger.focus();
         }
+        // If neither available, let focus remain where it is
       });
     }
 
@@ -194,7 +305,7 @@ export function createDialog(
     if (trigger) {
       setAria(trigger, "expanded", isOpen);
     }
-    root.setAttribute("data-state", isOpen ? "open" : "closed");
+    setDataState(isOpen ? "open" : "closed");
 
     emit(root, "dialog:change", { open: isOpen });
     onOpenChange?.(isOpen);
@@ -204,16 +315,64 @@ export function createDialog(
     }
   };
 
+  // Focus trap handler (called by global keydown handler)
+  const handleKeydown = (e: KeyboardEvent) => {
+    if (e.key !== "Tab") return;
+
+    const focusables = content.querySelectorAll<HTMLElement>(FOCUSABLE);
+
+    // If no focusables, prevent Tab from escaping
+    if (focusables.length === 0) {
+      e.preventDefault();
+      ensureContentFocusable();
+      content.focus();
+      return;
+    }
+
+    const first = focusables[0]!;
+    const last = focusables[focusables.length - 1]!;
+    const active = document.activeElement;
+
+    // If focus is outside the dialog, bring it back
+    if (!content.contains(active)) {
+      e.preventDefault();
+      first.focus();
+      return;
+    }
+
+    // Handle single focusable element
+    if (first === last) {
+      e.preventDefault();
+      return;
+    }
+
+    if (e.shiftKey) {
+      // Shift+Tab: if on first element, wrap to last
+      if (active === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      // Tab: if on last element, wrap to first
+      if (active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  };
+
   // Initialize state
   if (defaultOpen) {
+    // Move portal immediately for defaultOpen
+    movePortalToBody();
     content.hidden = false;
     overlay.hidden = false;
-    root.setAttribute("data-state", "open");
+    setDataState("open");
     updateState(true, true);
   } else {
     content.hidden = true;
     overlay.hidden = true;
-    root.setAttribute("data-state", "closed");
+    setDataState("closed");
   }
 
   // Trigger click - toggle behavior
@@ -221,10 +380,18 @@ export function createDialog(
     cleanups.push(on(trigger, "click", () => updateState(!isOpen)));
   }
 
-  // Close button click
-  if (closeBtn) {
-    cleanups.push(on(closeBtn, "click", () => updateState(false)));
-  }
+  // Delegated close button click - handles all [data-slot="dialog-close"] descendants
+  cleanups.push(
+    on(content, "click", (e) => {
+      const target = e.target as Element | null;
+      if (!target) return;
+
+      const closeEl = target.closest?.('[data-slot="dialog-close"]');
+      if (closeEl && content.contains(closeEl)) {
+        updateState(false);
+      }
+    })
+  );
 
   // Click on overlay to close
   if (closeOnClickOutside) {
@@ -237,67 +404,6 @@ export function createDialog(
     );
   }
 
-  // Keydown handler for Escape and Tab
-  cleanups.push(
-    on(document, "keydown", (e) => {
-      if (!isOpen) return;
-
-      // Escape key - only topmost dialog responds
-      if (e.key === "Escape" && closeOnEscape) {
-        const topmost = dialogStack[dialogStack.length - 1];
-        if (topmost === controller) {
-          e.preventDefault();
-          updateState(false);
-        }
-        return;
-      }
-
-      // Tab key - focus trap
-      if (e.key === "Tab") {
-        const focusables = content.querySelectorAll<HTMLElement>(FOCUSABLE);
-
-        // If no focusables, prevent Tab from escaping
-        if (focusables.length === 0) {
-          e.preventDefault();
-          ensureContentFocusable();
-          content.focus();
-          return;
-        }
-
-        const first = focusables[0]!;
-        const last = focusables[focusables.length - 1]!;
-        const active = document.activeElement;
-
-        // If focus is outside the dialog, bring it back
-        if (!content.contains(active)) {
-          e.preventDefault();
-          first.focus();
-          return;
-        }
-
-        // Handle single focusable element
-        if (first === last) {
-          e.preventDefault();
-          return;
-        }
-
-        if (e.shiftKey) {
-          // Shift+Tab: if on first element, wrap to last
-          if (active === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else {
-          // Tab: if on last element, wrap to first
-          if (active === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      }
-    })
-  );
-
   const controller: DialogController = {
     open: () => updateState(true),
     close: () => updateState(false),
@@ -307,12 +413,40 @@ export function createDialog(
     },
     destroy: () => {
       if (isOpen) {
+        // handles stack removal + reindex + teardown + scroll unlock + focus restore
         updateState(false, true);
+      } else {
+        // Safety: ensure removed from stack even if already closed
+        const idx = dialogStack.indexOf(controller);
+        if (idx !== -1) {
+          dialogStack.splice(idx, 1);
+          reindexStack();
+          teardownGlobalKeydownHandler();
+        }
       }
+
       cleanupContentFocusable();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
+
+      // Robust portal cleanup
+      if (portal && portalMoved) {
+        if (
+          portalOriginalParent &&
+          document.contains(portalOriginalParent as Node)
+        ) {
+          portalOriginalParent.insertBefore(portal, portalOriginalNextSibling);
+        } else {
+          portal.remove();
+        }
+        portalMoved = false;
+      }
     },
+    // Internal properties for global handler
+    _handleKeydown: handleKeydown,
+    _closeOnEscape: closeOnEscape,
+    _content: content,
+    _overlay: overlay,
   };
 
   return controller;
