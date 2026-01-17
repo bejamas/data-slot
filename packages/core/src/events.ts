@@ -1,15 +1,27 @@
 /**
  * Add an event listener and return a cleanup function
  */
-export const on = <K extends keyof HTMLElementEventMap>(
+export function on<K extends keyof HTMLElementEventMap>(
   el: EventTarget,
   type: K,
   fn: (e: HTMLElementEventMap[K]) => void,
   opts?: AddEventListenerOptions
-): (() => void) => {
+): () => void;
+export function on(
+  el: EventTarget,
+  type: string,
+  fn: (e: Event) => void,
+  opts?: AddEventListenerOptions
+): () => void;
+export function on(
+  el: EventTarget,
+  type: string,
+  fn: (e: Event) => void,
+  opts?: AddEventListenerOptions
+): () => void {
   el.addEventListener(type, fn as EventListener, opts);
   return () => el.removeEventListener(type, fn as EventListener, opts);
-};
+}
 
 /**
  * Dispatch a custom event with optional detail

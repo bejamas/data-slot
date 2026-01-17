@@ -42,6 +42,21 @@ interface TabItem {
 /**
  * Create a tabs controller for a root element
  *
+ * ## Events
+ * - **Outbound** `tabs:change` (on root): Fires when selected tab changes.
+ *   `event.detail: { value: string }`
+ * - **Inbound** `tabs:select` (on root): Select a tab programmatically.
+ *   `event.detail: { value: string } | string` (fallback: `event.currentTarget.dataset.value`)
+ *
+ * @example
+ * ```js
+ * // Listen for tab changes
+ * root.addEventListener("tabs:change", (e) => console.log(e.detail.value));
+ * // Select a tab from outside (object or string detail)
+ * root.dispatchEvent(new CustomEvent("tabs:select", { detail: { value: "two" } }));
+ * root.dispatchEvent(new CustomEvent("tabs:select", { detail: "two" }));
+ * ```
+ *
  * Expected markup:
  * ```html
  * <div data-slot="tabs" data-default-value="two">
@@ -101,7 +116,7 @@ export function createTabs(
     itemByEl.set(el, item);
   }
 
-  // Precompute enabled triggers array and index map for O(1) lookup
+  // Precompute enabled triggers array and index map to enable O(1) lookup later
   const enabled = items.filter((i) => !i.disabled);
   const enabledIndexByValue = new Map<string, number>();
   enabled.forEach((i, idx) => enabledIndexByValue.set(i.value, idx));
@@ -324,6 +339,20 @@ export function createTabs(
       }
     })
   );
+
+  // Listen for external select commands (Astro-friendly)
+  const handleSelect = (e: Event) => {
+    const evt = e as CustomEvent;
+    const rootEl = e.currentTarget as HTMLElement | null;
+    const detail = evt.detail as unknown;
+    const raw =
+      typeof detail === "string"
+        ? detail
+        : (detail as { value?: string } | null)?.value ?? rootEl?.dataset?.value;
+    const value = raw?.trim();
+    if (value) applyState(value);
+  };
+  cleanups.push(on(root, "tabs:select", handleSelect));
 
   const controller: TabsController = {
     select: (value: string) => applyState(value),
