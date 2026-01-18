@@ -94,6 +94,7 @@
         "@data-slot/accordion": "^0.1.2",
         "@data-slot/dialog": "^0.1.2",
         "@data-slot/disclosure": "^0.1.2",
+        "@data-slot/dropdown-menu": "^0.2.2",
         "@data-slot/popover": "^0.1.2",
         "@data-slot/tabs": "^0.1.2",
         "@data-slot/tooltip": "^0.1.2",
@@ -1037,6 +1038,8 @@
     "data-slot-docs/@data-slot/dialog": ["@data-slot/dialog@0.1.3", "", {}, "sha512-5aipdVpCRDFp+gRGUWNMOMAMxdUBK+EQay4q9R7ST/6jVwkpz81XZhEyi92w+OutHg4sHQ4ybzpWA4EVYoeG2A=="],
 
     "data-slot-docs/@data-slot/disclosure": ["@data-slot/disclosure@0.1.3", "", {}, "sha512-ZFLxDwEyb/mymyp0ou0PsBV+jCq+g7r9V/Zvvn9tG8UlUv0o5zumS+zfEkVCIYc0E0XLUMEzvM1weLgY35QPlA=="],
+
+    "data-slot-docs/@data-slot/dropdown-menu": ["@data-slot/dropdown-menu@0.2.2", "", {}, "sha512-gSqa9DSgTTqGovXfgVkDzi2Hvkv5Kd2Zv1vdxuswaqpKcG1GMoo1ztfK30u3sG6ckZfhh7Aq99vGex/AiVi9dA=="],
 
     "data-slot-docs/@data-slot/popover": ["@data-slot/popover@0.1.3", "", {}, "sha512-A5Amt3gfhfXCuI8V1eIdOjgRDYQoOqDqg5axbBM++/8VD5C5cqwdBQAQqp6SGq9br9tbu9Jw4jhO6mfhkEW4NQ=="],
 
