@@ -15,6 +15,7 @@ import Disclosure from "../components/examples/Disclosure.astro";
 import Tooltip from "../components/examples/Tooltip.astro";
 import Popover from "../components/examples/Popover.astro";
 import NavigationMenu from "../components/examples/NavigationMenu.astro";
+import DropdownMenu from "../components/examples/DropdownMenu.astro";
 
 const quickStartHtml = `<div data-slot="tabs" data-default-value="one">
   <div data-slot="tabs-list">
@@ -133,6 +134,10 @@ bun add @data-slot/dialog`}
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Navigation Menu</h3>
   <NavigationMenu />
 
+  <!-- Dropdown Menu -->
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Dropdown Menu</h3>
+  <DropdownMenu />
+
   <div class="text-border my-8">~~~</div>
 
   <!-- Styling Guide -->
@@ -180,6 +185,7 @@ bun add @data-slot/dialog`}
   import { createTooltip } from "@data-slot/tooltip";
   import { createPopover } from "@data-slot/popover";
   import { createNavigationMenu } from "@data-slot/navigation-menu";
+  import { createDropdownMenu } from "@data-slot/dropdown-menu";
 
   // Initialize all components
   document.querySelectorAll('[data-slot="tabs"]').forEach((el) => createTabs(el as HTMLElement));
@@ -213,5 +219,8 @@ bun add @data-slot/dialog`}
   );
   document.querySelectorAll('[data-slot="navigation-menu"]').forEach((el) =>
     createNavigationMenu(el as HTMLElement)
+  );
+  document.querySelectorAll('[data-slot="dropdown-menu"]').forEach((el) =>
+    createDropdownMenu(el as HTMLElement )
   );
 </script>

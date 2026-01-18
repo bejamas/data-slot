@@ -11,6 +11,7 @@ export default defineConfig({
     "src/tooltip.ts",
     "src/disclosure.ts",
     "src/navigation-menu.ts",
+    "src/dropdown-menu.ts",
   ],
   format: ["esm", "cjs"],
   dts: true,

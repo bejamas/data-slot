@@ -37,3 +37,9 @@ export type {
   NavigationMenuController,
 } from "@data-slot/navigation-menu";
 
+export { createDropdownMenu } from "@data-slot/dropdown-menu";
+export type {
+  DropdownMenuOptions,
+  DropdownMenuController,
+} from "@data-slot/dropdown-menu";
+

@@ -26,6 +26,7 @@ const descriptions: Record<string, string> = {
   disclosure: "Simple show/hide toggle",
   core: "Shared utilities",
   "navigation-menu": "Dropdown navigation menus",
+  "dropdown-menu": "Action menus, kbd nav",
 };
 
 // Packages to check (order doesn't matter, we sort by size)
@@ -34,6 +35,7 @@ const packageNames = [
   "accordion",
   "dialog",
   "disclosure",
+  "dropdown-menu",
   "navigation-menu",
   "popover",
   "tabs",

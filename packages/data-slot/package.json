@@ -97,6 +97,16 @@
         "types": "./dist/navigation-menu.d.cts",
         "default": "./dist/navigation-menu.cjs"
       }
+    },
+    "./dropdown-menu": {
+      "import": {
+        "types": "./dist/dropdown-menu.d.ts",
+        "default": "./dist/dropdown-menu.js"
+      },
+      "require": {
+        "types": "./dist/dropdown-menu.d.cts",
+        "default": "./dist/dropdown-menu.cjs"
+      }
     }
   },
   "files": [
@@ -113,7 +123,8 @@
     "@data-slot/popover": "workspace:*",
     "@data-slot/tooltip": "workspace:*",
     "@data-slot/disclosure": "workspace:*",
-    "@data-slot/navigation-menu": "workspace:*"
+    "@data-slot/navigation-menu": "workspace:*",
+    "@data-slot/dropdown-menu": "workspace:*"
   },
   "keywords": [
     "headless",
