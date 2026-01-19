@@ -434,6 +434,9 @@ export function createDropdownMenu(
           updateHighlight(index, false);
         }
       }
+    }),
+    on(content, "pointerleave", () => {
+      if (!keyboardMode) clearHighlight();
     })
   );
 
