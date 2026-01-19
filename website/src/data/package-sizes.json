@@ -1,56 +1,56 @@
 [
   {
     "name": "@data-slot/navigation-menu",
-    "size": 2802,
+    "size": 2805,
     "sizeFormatted": "2.7 KB",
     "description": "Dropdown navigation menus"
   },
   {
+    "name": "@data-slot/dropdown-menu",
+    "size": 2290,
+    "sizeFormatted": "2.2 KB",
+    "description": "Action menus, kbd nav"
+  },
+  {
     "name": "@data-slot/dialog",
-    "size": 1850,
+    "size": 1854,
     "sizeFormatted": "1.8 KB",
     "description": "Modal dialogs, focus trap"
   },
   {
     "name": "@data-slot/tabs",
-    "size": 1744,
-    "sizeFormatted": "1.7 KB",
+    "size": 1814,
+    "sizeFormatted": "1.8 KB",
     "description": "Tabbed interfaces, kbd nav"
   },
   {
-    "name": "@data-slot/dropdown-menu",
-    "size": 1698,
-    "sizeFormatted": "1.7 KB",
-    "description": "Action menus, kbd nav"
-  },
-  {
     "name": "@data-slot/accordion",
-    "size": 1237,
+    "size": 1240,
     "sizeFormatted": "1.2 KB",
     "description": "Collapsible sections"
   },
   {
     "name": "@data-slot/tooltip",
-    "size": 821,
-    "sizeFormatted": "821 B",
+    "size": 824,
+    "sizeFormatted": "824 B",
     "description": "Hover/focus tooltips"
   },
   {
     "name": "@data-slot/popover",
-    "size": 806,
-    "sizeFormatted": "806 B",
+    "size": 808,
+    "sizeFormatted": "808 B",
     "description": "Anchored floating content"
   },
   {
-    "name": "@data-slot/disclosure",
-    "size": 629,
-    "sizeFormatted": "629 B",
+    "name": "@data-slot/collapsible",
+    "size": 710,
+    "sizeFormatted": "710 B",
     "description": "Simple show/hide toggle"
   },
   {
     "name": "@data-slot/core",
-    "size": 409,
-    "sizeFormatted": "409 B",
+    "size": 419,
+    "sizeFormatted": "419 B",
     "description": "Shared utilities"
   }
 ]

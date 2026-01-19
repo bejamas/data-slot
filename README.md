@@ -72,7 +72,7 @@ All packages are independently installable. Each package includes its own README
 | `@data-slot/accordion`       | 1.2 KB | Collapsible sections       | [README](packages/accordion/README.md)       |
 | `@data-slot/tooltip`         | 821 B  | Hover/focus tooltips       | [README](packages/tooltip/README.md)         |
 | `@data-slot/popover`         | 806 B  | Anchored floating content  | [README](packages/popover/README.md)         |
-| `@data-slot/disclosure`      | 629 B  | Simple show/hide toggle    | [README](packages/disclosure/README.md)      |
+| `@data-slot/collapsible`     | 629 B  | Simple show/hide toggle    | [README](packages/collapsible/README.md)     |
 | `@data-slot/core`            | 409 B  | Shared utilities           | [README](packages/core/README.md)            |
 
 ## API

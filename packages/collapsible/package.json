@@ -1,5 +1,5 @@
 {
-  "name": "@data-slot/disclosure",
+  "name": "@data-slot/collapsible",
   "version": "0.2.4",
   "type": "module",
   "sideEffects": false,
@@ -30,12 +30,12 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/bejamas/data-slot",
-    "directory": "packages/disclosure"
+    "directory": "packages/collapsible"
   },
   "keywords": [
     "headless",
     "ui",
-    "disclosure",
+    "collapsible",
     "vanilla",
     "data-slot"
   ],

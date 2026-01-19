@@ -9,7 +9,7 @@ export default defineConfig({
     "src/accordion.ts",
     "src/popover.ts",
     "src/tooltip.ts",
-    "src/disclosure.ts",
+    "src/collapsible.ts",
     "src/navigation-menu.ts",
     "src/dropdown-menu.ts",
   ],
@@ -19,4 +19,3 @@ export default defineConfig({
   treeshake: true,
   minify: true,
 });
-
