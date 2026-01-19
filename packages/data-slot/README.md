@@ -21,7 +21,7 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 | `@data-slot/accordion` | 938 B | Collapsible content sections |
 | `@data-slot/popover` | 856 B | Anchored floating content |
 | `@data-slot/tooltip` | 772 B | Hover/focus tooltips |
-| `@data-slot/disclosure` | 710 B | Simple show/hide toggle |
+| `@data-slot/collapsible` | 710 B | Simple show/hide toggle |
 | `@data-slot/navigation-menu` | ~1.5 KB | Mega menus with hover/keyboard |
 | `@data-slot/core` | 452 B | Shared utilities |
 
@@ -43,7 +43,7 @@ Available subpaths:
 - `data-slot/accordion`
 - `data-slot/popover`
 - `data-slot/tooltip`
-- `data-slot/disclosure`
+- `data-slot/collapsible`
 - `data-slot/navigation-menu`
 
 ### Direct Package Imports
@@ -142,7 +142,7 @@ With Tailwind:
 | `createAccordion` | @data-slot/accordion |
 | `createPopover` | @data-slot/popover |
 | `createTooltip` | @data-slot/tooltip |
-| `createDisclosure` | @data-slot/disclosure |
+| `createCollapsible` | @data-slot/collapsible |
 | `createNavigationMenu` | @data-slot/navigation-menu |
 
 ### Types
@@ -154,7 +154,7 @@ With Tailwind:
 | `AccordionOptions`, `AccordionController` | @data-slot/accordion |
 | `PopoverOptions`, `PopoverController` | @data-slot/popover |
 | `TooltipOptions`, `TooltipController` | @data-slot/tooltip |
-| `DisclosureOptions`, `DisclosureController` | @data-slot/disclosure |
+| `CollapsibleOptions`, `CollapsibleController` | @data-slot/collapsible |
 | `NavigationMenuOptions`, `NavigationMenuController` | @data-slot/navigation-menu |
 
 ### Core Utilities
