@@ -2,14 +2,14 @@
 import { Code } from "astro:components";
 import ExampleBlock from "../ExampleBlock.astro";
 
-const cssCode = `<div data-slot="disclosure">
-  <button data-slot="disclosure-trigger" class="disclosure-trigger-btn">
+const cssCode = `<div data-slot="collapsible">
+  <button data-slot="collapsible-trigger" class="collapsible-trigger-btn">
     Show more details
   </button>
-  <div class="disclosure-content-wrapper">
-    <div data-slot="disclosure-content" class="disclosure-content">
-      <div class="disclosure-content-inner">
-        <p>Disclosure is the simplest component — just a trigger and content.</p>
+  <div class="collapsible-content-wrapper">
+    <div data-slot="collapsible-content" class="collapsible-content">
+      <div class="collapsible-content-inner">
+        <p>Collapsible is the simplest component — just a trigger and content.</p>
         <p>Perfect for FAQ items, collapsible sections, or any show/hide pattern.</p>
       </div>
     </div>
@@ -17,7 +17,7 @@ const cssCode = `<div data-slot="disclosure">
 </div>
 
 <style>
-  .disclosure-trigger-btn {
+  .collapsible-trigger-btn {
     padding: 0.5rem 1rem;
     background: none;
     border: 1px dashed #ccc;
@@ -26,37 +26,37 @@ const cssCode = `<div data-slot="disclosure">
     align-items: center;
     gap: 0.5rem;
   }
-  .disclosure-trigger-btn::before {
+  .collapsible-trigger-btn::before {
     content: "▶";
     font-size: 0.7rem;
     transition: transform 0.2s;
   }
-  .disclosure-trigger-btn[aria-expanded="true"]::before {
+  .collapsible-trigger-btn[aria-expanded="true"]::before {
     transform: rotate(90deg);
   }
-  .disclosure-content-wrapper {
+  .collapsible-content-wrapper {
     display: grid;
     grid-template-rows: 0fr;
     transition: grid-template-rows 0.3s;
   }
-  [data-slot="disclosure"][data-state="open"] .disclosure-content-wrapper {
+  [data-slot="collapsible"][data-state="open"] .collapsible-content-wrapper {
     grid-template-rows: 1fr;
   }
-  .disclosure-content {
+  .collapsible-content {
     overflow: hidden;
     min-height: 0;
   }
-  .disclosure-content[hidden] { display: block !important; }
-  .disclosure-content-inner {
+  .collapsible-content[hidden] { display: block !important; }
+  .collapsible-content-inner {
     padding: 1rem;
     margin-top: 0.5rem;
     background: #f0eeeb;
   }
 </style>`;
 
-const tailwindCode = `<div data-slot="disclosure" class="group">
+const tailwindCode = `<div data-slot="collapsible" class="group">
   <button
-    data-slot="disclosure-trigger"
+    data-slot="collapsible-trigger"
     class="px-4 py-2 bg-transparent border border-dashed border-gray-300
            cursor-pointer flex items-center gap-2 hover:bg-code-bg
            before:content-['▶'] before:text-[0.7rem]
@@ -69,9 +69,9 @@ const tailwindCode = `<div data-slot="disclosure" class="group">
     class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300
            group-data-[state=open]:grid-rows-[1fr]"
   >
-    <div data-slot="disclosure-content" class="overflow-hidden min-h-0">
+    <div data-slot="collapsible-content" class="overflow-hidden min-h-0">
       <div class="p-4 mt-2 bg-code-bg">
-        <p>Disclosure is the simplest component — just a trigger and content.</p>
+        <p>Collapsible is the simplest component — just a trigger and content.</p>
         <p class="mt-2">Perfect for FAQ items, collapsible sections, or any show/hide pattern.</p>
       </div>
     </div>
@@ -80,14 +80,14 @@ const tailwindCode = `<div data-slot="disclosure" class="group">
 ---
 
 <ExampleBlock>
-  <div slot="preview-css" data-slot="disclosure" id="disclosure-css">
-    <button data-slot="disclosure-trigger" class="disclosure-trigger-btn">
+  <div slot="preview-css" data-slot="collapsible" id="collapsible-css">
+    <button data-slot="collapsible-trigger" class="collapsible-trigger-btn">
       Show more details
     </button>
-    <div class="disclosure-content-wrapper">
-      <div data-slot="disclosure-content" class="disclosure-content">
-        <div class="disclosure-content-inner">
-          <p>Disclosure is the simplest component — just a trigger and content.</p>
+    <div class="collapsible-content-wrapper">
+      <div data-slot="collapsible-content" class="collapsible-content">
+        <div class="collapsible-content-inner">
+          <p>Collapsible is the simplest component — just a trigger and content.</p>
           <p style="margin-top: 0.5rem">
             Perfect for FAQ items, collapsible sections, or any show/hide pattern.
           </p>
@@ -95,17 +95,17 @@ const tailwindCode = `<div data-slot="disclosure" class="group">
       </div>
     </div>
   </div>
-  <div slot="preview-tailwind" data-slot="disclosure" id="disclosure-tw" class="group">
+  <div slot="preview-tailwind" data-slot="collapsible" id="collapsible-tw" class="group">
     <button
-      data-slot="disclosure-trigger"
+      data-slot="collapsible-trigger"
       class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-pointer flex items-center gap-2 hover:bg-code-bg before:content-['▶'] before:text-[0.7rem] before:transition-transform before:duration-200 aria-expanded:before:rotate-90"
     >
       Show more details
     </button>
     <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-data-[state=open]:grid-rows-[1fr]">
-      <div data-slot="disclosure-content" class="overflow-hidden min-h-0">
+      <div data-slot="collapsible-content" class="overflow-hidden min-h-0">
         <div class="p-4 mt-2 bg-code-bg">
-          <p>Disclosure is the simplest component — just a trigger and content.</p>
+          <p>Collapsible is the simplest component — just a trigger and content.</p>
           <p class="mt-2">Perfect for FAQ items, collapsible sections, or any show/hide pattern.</p>
         </div>
       </div>
@@ -114,4 +114,3 @@ const tailwindCode = `<div data-slot="disclosure" class="group">
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
   <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
 </ExampleBlock>
-

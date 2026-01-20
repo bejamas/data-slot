@@ -7,11 +7,11 @@
 
 export * from "@data-slot/core";
 
-export { createDisclosure } from "@data-slot/disclosure";
+export { createCollapsible } from "@data-slot/collapsible";
 export type {
-  DisclosureOptions,
-  DisclosureController,
-} from "@data-slot/disclosure";
+  CollapsibleOptions,
+  CollapsibleController,
+} from "@data-slot/collapsible";
 
 export { createTabs } from "@data-slot/tabs";
 export type { TabsOptions, TabsController } from "@data-slot/tabs";
@@ -42,4 +42,3 @@ export type {
   DropdownMenuOptions,
   DropdownMenuController,
 } from "@data-slot/dropdown-menu";
-

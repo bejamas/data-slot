@@ -64,7 +64,7 @@ jobs:
           publish_pkg packages/core
           publish_pkg packages/accordion
           publish_pkg packages/dialog
-          publish_pkg packages/disclosure
+          publish_pkg packages/collapsible
           publish_pkg packages/navigation-menu
           publish_pkg packages/popover
           publish_pkg packages/tabs

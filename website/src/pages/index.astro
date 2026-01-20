@@ -11,7 +11,7 @@ import TabsIndicator from "../components/examples/TabsIndicator.astro";
 import AccordionSingle from "../components/examples/AccordionSingle.astro";
 import AccordionMultiple from "../components/examples/AccordionMultiple.astro";
 import Dialog from "../components/examples/Dialog.astro";
-import Disclosure from "../components/examples/Disclosure.astro";
+import Collapsible from "../components/examples/Collapsible.astro";
 import Tooltip from "../components/examples/Tooltip.astro";
 import Popover from "../components/examples/Popover.astro";
 import NavigationMenu from "../components/examples/NavigationMenu.astro";
@@ -118,9 +118,9 @@ bun add @data-slot/dialog`}
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Dialog</h3>
   <Dialog />
 
-  <!-- Disclosure -->
-  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Disclosure</h3>
-  <Disclosure />
+  <!-- Collapsible -->
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Collapsible</h3>
+  <Collapsible />
 
   <!-- Tooltip -->
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Tooltip</h3>
@@ -181,7 +181,7 @@ bun add @data-slot/dialog`}
   import { createTabs } from "@data-slot/tabs";
   import { createAccordion } from "@data-slot/accordion";
   import { createDialog } from "../../../packages/dialog/dist/index.js";
-  import { createDisclosure } from "@data-slot/disclosure";
+  import { createCollapsible } from "../../../packages/collapsible/dist/index.js";
   import { createTooltip } from "@data-slot/tooltip";
   import { createPopover } from "@data-slot/popover";
   import { createNavigationMenu } from "@data-slot/navigation-menu";
@@ -208,8 +208,8 @@ bun add @data-slot/dialog`}
   );
 
   // Other components
-  document.querySelectorAll('[data-slot="disclosure"]').forEach((el) =>
-    createDisclosure(el as HTMLElement)
+  document.querySelectorAll('[data-slot="collapsible"]').forEach((el) =>
+    createCollapsible(el as HTMLElement)
   );
   document.querySelectorAll('[data-slot="tooltip"]').forEach((el) =>
     createTooltip(el as HTMLElement, { delay: 300 })

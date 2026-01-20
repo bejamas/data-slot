@@ -25,7 +25,7 @@
       "@data-slot/accordion": ["./packages/accordion/src/index.ts"],
       "@data-slot/popover": ["./packages/popover/src/index.ts"],
       "@data-slot/tooltip": ["./packages/tooltip/src/index.ts"],
-      "@data-slot/disclosure": ["./packages/disclosure/src/index.ts"],
+      "@data-slot/collapsible": ["./packages/collapsible/src/index.ts"],
       "data-slot": ["./packages/data-slot/src/index.ts"],
       "data-slot/*": ["./packages/data-slot/src/*.ts"]
     }

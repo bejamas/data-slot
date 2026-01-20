@@ -271,9 +271,9 @@ html {
 }
 
 /* ============================================
-   CSS Example: Disclosure
+   CSS Example: Collapsible
    ============================================ */
-.disclosure-trigger-btn {
+.collapsible-trigger-btn {
   font-family: inherit;
   font-size: inherit;
   padding: 0.5rem 1rem;
@@ -286,42 +286,42 @@ html {
   transition: background 0.15s;
 }
 
-.disclosure-trigger-btn:hover {
+.collapsible-trigger-btn:hover {
   background: var(--code-bg);
 }
 
-.disclosure-trigger-btn::before {
+.collapsible-trigger-btn::before {
   content: "▶";
   font-size: 0.7rem;
   transition: transform 0.2s ease;
 }
 
-.disclosure-trigger-btn[aria-expanded="true"]::before {
+.collapsible-trigger-btn[aria-expanded="true"]::before {
   transform: rotate(90deg);
 }
 
-/* Grid-based height animation for disclosure */
-.disclosure-content-wrapper {
+/* Grid-based height animation for collapsible */
+.collapsible-content-wrapper {
   display: grid;
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.3s ease-out;
 }
 
-[data-slot="disclosure"][data-state="open"] .disclosure-content-wrapper {
+[data-slot="collapsible"][data-state="open"] .collapsible-content-wrapper {
   grid-template-rows: 1fr;
 }
 
-.disclosure-content {
+.collapsible-content {
   overflow: hidden;
   min-height: 0;
 }
 
 /* Override library's hidden attribute - let grid control visibility */
-.disclosure-content[hidden] {
+.collapsible-content[hidden] {
   display: block !important;
 }
 
-.disclosure-content-inner {
+.collapsible-content-inner {
   padding: 1rem;
   margin-top: 0.5rem;
   background: var(--code-bg);
@@ -820,8 +820,8 @@ html.mode-tailwind .preview-css {
   pointer-events: none;
 }
 
-/* Disclosure: allow grid height animation */
-.preview-tailwind [data-slot="disclosure-content"][hidden] {
+/* Collapsible: allow grid height animation */
+.preview-tailwind [data-slot="collapsible-content"][hidden] {
   display: block !important;
 }
 

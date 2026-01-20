@@ -78,14 +78,14 @@
         "default": "./dist/tooltip.cjs"
       }
     },
-    "./disclosure": {
+    "./collapsible": {
       "import": {
-        "types": "./dist/disclosure.d.ts",
-        "default": "./dist/disclosure.js"
+        "types": "./dist/collapsible.d.ts",
+        "default": "./dist/collapsible.js"
       },
       "require": {
-        "types": "./dist/disclosure.d.cts",
-        "default": "./dist/disclosure.cjs"
+        "types": "./dist/collapsible.d.cts",
+        "default": "./dist/collapsible.cjs"
       }
     },
     "./navigation-menu": {
@@ -122,7 +122,7 @@
     "@data-slot/accordion": "workspace:*",
     "@data-slot/popover": "workspace:*",
     "@data-slot/tooltip": "workspace:*",
-    "@data-slot/disclosure": "workspace:*",
+    "@data-slot/collapsible": "workspace:*",
     "@data-slot/navigation-menu": "workspace:*",
     "@data-slot/dropdown-menu": "workspace:*"
   },
