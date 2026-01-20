@@ -188,12 +188,11 @@ describe('Collapsible', () => {
 
   it('allows re-initialization after destroy', () => {
     document.body.innerHTML = `
-      <div data-slot="collapsible" id="root">
+      <div data-slot="collapsible">
         <button data-slot="collapsible-trigger">Toggle</button>
         <div data-slot="collapsible-content">Content</div>
       </div>
     `
-    const root = document.getElementById('root')!
 
     // First initialization via create()
     const controllers1 = create()
