@@ -29,6 +29,7 @@
 
 html {
   font-family: var(--font-mono);
+  scrollbar-gutter: stable;
 }
 
 /* ============================================
