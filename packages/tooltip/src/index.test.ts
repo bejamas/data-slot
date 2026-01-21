@@ -79,16 +79,19 @@ describe('Tooltip', () => {
     controller.destroy()
   })
 
-  it('sets data-state on root', () => {
-    const { root, controller } = setup()
+  it('sets data-state on root and content', () => {
+    const { root, content, controller } = setup()
 
     expect(root.getAttribute('data-state')).toBe('closed')
+    expect(content.getAttribute('data-state')).toBe('closed')
 
     controller.show()
     expect(root.getAttribute('data-state')).toBe('open')
+    expect(content.getAttribute('data-state')).toBe('open')
 
     controller.hide()
     expect(root.getAttribute('data-state')).toBe('closed')
+    expect(content.getAttribute('data-state')).toBe('closed')
 
     controller.destroy()
   })

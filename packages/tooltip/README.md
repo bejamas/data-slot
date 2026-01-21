@@ -120,6 +120,7 @@ The component sets these attributes automatically:
 | Element | Attribute | Values |
 |---------|-----------|--------|
 | Root | `data-state` | `"open"` \| `"closed"` |
+| Content | `data-state` | `"open"` \| `"closed"` |
 | Content | `data-side` | `"top"` \| `"right"` \| `"bottom"` \| `"left"` |
 | Content | `data-align` | `"start"` \| `"center"` \| `"end"` |
 | Content | `role` | `"tooltip"` |

@@ -134,7 +134,9 @@ export function createTooltip(
     if (isOpen === open) return;
 
     isOpen = open;
-    root.setAttribute("data-state", isOpen ? "open" : "closed");
+    const state = isOpen ? "open" : "closed";
+    root.setAttribute("data-state", state);
+    content.setAttribute("data-state", state);
 
     // ARIA: explicit values for consistency across AT implementations
     if (isOpen) {
@@ -188,6 +190,7 @@ export function createTooltip(
   // Initialize state (CSS handles visibility via data-state)
   content.setAttribute("aria-hidden", "true");
   root.setAttribute("data-state", "closed");
+  content.setAttribute("data-state", "closed");
 
   // Pointer events on trigger
   cleanups.push(
