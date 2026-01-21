@@ -100,7 +100,7 @@ const tailwindCode = `<div data-slot="dialog" class="group/dialog">
 ---
 
 <ExampleBlock>
-  <div slot="preview-css" data-slot="dialog" id="demo-dialog-css">
+  <div slot="preview-css" data-slot="dialog" data-close-on-click-outside="false" id="demo-dialog-css">
     <button data-slot="dialog-trigger" class="dialog-trigger-btn">Open Dialog</button>
     <div data-slot="dialog-overlay" class="dialog-overlay" hidden></div>
     <div data-slot="dialog-content" class="dialog-panel" hidden>

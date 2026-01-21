@@ -178,13 +178,13 @@ bun add @data-slot/dialog`}
 
 <script>
   // Import component libraries from parent dist
-  import { createTabs } from "@data-slot/tabs";
-  import { createAccordion } from "@data-slot/accordion";
+  import { createTabs } from "../../../packages/tabs/dist/index.js";
+  import { createAccordion } from "../../../packages/accordion/dist/index.js";
   import { createDialog } from "../../../packages/dialog/dist/index.js";
   import { createCollapsible } from "../../../packages/collapsible/dist/index.js";
-  import { createTooltip } from "@data-slot/tooltip";
-  import { createPopover } from "@data-slot/popover";
-  import { createNavigationMenu } from "@data-slot/navigation-menu";
+  import { createTooltip } from "../../../packages/tooltip/dist/index.js";
+  import { createPopover } from "../../../packages/popover/dist/index.js";
+  import { createNavigationMenu } from "../../../packages/navigation-menu/dist/index.js";
   import { createDropdownMenu } from "../../../packages/dropdown-menu/dist/index.js";
 
   // Initialize all components
@@ -204,7 +204,7 @@ bun add @data-slot/dialog`}
 
   // Dialogs
   document.querySelectorAll('[data-slot="dialog"]').forEach((el) =>
-    createDialog(el as HTMLElement, { closeOnClickOutside: true })
+    createDialog(el as HTMLElement)
   );
 
   // Other components
@@ -212,7 +212,7 @@ bun add @data-slot/dialog`}
     createCollapsible(el as HTMLElement)
   );
   document.querySelectorAll('[data-slot="tooltip"]').forEach((el) =>
-    createTooltip(el as HTMLElement, { delay: 300 })
+    createTooltip(el as HTMLElement, { delay: 600 })
   );
   document.querySelectorAll('[data-slot="popover"]').forEach((el) =>
     createPopover(el as HTMLElement)
