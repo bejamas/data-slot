@@ -97,10 +97,27 @@ const popover = createPopover(element, {
 
 ### Data Attributes
 
-Set position via HTML:
+Options can also be set via data attributes on the root element. JS options take precedence over data attributes.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-default-open` | boolean | `false` | Initial open state |
+| `data-close-on-click-outside` | boolean | `true` | Close when clicking outside |
+| `data-close-on-escape` | boolean | `true` | Close when pressing Escape |
+
+Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
+
+Position is set via `data-position` on the content element:
 
 ```html
 <div data-slot="popover-content" data-position="top">
+```
+
+```html
+<!-- Popover that stays open when clicking outside -->
+<div data-slot="popover" data-close-on-click-outside="false">
+  ...
+</div>
 ```
 
 ## Styling

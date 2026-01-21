@@ -65,6 +65,30 @@ const accordion = createAccordion(element, {
 | `collapsible`   | `boolean`                   | `true`      | Whether items can be fully collapsed (single mode only) |
 | `onValueChange` | `(value: string[]) => void` | `undefined` | Callback when expanded items change                     |
 
+### Data Attributes
+
+Options can also be set via data attributes on the root element. JS options take precedence.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-multiple` | boolean | `false` | Allow multiple items open at once |
+| `data-default-value` | string | none | Initially expanded item |
+| `data-collapsible` | boolean | `true` | Whether items can be fully collapsed |
+
+Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
+
+```html
+<!-- Multiple items can be open, starting with "one" expanded -->
+<div data-slot="accordion" data-multiple data-default-value="one">
+  ...
+</div>
+
+<!-- Single mode that cannot be fully collapsed -->
+<div data-slot="accordion" data-collapsible="false">
+  ...
+</div>
+```
+
 ### Controller
 
 | Method/Property   | Description                                     |

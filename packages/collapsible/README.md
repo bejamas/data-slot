@@ -57,6 +57,23 @@ const collapsible = createCollapsible(element, {
 | `defaultOpen` | `boolean` | `false` | Initial open state |
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes (not called on init) |
 
+### Data Attributes
+
+Options can also be set via data attributes on the root element. JS options take precedence.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-default-open` | boolean | `false` | Initial open state |
+
+Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
+
+```html
+<!-- Start expanded -->
+<div data-slot="collapsible" data-default-open>
+  ...
+</div>
+```
+
 ### Controller
 
 | Method/Property | Description |

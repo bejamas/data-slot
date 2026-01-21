@@ -213,5 +213,87 @@ describe('Popover', () => {
 
     controllers.forEach(c => c.destroy())
   })
+
+  // Data attribute tests
+  describe('data attributes', () => {
+    it("data-close-on-escape='false' disables Escape key closing", () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root" data-close-on-escape="false">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const controller = createPopover(root)
+
+      controller.open()
+      expect(controller.isOpen).toBe(true)
+
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      )
+      expect(controller.isOpen).toBe(true)
+
+      controller.destroy()
+    })
+
+    it("data-close-on-click-outside='false' disables click outside closing", () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root" data-close-on-click-outside="false">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const controller = createPopover(root)
+
+      controller.open()
+      expect(controller.isOpen).toBe(true)
+
+      document.body.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true })
+      )
+      expect(controller.isOpen).toBe(true)
+
+      controller.destroy()
+    })
+
+    it("data-default-open opens popover initially", () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root" data-default-open>
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const controller = createPopover(root)
+
+      expect(controller.isOpen).toBe(true)
+
+      controller.destroy()
+    })
+
+    it("JS option overrides data attribute", () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root" data-close-on-escape="false">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      // JS option says true, data attribute says false - JS wins
+      const controller = createPopover(root, { closeOnEscape: true })
+
+      controller.open()
+      expect(controller.isOpen).toBe(true)
+
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      )
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+  })
 })
 

@@ -252,5 +252,79 @@ describe('Tabs', () => {
 
     controllers.forEach(c => c.destroy())
   })
+
+  // Data attribute tests
+  describe('data attributes', () => {
+    it("data-orientation='vertical' sets vertical orientation", () => {
+      document.body.innerHTML = `
+        <div data-slot="tabs" id="root" data-orientation="vertical">
+          <div data-slot="tabs-list">
+            <button data-slot="tabs-trigger" data-value="one">One</button>
+            <button data-slot="tabs-trigger" data-value="two">Two</button>
+          </div>
+          <div data-slot="tabs-content" data-value="one">Content One</div>
+          <div data-slot="tabs-content" data-value="two">Content Two</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const list = root.querySelector('[data-slot="tabs-list"]') as HTMLElement
+      const controller = createTabs(root)
+
+      expect(list.getAttribute('aria-orientation')).toBe('vertical')
+
+      controller.destroy()
+    })
+
+    it("data-activation-mode='manual' requires Enter to activate", () => {
+      document.body.innerHTML = `
+        <div data-slot="tabs" id="root" data-activation-mode="manual">
+          <div data-slot="tabs-list">
+            <button data-slot="tabs-trigger" data-value="one">One</button>
+            <button data-slot="tabs-trigger" data-value="two">Two</button>
+          </div>
+          <div data-slot="tabs-content" data-value="one">Content One</div>
+          <div data-slot="tabs-content" data-value="two">Content Two</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const triggers = root.querySelectorAll('[data-slot="tabs-trigger"]')
+      const controller = createTabs(root)
+
+      // Focus first trigger and press ArrowRight
+      ;(triggers[0] as HTMLElement).focus()
+      triggers[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
+
+      // In manual mode, ArrowRight just moves focus, doesn't change value
+      expect(controller.value).toBe('one')
+      expect(document.activeElement).toBe(triggers[1])
+
+      // Press Enter to activate
+      triggers[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      expect(controller.value).toBe('two')
+
+      controller.destroy()
+    })
+
+    it("JS option overrides data attribute", () => {
+      document.body.innerHTML = `
+        <div data-slot="tabs" id="root" data-orientation="vertical">
+          <div data-slot="tabs-list">
+            <button data-slot="tabs-trigger" data-value="one">One</button>
+            <button data-slot="tabs-trigger" data-value="two">Two</button>
+          </div>
+          <div data-slot="tabs-content" data-value="one">Content One</div>
+          <div data-slot="tabs-content" data-value="two">Content Two</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const list = root.querySelector('[data-slot="tabs-list"]') as HTMLElement
+      // JS option says horizontal, data attribute says vertical - JS wins
+      const controller = createTabs(root, { orientation: 'horizontal' })
+
+      expect(list.hasAttribute('aria-orientation')).toBe(false)
+
+      controller.destroy()
+    })
+  })
 })
 

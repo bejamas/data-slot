@@ -1,8 +1,9 @@
-import { getPart, getRoots } from "@data-slot/core";
+import { getPart, getRoots, getDataBool, getDataEnum } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 
 export type PopoverPosition = "top" | "bottom" | "left" | "right";
+const POSITIONS = ["top", "bottom", "left", "right"] as const;
 
 export interface PopoverOptions {
   /** Initial open state */
@@ -48,13 +49,6 @@ export function createPopover(
   root: Element,
   options: PopoverOptions = {}
 ): PopoverController {
-  const {
-    defaultOpen = false,
-    onOpenChange,
-    closeOnClickOutside = true,
-    closeOnEscape = true,
-  } = options;
-
   const trigger = getPart<HTMLElement>(root, "popover-trigger");
   const content = getPart<HTMLElement>(root, "popover-content");
   const closeBtn = getPart<HTMLElement>(root, "popover-close");
@@ -63,10 +57,18 @@ export function createPopover(
     throw new Error("Popover requires trigger and content slots");
   }
 
-  // Position: JS option > data-position attribute > default 'bottom'
+  // Resolve options with explicit precedence: JS > data-* > default
+  // Behavior options from root
+  const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
+  const onOpenChange = options.onOpenChange;
+  const closeOnClickOutside = options.closeOnClickOutside ?? getDataBool(root, "closeOnClickOutside") ?? true;
+  const closeOnEscape = options.closeOnEscape ?? getDataBool(root, "closeOnEscape") ?? true;
+
+  // Placement options: content-first, then root
   const position =
     options.position ??
-    (content.dataset["position"] as PopoverPosition) ??
+    getDataEnum(content, "position", POSITIONS) ??
+    getDataEnum(root, "position", POSITIONS) ??
     "bottom";
 
   let isOpen = defaultOpen;

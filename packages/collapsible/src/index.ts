@@ -1,4 +1,4 @@
-import { getPart, getRoots, setAria, ensureId, on, emit } from "@data-slot/core";
+import { getPart, getRoots, getDataBool, setAria, ensureId, on, emit } from "@data-slot/core";
 
 export interface CollapsibleOptions {
   /** Initial open state */
@@ -41,7 +41,9 @@ export function createCollapsible(
   root: Element,
   options: CollapsibleOptions = {}
 ): CollapsibleController {
-  const { defaultOpen = false, onOpenChange } = options;
+  // Resolve options with explicit precedence: JS > data-* > default
+  const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
+  const onOpenChange = options.onOpenChange;
 
   const trigger = getPart<HTMLElement>(root, "collapsible-trigger");
   const content = getPart<HTMLElement>(root, "collapsible-content");

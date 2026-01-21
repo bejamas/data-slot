@@ -1,4 +1,4 @@
-import { getPart, getRoots } from "@data-slot/core";
+import { getPart, getRoots, getDataBool } from "@data-slot/core";
 import { setAria, ensureId, linkLabelledBy } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 
@@ -121,14 +121,13 @@ export function createDialog(
   root: Element,
   options: DialogOptions = {}
 ): DialogController {
-  const {
-    defaultOpen = false,
-    onOpenChange,
-    closeOnClickOutside = true,
-    closeOnEscape = true,
-    lockScroll = true,
-    alertDialog = false,
-  } = options;
+  // Resolve options with explicit precedence: JS > data-* > default
+  const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
+  const onOpenChange = options.onOpenChange;
+  const closeOnClickOutside = options.closeOnClickOutside ?? getDataBool(root, "closeOnClickOutside") ?? true;
+  const closeOnEscape = options.closeOnEscape ?? getDataBool(root, "closeOnEscape") ?? true;
+  const lockScroll = options.lockScroll ?? getDataBool(root, "lockScroll") ?? true;
+  const alertDialog = options.alertDialog ?? getDataBool(root, "alertDialog") ?? false;
 
   const trigger = getPart<HTMLElement>(root, "dialog-trigger");
   const portal = getPart<HTMLElement>(root, "dialog-portal");
@@ -361,14 +360,16 @@ export function createDialog(
     }
   };
 
-  // Initialize state
+  // Initialize visual state (before controller is defined)
   if (defaultOpen) {
-    // Move portal immediately for defaultOpen
     movePortalToBody();
     content.hidden = false;
     overlay.hidden = false;
     setDataState("open");
-    updateState(true, true);
+    isOpen = true;
+    if (trigger) {
+      setAria(trigger, "expanded", true);
+    }
   } else {
     content.hidden = true;
     overlay.hidden = true;
@@ -448,6 +449,31 @@ export function createDialog(
     _content: content,
     _overlay: overlay,
   };
+
+  // Handle defaultOpen: push to stack and setup global state after controller is defined
+  if (defaultOpen) {
+    previousActiveElement = document.activeElement as HTMLElement;
+    dialogStack.push(controller);
+    setupGlobalKeydownHandler();
+    reindexStack();
+
+    if (lockScroll && !didLockScroll) {
+      if (scrollLockCount === 0) {
+        const scrollbarWidth =
+          window.innerWidth - document.documentElement.clientWidth;
+        savedBodyOverflow = document.body.style.overflow;
+        savedBodyPaddingRight = document.body.style.paddingRight;
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+        document.body.style.overflow = "hidden";
+      }
+      scrollLockCount++;
+      didLockScroll = true;
+    }
+
+    emit(root, "dialog:change", { open: true });
+    onOpenChange?.(true);
+    requestAnimationFrame(focusFirst);
+  }
 
   return controller;
 }

@@ -130,6 +130,37 @@ interface DropdownMenuOptions {
 }
 ```
 
+### Data Attribute Options
+
+Options can also be set via data attributes on the root element. JS options take precedence.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-default-open` | boolean | `false` | Initial open state |
+| `data-close-on-click-outside` | boolean | `true` | Close when clicking outside |
+| `data-close-on-escape` | boolean | `true` | Close when pressing Escape |
+| `data-close-on-select` | boolean | `true` | Close when an item is selected |
+| `data-side` | string | `"bottom"` | Preferred side: top, right, bottom, left |
+| `data-align` | string | `"start"` | Alignment: start, center, end |
+| `data-side-offset` | number | `4` | Distance from trigger in px |
+| `data-align-offset` | number | `0` | Offset from alignment edge in px |
+| `data-avoid-collisions` | boolean | `true` | Flip/shift to stay in viewport |
+| `data-collision-padding` | number | `8` | Viewport edge padding in px |
+
+Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
+
+```html
+<!-- Menu positioned at top with larger offset -->
+<div data-slot="dropdown-menu" data-side="top" data-side-offset="8">
+  ...
+</div>
+
+<!-- Menu that stays open after selection -->
+<div data-slot="dropdown-menu" data-close-on-select="false">
+  ...
+</div>
+```
+
 ## Positioning
 
 The dropdown menu uses `position: fixed` and automatically positions itself relative to the trigger. It supports all standard placement options:

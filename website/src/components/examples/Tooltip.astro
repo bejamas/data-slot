@@ -4,7 +4,7 @@ import ExampleBlock from "../ExampleBlock.astro";
 
 const cssCode = `<div data-slot="tooltip" class="tooltip-root">
   <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Hover me</button>
-  <div data-slot="tooltip-content" data-position="top" class="tooltip-content" hidden>
+  <div data-slot="tooltip-content" data-side="top" class="tooltip-content">
     Tooltip content
   </div>
 </div>
@@ -25,18 +25,27 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
     font-size: 0.85rem;
     white-space: nowrap;
     z-index: 50;
-    opacity: 1;
-    transition: opacity 0.15s, transform 0.15s;
+    /* Hidden by default */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    /* Visibility delays hiding until after fade */
+    transition: opacity 0.15s, transform 0.15s, visibility 0s linear 0.15s;
   }
-  .tooltip-content[data-position="top"] {
+  /* Open state */
+  .tooltip-root[data-state="open"] .tooltip-content {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+  .tooltip-content[data-side="top"] {
     bottom: 100%;
     left: 50%;
-    transform: translateX(-50%) translateY(-8px);
+    transform: translateX(-50%) translateY(-4px);
   }
-  .tooltip-content[hidden] {
-    display: block !important;
-    opacity: 0;
-    pointer-events: none;
+  .tooltip-root[data-state="open"] .tooltip-content[data-side="top"] {
+    transform: translateX(-50%) translateY(-8px);
   }
   /* Arrow */
   .tooltip-content::after {
@@ -44,7 +53,7 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
     position: absolute;
     border: 6px solid transparent;
   }
-  .tooltip-content[data-position="top"]::after {
+  .tooltip-content[data-side="top"]::after {
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
@@ -52,7 +61,7 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
   }
 </style>`;
 
-const tailwindCode = `<div data-slot="tooltip" class="relative inline-block">
+const tailwindCode = `<div data-slot="tooltip" class="group relative inline-block">
   <button
     data-slot="tooltip-trigger"
     class="px-4 py-2 bg-transparent border border-dashed border-gray-300
@@ -62,56 +71,50 @@ const tailwindCode = `<div data-slot="tooltip" class="relative inline-block">
   </button>
   <div
     data-slot="tooltip-content"
-    data-position="top"
-    class="absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-2
+    data-side="top"
+    class="absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1
            bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50
-           opacity-100 transition-opacity duration-150
+           opacity-0 pointer-events-none transition-all duration-150
+           group-data-[state=open]:opacity-100 group-data-[state=open]:pointer-events-auto
+           group-data-[state=open]:-translate-y-2
            after:content-[''] after:absolute after:top-full after:left-1/2
            after:-translate-x-1/2 after:border-[6px] after:border-transparent
            after:border-t-gray-900"
-    hidden
   >
     Tooltip content
   </div>
-</div>
-
-/* Note: Add this CSS override to allow transitions with hidden attribute */
-[data-slot="tooltip-content"][hidden] {
-  display: block !important;
-  opacity: 0;
-  pointer-events: none;
-}`;
+</div>`;
 ---
 
-<ExampleBlock label="positions: top, bottom, left, right (+ warm-up behavior)">
+<ExampleBlock label="sides: top, bottom, left, right (+ warm-up behavior)">
   <div slot="preview-css" class="tooltip-group" id="tooltip-css">
     <div data-slot="tooltip" class="tooltip-root">
       <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Top</button>
-      <div data-slot="tooltip-content" data-position="top" class="tooltip-content" hidden>
-        Position: top (default)
+      <div data-slot="tooltip-content" data-side="top" class="tooltip-content">
+        Side: top (default)
       </div>
     </div>
     <div data-slot="tooltip" class="tooltip-root">
       <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Bottom</button>
-      <div data-slot="tooltip-content" data-position="bottom" class="tooltip-content" hidden>
-        Position: bottom
+      <div data-slot="tooltip-content" data-side="bottom" class="tooltip-content">
+        Side: bottom
       </div>
     </div>
     <div data-slot="tooltip" class="tooltip-root">
       <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Left</button>
-      <div data-slot="tooltip-content" data-position="left" class="tooltip-content" hidden>
-        Position: left
+      <div data-slot="tooltip-content" data-side="left" class="tooltip-content">
+        Side: left
       </div>
     </div>
     <div data-slot="tooltip" class="tooltip-root">
       <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Right</button>
-      <div data-slot="tooltip-content" data-position="right" class="tooltip-content" hidden>
-        Position: right
+      <div data-slot="tooltip-content" data-side="right" class="tooltip-content">
+        Side: right
       </div>
     </div>
   </div>
   <div slot="preview-tailwind" class="flex gap-2" id="tooltip-tw">
-    <div data-slot="tooltip" class="relative inline-block">
+    <div data-slot="tooltip" class="group relative inline-block">
       <button
         data-slot="tooltip-trigger"
         class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
@@ -120,14 +123,13 @@ const tailwindCode = `<div data-slot="tooltip" class="relative inline-block">
       </button>
       <div
         data-slot="tooltip-content"
-        data-position="top"
-        class="absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-2 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-100 transition-opacity duration-150 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-t-gray-900"
-        hidden
+        data-side="top"
+        class="absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-all duration-150 group-data-[state=open]:opacity-100 group-data-[state=open]:pointer-events-auto group-data-[state=open]:-translate-y-2 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-t-gray-900"
       >
-        Position: top (default)
+        Side: top (default)
       </div>
     </div>
-    <div data-slot="tooltip" class="relative inline-block">
+    <div data-slot="tooltip" class="group relative inline-block">
       <button
         data-slot="tooltip-trigger"
         class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
@@ -136,14 +138,13 @@ const tailwindCode = `<div data-slot="tooltip" class="relative inline-block">
       </button>
       <div
         data-slot="tooltip-content"
-        data-position="bottom"
-        class="absolute top-full left-1/2 -translate-x-1/2 translate-y-2 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-100 transition-opacity duration-150 after:content-[''] after:absolute after:bottom-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-b-gray-900"
-        hidden
+        data-side="bottom"
+        class="absolute top-full left-1/2 -translate-x-1/2 translate-y-1 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-all duration-150 group-data-[state=open]:opacity-100 group-data-[state=open]:pointer-events-auto group-data-[state=open]:translate-y-2 after:content-[''] after:absolute after:bottom-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-b-gray-900"
       >
-        Position: bottom
+        Side: bottom
       </div>
     </div>
-    <div data-slot="tooltip" class="relative inline-block">
+    <div data-slot="tooltip" class="group relative inline-block">
       <button
         data-slot="tooltip-trigger"
         class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
@@ -152,14 +153,13 @@ const tailwindCode = `<div data-slot="tooltip" class="relative inline-block">
       </button>
       <div
         data-slot="tooltip-content"
-        data-position="left"
-        class="absolute right-full top-1/2 -translate-y-1/2 -translate-x-2 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-100 transition-opacity duration-150 after:content-[''] after:absolute after:left-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-l-gray-900"
-        hidden
+        data-side="left"
+        class="absolute right-full top-1/2 -translate-y-1/2 -translate-x-1 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-all duration-150 group-data-[state=open]:opacity-100 group-data-[state=open]:pointer-events-auto group-data-[state=open]:-translate-x-2 after:content-[''] after:absolute after:left-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-l-gray-900"
       >
-        Position: left
+        Side: left
       </div>
     </div>
-    <div data-slot="tooltip" class="relative inline-block">
+    <div data-slot="tooltip" class="group relative inline-block">
       <button
         data-slot="tooltip-trigger"
         class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
@@ -168,18 +168,16 @@ const tailwindCode = `<div data-slot="tooltip" class="relative inline-block">
       </button>
       <div
         data-slot="tooltip-content"
-        data-position="right"
-        class="absolute left-full top-1/2 -translate-y-1/2 translate-x-2 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-100 transition-opacity duration-150 after:content-[''] after:absolute after:right-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-r-gray-900"
-        hidden
+        data-side="right"
+        class="absolute left-full top-1/2 -translate-y-1/2 translate-x-1 bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-all duration-150 group-data-[state=open]:opacity-100 group-data-[state=open]:pointer-events-auto group-data-[state=open]:translate-x-2 after:content-[''] after:absolute after:right-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-r-gray-900"
       >
-        Position: right
+        Side: right
       </div>
     </div>
   </div>
   <p slot="note" class="mt-3">
-    Position via <code>data-position</code> attribute or JS option. Hover across quickly — warm-up skips delay for adjacent tooltips.
+    Side via <code>data-side</code> attribute or JS option. Hover across quickly — warm-up skips delay for adjacent tooltips.
   </p>
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
   <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
 </ExampleBlock>
-

@@ -289,5 +289,108 @@ describe('Accordion', () => {
 
     controller.destroy()
   })
+
+  // Data attribute tests
+  describe('data attributes', () => {
+    it("data-multiple allows multiple items open", () => {
+      document.body.innerHTML = `
+        <div data-slot="accordion" id="root" data-multiple>
+          <div data-slot="accordion-item" data-value="one">
+            <button data-slot="accordion-trigger">One</button>
+            <div data-slot="accordion-content">Content One</div>
+          </div>
+          <div data-slot="accordion-item" data-value="two">
+            <button data-slot="accordion-trigger">Two</button>
+            <div data-slot="accordion-content">Content Two</div>
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const triggers = root.querySelectorAll('[data-slot="accordion-trigger"]')
+      const controller = createAccordion(root)
+
+      ;(triggers[0] as HTMLElement).click()
+      ;(triggers[1] as HTMLElement).click()
+
+      expect(controller.value).toEqual(['one', 'two'])
+
+      controller.destroy()
+    })
+
+    it("data-collapsible='false' prevents collapsing last item", () => {
+      document.body.innerHTML = `
+        <div data-slot="accordion" id="root" data-collapsible="false">
+          <div data-slot="accordion-item" data-value="one">
+            <button data-slot="accordion-trigger">One</button>
+            <div data-slot="accordion-content">Content One</div>
+          </div>
+          <div data-slot="accordion-item" data-value="two">
+            <button data-slot="accordion-trigger">Two</button>
+            <div data-slot="accordion-content">Content Two</div>
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const triggers = root.querySelectorAll('[data-slot="accordion-trigger"]')
+      const controller = createAccordion(root)
+
+      ;(triggers[0] as HTMLElement).click()
+      expect(controller.value).toEqual(['one'])
+
+      // Try to collapse - should not work
+      ;(triggers[0] as HTMLElement).click()
+      expect(controller.value).toEqual(['one'])
+
+      controller.destroy()
+    })
+
+    it("data-default-value expands item initially", () => {
+      document.body.innerHTML = `
+        <div data-slot="accordion" id="root" data-default-value="two">
+          <div data-slot="accordion-item" data-value="one">
+            <button data-slot="accordion-trigger">One</button>
+            <div data-slot="accordion-content">Content One</div>
+          </div>
+          <div data-slot="accordion-item" data-value="two">
+            <button data-slot="accordion-trigger">Two</button>
+            <div data-slot="accordion-content">Content Two</div>
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const controller = createAccordion(root)
+
+      expect(controller.value).toEqual(['two'])
+
+      controller.destroy()
+    })
+
+    it("JS option overrides data attribute", () => {
+      document.body.innerHTML = `
+        <div data-slot="accordion" id="root" data-multiple>
+          <div data-slot="accordion-item" data-value="one">
+            <button data-slot="accordion-trigger">One</button>
+            <div data-slot="accordion-content">Content One</div>
+          </div>
+          <div data-slot="accordion-item" data-value="two">
+            <button data-slot="accordion-trigger">Two</button>
+            <div data-slot="accordion-content">Content Two</div>
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const triggers = root.querySelectorAll('[data-slot="accordion-trigger"]')
+      // JS option says false, data attribute says true - JS wins
+      const controller = createAccordion(root, { multiple: false })
+
+      ;(triggers[0] as HTMLElement).click()
+      ;(triggers[1] as HTMLElement).click()
+
+      // In single mode, second click closes first
+      expect(controller.value).toEqual(['two'])
+
+      controller.destroy()
+    })
+  })
 })
 

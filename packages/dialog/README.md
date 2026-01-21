@@ -63,7 +63,34 @@ const dialog = createDialog(element, {
 | `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside content |
 | `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
 | `lockScroll` | `boolean` | `true` | Lock body scroll when open |
+| `alertDialog` | `boolean` | `false` | Use alertdialog role for confirmations |
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
+
+### Data Attributes
+
+Options can also be set via data attributes on the root element. JS options take precedence over data attributes.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-default-open` | boolean | `false` | Initial open state |
+| `data-close-on-click-outside` | boolean | `true` | Close when clicking outside content |
+| `data-close-on-escape` | boolean | `true` | Close when pressing Escape |
+| `data-lock-scroll` | boolean | `true` | Lock body scroll when open |
+| `data-alert-dialog` | boolean | `false` | Use alertdialog role for confirmations |
+
+Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
+
+```html
+<!-- Disable close on Escape -->
+<div data-slot="dialog" data-close-on-escape="false">
+  ...
+</div>
+
+<!-- Alert dialog that stays open when clicking outside -->
+<div data-slot="dialog" data-alert-dialog data-close-on-click-outside="false">
+  ...
+</div>
+```
 
 ### Controller
 

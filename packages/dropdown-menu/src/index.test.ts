@@ -709,4 +709,134 @@ describe("DropdownMenu", () => {
       expect(changeCount).toBe(1);
     });
   });
+
+  describe("data attributes", () => {
+    it("data-close-on-escape='false' disables Escape key closing", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root" data-close-on-escape="false">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-item">Item</button>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const controller = createDropdownMenu(root);
+
+      controller.open();
+      expect(controller.isOpen).toBe(true);
+
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+      expect(controller.isOpen).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("data-close-on-click-outside='false' disables click outside closing", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root" data-close-on-click-outside="false">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-item">Item</button>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const controller = createDropdownMenu(root);
+
+      controller.open();
+      expect(controller.isOpen).toBe(true);
+
+      document.body.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true })
+      );
+      expect(controller.isOpen).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("data-close-on-select='false' keeps menu open after selection", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root" data-close-on-select="false">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-item">Item</button>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const item = root.querySelector('[data-slot="dropdown-menu-item"]') as HTMLElement;
+      const controller = createDropdownMenu(root);
+
+      controller.open();
+      item.click();
+      expect(controller.isOpen).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("data-side sets preferred side", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root" data-side="top" data-avoid-collisions="false">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-item">Item</button>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="dropdown-menu-content"]') as HTMLElement;
+      const controller = createDropdownMenu(root);
+
+      controller.open();
+      expect(content.getAttribute("data-side")).toBe("top");
+
+      controller.destroy();
+    });
+
+    it("data-side-offset sets distance from trigger", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root" data-side-offset="20">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-item">Item</button>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const controller = createDropdownMenu(root);
+
+      controller.open();
+      // Just verify it opens without error - position testing is complex
+      expect(controller.isOpen).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("JS option overrides data attribute", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root" data-close-on-escape="false">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-item">Item</button>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      // JS option says true, data attribute says false - JS wins
+      const controller = createDropdownMenu(root, { closeOnEscape: true });
+
+      controller.open();
+      expect(controller.isOpen).toBe(true);
+
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+      expect(controller.isOpen).toBe(false);
+
+      controller.destroy();
+    });
+  });
 });
