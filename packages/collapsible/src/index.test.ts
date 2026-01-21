@@ -249,4 +249,55 @@ describe('Collapsible', () => {
 
     expect(() => createCollapsible(root)).toThrow()
   })
+
+  // Data attribute tests
+  describe('data attributes', () => {
+    it("data-default-open opens collapsible initially", () => {
+      document.body.innerHTML = `
+        <div data-slot="collapsible" id="root" data-default-open>
+          <button data-slot="collapsible-trigger">Toggle</button>
+          <div data-slot="collapsible-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="collapsible-content"]') as HTMLElement
+      const controller = createCollapsible(root)
+
+      expect(controller.isOpen).toBe(true)
+      expect(content.hidden).toBe(false)
+
+      controller.destroy()
+    })
+
+    it("data-default-open='false' keeps collapsible closed", () => {
+      document.body.innerHTML = `
+        <div data-slot="collapsible" id="root" data-default-open="false">
+          <button data-slot="collapsible-trigger">Toggle</button>
+          <div data-slot="collapsible-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const controller = createCollapsible(root)
+
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+
+    it("JS option overrides data attribute", () => {
+      document.body.innerHTML = `
+        <div data-slot="collapsible" id="root" data-default-open>
+          <button data-slot="collapsible-trigger">Toggle</button>
+          <div data-slot="collapsible-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      // JS option says false, data attribute says true - JS wins
+      const controller = createCollapsible(root, { defaultOpen: false })
+
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+  })
 })

@@ -1,6 +1,9 @@
-import { getPart, getParts, getRoots } from "@data-slot/core";
+import { getPart, getParts, getRoots, getDataString, getDataEnum } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+
+const ORIENTATIONS = ["horizontal", "vertical"] as const;
+const ACTIVATION_MODES = ["auto", "manual"] as const;
 
 export interface TabsOptions {
   /** Initial selected tab value */
@@ -73,12 +76,6 @@ export function createTabs(
   root: Element,
   options: TabsOptions = {}
 ): TabsController {
-  const {
-    onValueChange,
-    orientation = "horizontal",
-    activationMode = "auto",
-  } = options;
-
   const list = getPart<HTMLElement>(root, "tabs-list");
   const triggers = getParts<HTMLElement>(root, "tabs-trigger");
   const panels = getParts<HTMLElement>(root, "tabs-content");
@@ -87,6 +84,11 @@ export function createTabs(
   if (!list || triggers.length === 0) {
     throw new Error("Tabs requires tabs-list and at least one tabs-trigger");
   }
+
+  // Resolve options with explicit precedence: JS > data-* > default
+  const onValueChange = options.onValueChange;
+  const orientation = options.orientation ?? getDataEnum(root, "orientation", ORIENTATIONS) ?? "horizontal";
+  const activationMode = options.activationMode ?? getDataEnum(root, "activationMode", ACTIVATION_MODES) ?? "auto";
 
   // Build panel lookup map once (value -> panel)
   const panelByValue = new Map<string, HTMLElement>();
@@ -123,10 +125,9 @@ export function createTabs(
   const firstValue = enabled[0]?.value || "";
 
   // Get default value: JS option > data-default-value attribute > first enabled
-  const rootEl = root as HTMLElement;
   const requestedValue = (
     options.defaultValue ??
-    rootEl.dataset["defaultValue"] ??
+    getDataString(root, "defaultValue") ??
     ""
   ).trim();
 

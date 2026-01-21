@@ -632,5 +632,73 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
   });
+
+  // Data attribute tests
+  describe("data attributes", () => {
+    it("data-open-on-focus='false' disables opening on focus", () => {
+      document.body.innerHTML = `
+        <nav data-slot="navigation-menu" id="root" data-open-on-focus="false">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">Content</div>
+            </li>
+          </ul>
+        </nav>
+      `;
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+      const controller = createNavigationMenu(root, { delayOpen: 0 });
+
+      trigger.focus();
+      // Without openOnFocus, focus alone should not open the menu
+      expect(controller.value).toBe(null);
+
+      controller.destroy();
+    });
+
+    it("data-delay-open sets custom open delay", () => {
+      document.body.innerHTML = `
+        <nav data-slot="navigation-menu" id="root" data-delay-open="0">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">Content</div>
+            </li>
+          </ul>
+        </nav>
+      `;
+      const root = document.getElementById("root")!;
+      const controller = createNavigationMenu(root);
+
+      // Just verify it initializes without error
+      expect(controller.value).toBe(null);
+
+      controller.destroy();
+    });
+
+    it("JS option overrides data attribute", () => {
+      document.body.innerHTML = `
+        <nav data-slot="navigation-menu" id="root" data-open-on-focus="false">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">Content</div>
+            </li>
+          </ul>
+        </nav>
+      `;
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+      // JS option says true, data attribute says false - JS wins
+      const controller = createNavigationMenu(root, { openOnFocus: true, delayOpen: 0 });
+
+      trigger.focus();
+      // With openOnFocus: true from JS, focus should open the menu
+      expect(controller.value).toBe("products");
+
+      controller.destroy();
+    });
+  });
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { getPart, getParts, getRoots } from './index'
+import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataString, getDataEnum } from './index'
 import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 
@@ -44,6 +44,236 @@ describe('core/parts', () => {
     `
     const dialogs = getRoots(document, 'dialog')
     expect(dialogs).toHaveLength(2)
+  })
+})
+
+describe('core/getDataBool', () => {
+  // Truthy values
+  it('returns true for empty string (present attribute)', () => {
+    document.body.innerHTML = `<div id="el" data-open></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'open')).toBe(true)
+  })
+
+  it('returns true for "true"', () => {
+    document.body.innerHTML = `<div id="el" data-open="true"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'open')).toBe(true)
+  })
+
+  it('returns true for "1"', () => {
+    document.body.innerHTML = `<div id="el" data-open="1"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'open')).toBe(true)
+  })
+
+  it('returns true for "yes"', () => {
+    document.body.innerHTML = `<div id="el" data-open="yes"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'open')).toBe(true)
+  })
+
+  it('returns true for "YES" (case insensitive)', () => {
+    document.body.innerHTML = `<div id="el" data-open="YES"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'open')).toBe(true)
+  })
+
+  // Falsy values
+  it('returns false for "false"', () => {
+    document.body.innerHTML = `<div id="el" data-open="false"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'open')).toBe(false)
+  })
+
+  it('returns false for "0"', () => {
+    document.body.innerHTML = `<div id="el" data-open="0"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'open')).toBe(false)
+  })
+
+  it('returns false for "no"', () => {
+    document.body.innerHTML = `<div id="el" data-open="no"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'open')).toBe(false)
+  })
+
+  it('returns false for "NO" (case insensitive)', () => {
+    document.body.innerHTML = `<div id="el" data-open="NO"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'open')).toBe(false)
+  })
+
+  // Undefined cases
+  it('returns undefined when attribute absent', () => {
+    document.body.innerHTML = `<div id="el"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'open')).toBeUndefined()
+  })
+
+  it('returns undefined for invalid value', () => {
+    document.body.innerHTML = `<div id="el" data-open="maybe"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'open')).toBeUndefined()
+  })
+
+  // Key normalization
+  it('handles camelCase keys for kebab-case attributes', () => {
+    document.body.innerHTML = `<div id="el" data-close-on-escape="false"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'closeOnEscape')).toBe(false)
+  })
+
+  it('handles camelCase attributes directly', () => {
+    document.body.innerHTML = `<div id="el" data-closeOnEscape="true"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'closeOnEscape')).toBe(true)
+  })
+
+  it('prefers kebab-case over camelCase when both present', () => {
+    document.body.innerHTML = `<div id="el" data-close-on-escape="false" data-closeOnEscape="true"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataBool(el, 'closeOnEscape')).toBe(false)
+  })
+})
+
+describe('core/getDataNumber', () => {
+  it('parses valid positive number', () => {
+    document.body.innerHTML = `<div id="el" data-delay="500"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataNumber(el, 'delay')).toBe(500)
+  })
+
+  it('parses zero', () => {
+    document.body.innerHTML = `<div id="el" data-offset="0"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataNumber(el, 'offset')).toBe(0)
+  })
+
+  it('parses negative numbers', () => {
+    document.body.innerHTML = `<div id="el" data-offset="-5"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataNumber(el, 'offset')).toBe(-5)
+  })
+
+  it('parses decimals', () => {
+    document.body.innerHTML = `<div id="el" data-scale="1.5"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataNumber(el, 'scale')).toBe(1.5)
+  })
+
+  it('returns undefined when attribute absent', () => {
+    document.body.innerHTML = `<div id="el"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataNumber(el, 'delay')).toBeUndefined()
+  })
+
+  it('returns undefined for invalid number', () => {
+    document.body.innerHTML = `<div id="el" data-delay="abc"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataNumber(el, 'delay')).toBeUndefined()
+  })
+
+  it('returns undefined for Infinity', () => {
+    document.body.innerHTML = `<div id="el" data-delay="Infinity"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataNumber(el, 'delay')).toBeUndefined()
+  })
+
+  it('returns undefined for empty string', () => {
+    document.body.innerHTML = `<div id="el" data-delay=""></div>`
+    const el = document.getElementById('el')!
+    expect(getDataNumber(el, 'delay')).toBeUndefined()
+  })
+
+  it('handles camelCase keys for kebab-case attributes', () => {
+    document.body.innerHTML = `<div id="el" data-side-offset="8"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataNumber(el, 'sideOffset')).toBe(8)
+  })
+})
+
+describe('core/getDataString', () => {
+  it('returns string value when present', () => {
+    document.body.innerHTML = `<div id="el" data-value="hello"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataString(el, 'value')).toBe('hello')
+  })
+
+  it('returns empty string when attribute is empty', () => {
+    document.body.innerHTML = `<div id="el" data-value=""></div>`
+    const el = document.getElementById('el')!
+    expect(getDataString(el, 'value')).toBe('')
+  })
+
+  it('returns undefined when attribute absent', () => {
+    document.body.innerHTML = `<div id="el"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataString(el, 'value')).toBeUndefined()
+  })
+
+  it('handles camelCase keys for kebab-case attributes', () => {
+    document.body.innerHTML = `<div id="el" data-default-value="test"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataString(el, 'defaultValue')).toBe('test')
+  })
+})
+
+describe('core/getDataEnum', () => {
+  const SIDES = ['top', 'right', 'bottom', 'left'] as const
+
+  it('returns valid enum value', () => {
+    document.body.innerHTML = `<div id="el" data-side="top"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataEnum(el, 'side', SIDES)).toBe('top')
+  })
+
+  it('returns undefined for invalid enum value', () => {
+    document.body.innerHTML = `<div id="el" data-side="center"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataEnum(el, 'side', SIDES)).toBeUndefined()
+  })
+
+  it('returns undefined when attribute absent', () => {
+    document.body.innerHTML = `<div id="el"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataEnum(el, 'side', SIDES)).toBeUndefined()
+  })
+
+  it('is case-sensitive', () => {
+    document.body.innerHTML = `<div id="el" data-side="TOP"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataEnum(el, 'side', SIDES)).toBeUndefined()
+  })
+
+  it('handles camelCase keys for kebab-case attributes', () => {
+    document.body.innerHTML = `<div id="el" data-preferred-side="left"></div>`
+    const el = document.getElementById('el')!
+    expect(getDataEnum(el, 'preferredSide', SIDES)).toBe('left')
+  })
+})
+
+describe('core/precedence pattern', () => {
+  it('JS option > data attribute > default (example)', () => {
+    document.body.innerHTML = `<div id="el" data-delay="500"></div>`
+    const el = document.getElementById('el')!
+    const options = { delay: 100 } as { delay?: number }
+    const DEFAULT = 300
+
+    // Full precedence chain
+    const delay = options.delay ?? getDataNumber(el, 'delay') ?? DEFAULT
+    expect(delay).toBe(100) // JS wins
+
+    // Without JS option
+    const options2 = {} as { delay?: number }
+    const delay2 = options2.delay ?? getDataNumber(el, 'delay') ?? DEFAULT
+    expect(delay2).toBe(500) // data-* wins
+
+    // Without either
+    document.body.innerHTML = `<div id="el2"></div>`
+    const el2 = document.getElementById('el2')!
+    const delay3 = options2.delay ?? getDataNumber(el2, 'delay') ?? DEFAULT
+    expect(delay3).toBe(300) // default wins
   })
 })
 

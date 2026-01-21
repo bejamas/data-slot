@@ -1,4 +1,4 @@
-import { getPart, getParts, getRoots } from "@data-slot/core";
+import { getPart, getParts, getRoots, getDataBool, getDataNumber } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 
@@ -46,12 +46,11 @@ export function createNavigationMenu(
   root: Element,
   options: NavigationMenuOptions = {}
 ): NavigationMenuController {
-  const {
-    delayOpen = 200,
-    delayClose = 150,
-    openOnFocus = true,
-    onValueChange,
-  } = options;
+  // Resolve options with explicit precedence: JS > data-* > default
+  const delayOpen = options.delayOpen ?? getDataNumber(root, "delayOpen") ?? 200;
+  const delayClose = options.delayClose ?? getDataNumber(root, "delayClose") ?? 150;
+  const openOnFocus = options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? true;
+  const onValueChange = options.onValueChange;
 
   // Sanitize value for use in IDs (spaces/slashes -> dashes)
   const safeId = (s: string) => s.replace(/[^a-z0-9\-_:.]/gi, "-");

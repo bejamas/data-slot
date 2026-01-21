@@ -71,7 +71,27 @@ const menu = createNavigationMenu(element, {
 |--------|------|---------|-------------|
 | `delayOpen` | `number` | `200` | Delay before opening on hover (ms) |
 | `delayClose` | `number` | `150` | Delay before closing on mouse leave (ms) |
+| `openOnFocus` | `boolean` | `true` | Whether focusing a trigger opens its content |
 | `onValueChange` | `(value: string \| null) => void` | `undefined` | Callback when active item changes |
+
+### Data Attributes
+
+Options can also be set via data attributes on the root element. JS options take precedence.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-delay-open` | number | `200` | Delay before opening on hover (ms) |
+| `data-delay-close` | number | `150` | Delay before closing on mouse leave (ms) |
+| `data-open-on-focus` | boolean | `true` | Whether focusing a trigger opens its content |
+
+Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
+
+```html
+<!-- Faster hover response, no auto-open on focus -->
+<nav data-slot="navigation-menu" data-delay-open="100" data-open-on-focus="false">
+  ...
+</nav>
+```
 
 ### Controller
 

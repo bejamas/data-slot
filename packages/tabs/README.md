@@ -62,7 +62,25 @@ const tabs = createTabs(element, {
 |--------|------|---------|-------------|
 | `defaultValue` | `string` | First trigger's value | Initial selected tab |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Tab orientation for keyboard nav |
+| `activationMode` | `"auto" \| "manual"` | `"auto"` | How tabs are activated with keyboard |
 | `onValueChange` | `(value: string) => void` | `undefined` | Callback when selected tab changes |
+
+### Data Attributes
+
+Options can also be set via data attributes on the root element. JS options take precedence.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-default-value` | string | first tab | Initial selected tab |
+| `data-orientation` | string | `"horizontal"` | Tab orientation: horizontal, vertical |
+| `data-activation-mode` | string | `"auto"` | Activation mode: auto, manual |
+
+```html
+<!-- Vertical tabs with manual activation -->
+<div data-slot="tabs" data-orientation="vertical" data-activation-mode="manual">
+  ...
+</div>
+```
 
 ### Controller
 

@@ -544,4 +544,117 @@ describe("Dialog", () => {
       });
     });
   });
+
+  // Data attribute tests
+  describe("data attributes", () => {
+    it("data-close-on-escape='false' disables Escape key closing", () => {
+      document.body.innerHTML = `
+        <div data-slot="dialog" id="root" data-close-on-escape="false">
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">Content</div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const controller = createDialog(root);
+
+      controller.open();
+      expect(controller.isOpen).toBe(true);
+
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+      expect(controller.isOpen).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("data-close-on-click-outside='false' disables overlay click closing", () => {
+      document.body.innerHTML = `
+        <div data-slot="dialog" id="root" data-close-on-click-outside="false">
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">Content</div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const overlay = root.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
+      const controller = createDialog(root);
+
+      controller.open();
+      expect(controller.isOpen).toBe(true);
+
+      overlay.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      expect(controller.isOpen).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("data-lock-scroll='false' disables scroll lock", () => {
+      document.body.innerHTML = `
+        <div data-slot="dialog" id="root" data-lock-scroll="false">
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">Content</div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const controller = createDialog(root);
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("");
+
+      controller.destroy();
+    });
+
+    it("data-alert-dialog enables alertdialog role", () => {
+      document.body.innerHTML = `
+        <div data-slot="dialog" id="root" data-alert-dialog>
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">Alert content</div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="dialog-content"]') as HTMLElement;
+      const controller = createDialog(root);
+
+      expect(content.getAttribute("role")).toBe("alertdialog");
+
+      controller.destroy();
+    });
+
+    it("data-default-open opens dialog initially", () => {
+      document.body.innerHTML = `
+        <div data-slot="dialog" id="root" data-default-open>
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">Content</div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const controller = createDialog(root);
+
+      expect(controller.isOpen).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("JS option overrides data attribute", () => {
+      document.body.innerHTML = `
+        <div data-slot="dialog" id="root" data-close-on-escape="false">
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">Content</div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      // JS option says true, data attribute says false - JS wins
+      const controller = createDialog(root, { closeOnEscape: true });
+
+      controller.open();
+      expect(controller.isOpen).toBe(true);
+
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+      expect(controller.isOpen).toBe(false);
+
+      controller.destroy();
+    });
+  });
 });

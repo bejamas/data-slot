@@ -1,4 +1,4 @@
-import { getParts, getRoots, getPart } from "@data-slot/core";
+import { getParts, getRoots, getPart, getDataBool, getDataString } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 
@@ -47,19 +47,23 @@ export function createAccordion(
   root: Element,
   options: AccordionOptions = {}
 ): AccordionController {
-  const { multiple = false, onValueChange, collapsible = true } = options;
-
   const items = getParts<HTMLElement>(root, "accordion-item");
 
   if (items.length === 0) {
     throw new Error("Accordion requires at least one accordion-item");
   }
 
-  // Normalize defaultValue to array
-  const defaultValue = options.defaultValue
-    ? Array.isArray(options.defaultValue)
-      ? options.defaultValue
-      : [options.defaultValue]
+  // Resolve options with explicit precedence: JS > data-* > default
+  const multiple = options.multiple ?? getDataBool(root, "multiple") ?? false;
+  const onValueChange = options.onValueChange;
+  const collapsible = options.collapsible ?? getDataBool(root, "collapsible") ?? true;
+
+  // Normalize defaultValue to array (JS option > data-default-value > empty)
+  const rawDefaultValue = options.defaultValue ?? getDataString(root, "defaultValue");
+  const defaultValue = rawDefaultValue
+    ? Array.isArray(rawDefaultValue)
+      ? rawDefaultValue
+      : [rawDefaultValue]
     : [];
 
   let expandedValues = new Set<string>(defaultValue);

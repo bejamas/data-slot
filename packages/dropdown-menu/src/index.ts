@@ -1,12 +1,14 @@
-import { getPart, getParts, getRoots } from "@data-slot/core";
+import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataEnum } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 
 /** Side of the trigger to place the content */
 export type Side = "top" | "right" | "bottom" | "left";
+const SIDES = ["top", "right", "bottom", "left"] as const;
 
 /** Alignment of the content relative to the trigger */
 export type Align = "start" | "center" | "end";
+const ALIGNS = ["start", "center", "end"] as const;
 
 export interface DropdownMenuOptions {
   /** Initial open state */
@@ -94,27 +96,53 @@ export function createDropdownMenu(
   root: Element,
   options: DropdownMenuOptions = {}
 ): DropdownMenuController {
-  const {
-    defaultOpen = false,
-    onOpenChange,
-    onSelect,
-    closeOnClickOutside = true,
-    closeOnEscape = true,
-    closeOnSelect = true,
-    side: preferredSide = "bottom",
-    align: preferredAlign = "start",
-    sideOffset = 4,
-    alignOffset = 0,
-    avoidCollisions = true,
-    collisionPadding = 8,
-  } = options;
-
   const trigger = getPart<HTMLElement>(root, "dropdown-menu-trigger");
   const content = getPart<HTMLElement>(root, "dropdown-menu-content");
 
   if (!trigger || !content) {
     throw new Error("DropdownMenu requires trigger and content slots");
   }
+
+  // Resolve options with explicit precedence: JS > data-* > default
+  // Behavior options from root
+  const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
+  const onOpenChange = options.onOpenChange;
+  const onSelect = options.onSelect;
+  const closeOnClickOutside = options.closeOnClickOutside ?? getDataBool(root, "closeOnClickOutside") ?? true;
+  const closeOnEscape = options.closeOnEscape ?? getDataBool(root, "closeOnEscape") ?? true;
+  const closeOnSelect = options.closeOnSelect ?? getDataBool(root, "closeOnSelect") ?? true;
+
+  // Placement options: content-first, then root
+  const preferredSide =
+    options.side ??
+    getDataEnum(content, "side", SIDES) ??
+    getDataEnum(root, "side", SIDES) ??
+    "bottom";
+  const preferredAlign =
+    options.align ??
+    getDataEnum(content, "align", ALIGNS) ??
+    getDataEnum(root, "align", ALIGNS) ??
+    "start";
+  const sideOffset =
+    options.sideOffset ??
+    getDataNumber(content, "sideOffset") ??
+    getDataNumber(root, "sideOffset") ??
+    4;
+  const alignOffset =
+    options.alignOffset ??
+    getDataNumber(content, "alignOffset") ??
+    getDataNumber(root, "alignOffset") ??
+    0;
+  const avoidCollisions =
+    options.avoidCollisions ??
+    getDataBool(content, "avoidCollisions") ??
+    getDataBool(root, "avoidCollisions") ??
+    true;
+  const collisionPadding =
+    options.collisionPadding ??
+    getDataNumber(content, "collisionPadding") ??
+    getDataNumber(root, "collisionPadding") ??
+    8;
 
   let isOpen = false;
   let previousActiveElement: HTMLElement | null = null;
