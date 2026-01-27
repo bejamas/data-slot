@@ -212,7 +212,7 @@ bun add @data-slot/dialog`}
     createCollapsible(el as HTMLElement)
   );
   document.querySelectorAll('[data-slot="tooltip"]').forEach((el) =>
-    createTooltip(el as HTMLElement, { delay: 600 })
+    createTooltip(el as HTMLElement)
   );
   document.querySelectorAll('[data-slot="popover"]').forEach((el) =>
     createPopover(el as HTMLElement)
