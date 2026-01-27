@@ -1,6 +1,10 @@
-import { getPart, getParts, getRoots, getDataBool, getDataNumber } from "@data-slot/core";
+import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataEnum } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+
+/** Alignment of the viewport relative to the trigger */
+export type Align = "start" | "center" | "end";
+const ALIGNS = ["start", "center", "end"] as const;
 
 export interface NavigationMenuOptions {
   /** Delay before opening on hover (ms) */
@@ -85,12 +89,12 @@ export function createNavigationMenu(
 
   // ResizeObserver for active panel - handles fonts/images/content changes after open
   let activeRO: ResizeObserver | null = null;
-  const observeActiveContent = (el: HTMLElement | null) => {
+  const observeActiveContent = (data: { content: HTMLElement; trigger: HTMLElement; align: Align } | null) => {
     activeRO?.disconnect();
     activeRO = null;
-    if (!viewport || !el) return;
-    activeRO = new ResizeObserver(() => updateViewportSize(el));
-    activeRO.observe(el);
+    if (!viewport || !data) return;
+    activeRO = new ResizeObserver(() => updateViewportSize(data.content, data.trigger, data.align));
+    activeRO.observe(data.content);
   };
   cleanups.push(() => activeRO?.disconnect());
 
@@ -102,6 +106,7 @@ export function createNavigationMenu(
       trigger: HTMLElement;
       content: HTMLElement;
       index: number;
+      align: Align;
     }
   >();
 
@@ -114,7 +119,14 @@ export function createNavigationMenu(
     const content = getPart<HTMLElement>(item, "navigation-menu-content");
 
     if (trigger && content) {
-      itemMap.set(value, { item, trigger, content, index: validIndex++ });
+      // Read alignment: content > item > root (default: start)
+      const align =
+        getDataEnum(content, "align", ALIGNS) ??
+        getDataEnum(item, "align", ALIGNS) ??
+        getDataEnum(root, "align", ALIGNS) ??
+        "start";
+
+      itemMap.set(value, { item, trigger, content, index: validIndex++, align });
 
       // Setup ARIA - link trigger to content bidirectionally
       const safe = safeId(value);
@@ -178,7 +190,7 @@ export function createNavigationMenu(
     return hoverBridge;
   };
 
-  const updateViewportSize = (content: HTMLElement) => {
+  const updateViewportSize = (content: HTMLElement, trigger: HTMLElement, align: Align) => {
     if (!viewport) return;
 
     // Measure after content is visible using rAF + getBoundingClientRect for abs/transform panels
@@ -197,6 +209,25 @@ export function createNavigationMenu(
         "--viewport-height",
         `${rect.height + viewportMarginTop + viewportMarginBottom}px`
       );
+
+      // Calculate horizontal position based on alignment
+      const rootRect = (root as HTMLElement).getBoundingClientRect();
+      const triggerRect = trigger.getBoundingClientRect();
+
+      let left: number;
+      if (align === "center") {
+        left = triggerRect.left - rootRect.left + triggerRect.width / 2 - rect.width / 2;
+      } else if (align === "end") {
+        left = triggerRect.right - rootRect.left - rect.width;
+      } else {
+        left = triggerRect.left - rootRect.left; // start (default)
+      }
+
+      viewport.style.setProperty("--viewport-left", `${left}px`);
+      // Set left directly on viewport (in case CSS variable isn't read)
+      viewport.style.left = `${left}px`;
+      // Also position the content element itself
+      content.style.left = `${left}px`;
 
       // If content has margin-top, create/update hover bridge to cover the gap
       const totalGap = contentMarginTop + viewportMarginTop;
@@ -326,8 +357,8 @@ export function createNavigationMenu(
         newData.content.hidden = false;
         previousIndex = newData.index;
 
-        updateViewportSize(newData.content);
-        observeActiveContent(newData.content);
+        updateViewportSize(newData.content, newData.trigger, newData.align);
+        observeActiveContent(newData);
         updateIndicator(newData.trigger); // Indicator follows active trigger
       } else {
         observeActiveContent(null);
@@ -509,7 +540,7 @@ export function createNavigationMenu(
       on(viewport, "transitionend", (e) => {
         if (e.target !== viewport) return; // Ignore bubbling from children
         const data = currentValue ? itemMap.get(currentValue) : null;
-        if (data) updateViewportSize(data.content);
+        if (data) updateViewportSize(data.content, data.trigger, data.align);
       })
     );
   }

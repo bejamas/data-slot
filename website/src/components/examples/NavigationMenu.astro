@@ -39,12 +39,13 @@ const cssCode = `<nav data-slot="navigation-menu" class="nav-menu">
   .nav-menu-viewport {
     position: absolute;
     top: 100%;
+    left: var(--viewport-left, 0);
     background: #faf9f7;
     border-radius: 8px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.12);
     width: var(--viewport-width, 0);
     height: var(--viewport-height, 0);
-    transition: width 0.25s, height 0.25s;
+    transition: left 0.25s, width 0.25s, height 0.25s;
   }
   .nav-menu-content { position: absolute; top: 100%; padding: 1.5rem 1rem; }
   .nav-menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; width: 380px; }
@@ -66,7 +67,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
       </button>
       <div
         data-slot="navigation-menu-content"
-        class="absolute top-full left-0 pt-6 px-4 pb-0
+        class="absolute top-full pt-6 px-4 pb-0
                data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4
                data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none
                data-[state=inactive]:invisible data-[state=active]:visible"
@@ -92,19 +93,20 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
   </ul>
   <div
     data-slot="navigation-menu-viewport"
-    class="absolute top-full left-0 bg-bg rounded-lg shadow-lg
+    class="absolute top-full bg-bg rounded-lg shadow-lg
            overflow-hidden mt-2 opacity-0 pointer-events-none
            data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
-    style="width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
+    style="left: var(--viewport-left, 0); width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
   ></div>
 </nav>
 
 /* CSS needed for animations (viewport size + content direction) */
 [data-slot="navigation-menu-viewport"] {
-  transition: width 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+  transition: left 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+              width 0.25s cubic-bezier(0.32, 0.72, 0, 1),
               height 0.25s cubic-bezier(0.32, 0.72, 0, 1),
               opacity 0.15s ease;
-  will-change: width, height;
+  will-change: left, width, height;
 }
 [data-slot="navigation-menu-viewport"][data-instant] {
   transition: opacity 0.15s ease;
@@ -197,6 +199,17 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
           </div>
         </div>
       </li>
+      <li data-slot="navigation-menu-item" data-value="company" class="nav-menu-item">
+        <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Company</button>
+        <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
+          <div class="nav-menu-single">
+            <a href="#" class="nav-menu-link">
+              <div class="nav-menu-link-title">About Us</div>
+              <div class="nav-menu-link-desc">Our story</div>
+            </a>
+          </div>
+        </div>
+      </li>
       <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
     </ul>
     <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
@@ -222,7 +235,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-full left-0 pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4 data-[motion='from-left']:slide-in-from-left-4 data-motion[to-right]:animate-slide-to-right-4 data-[state=active]:animate-in data-[state=inactive]:animate-out "
+          class="absolute top-full pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4 data-[motion='from-left']:slide-in-from-left-4 data-motion[to-right]:animate-slide-to-right-4 data-[state=active]:animate-in data-[state=inactive]:animate-out "
           hidden
         >
           <div class="grid grid-cols-2 gap-3 w-[380px]">
@@ -245,7 +258,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
           </div>
         </div>
       </li>
-      <li data-slot="navigation-menu-item" data-value="solutions" class="static">
+      <li data-slot="navigation-menu-item" data-value="solutions" data-align="center" class="static">
         <button
           data-slot="navigation-menu-trigger"
           class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent data-[state=open]:text-accent after:content-['▼'] after:text-[0.6rem] after:transition-transform after:duration-200 data-[state=open]:after:rotate-180"
@@ -254,7 +267,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-full left-0 pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+          class="absolute top-full pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
           hidden
         >
           <div class="grid grid-cols-2 gap-3 w-[380px]">
@@ -277,7 +290,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
           </div>
         </div>
       </li>
-      <li data-slot="navigation-menu-item" data-value="resources" class="static">
+      <li data-slot="navigation-menu-item" data-value="resources" data-align="center" class="static">
         <button
           data-slot="navigation-menu-trigger"
           class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent data-[state=open]:text-accent after:content-['▼'] after:text-[0.6rem] after:transition-transform after:duration-200 data-[state=open]:after:rotate-180"
@@ -286,7 +299,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-full left-0 pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+          class="absolute top-full pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
           hidden
         >
           <div class="grid grid-cols-3 gap-3 w-[520px]">
@@ -317,6 +330,26 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
           </div>
         </div>
       </li>
+      <li data-slot="navigation-menu-item" data-value="company" class="static">
+        <button
+          data-slot="navigation-menu-trigger"
+          class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent data-[state=open]:text-accent after:content-['▼'] after:text-[0.6rem] after:transition-transform after:duration-200 data-[state=open]:after:rotate-180"
+        >
+          Company
+        </button>
+        <div
+          data-slot="navigation-menu-content"
+          class="absolute top-full pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+          hidden
+        >
+          <div class="w-[140px]">
+            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
+              <div class="font-medium mb-1">About Us</div>
+              <div class="text-sm text-muted">Our story</div>
+            </a>
+          </div>
+        </div>
+      </li>
       <div
         data-slot="navigation-menu-indicator"
         class="absolute bg-code-bg z-0 rounded-md transition-all duration-150 pointer-events-none opacity-0 data-[state=visible]:opacity-100"
@@ -325,14 +358,21 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
     </ul>
     <div
       data-slot="navigation-menu-viewport"
-      class="absolute data-instant:transition-opacity duration-150 top-full left-0 bg-bg rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12),0_0_0_1px_var(--color-border)] overflow-hidden mt-2 opacity-0 pointer-events-none data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
-      style="width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
+      class="absolute data-instant:transition-opacity duration-150 top-full bg-bg rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12),0_0_0_1px_var(--color-border)] overflow-hidden mt-2 opacity-0 pointer-events-none data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
+      style="left: var(--viewport-left, 0); width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
     ></div>
   </nav>
-  <p slot="note" class="mt-3 text-muted">
-    Hover between items — content slides with direction. Viewport width animates smoothly.
-    CSS variables: <code>--viewport-width</code>, <code>--viewport-height</code>, <code>--motion-direction</code>.
-  </p>
+  <div slot="note">
+    <p class="mt-3 text-muted">
+      Hover between items — content slides with direction. Viewport animates smoothly.
+    </p>
+    <p class="text-muted mt-3">
+      CSS variables: <code>--viewport-left</code>, <code>--viewport-width</code>, <code>--viewport-height</code>, <code>--motion-direction</code>.
+    </p>
+    <p class="text-muted mt-3">
+      Use <code>data-align="start|center|end"</code> on items to control alignment.
+    </p>
+  </div>
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
   <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
 </ExampleBlock>

@@ -83,14 +83,34 @@ Options can also be set via data attributes on the root element. JS options take
 | `data-delay-open` | number | `200` | Delay before opening on hover (ms) |
 | `data-delay-close` | number | `150` | Delay before closing on mouse leave (ms) |
 | `data-open-on-focus` | boolean | `true` | Whether focusing a trigger opens its content |
+| `data-align` | string | `"start"` | Viewport alignment: `"start"`, `"center"`, or `"end"` |
 
 Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
+
+The `data-align` attribute controls how the viewport is positioned relative to the active trigger:
+- `start` - Align viewport left edge with trigger left edge (default)
+- `center` - Center viewport under trigger
+- `end` - Align viewport right edge with trigger right edge
+
+Can be set on:
+1. `navigation-menu-content` (highest priority)
+2. `navigation-menu-item`
+3. `navigation-menu` root (lowest priority, applies to all items)
 
 ```html
 <!-- Faster hover response, no auto-open on focus -->
 <nav data-slot="navigation-menu" data-delay-open="100" data-open-on-focus="false">
   ...
 </nav>
+
+<!-- Center-align a narrow submenu under its trigger -->
+<li data-slot="navigation-menu-item" data-value="company" data-align="center">
+  <button data-slot="navigation-menu-trigger">Company</button>
+  <div data-slot="navigation-menu-content">
+    <a href="/about">About</a>
+    <a href="/careers">Careers</a>
+  </div>
+</li>
 ```
 
 ### Controller
@@ -140,11 +160,12 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
   display: block;
 }
 
-/* Viewport sizing */
+/* Viewport sizing and positioning */
 [data-slot="navigation-menu-viewport"] {
+  left: var(--viewport-left, 0);
   width: var(--viewport-width);
   height: var(--viewport-height);
-  transition: width 0.3s, height 0.3s;
+  transition: left 0.3s, width 0.3s, height 0.3s;
 }
 
 /* Skip animation on initial open */
@@ -191,6 +212,7 @@ Content panels receive `data-motion` attributes for enter/exit animations:
 
 | Variable | Element | Description |
 |----------|---------|-------------|
+| `--viewport-left` | viewport | Left offset based on alignment |
 | `--viewport-width` | viewport | Width of active content |
 | `--viewport-height` | viewport | Height of active content |
 | `--indicator-left` | indicator | Left offset from list |
