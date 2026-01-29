@@ -183,14 +183,16 @@ export function createTabs(
     const listRect = list.getBoundingClientRect();
     const triggerRect = item.el.getBoundingClientRect();
 
+    const scrollLeft = list.scrollLeft;
+    const scrollTop = list.scrollTop;
     indicator.style.setProperty(
       "--active-tab-left",
-      `${triggerRect.left - listRect.left - list.clientLeft}px`
+      `${triggerRect.left - listRect.left - list.clientLeft + scrollLeft}px`
     );
     indicator.style.setProperty("--active-tab-width", `${triggerRect.width}px`);
     indicator.style.setProperty(
       "--active-tab-top",
-      `${triggerRect.top - listRect.top - list.clientTop}px`
+      `${triggerRect.top - listRect.top - list.clientTop + scrollTop}px`
     );
     indicator.style.setProperty(
       "--active-tab-height",

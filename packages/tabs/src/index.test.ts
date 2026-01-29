@@ -92,6 +92,49 @@ describe('Tabs', () => {
     controller.destroy()
   })
 
+  it('keeps indicator position stable when list scrolls', () => {
+    document.body.innerHTML = `
+      <div data-slot="tabs" id="root">
+        <div data-slot="tabs-list">
+          <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+          <button data-slot="tabs-trigger" data-value="two">Tab Two</button>
+          <div data-slot="tabs-indicator"></div>
+        </div>
+        <div data-slot="tabs-content" data-value="one">Content One</div>
+        <div data-slot="tabs-content" data-value="two">Content Two</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const list = root.querySelector('[data-slot="tabs-list"]') as HTMLElement
+    const trigger = root.querySelector('[data-slot="tabs-trigger"]') as HTMLElement
+    const indicator = root.querySelector('[data-slot="tabs-indicator"]') as HTMLElement
+
+    let listLeft = 100
+    let triggerLeft = 130
+    list.getBoundingClientRect = () =>
+      ({ left: listLeft, top: 0, width: 300, height: 40, right: 0, bottom: 0, x: 0, y: 0, toJSON() {} } as DOMRect)
+    trigger.getBoundingClientRect = () =>
+      ({ left: triggerLeft, top: 0, width: 60, height: 32, right: 0, bottom: 0, x: 0, y: 0, toJSON() {} } as DOMRect)
+
+    Object.defineProperty(list, 'clientLeft', { value: 0 })
+    Object.defineProperty(list, 'clientTop', { value: 0 })
+
+    const controller = createTabs(root)
+
+    list.scrollLeft = 0
+    controller.updateIndicator()
+    const initialLeft = indicator.style.getPropertyValue('--active-tab-left')
+
+    list.scrollLeft = 20
+    triggerLeft = 110
+    controller.updateIndicator()
+    const scrolledLeft = indicator.style.getPropertyValue('--active-tab-left')
+
+    expect(scrolledLeft).toBe(initialLeft)
+
+    controller.destroy()
+  })
+
   it('links tabs to panels via aria-controls', () => {
     const { triggers, panels, controller } = setup()
 
