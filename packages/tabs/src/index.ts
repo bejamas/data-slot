@@ -185,12 +185,12 @@ export function createTabs(
 
     indicator.style.setProperty(
       "--active-tab-left",
-      `${triggerRect.left - listRect.left}px`
+      `${triggerRect.left - listRect.left - list.clientLeft}px`
     );
     indicator.style.setProperty("--active-tab-width", `${triggerRect.width}px`);
     indicator.style.setProperty(
       "--active-tab-top",
-      `${triggerRect.top - listRect.top}px`
+      `${triggerRect.top - listRect.top - list.clientTop}px`
     );
     indicator.style.setProperty(
       "--active-tab-height",
