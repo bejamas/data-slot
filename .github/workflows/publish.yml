@@ -70,6 +70,7 @@ jobs:
           publish_pkg packages/tabs
           publish_pkg packages/tooltip
           publish_pkg packages/dropdown-menu
+          publish_pkg packages/slider
 
       - name: Dry run - show what would be published
         if: ${{ inputs.dry_run }}

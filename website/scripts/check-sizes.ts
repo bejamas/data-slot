@@ -27,6 +27,7 @@ const descriptions: Record<string, string> = {
   core: "Shared utilities",
   "navigation-menu": "Dropdown navigation menus",
   "dropdown-menu": "Action menus, kbd nav",
+  slider: "Single/range value sliders",
 };
 
 // Packages to check (order doesn't matter, we sort by size)
@@ -38,6 +39,7 @@ const packageNames = [
   "dropdown-menu",
   "navigation-menu",
   "popover",
+  "slider",
   "tabs",
   "tooltip",
 ];
