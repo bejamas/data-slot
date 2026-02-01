@@ -12,6 +12,7 @@ export default defineConfig({
     "src/collapsible.ts",
     "src/navigation-menu.ts",
     "src/dropdown-menu.ts",
+    "src/toggle.ts",
   ],
   format: ["esm", "cjs"],
   dts: true,

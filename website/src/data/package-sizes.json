@@ -7,7 +7,7 @@
   },
   {
     "name": "@data-slot/slider",
-    "size": 2909,
+    "size": 2912,
     "sizeFormatted": "2.8 KB",
     "description": "Single/range value sliders"
   },
@@ -28,6 +28,12 @@
     "size": 2181,
     "sizeFormatted": "2.1 KB",
     "description": "Tabbed interfaces, kbd nav"
+  },
+  {
+    "name": "@data-slot/toggle",
+    "size": 2040,
+    "sizeFormatted": "2.0 KB",
+    "description": "Two-state toggle button"
   },
   {
     "name": "@data-slot/accordion",

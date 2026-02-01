@@ -1,0 +1,178 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div class="toggle-group">
+  <button data-slot="toggle" class="toggle-btn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+      <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+    </svg>
+  </button>
+  <button data-slot="toggle" class="toggle-btn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="19" y1="4" x2="10" y2="4"/>
+      <line x1="14" y1="20" x2="5" y2="20"/>
+      <line x1="15" y1="4" x2="9" y2="20"/>
+    </svg>
+  </button>
+  <button data-slot="toggle" data-default-pressed class="toggle-btn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M6 4v16"/>
+      <path d="M18 4v16"/>
+      <path d="M6 12h12"/>
+    </svg>
+  </button>
+</div>
+
+<style>
+  .toggle-group {
+    display: flex;
+    gap: 0.25rem;
+  }
+  .toggle-btn {
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .toggle-btn:hover {
+    background: #f0eeeb;
+  }
+  .toggle-btn[data-state="on"] {
+    background: #333;
+    border-color: #333;
+    color: white;
+  }
+</style>`;
+
+const tailwindCode = `<div class="flex gap-1">
+  <button
+    data-slot="toggle"
+    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+           flex items-center justify-center transition-colors
+           hover:bg-code-bg data-[state=on]:bg-gray-800
+           data-[state=on]:border-gray-800 data-[state=on]:text-white"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+      <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+    </svg>
+  </button>
+  <button
+    data-slot="toggle"
+    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+           flex items-center justify-center transition-colors
+           hover:bg-code-bg data-[state=on]:bg-gray-800
+           data-[state=on]:border-gray-800 data-[state=on]:text-white"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="19" y1="4" x2="10" y2="4"/>
+      <line x1="14" y1="20" x2="5" y2="20"/>
+      <line x1="15" y1="4" x2="9" y2="20"/>
+    </svg>
+  </button>
+  <button
+    data-slot="toggle"
+    data-default-pressed
+    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+           flex items-center justify-center transition-colors
+           hover:bg-code-bg data-[state=on]:bg-gray-800
+           data-[state=on]:border-gray-800 data-[state=on]:text-white"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M6 4v16"/>
+      <path d="M18 4v16"/>
+      <path d="M6 12h12"/>
+    </svg>
+  </button>
+</div>`;
+---
+
+<ExampleBlock>
+  <div slot="preview-css" class="toggle-group">
+    <button data-slot="toggle" class="toggle-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+        <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+      </svg>
+    </button>
+    <button data-slot="toggle" class="toggle-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="19" y1="4" x2="10" y2="4"/>
+        <line x1="14" y1="20" x2="5" y2="20"/>
+        <line x1="15" y1="4" x2="9" y2="20"/>
+      </svg>
+    </button>
+    <button data-slot="toggle" data-default-pressed class="toggle-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M6 4v16"/>
+        <path d="M18 4v16"/>
+        <path d="M6 12h12"/>
+      </svg>
+    </button>
+  </div>
+  <div slot="preview-tailwind" class="flex gap-1">
+    <button
+      data-slot="toggle"
+      class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+        <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+      </svg>
+    </button>
+    <button
+      data-slot="toggle"
+      class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="19" y1="4" x2="10" y2="4"/>
+        <line x1="14" y1="20" x2="5" y2="20"/>
+        <line x1="15" y1="4" x2="9" y2="20"/>
+      </svg>
+    </button>
+    <button
+      data-slot="toggle"
+      data-default-pressed
+      class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M6 4v16"/>
+        <path d="M18 4v16"/>
+        <path d="M6 12h12"/>
+      </svg>
+    </button>
+  </div>
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+
+<style>
+  .toggle-group {
+    display: flex;
+    gap: 0.25rem;
+  }
+  .toggle-btn {
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .toggle-btn:hover {
+    background: #f0eeeb;
+  }
+  .toggle-btn[data-state="on"] {
+    background: #333;
+    border-color: #333;
+    color: white;
+  }
+</style>
