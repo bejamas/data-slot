@@ -6,6 +6,12 @@
     "description": "Dropdown navigation menus"
   },
   {
+    "name": "@data-slot/toggle-group",
+    "size": 2010,
+    "sizeFormatted": "2.0 KB",
+    "description": "Single/multi-select toggle buttons"
+  },
+  {
     "name": "@data-slot/slider",
     "size": 2912,
     "sizeFormatted": "2.8 KB",

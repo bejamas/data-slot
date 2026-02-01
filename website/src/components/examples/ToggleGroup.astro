@@ -1,0 +1,291 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<!-- Single selection (alignment) -->
+<div data-slot="toggle-group" data-default-value="center" class="toggle-group">
+  <button data-slot="toggle-group-item" data-value="left" class="toggle-group-btn" aria-label="Align left">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/>
+    </svg>
+  </button>
+  <button data-slot="toggle-group-item" data-value="center" class="toggle-group-btn" aria-label="Align center">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+    </svg>
+  </button>
+  <button data-slot="toggle-group-item" data-value="right" class="toggle-group-btn" aria-label="Align right">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+</div>
+
+<!-- Multiple selection (text formatting) -->
+<div data-slot="toggle-group" data-multiple data-default-value="bold" class="toggle-group" aria-label="Text formatting">
+  <button data-slot="toggle-group-item" data-value="bold" class="toggle-group-btn" aria-label="Bold">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+    </svg>
+  </button>
+  <button data-slot="toggle-group-item" data-value="italic" class="toggle-group-btn" aria-label="Italic">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/>
+    </svg>
+  </button>
+  <button data-slot="toggle-group-item" data-value="underline" class="toggle-group-btn" aria-label="Underline">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/>
+    </svg>
+  </button>
+</div>
+
+<style>
+  .toggle-group {
+    display: inline-flex;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+  }
+  .toggle-group-btn {
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .toggle-group-btn:hover {
+    background: #f0eeeb;
+  }
+  .toggle-group-btn[data-state="on"] {
+    background: #333;
+    border-color: #333;
+    color: white;
+  }
+</style>`;
+
+const tailwindCode = `<!-- Single selection (alignment) -->
+<div data-slot="toggle-group" data-default-value="center" class="inline-flex gap-1 mb-3">
+  <button
+    data-slot="toggle-group-item"
+    data-value="left"
+    aria-label="Align left"
+    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+           flex items-center justify-center transition-colors
+           hover:bg-code-bg data-[state=on]:bg-gray-800
+           data-[state=on]:border-gray-800 data-[state=on]:text-white"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/>
+    </svg>
+  </button>
+  <button
+    data-slot="toggle-group-item"
+    data-value="center"
+    aria-label="Align center"
+    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+           flex items-center justify-center transition-colors
+           hover:bg-code-bg data-[state=on]:bg-gray-800
+           data-[state=on]:border-gray-800 data-[state=on]:text-white"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+    </svg>
+  </button>
+  <button
+    data-slot="toggle-group-item"
+    data-value="right"
+    aria-label="Align right"
+    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+           flex items-center justify-center transition-colors
+           hover:bg-code-bg data-[state=on]:bg-gray-800
+           data-[state=on]:border-gray-800 data-[state=on]:text-white"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+</div>
+
+<!-- Multiple selection (text formatting) -->
+<div data-slot="toggle-group" data-multiple data-default-value="bold" class="inline-flex gap-1" aria-label="Text formatting">
+  <button
+    data-slot="toggle-group-item"
+    data-value="bold"
+    aria-label="Bold"
+    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+           flex items-center justify-center transition-colors
+           hover:bg-code-bg data-[state=on]:bg-gray-800
+           data-[state=on]:border-gray-800 data-[state=on]:text-white"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+    </svg>
+  </button>
+  <button
+    data-slot="toggle-group-item"
+    data-value="italic"
+    aria-label="Italic"
+    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+           flex items-center justify-center transition-colors
+           hover:bg-code-bg data-[state=on]:bg-gray-800
+           data-[state=on]:border-gray-800 data-[state=on]:text-white"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/>
+    </svg>
+  </button>
+  <button
+    data-slot="toggle-group-item"
+    data-value="underline"
+    aria-label="Underline"
+    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+           flex items-center justify-center transition-colors
+           hover:bg-code-bg data-[state=on]:bg-gray-800
+           data-[state=on]:border-gray-800 data-[state=on]:text-white"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/>
+    </svg>
+  </button>
+</div>`;
+---
+
+<ExampleBlock>
+  <div slot="preview-css">
+    <!-- Single selection (alignment) -->
+    <div data-slot="toggle-group" data-default-value="center" class="toggle-group" aria-label="Text alignment">
+      <button data-slot="toggle-group-item" data-value="left" class="toggle-group-btn" aria-label="Align left">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/>
+        </svg>
+      </button>
+      <button data-slot="toggle-group-item" data-value="center" class="toggle-group-btn" aria-label="Align center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+        </svg>
+      </button>
+      <button data-slot="toggle-group-item" data-value="right" class="toggle-group-btn" aria-label="Align right">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <!-- Multiple selection (text formatting) -->
+    <div data-slot="toggle-group" data-multiple data-default-value="bold" class="toggle-group" aria-label="Text formatting">
+      <button data-slot="toggle-group-item" data-value="bold" class="toggle-group-btn" aria-label="Bold">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+        </svg>
+      </button>
+      <button data-slot="toggle-group-item" data-value="italic" class="toggle-group-btn" aria-label="Italic">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/>
+        </svg>
+      </button>
+      <button data-slot="toggle-group-item" data-value="underline" class="toggle-group-btn" aria-label="Underline">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div slot="preview-tailwind">
+    <!-- Single selection (alignment) -->
+    <div data-slot="toggle-group" data-default-value="center" class="inline-flex gap-1 mb-3" aria-label="Text alignment">
+      <button
+        data-slot="toggle-group-item"
+        data-value="left"
+        aria-label="Align left"
+        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/>
+        </svg>
+      </button>
+      <button
+        data-slot="toggle-group-item"
+        data-value="center"
+        aria-label="Align center"
+        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+        </svg>
+      </button>
+      <button
+        data-slot="toggle-group-item"
+        data-value="right"
+        aria-label="Align right"
+        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <!-- Multiple selection (text formatting) -->
+    <div data-slot="toggle-group" data-multiple data-default-value="bold" class="inline-flex gap-1" aria-label="Text formatting">
+      <button
+        data-slot="toggle-group-item"
+        data-value="bold"
+        aria-label="Bold"
+        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+        </svg>
+      </button>
+      <button
+        data-slot="toggle-group-item"
+        data-value="italic"
+        aria-label="Italic"
+        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/>
+        </svg>
+      </button>
+      <button
+        data-slot="toggle-group-item"
+        data-value="underline"
+        aria-label="Underline"
+        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+
+<style>
+  .toggle-group {
+    display: inline-flex;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+  }
+  .toggle-group-btn {
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .toggle-group-btn:hover {
+    background: #f0eeeb;
+  }
+  .toggle-group-btn[data-state="on"] {
+    background: #333;
+    border-color: #333;
+    color: white;
+  }
+</style>

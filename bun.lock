@@ -43,6 +43,7 @@
         "@data-slot/popover": "workspace:*",
         "@data-slot/tabs": "workspace:*",
         "@data-slot/toggle": "workspace:*",
+        "@data-slot/toggle-group": "workspace:*",
         "@data-slot/tooltip": "workspace:*",
       },
     },
@@ -90,6 +91,13 @@
     },
     "packages/toggle": {
       "name": "@data-slot/toggle",
+      "version": "0.2.10",
+      "devDependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/toggle-group": {
+      "name": "@data-slot/toggle-group",
       "version": "0.2.10",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
@@ -175,6 +183,8 @@
     "@data-slot/tabs": ["@data-slot/tabs@workspace:packages/tabs"],
 
     "@data-slot/toggle": ["@data-slot/toggle@workspace:packages/toggle"],
+
+    "@data-slot/toggle-group": ["@data-slot/toggle-group@workspace:packages/toggle-group"],
 
     "@data-slot/tooltip": ["@data-slot/tooltip@workspace:packages/tooltip"],
 

@@ -13,6 +13,7 @@ export default defineConfig({
     "src/navigation-menu.ts",
     "src/dropdown-menu.ts",
     "src/toggle.ts",
+    "src/toggle-group.ts",
   ],
   format: ["esm", "cjs"],
   dts: true,
