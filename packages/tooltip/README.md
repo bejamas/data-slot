@@ -296,21 +296,34 @@ Control the tooltip via events:
 
 | Event | Detail | Description |
 |-------|--------|-------------|
-| `tooltip:set` | `{ value: boolean }` | Set visibility programmatically |
+| `tooltip:set` | `{ open: boolean }` | Set visibility programmatically |
 
 ```javascript
 // Show the tooltip
 element.dispatchEvent(
-  new CustomEvent("tooltip:set", { detail: { value: true } })
+  new CustomEvent("tooltip:set", { detail: { open: true } })
 );
 
 // Hide the tooltip
 element.dispatchEvent(
-  new CustomEvent("tooltip:set", { detail: { value: false } })
+  new CustomEvent("tooltip:set", { detail: { open: false } })
 );
 ```
 
 **Note:** Opening respects disabled state (trigger has `disabled` attribute or `aria-disabled="true"`). Closing is always allowed.
+
+#### Deprecated Shapes
+
+The following shape is deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: { value: boolean }
+element.dispatchEvent(
+  new CustomEvent("tooltip:set", { detail: { value: true } })
+);
+```
+
+Use `{ open: boolean }` instead.
 
 ## License
 

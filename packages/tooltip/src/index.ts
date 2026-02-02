@@ -237,10 +237,18 @@ export function createTooltip(
   // Inbound event
   cleanups.push(
     on(root, "tooltip:set", (e) => {
-      const detail = (e as CustomEvent).detail as { value?: boolean } | null;
-      if (typeof detail?.value !== "boolean") return;
+      const detail = (e as CustomEvent).detail;
+      // Preferred: { open: boolean }
+      // Deprecated: { value: boolean }
+      let open: boolean | undefined;
+      if (detail?.open !== undefined) {
+        open = detail.open;
+      } else if (detail?.value !== undefined) {
+        open = detail.value;
+      }
+      if (typeof open !== "boolean") return;
 
-      if (detail.value) {
+      if (open) {
         if (isTriggerDisabled()) return; // Opening respects disabled
         if (showTimeout) {
           clearTimeout(showTimeout);

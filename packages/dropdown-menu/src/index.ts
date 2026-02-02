@@ -492,8 +492,16 @@ export function createDropdownMenu(
   // Inbound event
   cleanups.push(
     on(root, "dropdown-menu:set", (e) => {
-      const detail = (e as CustomEvent).detail as { value?: boolean } | null;
-      if (typeof detail?.value === "boolean") updateState(detail.value);
+      const detail = (e as CustomEvent).detail;
+      // Preferred: { open: boolean }
+      // Deprecated: { value: boolean }
+      let open: boolean | undefined;
+      if (detail?.open !== undefined) {
+        open = detail.open;
+      } else if (detail?.value !== undefined) {
+        open = detail.value;
+      }
+      if (typeof open === "boolean") updateState(open);
     })
   );
 

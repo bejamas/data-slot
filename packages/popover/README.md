@@ -212,19 +212,32 @@ Control the popover via events:
 
 | Event | Detail | Description |
 |-------|--------|-------------|
-| `popover:set` | `{ value: boolean }` | Set open state programmatically |
+| `popover:set` | `{ open: boolean }` | Set open state programmatically |
 
 ```javascript
 // Open the popover
 element.dispatchEvent(
-  new CustomEvent("popover:set", { detail: { value: true } })
+  new CustomEvent("popover:set", { detail: { open: true } })
 );
 
 // Close the popover
 element.dispatchEvent(
-  new CustomEvent("popover:set", { detail: { value: false } })
+  new CustomEvent("popover:set", { detail: { open: false } })
 );
 ```
+
+#### Deprecated Shapes
+
+The following shape is deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: { value: boolean }
+element.dispatchEvent(
+  new CustomEvent("popover:set", { detail: { value: true } })
+);
+```
+
+Use `{ open: boolean }` instead.
 
 ## License
 

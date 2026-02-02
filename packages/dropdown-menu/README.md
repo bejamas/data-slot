@@ -103,19 +103,32 @@ controller.destroy();
 
 | Event | Detail | Description |
 |-------|--------|-------------|
-| `dropdown-menu:set` | `{ value: boolean }` | Set open state programmatically |
+| `dropdown-menu:set` | `{ open: boolean }` | Set open state programmatically |
 
 ```javascript
 // Open the menu
 root.dispatchEvent(
-  new CustomEvent("dropdown-menu:set", { detail: { value: true } })
+  new CustomEvent("dropdown-menu:set", { detail: { open: true } })
 );
 
 // Close the menu
 root.dispatchEvent(
-  new CustomEvent("dropdown-menu:set", { detail: { value: false } })
+  new CustomEvent("dropdown-menu:set", { detail: { open: false } })
 );
 ```
+
+#### Deprecated Shapes
+
+The following shape is deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: { value: boolean }
+root.dispatchEvent(
+  new CustomEvent("dropdown-menu:set", { detail: { value: true } })
+);
+```
+
+Use `{ open: boolean }` instead.
 
 ## Options
 

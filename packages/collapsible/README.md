@@ -165,16 +165,34 @@ Control the collapsible via events:
 
 | Event | Detail | Description |
 |-------|--------|-------------|
-| `collapsible:set` | `{ value: boolean }` | Set open state programmatically |
+| `collapsible:set` | `{ open: boolean }` | Set open state programmatically |
 
 ```javascript
 // Open the collapsible
+element.dispatchEvent(
+  new CustomEvent("collapsible:set", { detail: { open: true } })
+);
+
+// Close the collapsible
+element.dispatchEvent(
+  new CustomEvent("collapsible:set", { detail: { open: false } })
+);
+```
+
+**Note:** Blocked when trigger is disabled (has `disabled` attribute or `aria-disabled="true"`).
+
+#### Deprecated Shapes
+
+The following shape is deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: { value: boolean }
 element.dispatchEvent(
   new CustomEvent("collapsible:set", { detail: { value: true } })
 );
 ```
 
-**Note:** Blocked when trigger is disabled (has `disabled` attribute or `aria-disabled="true"`).
+Use `{ open: boolean }` instead.
 
 ## License
 
