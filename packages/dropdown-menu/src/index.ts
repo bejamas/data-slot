@@ -489,6 +489,14 @@ export function createDropdownMenu(
     );
   }
 
+  // Inbound event
+  cleanups.push(
+    on(root, "dropdown-menu:set", (e) => {
+      const detail = (e as CustomEvent).detail as { value?: boolean } | null;
+      if (typeof detail?.value === "boolean") updateState(detail.value);
+    })
+  );
+
   const controller: DropdownMenuController = {
     open: () => updateState(true),
     close: () => updateState(false),

@@ -100,7 +100,32 @@ root.addEventListener("slider:change", (e) => {
 root.dispatchEvent(new CustomEvent("slider:set", {
   detail: { value: 50 }
 }));
+
+// Set range value
+root.dispatchEvent(new CustomEvent("slider:set", {
+  detail: { value: [25, 75] }
+}));
 ```
+
+**Note:** Blocked when slider is disabled.
+
+### Deprecated Shapes
+
+The following shapes are deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: bare number
+root.dispatchEvent(new CustomEvent("slider:set", {
+  detail: 50
+}));
+
+// Deprecated: bare array
+root.dispatchEvent(new CustomEvent("slider:set", {
+  detail: [25, 75]
+}));
+```
+
+Use `{ value: ... }` instead.
 
 ## Keyboard Navigation
 

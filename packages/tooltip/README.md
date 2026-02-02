@@ -270,6 +270,8 @@ If the trigger has `disabled` attribute or `aria-disabled="true"`:
 
 ## Events
 
+### Outbound Events
+
 Listen for changes via custom events:
 
 ```javascript
@@ -279,7 +281,7 @@ element.addEventListener("tooltip:change", (e) => {
 });
 ```
 
-### Event Detail
+#### Event Detail
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -287,6 +289,28 @@ element.addEventListener("tooltip:change", (e) => {
 | `trigger` | `HTMLElement` | The trigger element |
 | `content` | `HTMLElement` | The content element |
 | `reason` | `string` | What caused the change: `"pointer"`, `"focus"`, `"blur"`, `"escape"`, `"api"` |
+
+### Inbound Events
+
+Control the tooltip via events:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `tooltip:set` | `{ value: boolean }` | Set visibility programmatically |
+
+```javascript
+// Show the tooltip
+element.dispatchEvent(
+  new CustomEvent("tooltip:set", { detail: { value: true } })
+);
+
+// Hide the tooltip
+element.dispatchEvent(
+  new CustomEvent("tooltip:set", { detail: { value: false } })
+);
+```
+
+**Note:** Opening respects disabled state (trigger has `disabled` attribute or `aria-disabled="true"`). Closing is always allowed.
 
 ## License
 

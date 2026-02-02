@@ -733,6 +733,25 @@ export function createNavigationMenu(
     })
   );
 
+  // Inbound event
+  cleanups.push(
+    on(root, "navigation-menu:set", (e) => {
+      const detail = (e as CustomEvent).detail as { value?: string | null } | null;
+      if (detail?.value === undefined) return;
+
+      if (detail.value === null) {
+        clickLocked = false;
+        updateState(null, true);
+        updateIndicator(null);
+      } else if (itemMap.has(detail.value)) {
+        clickLocked = true;
+        updateState(detail.value, true);
+        const data = itemMap.get(detail.value);
+        if (data) updateIndicator(data.trigger);
+      }
+    })
+  );
+
   const controller: NavigationMenuController = {
     get value() {
       return currentValue;

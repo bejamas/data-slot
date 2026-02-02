@@ -9,7 +9,7 @@
     "name": "@data-slot/toggle-group",
     "size": 2010,
     "sizeFormatted": "2.0 KB",
-    "description": "Single/multi-select toggle buttons"
+    "description": "Single/multi-select toggle"
   },
   {
     "name": "@data-slot/slider",

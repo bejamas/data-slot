@@ -80,12 +80,21 @@ export function createToggle(
   );
 
   // Inbound event - blocked when disabled (treated as external input)
+  // Preferred shape: { value: boolean }
+  // Deprecated shapes: boolean | { pressed: boolean }
   cleanups.push(
     on(root, "toggle:set", (e) => {
       if (isDisabled()) return;
       const detail = (e as CustomEvent).detail;
-      const pressed = typeof detail === "boolean" ? detail : detail?.pressed;
-      if (typeof pressed === "boolean") applyState(pressed);
+      let value: boolean | undefined;
+      if (typeof detail === "boolean") {
+        value = detail; // Deprecated
+      } else if (detail?.value !== undefined) {
+        value = detail.value; // Preferred
+      } else if (detail?.pressed !== undefined) {
+        value = detail.pressed; // Deprecated
+      }
+      if (typeof value === "boolean") applyState(value);
     })
   );
 

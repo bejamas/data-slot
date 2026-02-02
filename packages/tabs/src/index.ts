@@ -343,19 +343,22 @@ export function createTabs(
     })
   );
 
-  // Listen for external select commands (Astro-friendly)
-  const handleSelect = (e: Event) => {
+  // Listen for external set/select commands
+  // Preferred: tabs:set with { value: string }
+  // Deprecated: tabs:select with string or { value: string }
+  const handleSet = (e: Event) => {
     const evt = e as CustomEvent;
     const rootEl = e.currentTarget as HTMLElement | null;
     const detail = evt.detail as unknown;
     const raw =
       typeof detail === "string"
-        ? detail
+        ? detail // Deprecated (tabs:select style)
         : (detail as { value?: string } | null)?.value ?? rootEl?.dataset?.value;
     const value = raw?.trim();
     if (value) applyState(value);
   };
-  cleanups.push(on(root, "tabs:select", handleSelect));
+  cleanups.push(on(root, "tabs:set", handleSet));
+  cleanups.push(on(root, "tabs:select", handleSet)); // Deprecated alias
 
   const controller: TabsController = {
     select: (value: string) => applyState(value),

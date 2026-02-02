@@ -170,6 +170,8 @@ The component automatically handles:
 
 ## Events
 
+### Outbound Events
+
 Listen for changes via custom events:
 
 ```javascript
@@ -178,19 +180,38 @@ element.addEventListener("toggle:change", (e) => {
 });
 ```
 
+### Inbound Events
+
 Control the toggle via events (ignored when disabled):
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `toggle:set` | `{ value: boolean }` | Set pressed state programmatically |
 
 ```javascript
 // Set to specific state
 element.dispatchEvent(
-  new CustomEvent("toggle:set", { detail: { pressed: true } })
+  new CustomEvent("toggle:set", { detail: { value: true } })
 );
+```
 
-// Or with just a boolean
+### Deprecated Shapes
+
+The following shapes are deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: boolean detail
 element.dispatchEvent(
   new CustomEvent("toggle:set", { detail: true })
 );
+
+// Deprecated: { pressed } shape
+element.dispatchEvent(
+  new CustomEvent("toggle:set", { detail: { pressed: true } })
+);
 ```
+
+Use `{ value: boolean }` instead.
 
 ## License
 

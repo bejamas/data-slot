@@ -96,6 +96,19 @@ export function createCollapsible(
     })
   );
 
+  // Inbound event - blocked when trigger is disabled (consistent with click behavior)
+  cleanups.push(
+    on(root, "collapsible:set", (e) => {
+      if (
+        trigger.hasAttribute("disabled") ||
+        trigger.getAttribute("aria-disabled") === "true"
+      )
+        return;
+      const detail = (e as CustomEvent).detail as { value?: boolean } | null;
+      if (typeof detail?.value === "boolean") updateState(detail.value);
+    })
+  );
+
   const controller: CollapsibleController = {
     open: () => updateState(true),
     close: () => updateState(false),

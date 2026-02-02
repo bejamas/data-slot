@@ -189,12 +189,34 @@ The component automatically handles:
 
 ## Events
 
+### Outbound Events
+
 Listen for changes via custom events:
 
 ```javascript
 element.addEventListener("dialog:change", (e) => {
   console.log("Dialog open:", e.detail.open);
 });
+```
+
+### Inbound Events
+
+Control the dialog via events:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `dialog:set` | `{ value: boolean }` | Set open state programmatically |
+
+```javascript
+// Open the dialog
+element.dispatchEvent(
+  new CustomEvent("dialog:set", { detail: { value: true } })
+);
+
+// Close the dialog
+element.dispatchEvent(
+  new CustomEvent("dialog:set", { detail: { value: false } })
+);
 ```
 
 ## License

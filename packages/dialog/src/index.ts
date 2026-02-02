@@ -450,6 +450,14 @@ export function createDialog(
     _overlay: overlay,
   };
 
+  // Inbound event
+  cleanups.push(
+    on(root, "dialog:set", (e) => {
+      const detail = (e as CustomEvent).detail as { value?: boolean } | null;
+      if (typeof detail?.value === "boolean") updateState(detail.value);
+    })
+  );
+
   // Handle defaultOpen: push to stack and setup global state after controller is defined
   if (defaultOpen) {
     previousActiveElement = document.activeElement as HTMLElement;

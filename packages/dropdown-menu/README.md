@@ -92,10 +92,30 @@ controller.destroy();
 
 ## Events
 
+### Outbound Events
+
 | Event | Detail | Description |
 |-------|--------|-------------|
 | `dropdown-menu:change` | `{ open: boolean }` | Fired when menu opens or closes |
 | `dropdown-menu:select` | `{ value: string }` | Fired when an item is selected |
+
+### Inbound Events
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `dropdown-menu:set` | `{ value: boolean }` | Set open state programmatically |
+
+```javascript
+// Open the menu
+root.dispatchEvent(
+  new CustomEvent("dropdown-menu:set", { detail: { value: true } })
+);
+
+// Close the menu
+root.dispatchEvent(
+  new CustomEvent("dropdown-menu:set", { detail: { value: false } })
+);
+```
 
 ## Options
 

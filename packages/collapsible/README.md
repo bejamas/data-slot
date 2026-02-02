@@ -149,6 +149,8 @@ The component automatically handles:
 
 ## Events
 
+### Outbound Events
+
 Listen for changes via custom events:
 
 ```javascript
@@ -156,6 +158,23 @@ element.addEventListener("collapsible:change", (e) => {
   console.log("Collapsible open:", e.detail.open);
 });
 ```
+
+### Inbound Events
+
+Control the collapsible via events:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `collapsible:set` | `{ value: boolean }` | Set open state programmatically |
+
+```javascript
+// Open the collapsible
+element.dispatchEvent(
+  new CustomEvent("collapsible:set", { detail: { value: true } })
+);
+```
+
+**Note:** Blocked when trigger is disabled (has `disabled` attribute or `aria-disabled="true"`).
 
 ## License
 

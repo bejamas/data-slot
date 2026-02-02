@@ -396,6 +396,8 @@ export function createToggleGroup(
   );
 
   // Inbound event - blocked when group disabled
+  // Preferred shape: { value: string | string[] }
+  // Deprecated shapes: string | string[]
   cleanups.push(
     on(root, "toggle-group:set", (e) => {
       if (isGroupDisabled()) return;
@@ -403,18 +405,16 @@ export function createToggleGroup(
       const evt = e as CustomEvent;
       const detail = evt.detail as unknown;
 
-      let value: string | string[];
+      let value: string | string[] | undefined;
       if (typeof detail === "string") {
-        value = detail;
+        value = detail; // Deprecated
       } else if (Array.isArray(detail)) {
-        value = detail;
+        value = detail; // Deprecated
       } else if (detail && typeof detail === "object" && "value" in detail) {
-        value = (detail as { value: string | string[] }).value;
-      } else {
-        return;
+        value = (detail as { value: string | string[] }).value; // Preferred
       }
 
-      setValueDirect(value);
+      if (value !== undefined) setValueDirect(value);
     })
   );
 

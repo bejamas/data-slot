@@ -223,6 +223,8 @@ The component automatically handles:
 
 ## Events
 
+### Outbound Events
+
 Listen for changes via custom events:
 
 ```javascript
@@ -230,6 +232,39 @@ element.addEventListener("tabs:change", (e) => {
   console.log("Selected tab:", e.detail.value);
 });
 ```
+
+### Inbound Events
+
+Control the tabs via events:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `tabs:set` | `{ value: string }` | Select a tab programmatically |
+
+```javascript
+// Select a tab
+element.dispatchEvent(
+  new CustomEvent("tabs:set", { detail: { value: "two" } })
+);
+```
+
+### Deprecated Events
+
+The following event is deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: tabs:select event
+element.dispatchEvent(
+  new CustomEvent("tabs:select", { detail: { value: "two" } })
+);
+
+// Deprecated: string detail
+element.dispatchEvent(
+  new CustomEvent("tabs:select", { detail: "two" })
+);
+```
+
+Use `tabs:set` with `{ value: string }` instead.
 
 ## License
 

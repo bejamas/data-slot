@@ -631,7 +631,12 @@ export function createSlider(
   }
 
   // Listen for external set commands
+  // Blocked when slider is disabled
+  // Preferred shape: { value: number | [number, number] }
+  // Deprecated shapes: number | [number, number]
   const handleSet = (e: Event) => {
+    if (disabled) return;
+
     const evt = e as CustomEvent;
     const detail = evt.detail as
       | { value?: SliderValue }
@@ -640,11 +645,11 @@ export function createSlider(
 
     let value: SliderValue | undefined;
     if (typeof detail === "number") {
-      value = detail;
+      value = detail; // Deprecated
     } else if (Array.isArray(detail)) {
-      value = detail as [number, number];
+      value = detail as [number, number]; // Deprecated
     } else if (detail && typeof detail === "object" && "value" in detail) {
-      value = detail.value;
+      value = detail.value; // Preferred
     }
 
     if (value !== undefined) {

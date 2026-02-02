@@ -132,6 +132,14 @@ export function createPopover(
     );
   }
 
+  // Inbound event
+  cleanups.push(
+    on(root, "popover:set", (e) => {
+      const detail = (e as CustomEvent).detail as { value?: boolean } | null;
+      if (typeof detail?.value === "boolean") updateState(detail.value);
+    })
+  );
+
   const controller: PopoverController = {
     open: () => updateState(true),
     close: () => updateState(false),

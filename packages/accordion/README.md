@@ -165,6 +165,8 @@ With Tailwind:
 
 ## Events
 
+### Outbound Events
+
 Listen for changes via custom events:
 
 ```javascript
@@ -172,6 +174,28 @@ element.addEventListener("accordion:change", (e) => {
   console.log("Expanded items:", e.detail.value);
 });
 ```
+
+### Inbound Events
+
+Control the accordion via events:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `accordion:set` | `{ value: string \| string[] }` | Set expanded items programmatically |
+
+```javascript
+// Expand a single item
+element.dispatchEvent(
+  new CustomEvent("accordion:set", { detail: { value: "one" } })
+);
+
+// Expand multiple items (when data-multiple is set)
+element.dispatchEvent(
+  new CustomEvent("accordion:set", { detail: { value: ["one", "two"] } })
+);
+```
+
+**Note:** Respects `multiple` and `collapsible` options. In single mode, only the first value is used. When `collapsible` is false, the last open item cannot be closed.
 
 ## License
 

@@ -95,7 +95,7 @@ group.destroy();
 
 ## Events
 
-### Outbound
+### Outbound Events
 
 ```javascript
 // Listen for changes
@@ -104,7 +104,11 @@ root.addEventListener("toggle-group:change", (e) => {
 });
 ```
 
-### Inbound
+### Inbound Events
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `toggle-group:set` | `{ value: string \| string[] }` | Set selection programmatically |
 
 ```javascript
 // Set selection from outside
@@ -112,11 +116,31 @@ root.dispatchEvent(new CustomEvent("toggle-group:set", {
   detail: { value: "bold" }
 }));
 
-// Or with array
+// Set multiple values
+root.dispatchEvent(new CustomEvent("toggle-group:set", {
+  detail: { value: ["bold", "italic"] }
+}));
+```
+
+**Note:** Blocked when group is disabled.
+
+### Deprecated Shapes
+
+The following shapes are deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: bare string
+root.dispatchEvent(new CustomEvent("toggle-group:set", {
+  detail: "bold"
+}));
+
+// Deprecated: bare array
 root.dispatchEvent(new CustomEvent("toggle-group:set", {
   detail: ["bold", "italic"]
 }));
 ```
+
+Use `{ value: ... }` instead.
 
 ## Keyboard Navigation
 

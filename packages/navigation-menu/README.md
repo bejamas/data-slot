@@ -251,12 +251,34 @@ Content panels receive `data-motion` attributes for enter/exit animations:
 
 ## Events
 
+### Outbound Events
+
 Listen for changes via custom events:
 
 ```javascript
 element.addEventListener("navigation-menu:change", (e) => {
   console.log("Active item:", e.detail.value);
 });
+```
+
+### Inbound Events
+
+Control the navigation menu via events:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `navigation-menu:set` | `{ value: string \| null }` | Set active item or close menu |
+
+```javascript
+// Open a specific item
+element.dispatchEvent(
+  new CustomEvent("navigation-menu:set", { detail: { value: "products" } })
+);
+
+// Close the menu
+element.dispatchEvent(
+  new CustomEvent("navigation-menu:set", { detail: { value: null } })
+);
 ```
 
 ## License

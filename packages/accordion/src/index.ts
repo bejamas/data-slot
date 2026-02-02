@@ -232,6 +232,34 @@ export function createAccordion(
   // Initialize state
   updateAllItems();
 
+  // Inbound event
+  cleanups.push(
+    on(root, "accordion:set", (e) => {
+      const detail = (e as CustomEvent).detail as { value?: string | string[] } | null;
+      const value = detail?.value;
+      if (value === undefined) return;
+
+      const values = Array.isArray(value) ? value : [value];
+      const validValues = values.filter(v => items.some(i => i.dataset["value"] === v));
+
+      // Single mode: only first value
+      const newExpanded = multiple ? new Set(validValues) : new Set(validValues.slice(0, 1));
+
+      // Enforce collapsible rule
+      if (!multiple && !collapsible && newExpanded.size === 0 && expandedValues.size > 0) return;
+
+      // Apply if changed
+      const changed = newExpanded.size !== expandedValues.size ||
+        [...newExpanded].some(v => !expandedValues.has(v));
+      if (changed) {
+        expandedValues = newExpanded;
+        updateAllItems();
+        emit(root, "accordion:change", { value: [...expandedValues] });
+        onValueChange?.([...expandedValues]);
+      }
+    })
+  );
+
   const controller: AccordionController = {
     expand: (value: string) => {
       if (expandedValues.has(value)) return;

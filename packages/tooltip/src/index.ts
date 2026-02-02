@@ -234,6 +234,25 @@ export function createTooltip(
     })
   );
 
+  // Inbound event
+  cleanups.push(
+    on(root, "tooltip:set", (e) => {
+      const detail = (e as CustomEvent).detail as { value?: boolean } | null;
+      if (typeof detail?.value !== "boolean") return;
+
+      if (detail.value) {
+        if (isTriggerDisabled()) return; // Opening respects disabled
+        if (showTimeout) {
+          clearTimeout(showTimeout);
+          showTimeout = null;
+        }
+        updateState(true, "api");
+      } else {
+        hideImmediately("api"); // Closing always allowed
+      }
+    })
+  );
+
   const controller: TooltipController = {
     show: () => {
       // Respect disabled state even for programmatic calls

@@ -196,12 +196,34 @@ The component automatically handles:
 
 ## Events
 
+### Outbound Events
+
 Listen for changes via custom events:
 
 ```javascript
 element.addEventListener("popover:change", (e) => {
   console.log("Popover open:", e.detail.open);
 });
+```
+
+### Inbound Events
+
+Control the popover via events:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `popover:set` | `{ value: boolean }` | Set open state programmatically |
+
+```javascript
+// Open the popover
+element.dispatchEvent(
+  new CustomEvent("popover:set", { detail: { value: true } })
+);
+
+// Close the popover
+element.dispatchEvent(
+  new CustomEvent("popover:set", { detail: { value: false } })
+);
 ```
 
 ## License
