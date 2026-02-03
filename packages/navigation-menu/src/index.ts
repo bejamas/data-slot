@@ -195,20 +195,27 @@ export function createNavigationMenu(
 
     // Measure after content is visible using rAF + getBoundingClientRect for abs/transform panels
     requestAnimationFrame(() => {
-      const rect = content.getBoundingClientRect();
-      const contentStyle = getComputedStyle(content);
-      const contentMarginTop = parseFloat(contentStyle.marginTop) || 0;
+      // Measure the first child inside content to capture its margin
+      // (margins aren't included in parent's getBoundingClientRect)
+      const firstChild = content.firstElementChild as HTMLElement | null;
+      const childRect = firstChild?.getBoundingClientRect();
+      const childStyle = firstChild ? getComputedStyle(firstChild) : null;
+      const childMarginTop = childStyle ? parseFloat(childStyle.marginTop) || 0 : 0;
+      const childMarginBottom = childStyle ? parseFloat(childStyle.marginBottom) || 0 : 0;
 
-      // Account for viewport margins in height calculation
+      // Use child measurements if available, otherwise fall back to content
+      const rect = childRect ?? content.getBoundingClientRect();
+      const contentHeight = rect.height + childMarginTop + childMarginBottom;
+
+      // Get viewport margin-top for hover bridge calculation
       const viewportStyle = getComputedStyle(viewport);
       const viewportMarginTop = parseFloat(viewportStyle.marginTop) || 0;
-      const viewportMarginBottom = parseFloat(viewportStyle.marginBottom) || 0;
 
-      viewport.style.setProperty("--viewport-width", `${rect.width}px`);
-      viewport.style.setProperty(
-        "--viewport-height",
-        `${rect.height + viewportMarginTop + viewportMarginBottom}px`
-      );
+      // Use content's rect for width (may differ from child)
+      const contentRect = content.getBoundingClientRect();
+      viewport.style.setProperty("--viewport-width", `${contentRect.width}px`);
+      // Viewport height is just the content height - margins are outside the box
+      viewport.style.setProperty("--viewport-height", `${contentHeight}px`);
 
       // Calculate horizontal position based on alignment
       const rootRect = (root as HTMLElement).getBoundingClientRect();
@@ -229,8 +236,8 @@ export function createNavigationMenu(
       // Also position the content element itself
       content.style.left = `${left}px`;
 
-      // If content has margin-top, create/update hover bridge to cover the gap
-      const totalGap = contentMarginTop + viewportMarginTop;
+      // If child has margin-top, create/update hover bridge to cover the gap
+      const totalGap = childMarginTop + viewportMarginTop;
       if (totalGap > 0) {
         const bridge = getOrCreateHoverBridge();
         bridge.style.height = `${totalGap}px`;
@@ -270,9 +277,18 @@ export function createNavigationMenu(
       "--indicator-top",
       `${triggerRect.top - listRect.top}px`
     );
+
+    // Get viewport's margin-top to determine if there's visual separation
+    const viewportMarginTop = viewport
+      ? parseFloat(getComputedStyle(viewport).marginTop) || 0
+      : 0;
+
+    // If viewport has no margin, its 1px box-shadow border needs visual clearance
+    const borderOverlap = viewportMarginTop < 1 ? 1 : 0;
+
     indicator.style.setProperty(
       "--indicator-height",
-      `${triggerRect.height}px`
+      `${triggerRect.height - borderOverlap}px`
     );
     indicator.setAttribute("data-state", "visible");
   };

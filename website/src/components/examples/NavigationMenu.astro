@@ -235,10 +235,10 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-full pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4 data-[motion='from-left']:slide-in-from-left-4 data-motion[to-right]:animate-slide-to-right-4 data-[state=active]:animate-in data-[state=inactive]:animate-out "
+          class="absolute top-full py-0 px-4 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4 data-[motion='from-left']:slide-in-from-left-4 data-motion[to-right]:animate-slide-to-right-4 data-[state=active]:animate-in data-[state=inactive]:animate-out "
           hidden
         >
-          <div class="grid grid-cols-2 gap-3 w-[380px]">
+          <div class="grid grid-cols-2 gap-3 w-[380px] py-4">
             <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors no-underline text-inherit">
               <div class="font-medium mb-1">Analytics</div>
               <div class="text-sm text-muted">Real-time metrics</div>
@@ -267,10 +267,10 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-full pt-6 px-4 pb-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+          class="absolute top-full pt-2 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
           hidden
         >
-          <div class="grid grid-cols-2 gap-3 w-[380px]">
+          <div class="grid grid-cols-2 gap-2 w-[380px] p-2">
             <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
               <div class="font-medium mb-1">Startups</div>
               <div class="text-sm text-muted">Move fast</div>
@@ -358,7 +358,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
     </ul>
     <div
       data-slot="navigation-menu-viewport"
-      class="absolute data-instant:transition-opacity duration-150 top-full bg-bg rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12),0_0_0_1px_var(--color-border)] overflow-hidden mt-2 opacity-0 pointer-events-none data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
+      class="absolute mt-2 data-instant:transition-opacity duration-150 top-full bg-bg rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12),0_0_0_1px_var(--color-border)] overflow-hidden opacity-0 pointer-events-none data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
       style="left: var(--viewport-left, 0); width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
     ></div>
   </nav>
