@@ -124,10 +124,11 @@ export function createSelect(
     throw new Error("Select requires trigger and content slots");
   }
 
-  // Resolve options with explicit precedence: JS > data-* > default
+  // Resolve options with explicit precedence: JS > data-* (root, then valueSlot) > default
   const defaultValue = options.defaultValue ?? getDataString(root, "defaultValue") ?? null;
   const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
-  const placeholder = options.placeholder ?? getDataString(root, "placeholder") ?? "";
+  // Check root first, then valueSlot for placeholder (some implementations put it on the span)
+  const placeholder = options.placeholder ?? getDataString(root, "placeholder") ?? (valueSlot ? getDataString(valueSlot, "placeholder") : undefined) ?? "";
   const disabled = options.disabled ?? getDataBool(root, "disabled") ?? false;
   const required = options.required ?? getDataBool(root, "required") ?? false;
   const name = options.name ?? getDataString(root, "name") ?? null;
@@ -280,25 +281,26 @@ export function createSelect(
 
   // Compute position for item-aligned mode
   const computeItemAlignedPos = (tr: DOMRect, cr: DOMRect) => {
-    // Find selected item to align with trigger
+    // Find selected item, or fall back to first enabled item
     const selectedItem = items.find((item) => item.dataset["value"] === currentValue);
+    const alignItem = selectedItem ?? enabledItems[0];
 
     // Calculate x position (align left edges, match trigger width)
     let x = tr.left;
 
-    // Calculate y position so selected item aligns with trigger
+    // Calculate y position so aligned item is at trigger's vertical center
     let y: number;
     let itemOffsetTop = 0;
 
-    if (selectedItem) {
-      // Get the selected item's position relative to the content
-      const itemRect = selectedItem.getBoundingClientRect();
+    if (alignItem) {
+      // Get the item's position relative to the content
+      const itemRect = alignItem.getBoundingClientRect();
       itemOffsetTop = itemRect.top - cr.top;
 
-      // Position content so selected item is at trigger's vertical center
+      // Position content so item is at trigger's vertical center
       y = tr.top + (tr.height / 2) - (itemRect.height / 2) - itemOffsetTop;
     } else {
-      // No selection - align top of content with trigger
+      // No items at all - align top of content with trigger
       y = tr.top;
     }
 

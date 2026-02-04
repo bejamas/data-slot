@@ -1110,4 +1110,287 @@ describe("Select", () => {
       expect(changeCount).toBe(1);
     });
   });
+
+  describe("multiple selects", () => {
+    it("each select shows its own placeholder", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="select1" data-placeholder="Select fruit...">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="apple">Apple</div>
+          </div>
+        </div>
+        <div data-slot="select" id="select2" data-placeholder="Select veggie...">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="carrot">Carrot</div>
+          </div>
+        </div>
+        <div data-slot="select" id="select3" data-placeholder="Select color...">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="red">Red</div>
+          </div>
+        </div>
+      `;
+
+      const roots = document.querySelectorAll('[data-slot="select"]');
+      const controllers: ReturnType<typeof createSelect>[] = [];
+
+      roots.forEach((el) => {
+        controllers.push(createSelect(el as Element));
+      });
+
+      // Each select should show its own placeholder
+      const valueSlot1 = document.querySelector('#select1 [data-slot="select-value"]') as HTMLElement;
+      const valueSlot2 = document.querySelector('#select2 [data-slot="select-value"]') as HTMLElement;
+      const valueSlot3 = document.querySelector('#select3 [data-slot="select-value"]') as HTMLElement;
+
+      expect(valueSlot1.textContent).toBe("Select fruit...");
+      expect(valueSlot2.textContent).toBe("Select veggie...");
+      expect(valueSlot3.textContent).toBe("Select color...");
+
+      // Check data-placeholder attribute on triggers
+      const trigger1 = document.querySelector('#select1 [data-slot="select-trigger"]') as HTMLElement;
+      const trigger2 = document.querySelector('#select2 [data-slot="select-trigger"]') as HTMLElement;
+      const trigger3 = document.querySelector('#select3 [data-slot="select-trigger"]') as HTMLElement;
+
+      expect(trigger1.hasAttribute("data-placeholder")).toBe(true);
+      expect(trigger2.hasAttribute("data-placeholder")).toBe(true);
+      expect(trigger3.hasAttribute("data-placeholder")).toBe(true);
+
+      controllers.forEach((c) => c.destroy());
+    });
+
+    it("using create() initializes all selects with correct placeholders", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="select1" data-placeholder="First placeholder">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="a">A</div>
+          </div>
+        </div>
+        <div data-slot="select" id="select2" data-placeholder="Second placeholder">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="b">B</div>
+          </div>
+        </div>
+      `;
+
+      const controllers = create();
+
+      const valueSlot1 = document.querySelector('#select1 [data-slot="select-value"]') as HTMLElement;
+      const valueSlot2 = document.querySelector('#select2 [data-slot="select-value"]') as HTMLElement;
+
+      expect(valueSlot1.textContent).toBe("First placeholder");
+      expect(valueSlot2.textContent).toBe("Second placeholder");
+
+      controllers.forEach((c) => c.destroy());
+    });
+
+    it("works with selects in separate preview containers (like website demo)", () => {
+      document.body.innerHTML = `
+        <div class="example-block">
+          <div class="preview-css">
+            <div data-slot="select" id="select-css" data-placeholder="Select a fruit...">
+              <button data-slot="select-trigger">
+                <span data-slot="select-value"></span>
+              </button>
+              <div data-slot="select-content">
+                <div data-slot="select-item" data-value="apple">Apple</div>
+                <div data-slot="select-item" data-value="banana">Banana</div>
+              </div>
+            </div>
+          </div>
+          <div class="preview-tailwind" style="display: none;">
+            <div data-slot="select" id="select-tw" data-placeholder="Select a fruit...">
+              <button data-slot="select-trigger">
+                <span data-slot="select-value"></span>
+              </button>
+              <div data-slot="select-content">
+                <div data-slot="select-item" data-value="carrot">Carrot</div>
+                <div data-slot="select-item" data-value="broccoli">Broccoli</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const controllers: ReturnType<typeof createSelect>[] = [];
+      document.querySelectorAll('[data-slot="select"]').forEach((el) => {
+        controllers.push(createSelect(el as Element));
+      });
+
+      const valueSlotCss = document.querySelector('#select-css [data-slot="select-value"]') as HTMLElement;
+      const valueSlotTw = document.querySelector('#select-tw [data-slot="select-value"]') as HTMLElement;
+      const triggerCss = document.querySelector('#select-css [data-slot="select-trigger"]') as HTMLElement;
+      const triggerTw = document.querySelector('#select-tw [data-slot="select-trigger"]') as HTMLElement;
+
+      // Both should show placeholder
+      expect(valueSlotCss.textContent).toBe("Select a fruit...");
+      expect(valueSlotTw.textContent).toBe("Select a fruit...");
+      expect(triggerCss.hasAttribute("data-placeholder")).toBe(true);
+      expect(triggerTw.hasAttribute("data-placeholder")).toBe(true);
+
+      controllers.forEach((c) => c.destroy());
+    });
+
+    it("works when some selects have same placeholder text", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="s1" data-placeholder="Choose...">
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="a">A</div>
+          </div>
+        </div>
+        <div data-slot="select" id="s2" data-placeholder="Choose...">
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="b">B</div>
+          </div>
+        </div>
+      `;
+
+      const controllers: ReturnType<typeof createSelect>[] = [];
+      document.querySelectorAll('[data-slot="select"]').forEach((el) => {
+        controllers.push(createSelect(el as Element));
+      });
+
+      const v1 = document.querySelector('#s1 [data-slot="select-value"]') as HTMLElement;
+      const v2 = document.querySelector('#s2 [data-slot="select-value"]') as HTMLElement;
+
+      expect(v1.textContent).toBe("Choose...");
+      expect(v2.textContent).toBe("Choose...");
+
+      controllers.forEach((c) => c.destroy());
+    });
+
+    it("correctly scopes value slot to its own root", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="s1" data-placeholder="First">
+          <button data-slot="select-trigger" id="t1"><span data-slot="select-value" id="v1"></span></button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="a">A</div>
+          </div>
+        </div>
+        <div data-slot="select" id="s2" data-placeholder="Second">
+          <button data-slot="select-trigger" id="t2"><span data-slot="select-value" id="v2"></span></button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="b">B</div>
+          </div>
+        </div>
+      `;
+
+      // Initialize selects
+      const s1 = document.getElementById("s1")!;
+      const s2 = document.getElementById("s2")!;
+      const c1 = createSelect(s1);
+      const c2 = createSelect(s2);
+
+      // Verify value slots are correctly scoped
+      const v1 = document.getElementById("v1") as HTMLElement;
+      const v2 = document.getElementById("v2") as HTMLElement;
+
+      // Check the parent is the correct trigger
+      expect(v1.closest('[data-slot="select"]')?.id).toBe("s1");
+      expect(v2.closest('[data-slot="select"]')?.id).toBe("s2");
+
+      // Check content is correct
+      expect(v1.textContent).toBe("First");
+      expect(v2.textContent).toBe("Second");
+
+      c1.destroy();
+      c2.destroy();
+    });
+
+    it("shows empty string when no placeholder attribute", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="s1" data-placeholder="Has placeholder">
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="a">A</div>
+          </div>
+        </div>
+        <div data-slot="select" id="s2">
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="b">B</div>
+          </div>
+        </div>
+      `;
+
+      const s1 = document.getElementById("s1")!;
+      const s2 = document.getElementById("s2")!;
+      createSelect(s1);
+      createSelect(s2);
+
+      const v1 = document.querySelector('#s1 [data-slot="select-value"]') as HTMLElement;
+      const v2 = document.querySelector('#s2 [data-slot="select-value"]') as HTMLElement;
+
+      expect(v1.textContent).toBe("Has placeholder");
+      expect(v2.textContent).toBe(""); // No placeholder = empty string
+    });
+
+    it("reads placeholder from value slot if not on root", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="s1">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value" data-placeholder="Select radius"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="small">Small</div>
+          </div>
+        </div>
+        <div data-slot="select" id="s2">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value" data-placeholder="Choose..."></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="a">A</div>
+          </div>
+        </div>
+      `;
+
+      const s1 = document.getElementById("s1")!;
+      const s2 = document.getElementById("s2")!;
+      createSelect(s1);
+      createSelect(s2);
+
+      const v1 = document.querySelector('#s1 [data-slot="select-value"]') as HTMLElement;
+      const v2 = document.querySelector('#s2 [data-slot="select-value"]') as HTMLElement;
+
+      expect(v1.textContent).toBe("Select radius");
+      expect(v2.textContent).toBe("Choose...");
+    });
+
+    it("prefers root placeholder over value slot placeholder", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="s1" data-placeholder="From root">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value" data-placeholder="From span"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="a">A</div>
+          </div>
+        </div>
+      `;
+
+      const s1 = document.getElementById("s1")!;
+      createSelect(s1);
+
+      const v1 = document.querySelector('#s1 [data-slot="select-value"]') as HTMLElement;
+      expect(v1.textContent).toBe("From root");
+    });
+  });
 });
