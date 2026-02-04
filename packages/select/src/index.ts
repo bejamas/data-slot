@@ -703,6 +703,9 @@ export function createSelect(
         if (index !== undefined && index !== highlightedIndex) {
           updateHighlight(index, false);
         }
+      } else {
+        // Clear highlight when moving to label, separator, or disabled item
+        clearHighlight();
       }
     }),
     on(content, "pointerleave", () => {
