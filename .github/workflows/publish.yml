@@ -73,6 +73,7 @@ jobs:
           publish_pkg packages/slider
           publish_pkg packages/toggle
           publish_pkg packages/toggle-group
+          publish_pkg packages/select
 
       - name: Dry run - show what would be published
         if: ${{ inputs.dry_run }}
