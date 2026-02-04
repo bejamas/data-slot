@@ -1,0 +1,45 @@
+{
+  "name": "@data-slot/select",
+  "version": "0.2.14",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown"
+  },
+  "devDependencies": {
+    "@data-slot/core": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bejamas/data-slot",
+    "directory": "packages/select"
+  },
+  "keywords": [
+    "headless",
+    "ui",
+    "select",
+    "dropdown",
+    "combobox",
+    "vanilla",
+    "data-slot"
+  ],
+  "license": "MIT"
+}

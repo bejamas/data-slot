@@ -14,6 +14,7 @@ export default defineConfig({
     "src/dropdown-menu.ts",
     "src/toggle.ts",
     "src/toggle-group.ts",
+    "src/select.ts",
   ],
   format: ["esm", "cjs"],
   dts: true,

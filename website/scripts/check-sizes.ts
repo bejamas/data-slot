@@ -27,6 +27,7 @@ const descriptions: Record<string, string> = {
   core: "Shared utilities",
   "navigation-menu": "Dropdown navigation menus",
   "dropdown-menu": "Action menus, kbd nav",
+  select: "Dropdown select, form-ready",
   slider: "Single/range value sliders",
 };
 
@@ -39,6 +40,7 @@ const packageNames = [
   "dropdown-menu",
   "navigation-menu",
   "popover",
+  "select",
   "slider",
   "tabs",
   "tooltip",

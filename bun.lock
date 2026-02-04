@@ -14,25 +14,25 @@
     },
     "packages/accordion": {
       "name": "@data-slot/accordion",
-      "version": "0.2.10",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/collapsible": {
       "name": "@data-slot/collapsible",
-      "version": "0.2.10",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/core": {
       "name": "@data-slot/core",
-      "version": "0.2.10",
+      "version": "0.2.14",
     },
     "packages/data-slot": {
       "name": "data-slot",
-      "version": "0.2.10",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/accordion": "workspace:*",
         "@data-slot/collapsible": "workspace:*",
@@ -41,6 +41,7 @@
         "@data-slot/dropdown-menu": "workspace:*",
         "@data-slot/navigation-menu": "workspace:*",
         "@data-slot/popover": "workspace:*",
+        "@data-slot/select": "workspace:*",
         "@data-slot/tabs": "workspace:*",
         "@data-slot/toggle": "workspace:*",
         "@data-slot/toggle-group": "workspace:*",
@@ -49,63 +50,70 @@
     },
     "packages/dialog": {
       "name": "@data-slot/dialog",
-      "version": "0.2.10",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/dropdown-menu": {
       "name": "@data-slot/dropdown-menu",
-      "version": "0.2.10",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/navigation-menu": {
       "name": "@data-slot/navigation-menu",
-      "version": "0.2.10",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/popover": {
       "name": "@data-slot/popover",
-      "version": "0.2.10",
+      "version": "0.2.14",
+      "devDependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/select": {
+      "name": "@data-slot/select",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/slider": {
       "name": "@data-slot/slider",
-      "version": "0.2.10",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/tabs": {
       "name": "@data-slot/tabs",
-      "version": "0.2.10",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/toggle": {
       "name": "@data-slot/toggle",
-      "version": "0.2.10",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/toggle-group": {
       "name": "@data-slot/toggle-group",
-      "version": "0.2.10",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/tooltip": {
       "name": "@data-slot/tooltip",
-      "version": "0.2.10",
+      "version": "0.2.14",
       "devDependencies": {
         "@data-slot/core": "workspace:*",
       },
@@ -177,6 +185,8 @@
     "@data-slot/navigation-menu": ["@data-slot/navigation-menu@workspace:packages/navigation-menu"],
 
     "@data-slot/popover": ["@data-slot/popover@workspace:packages/popover"],
+
+    "@data-slot/select": ["@data-slot/select@workspace:packages/select"],
 
     "@data-slot/slider": ["@data-slot/slider@workspace:packages/slider"],
 

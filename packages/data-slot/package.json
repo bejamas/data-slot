@@ -127,6 +127,16 @@
         "types": "./dist/toggle-group.d.cts",
         "default": "./dist/toggle-group.cjs"
       }
+    },
+    "./select": {
+      "import": {
+        "types": "./dist/select.d.ts",
+        "default": "./dist/select.js"
+      },
+      "require": {
+        "types": "./dist/select.d.cts",
+        "default": "./dist/select.cjs"
+      }
     }
   },
   "files": [
@@ -146,7 +156,8 @@
     "@data-slot/navigation-menu": "workspace:*",
     "@data-slot/dropdown-menu": "workspace:*",
     "@data-slot/toggle": "workspace:*",
-    "@data-slot/toggle-group": "workspace:*"
+    "@data-slot/toggle-group": "workspace:*",
+    "@data-slot/select": "workspace:*"
   },
   "keywords": [
     "headless",
