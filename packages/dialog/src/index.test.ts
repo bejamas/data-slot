@@ -657,4 +657,98 @@ describe("Dialog", () => {
       controller.destroy();
     });
   });
+
+  describe("scroll lock", () => {
+    it("locks scroll when opening", () => {
+      const { controller } = setup();
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      controller.destroy();
+    });
+
+    it("unlocks scroll when closing", () => {
+      const { controller } = setup();
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      controller.close();
+      expect(document.body.style.overflow).toBe("");
+
+      controller.destroy();
+    });
+
+    it("unlocks scroll on destroy while open", () => {
+      const { controller } = setup();
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      controller.destroy();
+      expect(document.body.style.overflow).toBe("");
+    });
+
+    it("respects lockScroll: false option", () => {
+      const { controller } = setup({ lockScroll: false });
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("");
+
+      controller.destroy();
+    });
+
+    it("respects data-lock-scroll='false' attribute", () => {
+      document.body.innerHTML = `
+        <div data-slot="dialog" id="root" data-lock-scroll="false">
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">Content</div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const controller = createDialog(root);
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("");
+
+      controller.destroy();
+    });
+
+    it("handles nested dialogs with ref counting", () => {
+      document.body.innerHTML = `
+        <div data-slot="dialog" id="dialog1">
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">Dialog 1</div>
+        </div>
+        <div data-slot="dialog" id="dialog2">
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">Dialog 2</div>
+        </div>
+      `;
+      const dialog1 = document.getElementById("dialog1")!;
+      const dialog2 = document.getElementById("dialog2")!;
+      const controller1 = createDialog(dialog1);
+      const controller2 = createDialog(dialog2);
+
+      // Open first dialog
+      controller1.open();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      // Open second dialog (nested)
+      controller2.open();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      // Close second dialog - first still open, should stay locked
+      controller2.close();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      // Close first dialog - all closed, should unlock
+      controller1.close();
+      expect(document.body.style.overflow).toBe("");
+
+      controller1.destroy();
+      controller2.destroy();
+    });
+  });
 });

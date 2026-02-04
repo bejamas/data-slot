@@ -1,6 +1,7 @@
 import { getPart, getRoots, getDataBool } from "@data-slot/core";
 import { setAria, ensureId, linkLabelledBy } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+import { lockScroll, unlockScroll } from "@data-slot/core";
 
 export interface DialogOptions {
   /** Initial open state */
@@ -42,11 +43,8 @@ export interface DialogController {
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-// Dialog stack for managing Escape key and scroll lock with ref counting
+// Dialog stack for managing Escape key
 const dialogStack: DialogController[] = [];
-let scrollLockCount = 0;
-let savedBodyOverflow = "";
-let savedBodyPaddingRight = "";
 
 // Single global keydown handler
 let globalKeydownCleanup: (() => void) | null = null;
@@ -126,7 +124,7 @@ export function createDialog(
   const onOpenChange = options.onOpenChange;
   const closeOnClickOutside = options.closeOnClickOutside ?? getDataBool(root, "closeOnClickOutside") ?? true;
   const closeOnEscape = options.closeOnEscape ?? getDataBool(root, "closeOnEscape") ?? true;
-  const lockScroll = options.lockScroll ?? getDataBool(root, "lockScroll") ?? true;
+  const lockScrollOption = options.lockScroll ?? getDataBool(root, "lockScroll") ?? true;
   const alertDialog = options.alertDialog ?? getDataBool(root, "alertDialog") ?? false;
 
   const trigger = getPart<HTMLElement>(root, "dialog-trigger");
@@ -243,17 +241,9 @@ export function createDialog(
       // Reindex all dialogs
       reindexStack();
 
-      // Lock scroll with ref counting
-      if (lockScroll && !didLockScroll) {
-        if (scrollLockCount === 0) {
-          const scrollbarWidth =
-            window.innerWidth - document.documentElement.clientWidth;
-          savedBodyOverflow = document.body.style.overflow;
-          savedBodyPaddingRight = document.body.style.paddingRight;
-          document.body.style.paddingRight = `${scrollbarWidth}px`;
-          document.body.style.overflow = "hidden";
-        }
-        scrollLockCount++;
+      // Lock scroll
+      if (lockScrollOption && !didLockScroll) {
+        lockScroll();
         didLockScroll = true;
       }
     } else {
@@ -268,14 +258,10 @@ export function createDialog(
       clearZIndex();
       reindexStack();
 
-      // Unlock scroll with ref counting (only if we locked it)
+      // Unlock scroll (only if we locked it)
       if (didLockScroll) {
-        scrollLockCount = Math.max(0, scrollLockCount - 1);
+        unlockScroll();
         didLockScroll = false;
-        if (scrollLockCount === 0) {
-          document.body.style.overflow = savedBodyOverflow;
-          document.body.style.paddingRight = savedBodyPaddingRight;
-        }
       }
 
       // Clean up tabindex we may have added
@@ -473,16 +459,8 @@ export function createDialog(
     setupGlobalKeydownHandler();
     reindexStack();
 
-    if (lockScroll && !didLockScroll) {
-      if (scrollLockCount === 0) {
-        const scrollbarWidth =
-          window.innerWidth - document.documentElement.clientWidth;
-        savedBodyOverflow = document.body.style.overflow;
-        savedBodyPaddingRight = document.body.style.paddingRight;
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
-        document.body.style.overflow = "hidden";
-      }
-      scrollLockCount++;
+    if (lockScrollOption && !didLockScroll) {
+      lockScroll();
       didLockScroll = true;
     }
 

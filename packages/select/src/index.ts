@@ -1,6 +1,7 @@
 import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataString, getDataEnum } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+import { lockScroll, unlockScroll } from "@data-slot/core";
 
 /** Side of the trigger to place the content */
 export type Side = "top" | "bottom";
@@ -73,6 +74,11 @@ export interface SelectOptions {
    * @default 8
    */
   collisionPadding?: number;
+  /**
+   * Lock body scroll when open.
+   * @default true
+   */
+  lockScroll?: boolean;
 }
 
 export interface SelectController {
@@ -172,6 +178,7 @@ export function createSelect(
     getDataNumber(content, "collisionPadding") ??
     getDataNumber(root, "collisionPadding") ??
     8;
+  const lockScrollOption = options.lockScroll ?? getDataBool(root, "lockScroll") ?? true;
 
   let isOpen = false;
   let currentValue: string | null = defaultValue;
@@ -193,6 +200,9 @@ export function createSelect(
 
   // Hidden input for form integration
   let hiddenInput: HTMLInputElement | null = null;
+
+  // Track if this instance locked scroll
+  let didLockScroll = false;
 
   const isItemDisabled = (el: HTMLElement) =>
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
@@ -465,6 +475,12 @@ export function createSelect(
       content.hidden = false;
       setDataState("open");
 
+      // Lock scroll
+      if (lockScrollOption && !didLockScroll) {
+        lockScroll();
+        didLockScroll = true;
+      }
+
       cacheItems();
       keyboardMode = false;
 
@@ -488,6 +504,12 @@ export function createSelect(
       clearHighlight();
       typeaheadBuffer = "";
       keyboardMode = false;
+
+      // Unlock scroll
+      if (didLockScroll) {
+        unlockScroll();
+        didLockScroll = false;
+      }
 
       cleanupPosition();
 
@@ -718,6 +740,11 @@ export function createSelect(
     destroy: () => {
       if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
       cleanupPosition();
+      // Unlock scroll if still locked
+      if (didLockScroll) {
+        unlockScroll();
+        didLockScroll = false;
+      }
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       if (hiddenInput && hiddenInput.parentNode) {

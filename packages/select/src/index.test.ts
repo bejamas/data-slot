@@ -1393,4 +1393,66 @@ describe("Select", () => {
       expect(v1.textContent).toBe("From root");
     });
   });
+
+  describe("scroll lock", () => {
+    it("locks scroll when opening", () => {
+      const { controller } = setup();
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      controller.destroy();
+    });
+
+    it("unlocks scroll when closing", () => {
+      const { controller } = setup();
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      controller.close();
+      expect(document.body.style.overflow).toBe("");
+
+      controller.destroy();
+    });
+
+    it("unlocks scroll on destroy while open", () => {
+      const { controller } = setup();
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      controller.destroy();
+      expect(document.body.style.overflow).toBe("");
+    });
+
+    it("respects lockScroll: false option", () => {
+      const { controller } = setup({ lockScroll: false });
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("");
+
+      controller.destroy();
+    });
+
+    it("respects data-lock-scroll='false' attribute", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="root" data-lock-scroll="false">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="a">A</div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const controller = createSelect(root);
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("");
+
+      controller.destroy();
+    });
+  });
 });

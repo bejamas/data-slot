@@ -839,4 +839,64 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
   });
+
+  describe("scroll lock", () => {
+    it("locks scroll when opening", () => {
+      const { controller } = setup();
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      controller.destroy();
+    });
+
+    it("unlocks scroll when closing", () => {
+      const { controller } = setup();
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      controller.close();
+      expect(document.body.style.overflow).toBe("");
+
+      controller.destroy();
+    });
+
+    it("unlocks scroll on destroy while open", () => {
+      const { controller } = setup();
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      controller.destroy();
+      expect(document.body.style.overflow).toBe("");
+    });
+
+    it("respects lockScroll: false option", () => {
+      const { controller } = setup({ lockScroll: false });
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("");
+
+      controller.destroy();
+    });
+
+    it("respects data-lock-scroll='false' attribute", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root" data-lock-scroll="false">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-item">Item</button>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const controller = createDropdownMenu(root);
+
+      controller.open();
+      expect(document.body.style.overflow).toBe("");
+
+      controller.destroy();
+    });
+  });
 });

@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it, beforeEach } from 'bun:test'
 import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataString, getDataEnum } from './index'
 import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
+import { lockScroll, unlockScroll } from './index'
+import { getScrollLockCount, resetScrollLock } from './scroll'
 
 describe('core/parts', () => {
   it('getPart finds a single slot', () => {
@@ -385,6 +387,106 @@ describe('core/events', () => {
     const event = new Event('test', { cancelable: true })
     composed(event)
     expect(order).toEqual([1, 2])
+  })
+})
+
+describe('core/scroll', () => {
+  beforeEach(() => {
+    resetScrollLock()
+    document.body.style.cssText = ''
+  })
+
+  it('lockScroll sets overflow hidden on body', () => {
+    lockScroll()
+    expect(document.body.style.overflow).toBe('hidden')
+  })
+
+  it('unlockScroll restores body overflow', () => {
+    document.body.style.overflow = 'auto'
+    lockScroll()
+    expect(document.body.style.overflow).toBe('hidden')
+    unlockScroll()
+    expect(document.body.style.overflow).toBe('auto')
+  })
+
+  it('uses reference counting for nested overlays', () => {
+    lockScroll()
+    expect(getScrollLockCount()).toBe(1)
+    lockScroll()
+    expect(getScrollLockCount()).toBe(2)
+    expect(document.body.style.overflow).toBe('hidden')
+
+    unlockScroll()
+    expect(getScrollLockCount()).toBe(1)
+    expect(document.body.style.overflow).toBe('hidden') // Still locked
+
+    unlockScroll()
+    expect(getScrollLockCount()).toBe(0)
+    expect(document.body.style.overflow).toBe('') // Now unlocked
+  })
+
+  it('unlockScroll does not go below zero', () => {
+    unlockScroll()
+    unlockScroll()
+    expect(getScrollLockCount()).toBe(0)
+  })
+
+  it('preserves existing body padding when adding scrollbar compensation', () => {
+    // Set initial padding via style attribute (simulating CSS or inline style)
+    document.body.style.paddingRight = '20px'
+
+    lockScroll()
+
+    // Scrollbar width varies by environment, but padding should include the original 20px
+    const paddingValue = parseFloat(document.body.style.paddingRight)
+    expect(paddingValue).toBeGreaterThanOrEqual(20)
+
+    unlockScroll()
+    // Should restore the original inline value
+    expect(document.body.style.paddingRight).toBe('20px')
+  })
+
+  it('restores original inline paddingRight on unlock', () => {
+    document.body.style.paddingRight = '15px'
+    lockScroll()
+    unlockScroll()
+    expect(document.body.style.paddingRight).toBe('15px')
+  })
+
+  it('resetScrollLock clears all state', () => {
+    lockScroll()
+    lockScroll()
+    expect(getScrollLockCount()).toBe(2)
+
+    resetScrollLock()
+    expect(getScrollLockCount()).toBe(0)
+    expect(document.body.style.overflow).toBe('')
+    expect(document.body.style.paddingRight).toBe('')
+  })
+
+  it('handles multiple independent lock/unlock cycles (simulates nested overlays)', () => {
+    // Simulates: dialog opens, dropdown opens inside, dropdown closes, dialog closes
+    // This pattern is tested end-to-end in component tests; here we verify the core ref counting
+
+    // "Dialog" opens
+    lockScroll()
+    expect(document.body.style.overflow).toBe('hidden')
+    expect(getScrollLockCount()).toBe(1)
+
+    // "Dropdown" opens while dialog is open
+    lockScroll()
+    expect(document.body.style.overflow).toBe('hidden')
+    expect(getScrollLockCount()).toBe(2)
+
+    // "Dropdown" closes - dialog still open, should stay locked
+    unlockScroll()
+    expect(document.body.style.overflow).toBe('hidden')
+    expect(getScrollLockCount()).toBe(1)
+
+    // "Dialog" closes - all closed, should unlock
+    unlockScroll()
+    expect(document.body.style.overflow).toBe('')
+    expect(getScrollLockCount()).toBe(0)
   })
 })
 

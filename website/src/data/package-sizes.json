@@ -1,15 +1,39 @@
 [
   {
     "name": "@data-slot/select",
-    "size": 3428,
-    "sizeFormatted": "3.3 KB",
+    "size": 3615,
+    "sizeFormatted": "3.5 KB",
     "description": "Dropdown select, form-ready"
   },
   {
+    "name": "@data-slot/navigation-menu",
+    "size": 3537,
+    "sizeFormatted": "3.5 KB",
+    "description": "Dropdown navigation menus"
+  },
+  {
     "name": "@data-slot/dropdown-menu",
-    "size": 2895,
-    "sizeFormatted": "2.8 KB",
+    "size": 3050,
+    "sizeFormatted": "3.0 KB",
     "description": "Action menus, kbd nav"
+  },
+  {
+    "name": "@data-slot/slider",
+    "size": 2913,
+    "sizeFormatted": "2.8 KB",
+    "description": "Single/range value sliders"
+  },
+  {
+    "name": "@data-slot/dialog",
+    "size": 2323,
+    "sizeFormatted": "2.3 KB",
+    "description": "Modal dialogs, focus trap"
+  },
+  {
+    "name": "@data-slot/tabs",
+    "size": 2185,
+    "sizeFormatted": "2.1 KB",
+    "description": "Tabbed interfaces, kbd nav"
   },
   {
     "name": "@data-slot/accordion",
@@ -30,9 +54,15 @@
     "description": "Anchored floating content"
   },
   {
+    "name": "@data-slot/collapsible",
+    "size": 1152,
+    "sizeFormatted": "1.1 KB",
+    "description": "Simple show/hide toggle"
+  },
+  {
     "name": "@data-slot/core",
-    "size": 941,
-    "sizeFormatted": "941 B",
+    "size": 1139,
+    "sizeFormatted": "1.1 KB",
     "description": "Shared utilities"
   }
 ]

@@ -1,6 +1,7 @@
 import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataEnum } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+import { lockScroll, unlockScroll } from "@data-slot/core";
 
 /** Side of the trigger to place the content */
 export type Side = "top" | "right" | "bottom" | "left";
@@ -57,6 +58,11 @@ export interface DropdownMenuOptions {
    * @default 8
    */
   collisionPadding?: number;
+  /**
+   * Lock body scroll when open.
+   * @default true
+   */
+  lockScroll?: boolean;
 }
 
 export interface DropdownMenuController {
@@ -143,6 +149,7 @@ export function createDropdownMenu(
     getDataNumber(content, "collisionPadding") ??
     getDataNumber(root, "collisionPadding") ??
     8;
+  const lockScrollOption = options.lockScroll ?? getDataBool(root, "lockScroll") ?? true;
 
   let isOpen = false;
   let previousActiveElement: HTMLElement | null = null;
@@ -151,6 +158,9 @@ export function createDropdownMenu(
   let typeaheadTimeout: ReturnType<typeof setTimeout> | null = null;
   let keyboardMode = false; // Ignore pointer after keyboard nav
   const cleanups: Array<() => void> = [];
+
+  // Track if this instance locked scroll
+  let didLockScroll = false;
 
   // Cached on open - avoids repeated DOM queries
   let items: HTMLElement[] = [];
@@ -316,6 +326,12 @@ export function createDropdownMenu(
       content.hidden = false;
       setDataState("open");
 
+      // Lock scroll
+      if (lockScrollOption && !didLockScroll) {
+        lockScroll();
+        didLockScroll = true;
+      }
+
       cacheItems();
       keyboardMode = false;
       clearHighlight(); // Ensure no stale data-highlighted
@@ -331,6 +347,12 @@ export function createDropdownMenu(
       clearHighlight();
       typeaheadBuffer = "";
       keyboardMode = false;
+
+      // Unlock scroll
+      if (didLockScroll) {
+        unlockScroll();
+        didLockScroll = false;
+      }
 
       cleanupPosition();
 
@@ -513,6 +535,11 @@ export function createDropdownMenu(
     destroy: () => {
       if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
       cleanupPosition();
+      // Unlock scroll if still locked
+      if (didLockScroll) {
+        unlockScroll();
+        didLockScroll = false;
+      }
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       bound.delete(root);
