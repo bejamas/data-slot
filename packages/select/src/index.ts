@@ -187,8 +187,6 @@ export function createSelect(
   let typeaheadBuffer = "";
   let typeaheadTimeout: ReturnType<typeof setTimeout> | null = null;
   let keyboardMode = false;
-  let lastPointerX = 0;
-  let lastPointerY = 0;
   const cleanups: Array<() => void> = [];
 
   // Cached on open
@@ -326,10 +324,7 @@ export function createSelect(
     // Set min-width to match trigger width
     content.style.minWidth = `${tr.width}px`;
 
-    // Force reflow to ensure dimensions are calculated after unhiding
-    void content.offsetHeight;
-
-    // Get content rect after reflow
+    // Get content rect after setting min-width
     const cr = content.getBoundingClientRect();
 
     let pos: { x: number; y: number };
@@ -499,21 +494,6 @@ export function createSelect(
 
       setupPosition();
       updatePosition();
-
-      // Use rAF to highlight item under cursor if pointer opened the select
-      requestAnimationFrame(() => {
-        if (!isOpen) return;
-        if (lastPointerX !== 0 || lastPointerY !== 0) {
-          const el = document.elementFromPoint(lastPointerX, lastPointerY);
-          const item = el?.closest?.('[data-slot="select-item"]') as HTMLElement | null;
-          if (item && !isItemDisabled(item) && content.contains(item)) {
-            const index = itemToIndex.get(item);
-            if (index !== undefined) {
-              updateHighlight(index, false);
-            }
-          }
-        }
-      });
 
       content.focus();
     } else {
@@ -697,10 +677,6 @@ export function createSelect(
 
   // Trigger events
   cleanups.push(
-    on(trigger, "pointerdown", (e) => {
-      lastPointerX = e.clientX;
-      lastPointerY = e.clientY;
-    }),
     on(trigger, "click", () => {
       if (!disabled) updateOpenState(!isOpen);
     }),
