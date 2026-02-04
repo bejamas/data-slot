@@ -52,9 +52,7 @@ html {
   cursor: pointer;
   color: var(--muted);
   margin-bottom: -1px;
-  transition:
-    color 0.15s,
-    border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s;
 }
 
 .tabs-trigger[data-state="active"] {
@@ -117,14 +115,10 @@ html {
   height: calc(100% - 0.5rem);
   background: #fff;
   border-radius: 4px;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.12),
-    0 0 0 1px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
   transform: translateX(var(--active-tab-left, 0));
   width: var(--active-tab-width, 0);
-  transition:
-    transform 0.2s ease-out,
-    width 0.2s ease-out;
+  transition: transform 0.2s ease-out, width 0.2s ease-out;
 }
 
 /* ============================================
@@ -213,9 +207,7 @@ html {
   background: rgba(0, 0, 0, 0.5);
   z-index: 100;
   opacity: 1;
-  transition:
-    opacity 0.2s ease-out,
-    display 0.2s ease-out allow-discrete;
+  transition: opacity 0.2s ease-out, display 0.2s ease-out allow-discrete;
 }
 
 .dialog-overlay[hidden] {
@@ -235,9 +227,7 @@ html {
   border: 1px solid var(--border);
   z-index: 101;
   opacity: 1;
-  transition:
-    opacity 0.2s ease-out,
-    transform 0.2s ease-out,
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out,
     display 0.2s ease-out allow-discrete;
 }
 
@@ -372,9 +362,7 @@ html {
   visibility: hidden;
   pointer-events: none;
   /* Visibility delays hiding until after opacity/transform fades */
-  transition:
-    opacity 0.15s ease-out,
-    transform 0.15s ease-out,
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out,
     visibility 0s linear 0.15s;
 }
 
@@ -488,9 +476,7 @@ html {
   min-width: 200px;
   z-index: 50;
   opacity: 1;
-  transition:
-    opacity 0.2s ease-out,
-    transform 0.2s ease-out;
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
 }
 
 /* Popover positions */
@@ -638,17 +624,13 @@ html {
   left: var(--viewport-left, 0);
   background: var(--bg);
   border-radius: 8px;
-  box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.12),
-    0 0 0 1px var(--border);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border);
   overflow: hidden;
   width: var(--viewport-width, 0);
   height: var(--viewport-height, 0);
-  transition:
-    left 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+  transition: left 0.25s cubic-bezier(0.32, 0.72, 0, 1),
     width 0.25s cubic-bezier(0.32, 0.72, 0, 1),
-    height 0.25s cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 0.15s ease;
+    height 0.25s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s ease;
   opacity: 1;
   pointer-events: none;
   will-change: left, width, height;
@@ -673,7 +655,7 @@ html {
 .nav-menu-content {
   position: absolute;
   top: 100%;
-  padding: 1.5rem 1rem 0rem;
+  padding-top: 0.5rem;
   opacity: 1;
   z-index: 10;
 }
@@ -755,6 +737,7 @@ html {
   grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
   width: 380px;
+  padding: 0.75rem;
 }
 
 .nav-menu-grid-wide {
@@ -762,10 +745,12 @@ html {
   grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
   width: 520px;
+  padding: 0.75rem;
 }
 
 .nav-menu-single {
   width: 140px;
+  padding: 0.75rem;
 }
 
 .nav-menu-link {
@@ -858,9 +843,8 @@ html.mode-tailwind .preview-css {
 .preview-tailwind [data-slot="navigation-menu-viewport"] {
   transition-property: left, width, height, opacity !important;
   transition-duration: 0.25s, 0.25s, 0.25s, 0.15s !important;
-  transition-timing-function:
-    cubic-bezier(0.32, 0.72, 0, 1), cubic-bezier(0.32, 0.72, 0, 1),
-    cubic-bezier(0.32, 0.72, 0, 1), ease !important;
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1),
+    cubic-bezier(0.32, 0.72, 0, 1), cubic-bezier(0.32, 0.72, 0, 1), ease !important;
   will-change: left, width, height;
 }
 
