@@ -326,7 +326,10 @@ export function createSelect(
     // Set min-width to match trigger width
     content.style.minWidth = `${tr.width}px`;
 
-    // Get content rect after setting min-width
+    // Force reflow to ensure dimensions are calculated after unhiding
+    void content.offsetHeight;
+
+    // Get content rect after reflow
     const cr = content.getBoundingClientRect();
 
     let pos: { x: number; y: number };
@@ -497,13 +500,9 @@ export function createSelect(
       setupPosition();
       updatePosition();
 
-      // Use rAF to refine position after browser has fully rendered content,
-      // and to highlight item under cursor if pointer opened the select
+      // Use rAF to highlight item under cursor if pointer opened the select
       requestAnimationFrame(() => {
         if (!isOpen) return;
-        updatePosition();
-
-        // Highlight item under cursor if pointer opened the select
         if (lastPointerX !== 0 || lastPointerY !== 0) {
           const el = document.elementFromPoint(lastPointerX, lastPointerY);
           const item = el?.closest?.('[data-slot="select-item"]') as HTMLElement | null;
