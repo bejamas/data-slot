@@ -397,11 +397,16 @@ export function createSelect(
   const setupPosition = () => {
     if (positionCleanups.length > 0) return;
     const onResize = () => schedulePosition();
+    const onScroll = (e: Event) => {
+      // Ignore scroll events from inside the content (user scrolling the list)
+      if (e.target instanceof Node && content.contains(e.target)) return;
+      schedulePosition();
+    };
     window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onResize, true);
+    window.addEventListener("scroll", onScroll, true);
     positionCleanups.push(
       () => window.removeEventListener("resize", onResize),
-      () => window.removeEventListener("scroll", onResize, true)
+      () => window.removeEventListener("scroll", onScroll, true)
     );
     const ro = new ResizeObserver(onResize);
     ro.observe(trigger);
