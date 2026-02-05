@@ -66,20 +66,17 @@ controller.destroy();
 | `select-content` | Popup container for options |
 | `select-item` | Individual selectable option |
 | `select-group` | Groups related items |
-| `select-label` | Field label (outside content) or group label (inside a group) |
+| `select-label` | Group label (inside a `select-group`) |
 | `select-separator` | Visual divider between items/groups |
 
-### Field Label vs Group Label
+### Native Label Support
 
-The `select-label` slot serves two purposes depending on where it appears:
-
-- **Field label** (outside `select-content`): Acts as the accessible label for the entire select. Linked to the trigger via `aria-labelledby`. If using a `<label>` element, `htmlFor` is set automatically. For non-label elements, clicking the label focuses the trigger.
-- **Group label** (inside a `select-group`): Labels a group of items, linked to the group via `aria-labelledby`.
+Use a standard HTML `<label for="...">` element to label the select. The `for` attribute should match the `id` on the trigger button. Clicking the label opens the select, and `aria-labelledby` is set automatically.
 
 ```html
+<label for="fruit-select">Choose a fruit</label>
 <div data-slot="select">
-  <label data-slot="select-label">Choose a fruit</label>  <!-- field label -->
-  <button data-slot="select-trigger">
+  <button data-slot="select-trigger" id="fruit-select">
     <span data-slot="select-value"></span>
   </button>
   <div data-slot="select-content" hidden>
