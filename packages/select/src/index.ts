@@ -187,6 +187,8 @@ export function createSelect(
   let typeaheadBuffer = "";
   let typeaheadTimeout: ReturnType<typeof setTimeout> | null = null;
   let keyboardMode = false;
+  let lastPointerX = 0;
+  let lastPointerY = 0;
   const cleanups: Array<() => void> = [];
 
   // Cached on open
@@ -495,6 +497,25 @@ export function createSelect(
       setupPosition();
       updatePosition();
 
+      // Use rAF to refine position after browser has fully rendered content,
+      // and to highlight item under cursor if pointer opened the select
+      requestAnimationFrame(() => {
+        if (!isOpen) return;
+        updatePosition();
+
+        // Highlight item under cursor if pointer opened the select
+        if (lastPointerX !== 0 || lastPointerY !== 0) {
+          const el = document.elementFromPoint(lastPointerX, lastPointerY);
+          const item = el?.closest?.('[data-slot="select-item"]') as HTMLElement | null;
+          if (item && !isItemDisabled(item) && content.contains(item)) {
+            const index = itemToIndex.get(item);
+            if (index !== undefined) {
+              updateHighlight(index, false);
+            }
+          }
+        }
+      });
+
       content.focus();
     } else {
       isOpen = false;
@@ -677,6 +698,10 @@ export function createSelect(
 
   // Trigger events
   cleanups.push(
+    on(trigger, "pointerdown", (e) => {
+      lastPointerX = e.clientX;
+      lastPointerY = e.clientY;
+    }),
     on(trigger, "click", () => {
       if (!disabled) updateOpenState(!isOpen);
     }),
