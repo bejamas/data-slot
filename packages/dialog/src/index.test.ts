@@ -52,8 +52,8 @@ describe("Dialog", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
-    document.body.style.overflow = "";
-    document.body.style.paddingRight = "";
+    document.documentElement.style.overflow = "";
+    document.documentElement.style.scrollbarGutter = "";
   });
 
   it("initializes with content hidden", () => {
@@ -192,10 +192,10 @@ describe("Dialog", () => {
     const { controller } = setup({ lockScroll: true });
 
     controller.open();
-    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.documentElement.style.overflow).toBe("hidden");
 
     controller.close();
-    expect(document.body.style.overflow).toBe("");
+    expect(document.documentElement.style.overflow).toBe("");
 
     controller.destroy();
   });
@@ -204,7 +204,7 @@ describe("Dialog", () => {
     const { controller } = setup({ lockScroll: false });
 
     controller.open();
-    expect(document.body.style.overflow).toBe("");
+    expect(document.documentElement.style.overflow).toBe("");
 
     controller.destroy();
   });
@@ -385,18 +385,18 @@ describe("Dialog", () => {
     const controller2 = createDialog(root2, { lockScroll: true });
 
     controller1.open();
-    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.documentElement.style.overflow).toBe("hidden");
 
     controller2.open();
-    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.documentElement.style.overflow).toBe("hidden");
 
     // Close dialog2 - scroll should still be locked (dialog1 open)
     controller2.close();
-    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.documentElement.style.overflow).toBe("hidden");
 
     // Close dialog1 - scroll should be unlocked
     controller1.close();
-    expect(document.body.style.overflow).toBe("");
+    expect(document.documentElement.style.overflow).toBe("");
 
     controller1.destroy();
     controller2.destroy();
@@ -599,7 +599,7 @@ describe("Dialog", () => {
       const controller = createDialog(root);
 
       controller.open();
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
 
       controller.destroy();
     });
@@ -663,7 +663,7 @@ describe("Dialog", () => {
       const { controller } = setup();
 
       controller.open();
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       controller.destroy();
     });
@@ -672,10 +672,10 @@ describe("Dialog", () => {
       const { controller } = setup();
 
       controller.open();
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       controller.close();
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
 
       controller.destroy();
     });
@@ -684,17 +684,17 @@ describe("Dialog", () => {
       const { controller } = setup();
 
       controller.open();
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       controller.destroy();
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
     });
 
     it("respects lockScroll: false option", () => {
       const { controller } = setup({ lockScroll: false });
 
       controller.open();
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
 
       controller.destroy();
     });
@@ -710,7 +710,7 @@ describe("Dialog", () => {
       const controller = createDialog(root);
 
       controller.open();
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
 
       controller.destroy();
     });
@@ -733,19 +733,19 @@ describe("Dialog", () => {
 
       // Open first dialog
       controller1.open();
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       // Open second dialog (nested)
       controller2.open();
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       // Close second dialog - first still open, should stay locked
       controller2.close();
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       // Close first dialog - all closed, should unlock
       controller1.close();
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
 
       controller1.destroy();
       controller2.destroy();

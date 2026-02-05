@@ -1,13 +1,13 @@
 /**
  * Scroll lock utilities with reference counting.
  * Prevents body scroll when overlays (dialogs, selects, dropdowns) are open.
- * Handles scrollbar width compensation to prevent layout shift.
+ * Uses scrollbar-gutter: stable to prevent layout shift.
  */
 
 // Global state for scroll lock with ref counting
 let scrollLockCount = 0;
-let savedBodyOverflow = "";
-let savedBodyPaddingRight = "";
+let savedOverflow = "";
+let savedScrollbarGutter = "";
 
 /**
  * Lock document scroll. Call when opening an overlay.
@@ -15,13 +15,11 @@ let savedBodyPaddingRight = "";
  */
 export function lockScroll(): void {
   if (scrollLockCount === 0) {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    savedBodyOverflow = document.body.style.overflow;
-    savedBodyPaddingRight = document.body.style.paddingRight;
-    // Add scrollbar width to existing computed padding to avoid layout shift
-    const computedPadding = parseFloat(getComputedStyle(document.body).paddingRight) || 0;
-    document.body.style.paddingRight = `${computedPadding + scrollbarWidth}px`;
-    document.body.style.overflow = "hidden";
+    const html = document.documentElement;
+    savedOverflow = html.style.overflow;
+    savedScrollbarGutter = html.style.scrollbarGutter;
+    html.style.overflow = "hidden";
+    html.style.scrollbarGutter = "stable";
   }
   scrollLockCount++;
 }
@@ -33,8 +31,9 @@ export function lockScroll(): void {
 export function unlockScroll(): void {
   scrollLockCount = Math.max(0, scrollLockCount - 1);
   if (scrollLockCount === 0) {
-    document.body.style.overflow = savedBodyOverflow;
-    document.body.style.paddingRight = savedBodyPaddingRight;
+    const html = document.documentElement;
+    html.style.overflow = savedOverflow;
+    html.style.scrollbarGutter = savedScrollbarGutter;
   }
 }
 
@@ -50,8 +49,9 @@ export function getScrollLockCount(): number {
  */
 export function resetScrollLock(): void {
   scrollLockCount = 0;
-  document.body.style.overflow = "";
-  document.body.style.paddingRight = "";
-  savedBodyOverflow = "";
-  savedBodyPaddingRight = "";
+  const html = document.documentElement;
+  html.style.overflow = "";
+  html.style.scrollbarGutter = "";
+  savedOverflow = "";
+  savedScrollbarGutter = "";
 }

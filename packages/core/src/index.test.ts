@@ -393,20 +393,27 @@ describe('core/events', () => {
 describe('core/scroll', () => {
   beforeEach(() => {
     resetScrollLock()
-    document.body.style.cssText = ''
+    document.documentElement.style.cssText = ''
   })
 
-  it('lockScroll sets overflow hidden on body', () => {
+  it('lockScroll sets overflow hidden on html', () => {
     lockScroll()
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.documentElement.style.overflow).toBe('hidden')
   })
 
-  it('unlockScroll restores body overflow', () => {
-    document.body.style.overflow = 'auto'
+  it('lockScroll sets scrollbar-gutter to stable', () => {
     lockScroll()
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.documentElement.style.scrollbarGutter).toBe('stable')
     unlockScroll()
-    expect(document.body.style.overflow).toBe('auto')
+    expect(document.documentElement.style.scrollbarGutter).toBe('')
+  })
+
+  it('unlockScroll restores html overflow', () => {
+    document.documentElement.style.overflow = 'auto'
+    lockScroll()
+    expect(document.documentElement.style.overflow).toBe('hidden')
+    unlockScroll()
+    expect(document.documentElement.style.overflow).toBe('auto')
   })
 
   it('uses reference counting for nested overlays', () => {
@@ -414,43 +421,21 @@ describe('core/scroll', () => {
     expect(getScrollLockCount()).toBe(1)
     lockScroll()
     expect(getScrollLockCount()).toBe(2)
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.documentElement.style.overflow).toBe('hidden')
 
     unlockScroll()
     expect(getScrollLockCount()).toBe(1)
-    expect(document.body.style.overflow).toBe('hidden') // Still locked
+    expect(document.documentElement.style.overflow).toBe('hidden') // Still locked
 
     unlockScroll()
     expect(getScrollLockCount()).toBe(0)
-    expect(document.body.style.overflow).toBe('') // Now unlocked
+    expect(document.documentElement.style.overflow).toBe('') // Now unlocked
   })
 
   it('unlockScroll does not go below zero', () => {
     unlockScroll()
     unlockScroll()
     expect(getScrollLockCount()).toBe(0)
-  })
-
-  it('preserves existing body padding when adding scrollbar compensation', () => {
-    // Set initial padding via style attribute (simulating CSS or inline style)
-    document.body.style.paddingRight = '20px'
-
-    lockScroll()
-
-    // Scrollbar width varies by environment, but padding should include the original 20px
-    const paddingValue = parseFloat(document.body.style.paddingRight)
-    expect(paddingValue).toBeGreaterThanOrEqual(20)
-
-    unlockScroll()
-    // Should restore the original inline value
-    expect(document.body.style.paddingRight).toBe('20px')
-  })
-
-  it('restores original inline paddingRight on unlock', () => {
-    document.body.style.paddingRight = '15px'
-    lockScroll()
-    unlockScroll()
-    expect(document.body.style.paddingRight).toBe('15px')
   })
 
   it('resetScrollLock clears all state', () => {
@@ -460,8 +445,8 @@ describe('core/scroll', () => {
 
     resetScrollLock()
     expect(getScrollLockCount()).toBe(0)
-    expect(document.body.style.overflow).toBe('')
-    expect(document.body.style.paddingRight).toBe('')
+    expect(document.documentElement.style.overflow).toBe('')
+    expect(document.documentElement.style.scrollbarGutter).toBe('')
   })
 
   it('handles multiple independent lock/unlock cycles (simulates nested overlays)', () => {
@@ -470,22 +455,22 @@ describe('core/scroll', () => {
 
     // "Dialog" opens
     lockScroll()
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.documentElement.style.overflow).toBe('hidden')
     expect(getScrollLockCount()).toBe(1)
 
     // "Dropdown" opens while dialog is open
     lockScroll()
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.documentElement.style.overflow).toBe('hidden')
     expect(getScrollLockCount()).toBe(2)
 
     // "Dropdown" closes - dialog still open, should stay locked
     unlockScroll()
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.documentElement.style.overflow).toBe('hidden')
     expect(getScrollLockCount()).toBe(1)
 
     // "Dialog" closes - all closed, should unlock
     unlockScroll()
-    expect(document.body.style.overflow).toBe('')
+    expect(document.documentElement.style.overflow).toBe('')
     expect(getScrollLockCount()).toBe(0)
   })
 })
