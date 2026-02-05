@@ -3,6 +3,7 @@ import { Code } from "astro:components";
 import ExampleBlock from "../ExampleBlock.astro";
 
 const cssCode = `<div data-slot="select" data-placeholder="Select a fruit..." class="select-root">
+  <label data-slot="select-label" class="select-field-label">Fruit</label>
   <button data-slot="select-trigger" class="select-trigger">
     <span data-slot="select-value"></span>
     <span class="select-icon">▼</span>
@@ -38,6 +39,13 @@ const cssCode = `<div data-slot="select" data-placeholder="Select a fruit..." cl
 
 <style>
   .select-root { position: relative; display: inline-block; }
+  .select-field-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.25rem;
+  }
   .select-trigger {
     display: flex;
     align-items: center;
@@ -99,6 +107,7 @@ const cssCode = `<div data-slot="select" data-placeholder="Select a fruit..." cl
 </style>`;
 
 const tailwindCode = `<div data-slot="select" data-placeholder="Select a fruit..." class="relative inline-block">
+  <label data-slot="select-label" class="block text-sm font-medium text-gray-700 mb-1">Fruit</label>
   <button
     data-slot="select-trigger"
     class="flex items-center gap-2 px-4 py-2 min-w-[180px] bg-gray-900 text-white
@@ -185,6 +194,7 @@ const tailwindCode = `<div data-slot="select" data-placeholder="Select a fruit..
 
 <ExampleBlock>
   <div slot="preview-css" data-slot="select" data-placeholder="Select a fruit..." class="select-root" id="select-css">
+    <label data-slot="select-label" class="select-field-label">Fruit</label>
     <button data-slot="select-trigger" class="select-trigger">
       <span data-slot="select-value"></span>
       <span class="select-icon">▼</span>
@@ -218,6 +228,7 @@ const tailwindCode = `<div data-slot="select" data-placeholder="Select a fruit..
     </div>
   </div>
   <div slot="preview-tailwind" data-slot="select" data-placeholder="Select a fruit..." class="relative inline-block" id="select-tw">
+    <label data-slot="select-label" class="block text-sm font-medium text-gray-700 mb-1">Fruit</label>
     <button
       data-slot="select-trigger"
       class="flex items-center gap-2 px-4 py-2 min-w-[180px] bg-gray-900 text-white border-none cursor-pointer hover:opacity-90 transition-opacity"
@@ -294,6 +305,13 @@ const tailwindCode = `<div data-slot="select" data-placeholder="Select a fruit..
 
 <style is:global>
   .select-root { display: inline-block; }
+  .select-field-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.25rem;
+  }
   .select-trigger {
     display: flex;
     align-items: center;

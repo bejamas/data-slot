@@ -222,6 +222,20 @@ export function createSelect(
   content.setAttribute("aria-labelledby", triggerId);
   content.tabIndex = -1;
 
+  // Field-level label: a select-label that lives outside the content dropdown
+  const labels = getParts<HTMLElement>(root, "select-label");
+  const fieldLabel = labels.find((l) => !content.contains(l)) ?? null;
+  if (fieldLabel) {
+    const labelId = ensureId(fieldLabel, "select-label");
+    const existing = trigger.getAttribute("aria-labelledby");
+    trigger.setAttribute("aria-labelledby", existing ? `${existing} ${labelId}` : labelId);
+    if (fieldLabel.tagName === "LABEL") {
+      (fieldLabel as HTMLLabelElement).htmlFor = triggerId;
+    } else {
+      cleanups.push(on(fieldLabel, "click", () => trigger.focus()));
+    }
+  }
+
   if (disabled) {
     trigger.setAttribute("aria-disabled", "true");
     trigger.setAttribute("data-disabled", "");

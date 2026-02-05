@@ -1394,6 +1394,116 @@ describe("Select", () => {
     });
   });
 
+  describe("field label", () => {
+    it("sets aria-labelledby on trigger from field label", () => {
+      const { controller } = setup({}, `
+        <div data-slot="select" id="root">
+          <label data-slot="select-label">Choose a fruit</label>
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-group">
+              <div data-slot="select-label">Fruits</div>
+              <div data-slot="select-item" data-value="apple">Apple</div>
+            </div>
+          </div>
+        </div>
+      `);
+
+      const trigger = document.querySelector('[data-slot="select-trigger"]') as HTMLElement;
+      const fieldLabel = document.querySelector('label[data-slot="select-label"]') as HTMLElement;
+      const groupLabel = document.querySelector('[data-slot="select-group"] [data-slot="select-label"]') as HTMLElement;
+
+      // Field label should be linked to trigger
+      expect(trigger.getAttribute("aria-labelledby")).toContain(fieldLabel.id);
+
+      // Group label should NOT appear in trigger's aria-labelledby
+      // (group labels are set on open via cacheItems, on the group element)
+      expect(trigger.getAttribute("aria-labelledby")).not.toContain(groupLabel.id || "NONEXISTENT");
+
+      controller.destroy();
+    });
+
+    it("ignores select-label inside content (not treated as field label)", () => {
+      const { trigger, controller } = setup();
+
+      // Default setup has a group label inside content but no field label outside
+      // Trigger should NOT have aria-labelledby set (beyond what content has)
+      expect(trigger.hasAttribute("aria-labelledby")).toBe(false);
+
+      controller.destroy();
+    });
+
+    it("clicking non-label field label focuses trigger", () => {
+      const { controller } = setup({}, `
+        <div data-slot="select" id="root">
+          <span data-slot="select-label">Choose a fruit</span>
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="apple">Apple</div>
+          </div>
+        </div>
+      `);
+
+      const trigger = document.querySelector('[data-slot="select-trigger"]') as HTMLElement;
+      const fieldLabel = document.querySelector('span[data-slot="select-label"]') as HTMLElement;
+
+      // Click the field label
+      fieldLabel.click();
+      expect(document.activeElement).toBe(trigger);
+
+      controller.destroy();
+    });
+
+    it("appends to existing aria-labelledby instead of overwriting", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="root">
+          <span data-slot="select-label">Choose a fruit</span>
+          <button data-slot="select-trigger" aria-labelledby="custom-id">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="apple">Apple</div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const controller = createSelect(root);
+      const trigger = document.querySelector('[data-slot="select-trigger"]') as HTMLElement;
+      const fieldLabel = document.querySelector('span[data-slot="select-label"]') as HTMLElement;
+
+      const labelledBy = trigger.getAttribute("aria-labelledby")!;
+      expect(labelledBy).toContain("custom-id");
+      expect(labelledBy).toContain(fieldLabel.id);
+
+      controller.destroy();
+    });
+
+    it("sets htmlFor on native label element", () => {
+      const { controller } = setup({}, `
+        <div data-slot="select" id="root">
+          <label data-slot="select-label">Choose</label>
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="apple">Apple</div>
+          </div>
+        </div>
+      `);
+
+      const trigger = document.querySelector('[data-slot="select-trigger"]') as HTMLElement;
+      const fieldLabel = document.querySelector('label[data-slot="select-label"]') as HTMLLabelElement;
+
+      expect(fieldLabel.htmlFor).toBe(trigger.id);
+
+      controller.destroy();
+    });
+  });
+
   describe("scroll lock", () => {
     it("locks scroll when opening", () => {
       const { controller } = setup();
