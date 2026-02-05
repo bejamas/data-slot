@@ -845,7 +845,7 @@ describe("DropdownMenu", () => {
       const { controller } = setup();
 
       controller.open();
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       controller.destroy();
     });
@@ -854,10 +854,10 @@ describe("DropdownMenu", () => {
       const { controller } = setup();
 
       controller.open();
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       controller.close();
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
 
       controller.destroy();
     });
@@ -866,17 +866,17 @@ describe("DropdownMenu", () => {
       const { controller } = setup();
 
       controller.open();
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       controller.destroy();
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
     });
 
     it("respects lockScroll: false option", () => {
       const { controller } = setup({ lockScroll: false });
 
       controller.open();
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
 
       controller.destroy();
     });
@@ -894,7 +894,7 @@ describe("DropdownMenu", () => {
       const controller = createDropdownMenu(root);
 
       controller.open();
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
 
       controller.destroy();
     });
