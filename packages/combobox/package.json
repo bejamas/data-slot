@@ -24,9 +24,6 @@
   "scripts": {
     "build": "tsdown"
   },
-  "devDependencies": {
-    "@data-slot/core": "workspace:*"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/bejamas/data-slot",
@@ -41,5 +38,8 @@
     "vanilla",
     "data-slot"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@data-slot/core": "workspace:*"
+  }
 }

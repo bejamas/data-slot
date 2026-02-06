@@ -6,5 +6,6 @@ export default defineConfig({
   dts: true,
   clean: true,
   treeshake: true,
+  external: ["@data-slot/core"],
   minify: true,
 });
