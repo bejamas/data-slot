@@ -1,4 +1,4 @@
-import { getPart, getRoots, getDataBool, getDataEnum, containsWithPortals } from "@data-slot/core";
+import { getPart, getRoots, getDataBool, getDataEnum, createDismissLayer } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 
@@ -162,31 +162,15 @@ export function createPopover(
     cleanups.push(on(closeBtn, "click", () => updateState(false)));
   }
 
-  // Click outside
-  if (closeOnClickOutside) {
-    cleanups.push(
-      on(document, "pointerdown", (e) => {
-        if (!isOpen) return;
-        const target = e.target as Node;
-        if (!containsWithPortals(root, target)) {
-          updateState(false);
-        }
-      })
-    );
-  }
-
-  // Escape key
-  if (closeOnEscape) {
-    cleanups.push(
-      on(document, "keydown", (e) => {
-        if (!isOpen) return;
-        if (e.key === "Escape") {
-          e.preventDefault();
-          updateState(false);
-        }
-      })
-    );
-  }
+  cleanups.push(
+    createDismissLayer({
+      root,
+      isOpen: () => isOpen,
+      onDismiss: () => updateState(false),
+      closeOnClickOutside,
+      closeOnEscape,
+    })
+  );
 
   // Inbound event
   cleanups.push(
