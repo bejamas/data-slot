@@ -1,8 +1,20 @@
-import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataString, getDataEnum } from "@data-slot/core";
-import { setAria, ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
-import { portalToBody, restorePortal, containsWithPortals } from "@data-slot/core";
-import type { PortalState } from "@data-slot/core";
+import {
+  getPart,
+  getParts,
+  getRoots,
+  getDataBool,
+  getDataNumber,
+  getDataString,
+  getDataEnum,
+  setAria,
+  ensureId,
+  on,
+  emit,
+  computeFloatingPosition,
+  createPositionSync,
+  createPortalLifecycle,
+  createDismissLayer,
+} from "@data-slot/core";
 
 /** Side of the input to place the content */
 export type Side = "top" | "bottom";
@@ -71,9 +83,6 @@ export interface ComboboxController {
   /** Cleanup all event listeners */
   destroy(): void;
 }
-
-// Opposite sides for flipping
-const OPP: Record<Side, Side> = { top: "bottom", bottom: "top" };
 
 /**
  * Create a combobox controller for a root element.
@@ -161,15 +170,11 @@ export function createCombobox(
   let enabledVisibleItems: HTMLElement[] = [];
   let itemToEnabledIndex = new Map<HTMLElement, number>();
 
-  // Position sync
-  let positionRafId: number | null = null;
-  const positionCleanups: Array<() => void> = [];
-
   // Hidden input for form integration
   let hiddenInput: HTMLInputElement | null = null;
 
-  // Portal state
-  const portalState: PortalState = { originalParent: null, originalNextSibling: null, portaled: false };
+  // Portal lifecycle
+  const portal = createPortalLifecycle({ content, root });
 
   const isItemDisabled = (el: HTMLElement) =>
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
@@ -339,7 +344,7 @@ export function createCombobox(
     let visibleCount = 0;
 
     for (const item of allItems) {
-      const itemValue = getItemValue(item);
+      const itemValue = getItemValue(item) ?? "";
       const itemLabel = getItemLabel(item);
       const matches = trimmed === "" || filterFn(trimmed, itemValue, itemLabel);
       item.hidden = !matches;
@@ -376,93 +381,37 @@ export function createCombobox(
   };
 
   // Positioning
-  const computePopperPos = (side: Side, align: Align, anchorRect: DOMRect, cr: DOMRect) => {
-    let x = 0, y = 0;
-    if (side === "top") y = anchorRect.top - cr.height - sideOffset;
-    else y = anchorRect.bottom + sideOffset;
-
-    if (align === "start") x = anchorRect.left + alignOffset;
-    else if (align === "center") x = anchorRect.left + anchorRect.width / 2 - cr.width / 2 + alignOffset;
-    else x = anchorRect.right - cr.width - alignOffset;
-
-    return { x, y };
-  };
-
   const updatePosition = () => {
     // Anchor to root element (contains both input and trigger)
     const anchorRect = (root as HTMLElement).getBoundingClientRect();
-    const vw = window.innerWidth, vh = window.innerHeight;
-
     content.style.minWidth = `${anchorRect.width}px`;
-
     const cr = content.getBoundingClientRect();
-
-    let side: Side = preferredSide;
-    let pos = computePopperPos(side, preferredAlign, anchorRect, cr);
-
-    if (avoidCollisions) {
-      const overflow = (s: Side, p: { x: number; y: number }) =>
-        s === "top" ? p.y < collisionPadding :
-        p.y + cr.height > vh - collisionPadding;
-
-      if (overflow(side, pos)) {
-        const opp = OPP[side];
-        const oppPos = computePopperPos(opp, preferredAlign, anchorRect, cr);
-        if (!overflow(opp, oppPos)) {
-          side = opp;
-          pos = oppPos;
-        }
-      }
-
-      if (pos.x < collisionPadding) pos.x = collisionPadding;
-      else if (pos.x + cr.width > vw - collisionPadding) pos.x = vw - cr.width - collisionPadding;
-      if (pos.y < collisionPadding) pos.y = collisionPadding;
-      else if (pos.y + cr.height > vh - collisionPadding) pos.y = vh - cr.height - collisionPadding;
-    }
+    const pos = computeFloatingPosition({
+      anchorRect,
+      contentRect: cr,
+      side: preferredSide,
+      align: preferredAlign,
+      sideOffset,
+      alignOffset,
+      avoidCollisions,
+      collisionPadding,
+      allowedSides: SIDES,
+    });
 
     content.style.position = "fixed";
     content.style.top = `${pos.y}px`;
     content.style.left = `${pos.x}px`;
     content.style.margin = "0";
-    content.setAttribute("data-side", side);
-    content.setAttribute("data-align", preferredAlign);
+    content.setAttribute("data-side", pos.side);
+    content.setAttribute("data-align", pos.align);
   };
 
-  const schedulePosition = () => {
-    if (positionRafId !== null) return;
-    positionRafId = requestAnimationFrame(() => {
-      positionRafId = null;
-      if (isOpen) updatePosition();
-    });
-  };
-
-  const cleanupPosition = () => {
-    if (positionRafId !== null) {
-      cancelAnimationFrame(positionRafId);
-      positionRafId = null;
-    }
-    positionCleanups.forEach((fn) => fn());
-    positionCleanups.length = 0;
-  };
-
-  const setupPosition = () => {
-    if (positionCleanups.length > 0) return;
-    const onResize = () => schedulePosition();
-    const onScroll = (e: Event) => {
-      if (e.target instanceof Node && content.contains(e.target)) return;
-      schedulePosition();
-    };
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onScroll, true);
-    positionCleanups.push(
-      () => window.removeEventListener("resize", onResize),
-      () => window.removeEventListener("scroll", onScroll, true)
-    );
-    const ro = new ResizeObserver(onResize);
-    ro.observe(root as HTMLElement);
-    ro.observe(content);
-    positionCleanups.push(() => ro.disconnect());
-  };
+  const positionSync = createPositionSync({
+    observedElements: [root as HTMLElement, content],
+    isActive: () => isOpen,
+    onUpdate: updatePosition,
+    ignoreScrollTarget: (target) => target instanceof Node && content.contains(target),
+  });
 
   // Highlighting
   const updateHighlight = (index: number) => {
@@ -497,7 +446,7 @@ export function createCombobox(
     if (open) {
       isOpen = true;
       setAria(input, "expanded", true);
-      portalToBody(content, root, portalState);
+      portal.mount();
       content.hidden = false;
       setDataState("open");
 
@@ -517,23 +466,24 @@ export function createCombobox(
         clearHighlight();
       }
 
-      setupPosition();
+      positionSync.start();
       updatePosition();
+      positionSync.update();
 
       requestAnimationFrame(() => {
         if (!isOpen) return;
-        updatePosition();
+        positionSync.update();
       });
     } else {
       isOpen = false;
       setAria(input, "expanded", false);
+      portal.restore();
       content.hidden = true;
       setDataState("closed");
       clearHighlight();
       keyboardMode = false;
 
-      cleanupPosition();
-      restorePortal(content, portalState);
+      positionSync.stop();
 
       // Restore input text to committed value's label
       const committedLabel = getLabelForValue(currentValue);
@@ -687,7 +637,7 @@ export function createCombobox(
       }
 
       // Update position after filter changes content size
-      schedulePosition();
+      positionSync.update();
     }
   };
 
@@ -763,13 +713,13 @@ export function createCombobox(
     })
   );
 
-  // Close on click outside
   cleanups.push(
-    on(document, "pointerdown", (e) => {
-      const t = e.target as Node;
-      if (isOpen && !containsWithPortals(root, t) && !content.contains(t)) {
-        updateOpenState(false);
-      }
+    createDismissLayer({
+      root,
+      isOpen: () => isOpen,
+      onDismiss: () => updateOpenState(false),
+      closeOnClickOutside: true,
+      closeOnEscape: false,
     })
   );
 
@@ -799,8 +749,8 @@ export function createCombobox(
     open: () => updateOpenState(true),
     close: () => updateOpenState(false),
     destroy: () => {
-      cleanupPosition();
-      restorePortal(content, portalState);
+      positionSync.stop();
+      portal.cleanup();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       if (hiddenInput && hiddenInput.parentNode) {

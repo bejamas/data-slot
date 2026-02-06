@@ -796,7 +796,7 @@ describe("Combobox", () => {
     });
 
     it("trigger click focuses input", () => {
-      const { triggerBtn, input, controller } = setup({ openOnFocus: false });
+      const { triggerBtn, controller } = setup({ openOnFocus: false });
       triggerBtn.click();
       // In bun:test, focus doesn't always work but we verify the intent
       expect(controller.isOpen).toBe(true);
@@ -1071,6 +1071,53 @@ describe("Combobox", () => {
 
       controller.close();
       expect(root.contains(content)).toBe(true);
+      controller.destroy();
+    });
+
+    it("restores content before applying closed hidden/data-state", () => {
+      const { root, content, controller } = setup();
+      controller.open();
+      expect(content.parentElement).toBe(document.body);
+
+      type ParentWithHooks = HTMLElement & {
+        appendChild(node: Node): Node;
+        insertBefore(node: Node, child: Node | null): Node;
+      };
+
+      const rootNode = root as ParentWithHooks;
+      const originalAppendChild = rootNode.appendChild.bind(rootNode);
+      const originalInsertBefore = rootNode.insertBefore.bind(rootNode);
+      let observedRestore = false;
+
+      const assertRestoreBeforeClose = (node: Node) => {
+        if (node !== content) return;
+        observedRestore = true;
+        expect(content.hidden).toBe(false);
+        expect(content.getAttribute("data-state")).toBe("open");
+      };
+
+      rootNode.appendChild = ((node: Node) => {
+        assertRestoreBeforeClose(node);
+        return originalAppendChild(node);
+      }) as ParentWithHooks["appendChild"];
+
+      rootNode.insertBefore = ((node: Node, child: Node | null) => {
+        assertRestoreBeforeClose(node);
+        return originalInsertBefore(node, child);
+      }) as ParentWithHooks["insertBefore"];
+
+      try {
+        controller.close();
+      } finally {
+        rootNode.appendChild = originalAppendChild as ParentWithHooks["appendChild"];
+        rootNode.insertBefore = originalInsertBefore as ParentWithHooks["insertBefore"];
+      }
+
+      expect(observedRestore).toBe(true);
+      expect(root.contains(content)).toBe(true);
+      expect(content.hidden).toBe(true);
+      expect(content.getAttribute("data-state")).toBe("closed");
+
       controller.destroy();
     });
 

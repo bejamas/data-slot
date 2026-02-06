@@ -1,9 +1,21 @@
-import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataEnum } from "@data-slot/core";
-import { setAria, ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
-import { lockScroll, unlockScroll } from "@data-slot/core";
-import { portalToBody, restorePortal } from "@data-slot/core";
-import type { PortalState } from "@data-slot/core";
+import {
+  getPart,
+  getParts,
+  getRoots,
+  getDataBool,
+  getDataNumber,
+  getDataEnum,
+  setAria,
+  ensureId,
+  on,
+  emit,
+  lockScroll,
+  unlockScroll,
+  computeFloatingPosition,
+  createPositionSync,
+  createPortalLifecycle,
+  createDismissLayer,
+} from "@data-slot/core";
 
 /** Side of the trigger to place the content */
 export type Side = "top" | "right" | "bottom" | "left";
@@ -79,9 +91,6 @@ export interface DropdownMenuController {
   /** Cleanup all event listeners */
   destroy(): void;
 }
-
-// Opposite sides for flipping
-const OPP: Record<Side, Side> = { top: "bottom", bottom: "top", left: "right", right: "left" };
 
 /**
  * Create a dropdown menu controller for a root element.
@@ -164,17 +173,13 @@ export function createDropdownMenu(
   // Track if this instance locked scroll
   let didLockScroll = false;
 
-  // Portal state for moving content to body
-  const portalState: PortalState = { originalParent: null, originalNextSibling: null, portaled: false };
+  // Portal lifecycle for moving content to body
+  const portal = createPortalLifecycle({ content, root });
 
   // Cached on open - avoids repeated DOM queries
   let items: HTMLElement[] = [];
   let enabledItems: HTMLElement[] = [];
   let itemToIndex = new Map<HTMLElement, number>();
-
-  // For position syncing while open
-  let positionRafId: number | null = null;
-  const positionCleanups: Array<() => void> = [];
 
   const isDisabled = (el: HTMLElement) =>
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
@@ -206,97 +211,33 @@ export function createDropdownMenu(
     itemToIndex = new Map(enabledItems.map((el, i) => [el, i]));
   };
 
-  // Compute position for side/align
-  const computePos = (side: Side, align: Align, tr: DOMRect, cr: DOMRect) => {
-    let x = 0, y = 0;
-    if (side === "top") y = tr.top - cr.height - sideOffset;
-    else if (side === "bottom") y = tr.bottom + sideOffset;
-    else if (side === "left") x = tr.left - cr.width - sideOffset;
-    else x = tr.right + sideOffset;
-
-    if (side === "top" || side === "bottom") {
-      if (align === "start") x = tr.left + alignOffset;
-      else if (align === "center") x = tr.left + tr.width / 2 - cr.width / 2 + alignOffset;
-      else x = tr.right - cr.width - alignOffset;
-    } else {
-      if (align === "start") y = tr.top + alignOffset;
-      else if (align === "center") y = tr.top + tr.height / 2 - cr.height / 2 + alignOffset;
-      else y = tr.bottom - cr.height - alignOffset;
-    }
-    return { x, y };
-  };
-
   const updatePosition = () => {
     const tr = trigger.getBoundingClientRect();
     const cr = content.getBoundingClientRect();
-    const vw = window.innerWidth, vh = window.innerHeight;
-
-    let side = preferredSide;
-    let pos = computePos(side, preferredAlign, tr, cr);
-
-    if (avoidCollisions) {
-      // Check overflow on main axis
-      const overflow = (s: Side, p: { x: number; y: number }) =>
-        s === "top" ? p.y < collisionPadding :
-        s === "bottom" ? p.y + cr.height > vh - collisionPadding :
-        s === "left" ? p.x < collisionPadding :
-        p.x + cr.width > vw - collisionPadding;
-
-      if (overflow(side, pos)) {
-        const opp = OPP[side];
-        const oppPos = computePos(opp, preferredAlign, tr, cr);
-        if (!overflow(opp, oppPos)) {
-          side = opp;
-          pos = oppPos;
-        }
-      }
-
-      // Clamp to viewport
-      if (pos.x < collisionPadding) pos.x = collisionPadding;
-      else if (pos.x + cr.width > vw - collisionPadding) pos.x = vw - cr.width - collisionPadding;
-      if (pos.y < collisionPadding) pos.y = collisionPadding;
-      else if (pos.y + cr.height > vh - collisionPadding) pos.y = vh - cr.height - collisionPadding;
-    }
+    const pos = computeFloatingPosition({
+      anchorRect: tr,
+      contentRect: cr,
+      side: preferredSide,
+      align: preferredAlign,
+      sideOffset,
+      alignOffset,
+      avoidCollisions,
+      collisionPadding,
+    });
 
     content.style.position = "fixed";
     content.style.top = `${pos.y}px`;
     content.style.left = `${pos.x}px`;
     content.style.margin = "0";
-    content.setAttribute("data-side", side);
-    content.setAttribute("data-align", preferredAlign);
+    content.setAttribute("data-side", pos.side);
+    content.setAttribute("data-align", pos.align);
   };
 
-  const schedulePosition = () => {
-    if (positionRafId !== null) return;
-    positionRafId = requestAnimationFrame(() => {
-      positionRafId = null;
-      if (isOpen) updatePosition();
-    });
-  };
-
-  const cleanupPosition = () => {
-    if (positionRafId !== null) {
-      cancelAnimationFrame(positionRafId);
-      positionRafId = null;
-    }
-    positionCleanups.forEach((fn) => fn());
-    positionCleanups.length = 0;
-  };
-
-  const setupPosition = () => {
-    if (positionCleanups.length > 0) return;
-    const onResize = () => schedulePosition();
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onResize, true);
-    positionCleanups.push(
-      () => window.removeEventListener("resize", onResize),
-      () => window.removeEventListener("scroll", onResize, true)
-    );
-    const ro = new ResizeObserver(onResize);
-    ro.observe(trigger);
-    ro.observe(content);
-    positionCleanups.push(() => ro.disconnect());
-  };
+  const positionSync = createPositionSync({
+    observedElements: [trigger, content],
+    isActive: () => isOpen,
+    onUpdate: updatePosition,
+  });
 
   const updateHighlight = (index: number, focus = true) => {
     for (let i = 0; i < enabledItems.length; i++) {
@@ -328,7 +269,7 @@ export function createDropdownMenu(
       previousActiveElement = document.activeElement as HTMLElement;
       isOpen = true;
       setAria(trigger, "expanded", true);
-      portalToBody(content, root, portalState);
+      portal.mount();
       content.hidden = false;
       setDataState("open");
 
@@ -341,14 +282,15 @@ export function createDropdownMenu(
       cacheItems();
       keyboardMode = false;
       clearHighlight(); // Ensure no stale data-highlighted
-      setupPosition();
+      positionSync.start();
       updatePosition();
+      positionSync.update();
 
       content.focus();
     } else {
       isOpen = false;
       setAria(trigger, "expanded", false);
-      restorePortal(content, portalState);
+      portal.restore();
       content.hidden = true;
       setDataState("closed");
       clearHighlight();
@@ -361,7 +303,7 @@ export function createDropdownMenu(
         didLockScroll = false;
       }
 
-      cleanupPosition();
+      positionSync.stop();
 
       requestAnimationFrame(() => {
         if (previousActiveElement && document.contains(previousActiveElement)) {
@@ -500,26 +442,15 @@ export function createDropdownMenu(
     })
   );
 
-  // Close handlers
-  if (closeOnClickOutside) {
-    cleanups.push(
-      on(document, "pointerdown", (e) => {
-        const t = e.target as Node;
-        if (isOpen && !root.contains(t) && !content.contains(t)) updateState(false);
-      })
-    );
-  }
-
-  if (closeOnEscape) {
-    cleanups.push(
-      on(document, "keydown", (e) => {
-        if (isOpen && e.key === "Escape") {
-          e.preventDefault();
-          updateState(false);
-        }
-      })
-    );
-  }
+  cleanups.push(
+    createDismissLayer({
+      root,
+      isOpen: () => isOpen,
+      onDismiss: () => updateState(false),
+      closeOnClickOutside,
+      closeOnEscape,
+    })
+  );
 
   // Inbound event
   cleanups.push(
@@ -544,8 +475,8 @@ export function createDropdownMenu(
     get isOpen() { return isOpen; },
     destroy: () => {
       if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
-      cleanupPosition();
-      restorePortal(content, portalState);
+      positionSync.stop();
+      portal.cleanup();
       // Unlock scroll if still locked
       if (didLockScroll) {
         unlockScroll();

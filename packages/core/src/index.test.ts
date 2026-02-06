@@ -4,6 +4,7 @@ import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
+import { computeFloatingPosition, createDismissLayer, createPortalLifecycle } from './index'
 import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
 
@@ -697,6 +698,136 @@ describe('core/portal', () => {
 
     // Should be a no-op
     restorePortal(content, state)
+    expect(content.parentElement).toBe(root)
+  })
+})
+
+describe('core/popup', () => {
+  const rect = (left: number, top: number, width: number, height: number) =>
+    ({
+      left,
+      top,
+      right: left + width,
+      bottom: top + height,
+      width,
+      height,
+    }) as DOMRect
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('computeFloatingPosition returns preferred side when it fits', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(100, 100, 60, 30),
+      contentRect: rect(0, 0, 80, 40),
+      side: 'bottom',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 8,
+      viewportWidth: 800,
+      viewportHeight: 600,
+    })
+
+    expect(pos.side).toBe('bottom')
+    expect(pos.align).toBe('start')
+    expect(pos.x).toBe(100)
+    expect(pos.y).toBe(134)
+  })
+
+  it('computeFloatingPosition flips to opposite side on overflow', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(100, 580, 60, 20),
+      contentRect: rect(0, 0, 120, 120),
+      side: 'bottom',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 8,
+      viewportWidth: 800,
+      viewportHeight: 700,
+      allowedSides: ['top', 'bottom'],
+    })
+
+    expect(pos.side).toBe('top')
+    expect(pos.y).toBe(456)
+  })
+
+  it('computeFloatingPosition clamps to viewport when collisions enabled', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(390, 250, 20, 20),
+      contentRect: rect(0, 0, 160, 80),
+      side: 'right',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 10,
+      viewportWidth: 420,
+      viewportHeight: 320,
+    })
+
+    expect(pos.side).toBe('left')
+    expect(pos.x).toBe(226)
+    expect(pos.y).toBe(230)
+  })
+
+  it('createDismissLayer dismisses on outside pointerdown but not on portaled inside click', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content"></div>
+      </div>
+      <div id="outside"></div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const outside = document.getElementById('outside')!
+
+    const lifecycle = createPortalLifecycle({ content, root })
+    lifecycle.mount()
+
+    let open = true
+    let dismissed = 0
+    const cleanup = createDismissLayer({
+      root,
+      isOpen: () => open,
+      onDismiss: () => {
+        dismissed += 1
+        open = false
+      },
+      closeOnEscape: false,
+    })
+
+    content.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    expect(dismissed).toBe(0)
+
+    outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    expect(dismissed).toBe(1)
+
+    cleanup()
+    lifecycle.cleanup()
+  })
+
+  it('createPortalLifecycle mounts and restores content', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content"></div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const lifecycle = createPortalLifecycle({ content, root })
+
+    lifecycle.mount()
+    expect(content.parentElement).toBe(document.body)
+
+    lifecycle.restore()
+    expect(content.parentElement).toBe(root)
+
+    lifecycle.cleanup()
     expect(content.parentElement).toBe(root)
   })
 })
