@@ -7,8 +7,8 @@
   },
   {
     "name": "@data-slot/select",
-    "size": 3985,
-    "sizeFormatted": "3.9 KB",
+    "size": 4730,
+    "sizeFormatted": "4.6 KB",
     "description": "Dropdown select, form-ready"
   },
   {
@@ -30,16 +30,16 @@
     "description": "Single/range value sliders"
   },
   {
+    "name": "@data-slot/dialog",
+    "size": 2534,
+    "sizeFormatted": "2.5 KB",
+    "description": "Modal dialogs, focus trap"
+  },
+  {
     "name": "@data-slot/core",
     "size": 2441,
     "sizeFormatted": "2.4 KB",
     "description": "Shared utilities"
-  },
-  {
-    "name": "@data-slot/dialog",
-    "size": 2320,
-    "sizeFormatted": "2.3 KB",
-    "description": "Modal dialogs, focus trap"
   },
   {
     "name": "@data-slot/tabs",
@@ -48,22 +48,22 @@
     "description": "Tabbed interfaces, kbd nav"
   },
   {
+    "name": "@data-slot/tooltip",
+    "size": 1805,
+    "sizeFormatted": "1.8 KB",
+    "description": "Hover/focus tooltips"
+  },
+  {
+    "name": "@data-slot/popover",
+    "size": 1788,
+    "sizeFormatted": "1.7 KB",
+    "description": "Anchored floating content"
+  },
+  {
     "name": "@data-slot/accordion",
     "size": 1763,
     "sizeFormatted": "1.7 KB",
     "description": "Collapsible sections"
-  },
-  {
-    "name": "@data-slot/popover",
-    "size": 1667,
-    "sizeFormatted": "1.6 KB",
-    "description": "Anchored floating content"
-  },
-  {
-    "name": "@data-slot/tooltip",
-    "size": 1545,
-    "sizeFormatted": "1.5 KB",
-    "description": "Hover/focus tooltips"
   },
   {
     "name": "@data-slot/collapsible",
