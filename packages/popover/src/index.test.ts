@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { createPopover, create } from './index'
+import { portalToBody, restorePortal } from '@data-slot/core'
+import type { PortalState } from '@data-slot/core'
 
 describe('Popover', () => {
   const setup = (options: Parameters<typeof createPopover>[1] = {}) => {
@@ -404,6 +406,64 @@ describe('Popover', () => {
 
       document.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      )
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+  })
+
+  describe('portal-aware click-outside', () => {
+    it('does not close popover when clicking portaled child content', () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">
+            <div id="inner-select-root">
+              <div id="select-content">Select dropdown</div>
+            </div>
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const selectRoot = document.getElementById('inner-select-root')!
+      const selectContent = document.getElementById('select-content')!
+      const controller = createPopover(root)
+
+      controller.open()
+      expect(controller.isOpen).toBe(true)
+
+      // Simulate portaling the select content to body (like select component does)
+      const portalState: PortalState = { originalParent: null, originalNextSibling: null, portaled: false }
+      portalToBody(selectContent, selectRoot, portalState)
+
+      // Click on the portaled select content — should NOT close the popover
+      selectContent.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true })
+      )
+      expect(controller.isOpen).toBe(true)
+
+      restorePortal(selectContent, portalState)
+      controller.destroy()
+    })
+
+    it('still closes popover when clicking truly outside', () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">Content</div>
+        </div>
+        <div id="outside">Outside</div>
+      `
+      const root = document.getElementById('root')!
+      const outside = document.getElementById('outside')!
+      const controller = createPopover(root)
+
+      controller.open()
+      expect(controller.isOpen).toBe(true)
+
+      outside.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true })
       )
       expect(controller.isOpen).toBe(false)
 

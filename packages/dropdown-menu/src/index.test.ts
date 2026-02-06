@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from "bun:test";
 import { createDropdownMenu, create } from "./index";
+import { resetScrollLock } from "../../core/src/scroll";
 
 describe("DropdownMenu", () => {
   const setup = (options: Parameters<typeof createDropdownMenu>[1] = {}) => {
@@ -35,6 +36,8 @@ describe("DropdownMenu", () => {
 
   beforeEach(() => {
     document.body.innerHTML = "";
+    resetScrollLock();
+    document.documentElement.style.cssText = "";
   });
 
   describe("initialization", () => {
@@ -641,12 +644,45 @@ describe("DropdownMenu", () => {
   });
 
   describe("content positioning", () => {
-    it("keeps content within root element", () => {
+    it("portals content to body when open and restores on close", () => {
+      const { root, trigger, content, controller } = setup();
+
+      // Content starts inside root
+      expect(content.parentElement).toBe(root);
+
+      trigger.click();
+      // Content is portaled to body when open
+      expect(content.parentElement).toBe(document.body);
+
+      trigger.click();
+      // Content is restored to root when closed
+      expect(content.parentElement).toBe(root);
+
+      controller.destroy();
+    });
+
+    it("restores content to root on destroy while open", () => {
       const { root, trigger, content, controller } = setup();
 
       trigger.click();
+      expect(content.parentElement).toBe(document.body);
+
+      controller.destroy();
       expect(content.parentElement).toBe(root);
-      expect(root.contains(content)).toBe(true);
+    });
+
+    it("click inside portaled content does not close the menu", () => {
+      const { trigger, content, items, controller } = setup({ closeOnSelect: false });
+
+      trigger.click();
+      expect(controller.isOpen).toBe(true);
+      expect(content.parentElement).toBe(document.body);
+
+      // Click on an item inside the portaled content
+      items[0]?.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true })
+      );
+      expect(controller.isOpen).toBe(true);
 
       controller.destroy();
     });

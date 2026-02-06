@@ -1,4 +1,4 @@
-import { getPart, getRoots, getDataBool, getDataEnum } from "@data-slot/core";
+import { getPart, getRoots, getDataBool, getDataEnum, containsWithPortals } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 
@@ -168,7 +168,7 @@ export function createPopover(
       on(document, "pointerdown", (e) => {
         if (!isOpen) return;
         const target = e.target as Node;
-        if (!root.contains(target)) {
+        if (!containsWithPortals(root, target)) {
           updateState(false);
         }
       })

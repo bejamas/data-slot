@@ -2,6 +2,8 @@ import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataEnum } 
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
+import { portalToBody, restorePortal } from "@data-slot/core";
+import type { PortalState } from "@data-slot/core";
 
 /** Side of the trigger to place the content */
 export type Side = "top" | "right" | "bottom" | "left";
@@ -161,6 +163,9 @@ export function createDropdownMenu(
 
   // Track if this instance locked scroll
   let didLockScroll = false;
+
+  // Portal state for moving content to body
+  const portalState: PortalState = { originalParent: null, originalNextSibling: null, portaled: false };
 
   // Cached on open - avoids repeated DOM queries
   let items: HTMLElement[] = [];
@@ -323,6 +328,7 @@ export function createDropdownMenu(
       previousActiveElement = document.activeElement as HTMLElement;
       isOpen = true;
       setAria(trigger, "expanded", true);
+      portalToBody(content, root, portalState);
       content.hidden = false;
       setDataState("open");
 
@@ -355,6 +361,7 @@ export function createDropdownMenu(
       }
 
       cleanupPosition();
+      restorePortal(content, portalState);
 
       requestAnimationFrame(() => {
         if (previousActiveElement && document.contains(previousActiveElement)) {
@@ -538,6 +545,7 @@ export function createDropdownMenu(
     destroy: () => {
       if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
       cleanupPosition();
+      restorePortal(content, portalState);
       // Unlock scroll if still locked
       if (didLockScroll) {
         unlockScroll();

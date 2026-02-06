@@ -2,6 +2,8 @@ import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataString,
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
+import { portalToBody, restorePortal } from "@data-slot/core";
+import type { PortalState } from "@data-slot/core";
 
 /** Side of the trigger to place the content */
 export type Side = "top" | "bottom";
@@ -205,6 +207,9 @@ export function createSelect(
 
   // Track if this instance locked scroll
   let didLockScroll = false;
+
+  // Portal state for moving content to body
+  const portalState: PortalState = { originalParent: null, originalNextSibling: null, portaled: false };
 
   const isItemDisabled = (el: HTMLElement) =>
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
@@ -486,6 +491,7 @@ export function createSelect(
       previousActiveElement = document.activeElement as HTMLElement;
       isOpen = true;
       setAria(trigger, "expanded", true);
+      portalToBody(content, root, portalState);
       content.hidden = false;
       setDataState("open");
 
@@ -545,6 +551,7 @@ export function createSelect(
       }
 
       cleanupPosition();
+      restorePortal(content, portalState);
 
       // Skip focus restoration when closing via Tab to allow normal tab navigation
       if (!skipFocusRestore) {
@@ -780,6 +787,7 @@ export function createSelect(
     destroy: () => {
       if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
       cleanupPosition();
+      restorePortal(content, portalState);
       // Unlock scroll if still locked
       if (didLockScroll) {
         unlockScroll();

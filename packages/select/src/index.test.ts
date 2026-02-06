@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from "bun:test";
 import { createSelect, create } from "./index";
+import { resetScrollLock } from "../../core/src/scroll";
 
 describe("Select", () => {
   const setup = (options: Parameters<typeof createSelect>[1] = {}, html?: string) => {
@@ -32,6 +33,8 @@ describe("Select", () => {
 
   beforeEach(() => {
     document.body.innerHTML = "";
+    resetScrollLock();
+    document.documentElement.style.cssText = "";
   });
 
   describe("initialization", () => {
@@ -1558,17 +1561,48 @@ describe("Select", () => {
         </div>
       `;
       const root = document.querySelector('[data-slot="select"]')!;
+      const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
       const controller = createSelect(root);
 
       controller.open();
 
-      const group = root.querySelector('[data-slot="select-group"]') as HTMLElement;
+      // Content is portaled to body when open, so query from content
+      const group = content.querySelector('[data-slot="select-group"]') as HTMLElement;
       const groupLabel = group.querySelector('[data-slot="select-label"]') as HTMLElement;
 
       expect(group.getAttribute("role")).toBe("group");
       expect(group.getAttribute("aria-labelledby")).toBe(groupLabel.id);
 
       controller.destroy();
+    });
+  });
+
+  describe("content portaling", () => {
+    it("portals content to body when open and restores on close", () => {
+      const { root, trigger, content, controller } = setup();
+
+      // Content starts inside root
+      expect(content.parentElement).toBe(root);
+
+      trigger.click();
+      // Content is portaled to body when open
+      expect(content.parentElement).toBe(document.body);
+
+      controller.close();
+      // Content is restored to root when closed
+      expect(content.parentElement).toBe(root);
+
+      controller.destroy();
+    });
+
+    it("restores content to root on destroy while open", () => {
+      const { root, trigger, content, controller } = setup();
+
+      trigger.click();
+      expect(content.parentElement).toBe(document.body);
+
+      controller.destroy();
+      expect(content.parentElement).toBe(root);
     });
   });
 

@@ -141,13 +141,87 @@ export function getDataEnum<T extends string>(
 ): T | undefined {
   const val = getRawAttr(el, key);
   if (val === null) return undefined;
-  
+
   if (allowed.includes(val as T)) {
     return val as T;
   }
-  
+
   // Invalid value - warn in dev
   warnOnce(el, key, `Invalid value "${val}" for data-${key}. Expected one of: ${allowed.join(", ")}.`);
   return undefined;
+}
+
+// ============================================================================
+// Portal Utilities
+// ============================================================================
+
+const portalOwners = new WeakMap<Element, Element>();
+
+/** Check if target is inside root, including portaled descendants.
+ *  Follows chained portal ownership for nested portals. */
+export function containsWithPortals(root: Element, target: Node | null): boolean {
+  return _containsWithPortals(root, target, new Set<Element>());
+}
+
+function _containsWithPortals(
+  root: Element,
+  target: Node | null,
+  visited: Set<Element>
+): boolean {
+  if (!target) return false;
+  const el = target instanceof Element ? target : target.parentElement;
+  if (!el) return false;
+  if (root.contains(el)) return true;
+  // Walk up ancestors, following portal-owner chain recursively
+  let current: Element | null = el;
+  while (current) {
+    const owner = portalOwners.get(current);
+    if (owner && !visited.has(owner)) {
+      visited.add(owner);
+      if (_containsWithPortals(root, owner, visited)) return true;
+    }
+    current = current.parentElement;
+  }
+  return false;
+}
+
+export interface PortalState {
+  originalParent: ParentNode | null;
+  originalNextSibling: ChildNode | null;
+  portaled: boolean;
+}
+
+export function portalToBody(
+  el: Element,
+  originRoot: Element,
+  state: PortalState
+): void {
+  if (state.portaled) return;
+  const body = (originRoot.ownerDocument ?? document)?.body;
+  if (!body) return;
+  state.originalParent = el.parentNode;
+  state.originalNextSibling = el.nextSibling;
+  portalOwners.set(el, originRoot);
+  body.appendChild(el);
+  state.portaled = true;
+}
+
+export function restorePortal(el: Element, state: PortalState): void {
+  if (!state.portaled) return;
+  portalOwners.delete(el);
+  const parent = state.originalParent;
+  const sibling = state.originalNextSibling;
+  if (parent && (parent as Node).isConnected) {
+    if (sibling && sibling.parentNode === parent) {
+      parent.insertBefore(el, sibling);
+    } else {
+      parent.appendChild(el);
+    }
+  } else {
+    el.remove();
+  }
+  state.portaled = false;
+  state.originalParent = null;
+  state.originalNextSibling = null;
 }
 

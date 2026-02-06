@@ -3,6 +3,8 @@ import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataString,
 import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
+import { containsWithPortals, portalToBody, restorePortal } from './index'
+import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
 
 describe('core/parts', () => {
@@ -472,6 +474,214 @@ describe('core/scroll', () => {
     unlockScroll()
     expect(document.documentElement.style.overflow).toBe('')
     expect(getScrollLockCount()).toBe(0)
+  })
+})
+
+describe('core/portal', () => {
+  const makeState = (): PortalState => ({
+    originalParent: null,
+    originalNextSibling: null,
+    portaled: false,
+  })
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('portalToBody moves element to body and tracks state', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content">Content</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const state = makeState()
+
+    portalToBody(content, root, state)
+
+    expect(content.parentElement).toBe(document.body)
+    expect(state.portaled).toBe(true)
+    expect(state.originalParent).toBe(root)
+  })
+
+  it('restorePortal returns element to original position', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content">Content</div>
+        <div id="sibling">Sibling</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const sibling = document.getElementById('sibling')!
+    const state = makeState()
+
+    portalToBody(content, root, state)
+    expect(content.parentElement).toBe(document.body)
+
+    restorePortal(content, state)
+    expect(content.parentElement).toBe(root)
+    // Content should appear before sibling (nextElementSibling ignores text nodes)
+    expect(content.nextElementSibling).toBe(sibling)
+    expect(state.portaled).toBe(false)
+  })
+
+  it('restorePortal with removed sibling falls back to appendChild', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content">Content</div>
+        <div id="sibling">Sibling</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const state = makeState()
+
+    portalToBody(content, root, state)
+
+    // Remove the sibling while portaled
+    document.getElementById('sibling')!.remove()
+
+    restorePortal(content, state)
+    expect(content.parentElement).toBe(root)
+    // Should be last child since sibling was removed
+    expect(root.lastElementChild).toBe(content)
+  })
+
+  it('restorePortal with disconnected parent removes element', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content">Content</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const state = makeState()
+
+    portalToBody(content, root, state)
+
+    // Disconnect the original parent
+    root.remove()
+
+    restorePortal(content, state)
+    // Element should be removed from DOM entirely
+    expect(content.parentElement).toBeNull()
+  })
+
+  it('containsWithPortals returns true for direct child', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="child">Child</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const child = document.getElementById('child')!
+
+    expect(containsWithPortals(root, child)).toBe(true)
+  })
+
+  it('containsWithPortals returns true for portaled element whose owner is inside root', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content">Content</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const state = makeState()
+
+    portalToBody(content, root, state)
+
+    // content is now in body, but its owner (root) is root — so clicking content
+    // should be recognized as inside root
+    expect(containsWithPortals(root, content)).toBe(true)
+
+    restorePortal(content, state)
+  })
+
+  it('containsWithPortals returns false for unrelated portaled element', () => {
+    document.body.innerHTML = `
+      <div id="root1">
+        <div id="content1">Content 1</div>
+      </div>
+      <div id="root2">
+        <div id="content2">Content 2</div>
+      </div>
+    `
+    const root1 = document.getElementById('root1')!
+    const content2 = document.getElementById('content2')!
+    const root2 = document.getElementById('root2')!
+    const state = makeState()
+
+    portalToBody(content2, root2, state)
+
+    expect(containsWithPortals(root1, content2)).toBe(false)
+
+    restorePortal(content2, state)
+  })
+
+  it('containsWithPortals handles chained portals (nested)', () => {
+    document.body.innerHTML = `
+      <div id="popover-root">
+        <div id="select-root">
+          <div id="select-content">Select Content</div>
+        </div>
+      </div>
+    `
+    const popoverRoot = document.getElementById('popover-root')!
+    const selectRoot = document.getElementById('select-root')!
+    const selectContent = document.getElementById('select-content')!
+    const state = makeState()
+
+    // Select content portaled to body, owner is selectRoot which is inside popoverRoot
+    portalToBody(selectContent, selectRoot, state)
+
+    expect(containsWithPortals(popoverRoot, selectContent)).toBe(true)
+
+    restorePortal(selectContent, state)
+  })
+
+  it('containsWithPortals handles null target', () => {
+    document.body.innerHTML = `<div id="root"></div>`
+    const root = document.getElementById('root')!
+
+    expect(containsWithPortals(root, null)).toBe(false)
+  })
+
+  it('portalToBody is idempotent when already portaled', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content">Content</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const state = makeState()
+
+    portalToBody(content, root, state)
+    const parentAfterFirst = content.parentElement
+
+    // Calling again should be a no-op
+    portalToBody(content, root, state)
+    expect(content.parentElement).toBe(parentAfterFirst)
+
+    restorePortal(content, state)
+  })
+
+  it('restorePortal is idempotent when not portaled', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content">Content</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const state = makeState()
+
+    // Should be a no-op
+    restorePortal(content, state)
+    expect(content.parentElement).toBe(root)
   })
 })
 
