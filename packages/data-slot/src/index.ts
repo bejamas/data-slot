@@ -42,3 +42,9 @@ export type {
   DropdownMenuOptions,
   DropdownMenuController,
 } from "@data-slot/dropdown-menu";
+
+export { createCombobox } from "@data-slot/combobox";
+export type {
+  ComboboxOptions,
+  ComboboxController,
+} from "@data-slot/combobox";

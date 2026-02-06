@@ -1,6 +1,6 @@
 {
   "name": "data-slot",
-  "version": "0.2.29",
+  "version": "0.2.30",
   "type": "module",
   "sideEffects": false,
   "description": "Headless UI components for vanilla JavaScript. Convenience re-exports from @data-slot/* packages.",
@@ -137,6 +137,16 @@
         "types": "./dist/select.d.cts",
         "default": "./dist/select.cjs"
       }
+    },
+    "./combobox": {
+      "import": {
+        "types": "./dist/combobox.d.ts",
+        "default": "./dist/combobox.js"
+      },
+      "require": {
+        "types": "./dist/combobox.d.cts",
+        "default": "./dist/combobox.cjs"
+      }
     }
   },
   "files": [
@@ -157,7 +167,8 @@
     "@data-slot/dropdown-menu": "workspace:*",
     "@data-slot/toggle": "workspace:*",
     "@data-slot/toggle-group": "workspace:*",
-    "@data-slot/select": "workspace:*"
+    "@data-slot/select": "workspace:*",
+    "@data-slot/combobox": "workspace:*"
   },
   "keywords": [
     "headless",

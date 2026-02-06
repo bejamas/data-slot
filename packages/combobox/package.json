@@ -1,5 +1,5 @@
 {
-  "name": "@data-slot/accordion",
+  "name": "@data-slot/combobox",
   "version": "0.2.30",
   "type": "module",
   "sideEffects": false,
@@ -30,12 +30,14 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/bejamas/data-slot",
-    "directory": "packages/accordion"
+    "directory": "packages/combobox"
   },
   "keywords": [
     "headless",
     "ui",
-    "accordion",
+    "combobox",
+    "autocomplete",
+    "typeahead",
     "vanilla",
     "data-slot"
   ],

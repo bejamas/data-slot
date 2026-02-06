@@ -28,6 +28,7 @@ const descriptions: Record<string, string> = {
   "navigation-menu": "Dropdown navigation menus",
   "dropdown-menu": "Action menus, kbd nav",
   select: "Dropdown select, form-ready",
+  combobox: "Autocomplete input, filterable",
   slider: "Single/range value sliders",
 };
 
@@ -41,6 +42,7 @@ const packageNames = [
   "navigation-menu",
   "popover",
   "select",
+  "combobox",
   "slider",
   "tabs",
   "tooltip",

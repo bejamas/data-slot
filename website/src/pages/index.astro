@@ -17,6 +17,7 @@ import Popover from "../components/examples/Popover.astro";
 import NavigationMenu from "../components/examples/NavigationMenu.astro";
 import DropdownMenu from "../components/examples/DropdownMenu.astro";
 import Select from "../components/examples/Select.astro";
+import Combobox from "../components/examples/Combobox.astro";
 import Slider from "../components/examples/Slider.astro";
 import Toggle from "../components/examples/Toggle.astro";
 import ToggleGroup from "../components/examples/ToggleGroup.astro";
@@ -146,6 +147,10 @@ bun add @data-slot/dialog`}
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Select</h3>
   <Select />
 
+  <!-- Combobox -->
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Combobox</h3>
+  <Combobox />
+
   <!-- Slider -->
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Slider</h3>
   <Slider />
@@ -207,6 +212,7 @@ bun add @data-slot/dialog`}
   import { createNavigationMenu } from "../../../packages/navigation-menu/dist/index.js";
   import { createDropdownMenu } from "../../../packages/dropdown-menu/dist/index.js";
   import { createSelect } from "../../../packages/select/dist/index.js";
+  import { createCombobox } from "../../../packages/combobox/dist/index.js";
   import { createSlider } from "../../../packages/slider/dist/index.js";
   import { createToggle } from "../../../packages/toggle/dist/index.js";
   import { createToggleGroup } from "../../../packages/toggle-group/dist/index.js";
@@ -249,6 +255,9 @@ bun add @data-slot/dialog`}
   );
   document.querySelectorAll('[data-slot="select"]').forEach((el) =>
     createSelect(el as HTMLElement)
+  );
+  document.querySelectorAll('[data-slot="combobox"]').forEach((el) =>
+    createCombobox(el as HTMLElement)
   );
   document.querySelectorAll('[data-slot="slider"]').forEach((el) =>
     createSlider(el as HTMLElement)

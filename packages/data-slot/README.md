@@ -23,6 +23,7 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 | `@data-slot/tooltip` | 772 B | Hover/focus tooltips |
 | `@data-slot/collapsible` | 710 B | Simple show/hide toggle |
 | `@data-slot/navigation-menu` | ~1.5 KB | Mega menus with hover/keyboard |
+| `@data-slot/combobox` | ~3 KB | Autocomplete input with filtering |
 | `@data-slot/core` | 452 B | Shared utilities |
 
 ## Usage
@@ -45,6 +46,7 @@ Available subpaths:
 - `data-slot/tooltip`
 - `data-slot/collapsible`
 - `data-slot/navigation-menu`
+- `data-slot/combobox`
 
 ### Direct Package Imports
 
@@ -144,6 +146,7 @@ With Tailwind:
 | `createTooltip` | @data-slot/tooltip |
 | `createCollapsible` | @data-slot/collapsible |
 | `createNavigationMenu` | @data-slot/navigation-menu |
+| `createCombobox` | @data-slot/combobox |
 
 ### Types
 
@@ -156,6 +159,7 @@ With Tailwind:
 | `TooltipOptions`, `TooltipController` | @data-slot/tooltip |
 | `CollapsibleOptions`, `CollapsibleController` | @data-slot/collapsible |
 | `NavigationMenuOptions`, `NavigationMenuController` | @data-slot/navigation-menu |
+| `ComboboxOptions`, `ComboboxController` | @data-slot/combobox |
 
 ### Core Utilities
 
