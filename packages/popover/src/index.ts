@@ -5,6 +5,10 @@ import { on, emit } from "@data-slot/core";
 export type PopoverPosition = "top" | "bottom" | "left" | "right";
 const POSITIONS = ["top", "bottom", "left", "right"] as const;
 
+// Focusable element selector
+const FOCUSABLE =
+  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
 export interface PopoverOptions {
   /** Initial open state */
   defaultOpen?: boolean;
@@ -74,6 +78,33 @@ export function createPopover(
   let isOpen = defaultOpen;
   const cleanups: Array<() => void> = [];
 
+  // Focus management state
+  let previousActiveElement: HTMLElement | null = null;
+  let addedTabIndex = false;
+
+  const cleanupContentFocusable = () => {
+    if (addedTabIndex) {
+      content.removeAttribute("tabindex");
+      addedTabIndex = false;
+    }
+  };
+
+  const focusFirst = () => {
+    // Priority: [autofocus] > first focusable > content itself
+    const autofocusEl = content.querySelector<HTMLElement>("[autofocus]");
+    if (autofocusEl) return autofocusEl.focus();
+
+    const first = content.querySelector<HTMLElement>(FOCUSABLE);
+    if (first) return first.focus();
+
+    // No focusable elements — make content itself focusable temporarily
+    if (!content.getAttribute("tabindex")) {
+      content.setAttribute("tabindex", "-1");
+      addedTabIndex = true;
+    }
+    content.focus();
+  };
+
   // ARIA setup
   const contentId = ensureId(content, "popover-content");
   trigger.setAttribute("aria-haspopup", "dialog");
@@ -83,6 +114,11 @@ export function createPopover(
   const updateState = (open: boolean) => {
     if (isOpen === open) return;
 
+    // Save focus target before opening
+    if (open) {
+      previousActiveElement = document.activeElement as HTMLElement | null;
+    }
+
     isOpen = open;
     setAria(trigger, "expanded", isOpen);
     content.hidden = !isOpen;
@@ -91,6 +127,20 @@ export function createPopover(
 
     emit(root, "popover:change", { open: isOpen });
     onOpenChange?.(isOpen);
+
+    if (open) {
+      requestAnimationFrame(focusFirst);
+    } else {
+      cleanupContentFocusable();
+      requestAnimationFrame(() => {
+        if (previousActiveElement && previousActiveElement.isConnected) {
+          previousActiveElement.focus();
+        } else {
+          trigger.focus();
+        }
+        previousActiveElement = null;
+      });
+    }
   };
 
   // Initialize state
@@ -98,6 +148,11 @@ export function createPopover(
   content.hidden = !isOpen;
   root.setAttribute("data-state", isOpen ? "open" : "closed");
   content.setAttribute("data-state", isOpen ? "open" : "closed");
+
+  // Focus first element if defaultOpen
+  if (defaultOpen) {
+    requestAnimationFrame(focusFirst);
+  }
 
   // Trigger click
   cleanups.push(on(trigger, "click", () => updateState(!isOpen)));
@@ -128,7 +183,6 @@ export function createPopover(
         if (e.key === "Escape") {
           e.preventDefault();
           updateState(false);
-          trigger.focus();
         }
       })
     );
@@ -160,6 +214,7 @@ export function createPopover(
     destroy: () => {
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
+      cleanupContentFocusable();
     },
   };
 

@@ -217,6 +217,118 @@ describe('Popover', () => {
     controllers.forEach(c => c.destroy())
   })
 
+  // Focus management tests
+  describe('focus management', () => {
+    it('focuses first focusable element on open', () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">
+            <input type="text" id="first-input" />
+            <input type="text" id="second-input" />
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const controller = createPopover(root)
+      const input = document.getElementById('first-input') as HTMLInputElement
+
+      controller.open()
+
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          expect(document.activeElement).toBe(input)
+          controller.destroy()
+          resolve()
+        })
+      })
+    })
+
+    it('focuses [autofocus] element on open', () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">
+            <input type="text" id="first-input" />
+            <input type="text" id="auto-input" autofocus />
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const controller = createPopover(root)
+      const autoInput = document.getElementById('auto-input') as HTMLInputElement
+
+      controller.open()
+
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          expect(document.activeElement).toBe(autoInput)
+          controller.destroy()
+          resolve()
+        })
+      })
+    })
+
+    it('focuses content when no focusable elements', () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">
+            <p>Just text, no focusable elements</p>
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="popover-content"]') as HTMLElement
+      const controller = createPopover(root)
+
+      controller.open()
+
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          expect(document.activeElement).toBe(content)
+          expect(content.getAttribute('tabindex')).toBe('-1')
+          controller.destroy()
+          resolve()
+        })
+      })
+    })
+
+    it('restores focus to previous element on close', () => {
+      document.body.innerHTML = `
+        <button id="outside-btn">Outside</button>
+        <div data-slot="popover" id="root">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">
+            <input type="text" />
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const trigger = root.querySelector('[data-slot="popover-trigger"]') as HTMLElement
+      const controller = createPopover(root)
+
+      // Focus the trigger, then open
+      trigger.focus()
+      expect(document.activeElement).toBe(trigger)
+
+      controller.open()
+
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          // Now close
+          controller.close()
+
+          requestAnimationFrame(() => {
+            expect(document.activeElement).toBe(trigger)
+            controller.destroy()
+            resolve()
+          })
+        })
+      })
+    })
+  })
+
   // Data attribute tests
   describe('data attributes', () => {
     it("data-close-on-escape='false' disables Escape key closing", () => {
