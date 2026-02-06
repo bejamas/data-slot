@@ -87,6 +87,7 @@ export function createPopover(
     setAria(trigger, "expanded", isOpen);
     content.hidden = !isOpen;
     root.setAttribute("data-state", isOpen ? "open" : "closed");
+    content.setAttribute("data-state", isOpen ? "open" : "closed");
 
     emit(root, "popover:change", { open: isOpen });
     onOpenChange?.(isOpen);
@@ -96,6 +97,7 @@ export function createPopover(
   setAria(trigger, "expanded", isOpen);
   content.hidden = !isOpen;
   root.setAttribute("data-state", isOpen ? "open" : "closed");
+  content.setAttribute("data-state", isOpen ? "open" : "closed");
 
   // Trigger click
   cleanups.push(on(trigger, "click", () => updateState(!isOpen)));
