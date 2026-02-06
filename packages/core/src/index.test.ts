@@ -649,6 +649,22 @@ describe('core/portal', () => {
     expect(containsWithPortals(root, null)).toBe(false)
   })
 
+  it('containsWithPortals recognizes owner set via shared symbol marker', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content">Content</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+
+    // Simulate ownership written by another bundled copy of core
+    ;(content as Element & { [key: symbol]: Element })[Symbol.for('data-slot.portal-owner')] = root
+    document.body.appendChild(content)
+
+    expect(containsWithPortals(root, content)).toBe(true)
+  })
+
   it('portalToBody is idempotent when already portaled', () => {
     document.body.innerHTML = `
       <div id="root">
@@ -684,4 +700,3 @@ describe('core/portal', () => {
     expect(content.parentElement).toBe(root)
   })
 })
-

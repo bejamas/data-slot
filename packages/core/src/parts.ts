@@ -156,6 +156,24 @@ export function getDataEnum<T extends string>(
 // ============================================================================
 
 const portalOwners = new WeakMap<Element, Element>();
+const PORTAL_OWNER_SYMBOL = Symbol.for("data-slot.portal-owner");
+
+type PortalTaggedElement = Element & {
+  [PORTAL_OWNER_SYMBOL]?: Element;
+};
+
+const getPortalOwner = (el: Element): Element | undefined =>
+  (el as PortalTaggedElement)[PORTAL_OWNER_SYMBOL] ?? portalOwners.get(el);
+
+const setPortalOwner = (el: Element, owner: Element): void => {
+  portalOwners.set(el, owner);
+  (el as PortalTaggedElement)[PORTAL_OWNER_SYMBOL] = owner;
+};
+
+const clearPortalOwner = (el: Element): void => {
+  portalOwners.delete(el);
+  delete (el as PortalTaggedElement)[PORTAL_OWNER_SYMBOL];
+};
 
 /** Check if target is inside root, including portaled descendants.
  *  Follows chained portal ownership for nested portals. */
@@ -175,7 +193,7 @@ function _containsWithPortals(
   // Walk up ancestors, following portal-owner chain recursively
   let current: Element | null = el;
   while (current) {
-    const owner = portalOwners.get(current);
+    const owner = getPortalOwner(current);
     if (owner && !visited.has(owner)) {
       visited.add(owner);
       if (_containsWithPortals(root, owner, visited)) return true;
@@ -201,14 +219,14 @@ export function portalToBody(
   if (!body) return;
   state.originalParent = el.parentNode;
   state.originalNextSibling = el.nextSibling;
-  portalOwners.set(el, originRoot);
+  setPortalOwner(el, originRoot);
   body.appendChild(el);
   state.portaled = true;
 }
 
 export function restorePortal(el: Element, state: PortalState): void {
   if (!state.portaled) return;
-  portalOwners.delete(el);
+  clearPortalOwner(el);
   const parent = state.originalParent;
   const sibling = state.originalNextSibling;
   if (parent && (parent as Node).isConnected) {
@@ -224,4 +242,3 @@ export function restorePortal(el: Element, state: PortalState): void {
   state.originalParent = null;
   state.originalNextSibling = null;
 }
-
