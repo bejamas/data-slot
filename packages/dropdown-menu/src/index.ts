@@ -348,6 +348,7 @@ export function createDropdownMenu(
     } else {
       isOpen = false;
       setAria(trigger, "expanded", false);
+      restorePortal(content, portalState);
       content.hidden = true;
       setDataState("closed");
       clearHighlight();
@@ -361,7 +362,6 @@ export function createDropdownMenu(
       }
 
       cleanupPosition();
-      restorePortal(content, portalState);
 
       requestAnimationFrame(() => {
         if (previousActiveElement && document.contains(previousActiveElement)) {

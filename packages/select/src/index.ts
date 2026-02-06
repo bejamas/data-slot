@@ -538,6 +538,7 @@ export function createSelect(
     } else {
       isOpen = false;
       setAria(trigger, "expanded", false);
+      restorePortal(content, portalState);
       content.hidden = true;
       setDataState("closed");
       clearHighlight();
@@ -551,7 +552,6 @@ export function createSelect(
       }
 
       cleanupPosition();
-      restorePortal(content, portalState);
 
       // Skip focus restoration when closing via Tab to allow normal tab navigation
       if (!skipFocusRestore) {

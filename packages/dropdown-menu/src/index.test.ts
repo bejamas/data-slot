@@ -661,6 +661,54 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
 
+    it("restores content before applying closed hidden/data-state", () => {
+      const { root, trigger, content, controller } = setup();
+
+      trigger.click();
+      expect(content.parentElement).toBe(document.body);
+
+      type ParentWithHooks = HTMLElement & {
+        appendChild(node: Node): Node;
+        insertBefore(node: Node, child: Node | null): Node;
+      };
+
+      const rootNode = root as ParentWithHooks;
+      const originalAppendChild = rootNode.appendChild.bind(rootNode);
+      const originalInsertBefore = rootNode.insertBefore.bind(rootNode);
+      let observedRestore = false;
+
+      const assertRestoreBeforeClose = (node: Node) => {
+        if (node !== content) return;
+        observedRestore = true;
+        expect(content.hidden).toBe(false);
+        expect(content.getAttribute("data-state")).toBe("open");
+      };
+
+      rootNode.appendChild = ((node: Node) => {
+        assertRestoreBeforeClose(node);
+        return originalAppendChild(node);
+      }) as ParentWithHooks["appendChild"];
+
+      rootNode.insertBefore = ((node: Node, child: Node | null) => {
+        assertRestoreBeforeClose(node);
+        return originalInsertBefore(node, child);
+      }) as ParentWithHooks["insertBefore"];
+
+      try {
+        controller.close();
+      } finally {
+        rootNode.appendChild = originalAppendChild as ParentWithHooks["appendChild"];
+        rootNode.insertBefore = originalInsertBefore as ParentWithHooks["insertBefore"];
+      }
+
+      expect(observedRestore).toBe(true);
+      expect(content.parentElement).toBe(root);
+      expect(content.hidden).toBe(true);
+      expect(content.getAttribute("data-state")).toBe("closed");
+
+      controller.destroy();
+    });
+
     it("restores content to root on destroy while open", () => {
       const { root, trigger, content, controller } = setup();
 
