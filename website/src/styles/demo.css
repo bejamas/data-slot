@@ -450,7 +450,6 @@ html {
    CSS Example: Popover
    ============================================ */
 .popover-root {
-  position: relative;
   display: inline-block;
 }
 
@@ -469,40 +468,14 @@ html {
 }
 
 .popover-content {
-  position: absolute;
+  position: fixed;
   background: var(--bg);
   border: 1px solid var(--border);
   padding: 1rem;
-  min-width: 200px;
+  width: min(20rem, calc(100vw - 2rem));
   z-index: 50;
   opacity: 1;
   transition: opacity 0.2s ease-out, transform 0.2s ease-out;
-}
-
-/* Popover positions */
-.popover-content[data-position="bottom"] {
-  top: 100%;
-  left: 0;
-  margin-top: 0.5rem;
-  transform: translateY(0);
-}
-.popover-content[data-position="top"] {
-  bottom: 100%;
-  left: 0;
-  margin-bottom: 0.5rem;
-  transform: translateY(0);
-}
-.popover-content[data-position="left"] {
-  right: 100%;
-  top: 0;
-  margin-right: 0.5rem;
-  transform: translateX(0);
-}
-.popover-content[data-position="right"] {
-  left: 100%;
-  top: 0;
-  margin-left: 0.5rem;
-  transform: translateX(0);
 }
 
 .popover-content[hidden] {
@@ -510,16 +483,16 @@ html {
   opacity: 0;
   pointer-events: none;
 }
-.popover-content[hidden][data-position="bottom"] {
+.popover-content[hidden][data-side="bottom"] {
   transform: translateY(-4px);
 }
-.popover-content[hidden][data-position="top"] {
+.popover-content[hidden][data-side="top"] {
   transform: translateY(4px);
 }
-.popover-content[hidden][data-position="left"] {
+.popover-content[hidden][data-side="left"] {
   transform: translateX(4px);
 }
-.popover-content[hidden][data-position="right"] {
+.popover-content[hidden][data-side="right"] {
   transform: translateX(-4px);
 }
 

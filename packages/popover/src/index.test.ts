@@ -219,6 +219,83 @@ describe('Popover', () => {
     controllers.forEach(c => c.destroy())
   })
 
+  describe('inbound events', () => {
+    it('popover:set with { open } controls state', () => {
+      const { root, controller } = setup()
+
+      root.dispatchEvent(new CustomEvent('popover:set', { detail: { open: true } }))
+      expect(controller.isOpen).toBe(true)
+
+      root.dispatchEvent(new CustomEvent('popover:set', { detail: { open: false } }))
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('supports deprecated popover:set { value } shape', () => {
+      const { root, controller } = setup()
+
+      root.dispatchEvent(new CustomEvent('popover:set', { detail: { value: true } }))
+      expect(controller.isOpen).toBe(true)
+
+      root.dispatchEvent(new CustomEvent('popover:set', { detail: { value: false } }))
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+  })
+
+  describe('content positioning', () => {
+    it('uses fixed positioning when open', () => {
+      const { content, controller } = setup()
+
+      controller.open()
+      expect(content.style.position).toBe('fixed')
+      expect(content.style.top).not.toBe('')
+      expect(content.style.left).not.toBe('')
+
+      controller.destroy()
+    })
+
+    it('sets data-side and data-align attributes when open', () => {
+      const { content, controller } = setup()
+
+      controller.open()
+      expect(content.getAttribute('data-side')).toBe('bottom')
+      expect(content.getAttribute('data-align')).toBe('center')
+
+      controller.destroy()
+    })
+
+    it('respects side option', () => {
+      const { content, controller } = setup({ side: 'top', avoidCollisions: false })
+
+      controller.open()
+      expect(content.getAttribute('data-side')).toBe('top')
+
+      controller.destroy()
+    })
+
+    it('respects align option', () => {
+      const { content, controller } = setup({ align: 'end', avoidCollisions: false })
+
+      controller.open()
+      expect(content.getAttribute('data-align')).toBe('end')
+
+      controller.destroy()
+    })
+
+    it('supports deprecated position option as a side alias', () => {
+      const { content, controller } = setup({ position: 'left', avoidCollisions: false })
+
+      controller.open()
+      expect(content.getAttribute('data-side')).toBe('left')
+      expect(content.getAttribute('data-position')).toBe('left')
+
+      controller.destroy()
+    })
+  })
+
   // Focus management tests
   describe('focus management', () => {
     it('focuses first focusable element on open', () => {
@@ -411,6 +488,42 @@ describe('Popover', () => {
 
       controller.destroy()
     })
+
+    it('reads data-side and data-align from content first, then root', () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root" data-side="top" data-align="end" data-avoid-collisions="false">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content" data-side="right" data-align="start">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="popover-content"]') as HTMLElement
+      const controller = createPopover(root)
+
+      controller.open()
+      expect(content.getAttribute('data-side')).toBe('right')
+      expect(content.getAttribute('data-align')).toBe('start')
+
+      controller.destroy()
+    })
+
+    it('falls back to deprecated data-position when data-side is absent', () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root" data-position="left" data-avoid-collisions="false">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="popover-content"]') as HTMLElement
+      const controller = createPopover(root)
+
+      controller.open()
+      expect(content.getAttribute('data-side')).toBe('left')
+      expect(content.getAttribute('data-position')).toBe('left')
+
+      controller.destroy()
+    })
   })
 
   describe('portal-aware click-outside', () => {
@@ -471,4 +584,3 @@ describe('Popover', () => {
     })
   })
 })
-
