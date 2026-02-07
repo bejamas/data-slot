@@ -11,7 +11,9 @@
 
 import { readFileSync, writeFileSync, readdirSync } from "fs";
 import { join } from "path";
+import { spawnSync } from "child_process";
 
+const repoRoot = join(import.meta.dir, "..");
 const packagesDir = join(import.meta.dir, "..", "packages");
 const websiteSettingsPath = join(import.meta.dir, "..", "website", "src", "components", "SettingsPanel.astro");
 
@@ -64,6 +66,18 @@ function updateWebsiteVersion(version: string) {
   }
 }
 
+function refreshLockfile() {
+  console.log(`\nRefreshing bun.lock...`);
+  const result = spawnSync("bun", ["install", "--lockfile-only"], {
+    cwd: repoRoot,
+    stdio: "inherit",
+  });
+
+  if (result.status !== 0) {
+    throw new Error("Failed to refresh bun.lock. Please run `bun install --lockfile-only` and retry.");
+  }
+}
+
 function main() {
   const type = process.argv[2];
   
@@ -102,6 +116,7 @@ function main() {
 
   // Update website version display
   updateWebsiteVersion(newVersion);
+  refreshLockfile();
 
   console.log(`
 Done! Next steps:
@@ -114,4 +129,3 @@ This will trigger the GitHub Action to publish to npm.
 }
 
 main();
-
