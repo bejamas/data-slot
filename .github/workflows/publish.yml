@@ -74,6 +74,7 @@ jobs:
           publish_pkg packages/toggle
           publish_pkg packages/toggle-group
           publish_pkg packages/select
+          publish_pkg packages/combobox
 
       - name: Dry run - show what would be published
         if: ${{ inputs.dry_run }}
