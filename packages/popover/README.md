@@ -144,32 +144,66 @@ Placement can be set on root or content (content takes precedence):
 
 ## Styling
 
-Popover position is computed in JavaScript and applied as `position: absolute` + inline `top/left`.
-By default, content is portaled to `document.body` while open, so absolute positioning is based on document coordinates.
-Use `data-state`, `data-side`, and `data-align` for styling/animation:
+Popover position is computed in JavaScript and applied as `position: absolute` + inline `transform: translate3d(...)`.
+By default, content is portaled to `document.body` while open (document coordinates). In this mode, a generated `popover-positioner` wrapper receives the positioning transform. If `portal` is disabled, positioning is applied directly to `popover-content`.
+Use `data-open`/`data-closed` and `data-side` for styling/animation.
+When portaling is enabled (default), a transient wrapper with `data-slot="popover-positioner"` is created while open and receives the positioning transform. This keeps `popover-content` free for transform animations.
 
 ```css
-/* Hidden state */
-[data-slot="popover-content"][hidden] {
-  display: none;
-}
-
 [data-slot="popover-content"] {
-  position: absolute;
-  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  transform-origin: var(--transform-origin, center);
+  --popover-slide-x: 0px;
+  --popover-slide-y: -4px;
 }
 
-[data-slot="popover-content"][hidden][data-side="top"] {
-  transform: translateY(4px);
+[data-slot="popover-content"][data-side="top"] {
+  --popover-slide-y: 4px;
 }
-[data-slot="popover-content"][hidden][data-side="bottom"] {
-  transform: translateY(-4px);
+[data-slot="popover-content"][data-side="bottom"] {
+  --popover-slide-y: -4px;
 }
-[data-slot="popover-content"][hidden][data-side="left"] {
-  transform: translateX(4px);
+[data-slot="popover-content"][data-side="left"] {
+  --popover-slide-x: 4px;
+  --popover-slide-y: 0px;
 }
-[data-slot="popover-content"][hidden][data-side="right"] {
-  transform: translateX(-4px);
+[data-slot="popover-content"][data-side="right"] {
+  --popover-slide-x: -4px;
+  --popover-slide-y: 0px;
+}
+
+[data-slot="popover-content"][data-open] {
+  animation: popover-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-slot="popover-content"][data-closed] {
+  pointer-events: none;
+  animation: popover-out 120ms ease-in forwards;
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+    translate: var(--popover-slide-x) var(--popover-slide-y);
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes popover-out {
+  from {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    scale: 0.96;
+    translate: var(--popover-slide-x) var(--popover-slide-y);
+  }
 }
 ```
 
@@ -182,12 +216,14 @@ With Tailwind:
     data-slot="popover-content"
     data-side="bottom"
     data-align="start"
-    class="absolute bg-white shadow-lg rounded-lg p-4 transition data-[state=closed]:opacity-0"
+    class="absolute bg-white shadow-lg rounded-lg p-4"
   >
     Content
   </div>
 </div>
 ```
+
+Use Tailwind for layout/colors and keep the state selectors from the CSS snippet above for fade/zoom animation.
 
 ## Accessibility
 

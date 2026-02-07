@@ -262,10 +262,13 @@ describe('Popover', () => {
       const { content, controller } = setup()
 
       controller.open()
-      expect(content.style.position).toBe('absolute')
-      expect(content.style.top).toBe('0px')
-      expect(content.style.left).toBe('0px')
-      expect(content.style.transform).toContain('translate3d(')
+      const positioner = content.parentElement as HTMLElement
+      expect(positioner.getAttribute('data-slot')).toBe('popover-positioner')
+      expect(positioner.style.position).toBe('absolute')
+      expect(positioner.style.top).toBe('0px')
+      expect(positioner.style.left).toBe('0px')
+      expect(positioner.style.transform).toContain('translate3d(')
+      expect(content.style.transform).toBe('')
 
       controller.destroy()
     })
@@ -346,14 +349,15 @@ describe('Popover', () => {
       await waitForRaf()
       await waitForRaf()
 
-      const initialTransform = content.style.transform
+      const positioner = content.parentElement as HTMLElement
+      const initialTransform = positioner.style.transform
 
       anchorTop = 260
       window.dispatchEvent(new Event('scroll'))
       await waitForRaf()
       await waitForRaf()
 
-      expect(content.style.transform).toBe(initialTransform)
+      expect(positioner.style.transform).toBe(initialTransform)
       controller.destroy()
     })
   })
@@ -364,7 +368,9 @@ describe('Popover', () => {
       const originalParent = content.parentNode
 
       controller.open()
-      expect(content.parentNode).toBe(document.body)
+      const positioner = content.parentElement as HTMLElement
+      expect(positioner.getAttribute('data-slot')).toBe('popover-positioner')
+      expect(positioner.parentElement).toBe(document.body)
 
       controller.close()
       await waitForClose()
@@ -427,7 +433,8 @@ describe('Popover', () => {
       const { root, content, controller } = setup()
 
       controller.open()
-      expect(content.parentNode).toBe(document.body)
+      const positioner = content.parentElement as HTMLElement
+      expect(positioner.parentElement).toBe(document.body)
 
       controller.destroy()
       expect(root.contains(content)).toBe(true)

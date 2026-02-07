@@ -49,6 +49,14 @@ describe("Select", () => {
     return Number(match[1]);
   };
 
+  const getPositioner = (content: HTMLElement): HTMLElement => {
+    const parent = content.parentElement;
+    if (parent instanceof HTMLElement && parent.getAttribute("data-slot") === "select-positioner") {
+      return parent;
+    }
+    return content;
+  };
+
   beforeEach(() => {
     document.body.innerHTML = "";
     resetScrollLock();
@@ -928,7 +936,7 @@ describe("Select", () => {
       const { trigger, content, controller } = setup();
 
       trigger.click();
-      expect(content.style.position).toBe("fixed");
+      expect(getPositioner(content).style.position).toBe("fixed");
 
       controller.destroy();
     });
@@ -937,7 +945,7 @@ describe("Select", () => {
       const { trigger, content, controller } = setup({ lockScroll: false });
 
       trigger.click();
-      expect(content.style.position).toBe("absolute");
+      expect(getPositioner(content).style.position).toBe("absolute");
 
       controller.destroy();
     });
@@ -1040,7 +1048,7 @@ describe("Select", () => {
 
       controller.open();
 
-      expect(getTranslate3dY(content.style.transform)).toBe(310);
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(310);
       expect(content.scrollTop).toBe(326);
 
       controller.destroy();
@@ -1105,7 +1113,7 @@ describe("Select", () => {
 
       controller.open();
 
-      expect(getTranslate3dY(content.style.transform)).toBe(430);
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(430);
       expect(content.scrollTop).toBe(596);
 
       controller.destroy();
@@ -1164,7 +1172,7 @@ describe("Select", () => {
 
       controller.open();
 
-      expect(getTranslate3dY(content.style.transform)).toBe(430);
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(430);
       expect(viewport.scrollTop).toBe(596);
       expect(content.scrollTop).toBe(0);
 
@@ -1225,7 +1233,7 @@ describe("Select", () => {
       const minY = 8;
       const maxY = window.innerHeight - 700 - 8;
       const expectedY = maxY < minY ? minY : Math.min(Math.max(centeredY, minY), maxY);
-      expect(getTranslate3dY(content.style.transform)).toBe(expectedY);
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(expectedY);
       expect(content.scrollTop).toBe(0);
 
       controller.destroy();
@@ -1307,14 +1315,14 @@ describe("Select", () => {
       await waitForRaf();
       await waitForRaf();
 
-      const initialTransform = content.style.transform;
+      const initialTransform = getPositioner(content).style.transform;
 
       anchorTop = 320;
       window.dispatchEvent(new Event("scroll"));
       await waitForRaf();
       await waitForRaf();
 
-      expect(content.style.transform).toBe(initialTransform);
+      expect(getPositioner(content).style.transform).toBe(initialTransform);
       controller.destroy();
     });
   });
@@ -2017,7 +2025,8 @@ describe("Select", () => {
 
       trigger.click();
       // Content is portaled to body when open
-      expect(content.parentElement).toBe(document.body);
+      const positioner = getPositioner(content);
+      expect(positioner.parentElement).toBe(document.body);
 
       controller.close();
       await waitForClose();
@@ -2031,7 +2040,8 @@ describe("Select", () => {
       const { root, trigger, content, controller } = setup();
 
       trigger.click();
-      expect(content.parentElement).toBe(document.body);
+      const positioner = getPositioner(content);
+      expect(positioner.parentElement).toBe(document.body);
 
       type ParentWithHooks = HTMLElement & {
         appendChild(node: Node): Node;
@@ -2080,7 +2090,8 @@ describe("Select", () => {
       const { root, trigger, content, controller } = setup();
 
       trigger.click();
-      expect(content.parentElement).toBe(document.body);
+      const positioner = getPositioner(content);
+      expect(positioner.parentElement).toBe(document.body);
 
       controller.destroy();
       expect(content.parentElement).toBe(root);

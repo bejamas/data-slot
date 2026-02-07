@@ -44,6 +44,14 @@ describe("Combobox", () => {
     await waitForRaf();
   };
 
+  const getPositioner = (content: HTMLElement): HTMLElement => {
+    const parent = content.parentElement;
+    if (parent instanceof HTMLElement && parent.getAttribute("data-slot") === "combobox-positioner") {
+      return parent;
+    }
+    return content;
+  };
+
   beforeEach(() => {
     document.body.innerHTML = "";
   });
@@ -1128,7 +1136,7 @@ describe("Combobox", () => {
       expect(root.contains(content)).toBe(true);
 
       controller.open();
-      expect(content.parentElement).toBe(document.body);
+      expect(getPositioner(content).parentElement).toBe(document.body);
 
       controller.close();
       await waitForClose();
@@ -1139,7 +1147,7 @@ describe("Combobox", () => {
     it("restores content before applying closed hidden/data-state", async () => {
       const { root, content, controller } = setup();
       controller.open();
-      expect(content.parentElement).toBe(document.body);
+      expect(getPositioner(content).parentElement).toBe(document.body);
 
       type ParentWithHooks = HTMLElement & {
         appendChild(node: Node): Node;
@@ -1187,7 +1195,7 @@ describe("Combobox", () => {
     it("restores content to root on destroy while open", () => {
       const { root, content, controller } = setup();
       controller.open();
-      expect(content.parentElement).toBe(document.body);
+      expect(getPositioner(content).parentElement).toBe(document.body);
 
       controller.destroy();
       expect(root.contains(content)).toBe(true);
@@ -1198,7 +1206,7 @@ describe("Combobox", () => {
     it("uses position: absolute when open", () => {
       const { content, controller } = setup();
       controller.open();
-      expect(content.style.position).toBe("absolute");
+      expect(getPositioner(content).style.position).toBe("absolute");
       controller.destroy();
     });
 
@@ -1264,14 +1272,14 @@ describe("Combobox", () => {
       await waitForRaf();
       await waitForRaf();
 
-      const initialTransform = content.style.transform;
+      const initialTransform = getPositioner(content).style.transform;
 
       anchorTop = 260;
       window.dispatchEvent(new Event("scroll"));
       await waitForRaf();
       await waitForRaf();
 
-      expect(content.style.transform).toBe(initialTransform);
+      expect(getPositioner(content).style.transform).toBe(initialTransform);
       controller.destroy();
     });
   });

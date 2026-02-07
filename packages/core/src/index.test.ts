@@ -1050,6 +1050,34 @@ describe('core/popup', () => {
     expect(content.parentElement).toBe(root)
   })
 
+  it('createPortalLifecycle supports wrapper slot for positioner-style portaling', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content"></div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const lifecycle = createPortalLifecycle({
+      content,
+      root,
+      wrapperSlot: 'popover-positioner',
+    })
+
+    expect(lifecycle.container).toBe(content)
+
+    lifecycle.mount()
+    const wrapper = content.parentElement as HTMLElement | null
+    expect(wrapper).toBeTruthy()
+    expect(wrapper?.getAttribute('data-slot')).toBe('popover-positioner')
+    expect(wrapper?.parentElement).toBe(document.body)
+    expect(lifecycle.container).toBe(wrapper)
+
+    lifecycle.restore()
+    expect(content.parentElement).toBe(root)
+    expect(lifecycle.container).toBe(content)
+  })
+
   it('createPresenceLifecycle toggles starting/ending style markers and completes exit', async () => {
     document.body.innerHTML = `<div id="content"></div>`
     const content = document.getElementById('content') as HTMLElement

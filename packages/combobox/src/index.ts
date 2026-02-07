@@ -176,7 +176,11 @@ export function createCombobox(
   let hiddenInput: HTMLInputElement | null = null;
 
   // Portal lifecycle
-  const portal = createPortalLifecycle({ content, root });
+  const portal = createPortalLifecycle({
+    content,
+    root,
+    wrapperSlot: "combobox-positioner",
+  });
   let isDestroyed = false;
 
   const isItemDisabled = (el: HTMLElement) =>
@@ -385,6 +389,7 @@ export function createCombobox(
 
   // Positioning
   const updatePosition = () => {
+    const positioner = portal.container as HTMLElement;
     const win = root.ownerDocument.defaultView ?? window;
     // Anchor to root element (contains both input and trigger)
     const anchorRect = (root as HTMLElement).getBoundingClientRect();
@@ -402,14 +407,18 @@ export function createCombobox(
       allowedSides: SIDES,
     });
 
-    content.style.position = "absolute";
-    content.style.top = "0px";
-    content.style.left = "0px";
-    content.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
-    content.style.willChange = "transform";
-    content.style.margin = "0";
+    positioner.style.position = "absolute";
+    positioner.style.top = "0px";
+    positioner.style.left = "0px";
+    positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+    positioner.style.willChange = "transform";
+    positioner.style.margin = "0";
     content.setAttribute("data-side", pos.side);
     content.setAttribute("data-align", pos.align);
+    if (positioner !== content) {
+      positioner.setAttribute("data-side", pos.side);
+      positioner.setAttribute("data-align", pos.align);
+    }
   };
 
   const positionSync = createPositionSync({

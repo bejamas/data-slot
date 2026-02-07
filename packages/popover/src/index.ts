@@ -151,7 +151,12 @@ export function createPopover(
 
   let isOpen = defaultOpen;
   const cleanups: Array<() => void> = [];
-  const portal = createPortalLifecycle({ content, root, enabled: portalOption });
+  const portal = createPortalLifecycle({
+    content,
+    root,
+    enabled: portalOption,
+    wrapperSlot: "popover-positioner",
+  });
   let isDestroyed = false;
 
   // Focus management state
@@ -191,6 +196,7 @@ export function createPopover(
   content.setAttribute("data-position", preferredSide);
 
   const updatePosition = () => {
+    const positioner = portal.container as HTMLElement;
     const win = root.ownerDocument.defaultView ?? window;
     const tr = trigger.getBoundingClientRect();
     const cr = content.getBoundingClientRect();
@@ -205,31 +211,51 @@ export function createPopover(
       collisionPadding,
     });
 
-    content.style.position = "absolute";
-    content.style.top = "0px";
-    content.style.left = "0px";
-    content.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
-    content.style.willChange = "transform";
-    content.style.margin = "0";
+    positioner.style.position = "absolute";
+    positioner.style.top = "0px";
+    positioner.style.left = "0px";
+    positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+    positioner.style.willChange = "transform";
+    positioner.style.margin = "0";
     content.setAttribute("data-side", pos.side);
     content.setAttribute("data-align", pos.align);
+    if (positioner !== content) {
+      positioner.setAttribute("data-side", pos.side);
+      positioner.setAttribute("data-align", pos.align);
+    }
     // TODO(next-major): stop mirroring computed side to legacy `data-position`.
     content.setAttribute("data-position", pos.side);
   };
 
   const setDataState = (state: "open" | "closed") => {
+    const positioner = portal.container as HTMLElement;
     root.setAttribute("data-state", state);
     content.setAttribute("data-state", state);
+    if (positioner !== content) {
+      positioner.setAttribute("data-state", state);
+    }
     if (state === "open") {
       root.setAttribute("data-open", "");
       content.setAttribute("data-open", "");
+      if (positioner !== content) {
+        positioner.setAttribute("data-open", "");
+      }
       root.removeAttribute("data-closed");
       content.removeAttribute("data-closed");
+      if (positioner !== content) {
+        positioner.removeAttribute("data-closed");
+      }
     } else {
       root.setAttribute("data-closed", "");
       content.setAttribute("data-closed", "");
+      if (positioner !== content) {
+        positioner.setAttribute("data-closed", "");
+      }
       root.removeAttribute("data-open");
       content.removeAttribute("data-open");
+      if (positioner !== content) {
+        positioner.removeAttribute("data-open");
+      }
     }
   };
 

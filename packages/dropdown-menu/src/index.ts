@@ -176,7 +176,11 @@ export function createDropdownMenu(
   let didLockScroll = false;
 
   // Portal lifecycle for moving content to body
-  const portal = createPortalLifecycle({ content, root });
+  const portal = createPortalLifecycle({
+    content,
+    root,
+    wrapperSlot: "dropdown-menu-positioner",
+  });
   let isDestroyed = false;
 
   // Cached on open - avoids repeated DOM queries
@@ -215,6 +219,7 @@ export function createDropdownMenu(
   };
 
   const updatePosition = () => {
+    const positioner = portal.container as HTMLElement;
     const win = root.ownerDocument.defaultView ?? window;
     const tr = trigger.getBoundingClientRect();
     const cr = content.getBoundingClientRect();
@@ -230,20 +235,24 @@ export function createDropdownMenu(
     });
 
     if (lockScrollOption) {
-      content.style.position = "fixed";
-      content.style.top = "0px";
-      content.style.left = "0px";
-      content.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+      positioner.style.position = "fixed";
+      positioner.style.top = "0px";
+      positioner.style.left = "0px";
+      positioner.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
     } else {
-      content.style.position = "absolute";
-      content.style.top = "0px";
-      content.style.left = "0px";
-      content.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+      positioner.style.position = "absolute";
+      positioner.style.top = "0px";
+      positioner.style.left = "0px";
+      positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
     }
-    content.style.willChange = "transform";
-    content.style.margin = "0";
+    positioner.style.willChange = "transform";
+    positioner.style.margin = "0";
     content.setAttribute("data-side", pos.side);
     content.setAttribute("data-align", pos.align);
+    if (positioner !== content) {
+      positioner.setAttribute("data-side", pos.side);
+      positioner.setAttribute("data-align", pos.align);
+    }
   };
 
   const positionSync = createPositionSync({

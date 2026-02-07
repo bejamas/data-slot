@@ -572,10 +572,12 @@ export interface PortalLifecycleOptions {
   root: Element;
   enabled?: boolean;
   state?: PortalState;
+  wrapperSlot?: string;
 }
 
 export interface PortalLifecycleController {
   readonly state: PortalState;
+  readonly container: Element;
   mount(): void;
   restore(): void;
   cleanup(): void;
@@ -583,25 +585,80 @@ export interface PortalLifecycleController {
 
 export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLifecycleController {
   const enabled = options.enabled ?? true;
+  const wrapperSlot = options.wrapperSlot;
   const state: PortalState = options.state ?? {
     originalParent: null,
     originalNextSibling: null,
     portaled: false,
   };
+  const doc = options.root.ownerDocument ?? document;
+  let wrapper: HTMLElement | null = null;
+
+  const ensureWrapper = () => {
+    if (wrapper) return wrapper;
+    const nextWrapper = doc.createElement("div");
+    if (wrapperSlot) {
+      nextWrapper.setAttribute("data-slot", wrapperSlot);
+    }
+    wrapper = nextWrapper;
+    return nextWrapper;
+  };
+
+  const mountWithWrapper = () => {
+    if (state.portaled) return;
+    const parent = options.content.parentNode;
+    if (!parent) return;
+    const nextWrapper = ensureWrapper();
+    parent.insertBefore(nextWrapper, options.content);
+    nextWrapper.appendChild(options.content);
+    portalToBody(nextWrapper, options.root, state);
+  };
+
+  const restoreWithWrapper = () => {
+    if (!state.portaled) return;
+    const currentWrapper = wrapper;
+    if (!currentWrapper) return;
+    restorePortal(currentWrapper, state);
+    const parent = currentWrapper.parentNode;
+    if (parent && parent.isConnected) {
+      parent.insertBefore(options.content, currentWrapper);
+      currentWrapper.remove();
+    } else {
+      options.content.remove();
+    }
+  };
 
   return {
     state,
+    get container() {
+      if (enabled && wrapperSlot && state.portaled && wrapper) {
+        return wrapper;
+      }
+      return options.content;
+    },
     mount: () => {
       if (!enabled) return;
-      portalToBody(options.content, options.root, state);
+      if (wrapperSlot) {
+        mountWithWrapper();
+      } else {
+        portalToBody(options.content, options.root, state);
+      }
     },
     restore: () => {
       if (!enabled) return;
-      restorePortal(options.content, state);
+      if (wrapperSlot) {
+        restoreWithWrapper();
+      } else {
+        restorePortal(options.content, state);
+      }
     },
     cleanup: () => {
       if (!enabled) return;
-      restorePortal(options.content, state);
+      if (wrapperSlot) {
+        restoreWithWrapper();
+      } else {
+        restorePortal(options.content, state);
+      }
     },
   };
 }
