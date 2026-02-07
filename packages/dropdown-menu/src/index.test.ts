@@ -457,6 +457,39 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
 
+    it("scrolls highlighted item into view during keyboard navigation", () => {
+      const { trigger, content, items, controller } = setup();
+      const rect = (top: number, height: number) =>
+        ({
+          x: 0,
+          y: top,
+          top,
+          left: 0,
+          width: 200,
+          height,
+          right: 200,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 100 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 300 });
+      content.scrollTop = 0;
+      content.getBoundingClientRect = () => rect(0, 100);
+      items.forEach((item, index) => {
+        item.getBoundingClientRect = () => rect(index * 70, 30);
+      });
+
+      trigger.click();
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "End", bubbles: true })
+      );
+
+      expect(items[2]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(content.scrollTop).toBe(74);
+      controller.destroy();
+    });
+
     it("selects item with Enter", () => {
       const { root, trigger, content, controller } = setup();
 
@@ -744,6 +777,15 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
 
+    it("uses position: absolute when lockScroll is false", () => {
+      const { trigger, content, controller } = setup({ lockScroll: false });
+
+      trigger.click();
+      expect(content.style.position).toBe("absolute");
+
+      controller.destroy();
+    });
+
     it("sets data-side and data-align attributes when open", () => {
       const { trigger, content, controller } = setup();
 
@@ -770,6 +812,66 @@ describe("DropdownMenu", () => {
       trigger.click();
       expect(content.getAttribute("data-align")).toBe("end");
 
+      controller.destroy();
+    });
+
+    it("keeps coordinates stable on window scroll when lockScroll is false", async () => {
+      const { trigger, content, controller } = setup({
+        side: "bottom",
+        align: "start",
+        avoidCollisions: false,
+        lockScroll: false,
+      });
+      const waitForRaf = () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
+
+      let anchorTop = 110;
+      const anchorLeft = 48;
+      const anchorWidth = 130;
+      const anchorHeight = 30;
+
+      trigger.getBoundingClientRect = () =>
+        ({
+          x: anchorLeft,
+          y: anchorTop,
+          top: anchorTop,
+          left: anchorLeft,
+          width: anchorWidth,
+          height: anchorHeight,
+          right: anchorLeft + anchorWidth,
+          bottom: anchorTop + anchorHeight,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 210,
+          height: 140,
+          right: 210,
+          bottom: 140,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.click();
+      await waitForRaf();
+      await waitForRaf();
+
+      const initialTop = content.style.top;
+      const initialLeft = content.style.left;
+
+      anchorTop = 290;
+      window.dispatchEvent(new Event("scroll"));
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(content.style.top).toBe(initialTop);
+      expect(content.style.left).toBe(initialLeft);
       controller.destroy();
     });
   });

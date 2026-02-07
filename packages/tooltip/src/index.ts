@@ -1,6 +1,7 @@
 import { getPart, getRoots, getDataNumber, getDataEnum } from "@data-slot/core";
 import { ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+import { createDismissLayer } from "@data-slot/core";
 
 // Global state for "warm-up" behavior across tooltip instances
 let globalWarmUntil = 0;
@@ -101,7 +102,6 @@ export function createTooltip(
   let isOpen = false;
   let hasFocus = false;
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
-  let escapeCleanup: (() => void) | null = null;
   const cleanups: Array<() => void> = [];
 
   // ARIA setup - ensure content has stable id
@@ -115,21 +115,6 @@ export function createTooltip(
     trigger.hasAttribute("disabled") ||
     trigger.getAttribute("aria-disabled") === "true";
 
-  // Escape listener management - attach only when open
-  const attachEscapeListener = () => {
-    if (escapeCleanup) return;
-    escapeCleanup = on(document, "keydown", (e) => {
-      if (e.key === "Escape" && isOpen) {
-        hideImmediately("escape");
-      }
-    });
-  };
-
-  const detachEscapeListener = () => {
-    escapeCleanup?.();
-    escapeCleanup = null;
-  };
-
   const updateState = (open: boolean, reason: TooltipReason) => {
     if (isOpen === open) return;
 
@@ -142,11 +127,9 @@ export function createTooltip(
     if (isOpen) {
       trigger.setAttribute("aria-describedby", contentId);
       content.setAttribute("aria-hidden", "false");
-      attachEscapeListener();
     } else {
       trigger.removeAttribute("aria-describedby");
       content.setAttribute("aria-hidden", "true");
-      detachEscapeListener();
     }
 
     emit(root, "tooltip:change", { open: isOpen, trigger, content, reason });
@@ -261,6 +244,17 @@ export function createTooltip(
     })
   );
 
+  cleanups.push(
+    createDismissLayer({
+      root,
+      isOpen: () => isOpen,
+      onDismiss: () => hideImmediately("escape"),
+      closeOnClickOutside: false,
+      closeOnEscape: true,
+      preventEscapeDefault: false,
+    })
+  );
+
   const controller: TooltipController = {
     show: () => {
       // Respect disabled state even for programmatic calls
@@ -277,7 +271,6 @@ export function createTooltip(
     },
     destroy: () => {
       if (showTimeout) clearTimeout(showTimeout);
-      detachEscapeListener();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
     },

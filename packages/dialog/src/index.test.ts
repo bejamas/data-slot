@@ -319,6 +319,53 @@ describe("Dialog", () => {
     controllers.forEach((c) => c.destroy());
   });
 
+  it("moves dialog-portal to body on open and restores on destroy", () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog" id="root">
+        <button data-slot="dialog-trigger">Open</button>
+        <div data-slot="dialog-portal" id="portal">
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">Content</div>
+        </div>
+      </div>
+    `;
+    const root = document.getElementById("root")!;
+    const portal = document.getElementById("portal") as HTMLElement;
+    const controller = createDialog(root);
+
+    expect(portal.parentElement).toBe(root);
+
+    controller.open();
+    expect(portal.parentElement).toBe(document.body);
+
+    // Portal stays in body while closed and is restored only on destroy.
+    controller.close();
+    expect(portal.parentElement).toBe(document.body);
+
+    controller.destroy();
+    expect(portal.parentElement).toBe(root);
+  });
+
+  it("handles defaultOpen with dialog-portal and restores on destroy", () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog" id="root" data-default-open>
+        <div data-slot="dialog-portal" id="portal">
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">Content</div>
+        </div>
+      </div>
+    `;
+    const root = document.getElementById("root")!;
+    const portal = document.getElementById("portal") as HTMLElement;
+    const controller = createDialog(root);
+
+    expect(controller.isOpen).toBe(true);
+    expect(portal.parentElement).toBe(document.body);
+
+    controller.destroy();
+    expect(portal.parentElement).toBe(root);
+  });
+
   it("throws error when missing content slot", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="root">

@@ -242,6 +242,20 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("does not close on Escape when menu is open but inactive", () => {
+    const { controller } = setup();
+
+    controller.open("products");
+    expect(controller.value).toBe("products");
+
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    expect(controller.value).toBe("products");
+
+    controller.destroy();
+  });
+
   it("closes on click outside", () => {
     const { triggers, controller } = setup();
 
@@ -253,6 +267,36 @@ describe("NavigationMenu", () => {
     document.body.dispatchEvent(
       new PointerEvent("pointerdown", { bubbles: true })
     );
+    expect(controller.value).toBe(null);
+
+    controller.destroy();
+  });
+
+  it("does not close on click outside when menu is open but inactive", () => {
+    const { controller } = setup();
+
+    controller.open("products");
+    expect(controller.value).toBe("products");
+
+    document.body.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true })
+    );
+    expect(controller.value).toBe("products");
+
+    controller.destroy();
+  });
+
+  it("closes when focus leaves root", () => {
+    const { triggers, controller } = setup();
+
+    const outside = document.createElement("button");
+    document.body.appendChild(outside);
+
+    triggers[0]?.focus();
+    controller.open("products");
+    expect(controller.value).toBe("products");
+
+    outside.focus();
     expect(controller.value).toBe(null);
 
     controller.destroy();
@@ -701,4 +745,3 @@ describe("NavigationMenu", () => {
     });
   });
 });
-

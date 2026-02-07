@@ -538,6 +538,57 @@ describe("Combobox", () => {
       controller.destroy();
     });
 
+    it("scrolls highlighted item into view when navigating with keyboard", () => {
+      const { input, content, items, controller } = setup(
+        {},
+        `
+        <div data-slot="combobox" id="root">
+          <input data-slot="combobox-input" />
+          <button data-slot="combobox-trigger">▼</button>
+          <div data-slot="combobox-content" hidden>
+            <div data-slot="combobox-list">
+              <div data-slot="combobox-item" data-value="item-1">Item 1</div>
+              <div data-slot="combobox-item" data-value="item-2">Item 2</div>
+              <div data-slot="combobox-item" data-value="item-3">Item 3</div>
+              <div data-slot="combobox-item" data-value="item-4">Item 4</div>
+              <div data-slot="combobox-item" data-value="item-5">Item 5</div>
+              <div data-slot="combobox-item" data-value="item-6">Item 6</div>
+            </div>
+          </div>
+        </div>
+      `
+      );
+      const rect = (top: number, height: number) =>
+        ({
+          x: 0,
+          y: top,
+          top,
+          left: 0,
+          width: 200,
+          height,
+          right: 200,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 120 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 400 });
+      content.scrollTop = 0;
+      content.getBoundingClientRect = () => rect(0, 120);
+      items.forEach((item, index) => {
+        item.getBoundingClientRect = () => rect(index * 40, 40);
+      });
+
+      controller.open();
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "End", bubbles: true })
+      );
+
+      expect(items[5]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(content.scrollTop).toBe(124);
+      controller.destroy();
+    });
+
     it("Enter selects highlighted item", () => {
       const { input, controller } = setup();
       controller.open();
@@ -796,7 +847,7 @@ describe("Combobox", () => {
     });
 
     it("trigger click focuses input", () => {
-      const { triggerBtn, input, controller } = setup({ openOnFocus: false });
+      const { triggerBtn, controller } = setup({ openOnFocus: false });
       triggerBtn.click();
       // In bun:test, focus doesn't always work but we verify the intent
       expect(controller.isOpen).toBe(true);
@@ -1074,6 +1125,53 @@ describe("Combobox", () => {
       controller.destroy();
     });
 
+    it("restores content before applying closed hidden/data-state", () => {
+      const { root, content, controller } = setup();
+      controller.open();
+      expect(content.parentElement).toBe(document.body);
+
+      type ParentWithHooks = HTMLElement & {
+        appendChild(node: Node): Node;
+        insertBefore(node: Node, child: Node | null): Node;
+      };
+
+      const rootNode = root as ParentWithHooks;
+      const originalAppendChild = rootNode.appendChild.bind(rootNode);
+      const originalInsertBefore = rootNode.insertBefore.bind(rootNode);
+      let observedRestore = false;
+
+      const assertRestoreBeforeClose = (node: Node) => {
+        if (node !== content) return;
+        observedRestore = true;
+        expect(content.hidden).toBe(false);
+        expect(content.getAttribute("data-state")).toBe("open");
+      };
+
+      rootNode.appendChild = ((node: Node) => {
+        assertRestoreBeforeClose(node);
+        return originalAppendChild(node);
+      }) as ParentWithHooks["appendChild"];
+
+      rootNode.insertBefore = ((node: Node, child: Node | null) => {
+        assertRestoreBeforeClose(node);
+        return originalInsertBefore(node, child);
+      }) as ParentWithHooks["insertBefore"];
+
+      try {
+        controller.close();
+      } finally {
+        rootNode.appendChild = originalAppendChild as ParentWithHooks["appendChild"];
+        rootNode.insertBefore = originalInsertBefore as ParentWithHooks["insertBefore"];
+      }
+
+      expect(observedRestore).toBe(true);
+      expect(root.contains(content)).toBe(true);
+      expect(content.hidden).toBe(true);
+      expect(content.getAttribute("data-state")).toBe("closed");
+
+      controller.destroy();
+    });
+
     it("restores content to root on destroy while open", () => {
       const { root, content, controller } = setup();
       controller.open();
@@ -1085,10 +1183,10 @@ describe("Combobox", () => {
   });
 
   describe("content positioning", () => {
-    it("uses position: fixed when open", () => {
+    it("uses position: absolute when open", () => {
       const { content, controller } = setup();
       controller.open();
-      expect(content.style.position).toBe("fixed");
+      expect(content.style.position).toBe("absolute");
       controller.destroy();
     });
 
@@ -1111,6 +1209,63 @@ describe("Combobox", () => {
       const { content, controller } = setup({ align: "end", avoidCollisions: false });
       controller.open();
       expect(content.getAttribute("data-align")).toBe("end");
+      controller.destroy();
+    });
+
+    it("keeps coordinates stable on window scroll", async () => {
+      const { root, content, controller } = setup({ avoidCollisions: false });
+      const waitForRaf = () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
+
+      let anchorTop = 100;
+      const anchorLeft = 40;
+      const anchorWidth = 180;
+      const anchorHeight = 36;
+
+      (root as HTMLElement).getBoundingClientRect = () =>
+        ({
+          x: anchorLeft,
+          y: anchorTop,
+          top: anchorTop,
+          left: anchorLeft,
+          width: anchorWidth,
+          height: anchorHeight,
+          right: anchorLeft + anchorWidth,
+          bottom: anchorTop + anchorHeight,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 220,
+          height: 140,
+          right: 220,
+          bottom: 140,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      controller.open();
+      await waitForRaf();
+      await waitForRaf();
+      await waitForRaf();
+      await waitForRaf();
+
+      const initialTop = content.style.top;
+      const initialLeft = content.style.left;
+
+      anchorTop = 260;
+      window.dispatchEvent(new Event("scroll"));
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(content.style.top).toBe(initialTop);
+      expect(content.style.left).toBe(initialLeft);
       controller.destroy();
     });
   });

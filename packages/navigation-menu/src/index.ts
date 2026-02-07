@@ -1,6 +1,7 @@
 import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataEnum } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+import { createDismissLayer } from "@data-slot/core";
 
 /** Alignment of the viewport relative to the trigger */
 export type Align = "start" | "center" | "end";
@@ -681,6 +682,12 @@ export function createNavigationMenu(
   const isMenuActive = () =>
     root.contains(document.activeElement) || isRootHovered || clickLocked;
 
+  const closeMenuAndUnlock = () => {
+    clickLocked = false;
+    updateState(null, true);
+    updateIndicator(null);
+  };
+
   // Reset isPointerDown on document pointerup/pointercancel (capture phase)
   cleanups.push(
     on(
@@ -706,34 +713,20 @@ export function createNavigationMenu(
     on(document, "focusin", (e) => {
       if (currentValue === null) return;
       if (!root.contains(e.target as Node)) {
-        clickLocked = false;
-        updateState(null, true);
-        updateIndicator(null);
+        closeMenuAndUnlock();
       }
     })
   );
 
-  // Close on click outside (only if this menu is active)
   cleanups.push(
-    on(document, "pointerdown", (e) => {
-      if (currentValue === null) return;
-      if (!isMenuActive()) return;
-      if (!root.contains(e.target as Node)) {
-        clickLocked = false;
-        updateState(null, true);
-        updateIndicator(null);
-      }
-    })
-  );
-
-  // Close on Escape (only if this menu is active)
-  cleanups.push(
-    on(document, "keydown", (e) => {
-      if (e.key !== "Escape" || currentValue === null) return;
-      if (!isMenuActive()) return;
-      clickLocked = false;
-      updateState(null, true);
-      updateIndicator(null);
+    createDismissLayer({
+      root,
+      isOpen: () => currentValue !== null && isMenuActive(),
+      onDismiss: closeMenuAndUnlock,
+      closeOnClickOutside: true,
+      closeOnEscape: true,
+      preventEscapeDefault: false,
+      isInside: (target) => !!target && root.contains(target),
     })
   );
 
@@ -756,9 +749,7 @@ export function createNavigationMenu(
       if (detail?.value === undefined) return;
 
       if (detail.value === null) {
-        clickLocked = false;
-        updateState(null, true);
-        updateIndicator(null);
+        closeMenuAndUnlock();
       } else if (itemMap.has(detail.value)) {
         clickLocked = true;
         updateState(detail.value, true);

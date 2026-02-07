@@ -4,6 +4,7 @@ import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
+import { computeFloatingPosition, ensureItemVisibleInContainer, createDismissLayer, createPortalLifecycle, createPositionSync } from './index'
 import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
 
@@ -697,6 +698,355 @@ describe('core/portal', () => {
 
     // Should be a no-op
     restorePortal(content, state)
+    expect(content.parentElement).toBe(root)
+  })
+})
+
+describe('core/popup', () => {
+  const rect = (left: number, top: number, width: number, height: number) =>
+    ({
+      left,
+      top,
+      right: left + width,
+      bottom: top + height,
+      width,
+      height,
+    }) as DOMRect
+
+  const waitForRaf = () => new Promise((resolve) => setTimeout(resolve, 20))
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('computeFloatingPosition returns preferred side when it fits', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(100, 100, 60, 30),
+      contentRect: rect(0, 0, 80, 40),
+      side: 'bottom',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 8,
+      viewportWidth: 800,
+      viewportHeight: 600,
+    })
+
+    expect(pos.side).toBe('bottom')
+    expect(pos.align).toBe('start')
+    expect(pos.x).toBe(100)
+    expect(pos.y).toBe(134)
+  })
+
+  it('computeFloatingPosition flips to opposite side on overflow', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(100, 580, 60, 20),
+      contentRect: rect(0, 0, 120, 120),
+      side: 'bottom',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 8,
+      viewportWidth: 800,
+      viewportHeight: 700,
+      allowedSides: ['top', 'bottom'],
+    })
+
+    expect(pos.side).toBe('top')
+    expect(pos.y).toBe(456)
+  })
+
+  it('computeFloatingPosition clamps to viewport when collisions enabled', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(390, 250, 20, 20),
+      contentRect: rect(0, 0, 160, 80),
+      side: 'right',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 10,
+      viewportWidth: 420,
+      viewportHeight: 320,
+    })
+
+    expect(pos.side).toBe('top')
+    expect(pos.x).toBe(250)
+    expect(pos.y).toBe(166)
+  })
+
+  it('computeFloatingPosition selects the first allowed side that fits', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(180, 170, 20, 20),
+      contentRect: rect(0, 0, 120, 80),
+      side: 'right',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 8,
+      viewportWidth: 220,
+      viewportHeight: 220,
+      allowedSides: ['right', 'bottom', 'left'],
+    })
+
+    expect(pos.side).toBe('left')
+  })
+
+  it('computeFloatingPosition uses least-overflow side when none fit', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(10, 30, 20, 20),
+      contentRect: rect(0, 0, 120, 90),
+      side: 'left',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 8,
+      viewportWidth: 140,
+      viewportHeight: 100,
+      allowedSides: ['left', 'right'],
+    })
+
+    expect(pos.side).toBe('right')
+  })
+
+  it('computeFloatingPosition uses visualViewport offsets while clamping', () => {
+    const original = Object.getOwnPropertyDescriptor(window, 'visualViewport')
+    const fakeVisualViewport = {
+      width: 300,
+      height: 200,
+      offsetLeft: 100,
+      offsetTop: 50,
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent() {
+        return true
+      },
+    } as unknown as VisualViewport
+
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: fakeVisualViewport,
+    })
+
+    try {
+      const pos = computeFloatingPosition({
+        anchorRect: rect(90, 60, 20, 20),
+        contentRect: rect(0, 0, 120, 80),
+        side: 'bottom',
+        align: 'start',
+        sideOffset: 4,
+        alignOffset: 0,
+        avoidCollisions: true,
+        collisionPadding: 10,
+        allowedSides: ['bottom'],
+      })
+
+      expect(pos.side).toBe('bottom')
+      expect(pos.x).toBe(110)
+      expect(pos.y).toBe(84)
+    } finally {
+      if (original) {
+        Object.defineProperty(window, 'visualViewport', original)
+      } else {
+        Reflect.deleteProperty(window as Window & Record<string, unknown>, 'visualViewport')
+      }
+    }
+  })
+
+  it('ensureItemVisibleInContainer does not scroll when item is already visible', () => {
+    document.body.innerHTML = `
+      <div id="container">
+        <div id="item"></div>
+      </div>
+    `
+    const container = document.getElementById('container') as HTMLElement
+    const item = document.getElementById('item') as HTMLElement
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, value: 100 })
+    Object.defineProperty(container, 'scrollHeight', { configurable: true, value: 400 })
+    container.scrollTop = 40
+
+    container.getBoundingClientRect = () => rect(0, 0, 200, 100)
+    item.getBoundingClientRect = () => rect(0, 20, 200, 20)
+
+    ensureItemVisibleInContainer(item, container)
+    expect(container.scrollTop).toBe(40)
+  })
+
+  it('ensureItemVisibleInContainer scrolls down when item is below viewport', () => {
+    document.body.innerHTML = `
+      <div id="container">
+        <div id="item"></div>
+      </div>
+    `
+    const container = document.getElementById('container') as HTMLElement
+    const item = document.getElementById('item') as HTMLElement
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, value: 100 })
+    Object.defineProperty(container, 'scrollHeight', { configurable: true, value: 400 })
+    container.scrollTop = 0
+
+    container.getBoundingClientRect = () => rect(0, 0, 200, 100)
+    item.getBoundingClientRect = () => rect(0, 140, 200, 30)
+
+    ensureItemVisibleInContainer(item, container)
+    expect(container.scrollTop).toBe(74)
+  })
+
+  it('ensureItemVisibleInContainer scrolls up when item is above viewport', () => {
+    document.body.innerHTML = `
+      <div id="container">
+        <div id="item"></div>
+      </div>
+    `
+    const container = document.getElementById('container') as HTMLElement
+    const item = document.getElementById('item') as HTMLElement
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, value: 100 })
+    Object.defineProperty(container, 'scrollHeight', { configurable: true, value: 400 })
+    container.scrollTop = 80
+
+    container.getBoundingClientRect = () => rect(0, 0, 200, 100)
+    item.getBoundingClientRect = () => rect(0, -40, 200, 20)
+
+    ensureItemVisibleInContainer(item, container)
+    expect(container.scrollTop).toBe(36)
+  })
+
+  it('createPositionSync updates from ancestor scroll', async () => {
+    document.body.innerHTML = `
+      <div id="outer" style="overflow: auto; max-height: 100px;">
+        <div style="height: 300px;">
+          <div id="anchor"></div>
+        </div>
+      </div>
+    `
+    const outer = document.getElementById('outer')!
+    const anchor = document.getElementById('anchor')!
+    let updates = 0
+
+    const sync = createPositionSync({
+      observedElements: [anchor],
+      onUpdate: () => {
+        updates += 1
+      },
+    })
+
+    sync.start()
+    outer.dispatchEvent(new Event('scroll'))
+    await waitForRaf()
+    expect(updates).toBe(1)
+    sync.stop()
+  })
+
+  it('createPositionSync honors ignoreScrollTarget', async () => {
+    document.body.innerHTML = `
+      <div id="content" style="overflow: auto; max-height: 100px;">
+        <div style="height: 300px;"></div>
+      </div>
+    `
+    const content = document.getElementById('content')!
+    let updates = 0
+
+    const sync = createPositionSync({
+      observedElements: [content],
+      onUpdate: () => {
+        updates += 1
+      },
+      ignoreScrollTarget: (target) => target === content,
+    })
+
+    sync.start()
+    content.dispatchEvent(new Event('scroll'))
+    await waitForRaf()
+    expect(updates).toBe(0)
+    sync.stop()
+  })
+
+  it('createPositionSync can disable ancestor scroll listeners', async () => {
+    document.body.innerHTML = `
+      <div id="outer" style="overflow: auto; max-height: 100px;">
+        <div style="height: 300px;">
+          <div id="anchor"></div>
+        </div>
+      </div>
+    `
+    const outer = document.getElementById('outer')!
+    const anchor = document.getElementById('anchor')!
+    let updates = 0
+
+    const sync = createPositionSync({
+      observedElements: [anchor],
+      ancestorScroll: false,
+      onUpdate: () => {
+        updates += 1
+      },
+    })
+
+    sync.start()
+    outer.dispatchEvent(new Event('scroll'))
+    await waitForRaf()
+    expect(updates).toBe(0)
+    sync.stop()
+  })
+
+  it('createDismissLayer dismisses on outside pointerdown but not on portaled inside click', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content"></div>
+      </div>
+      <div id="outside"></div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const outside = document.getElementById('outside')!
+
+    const lifecycle = createPortalLifecycle({ content, root })
+    lifecycle.mount()
+
+    let open = true
+    let dismissed = 0
+    const cleanup = createDismissLayer({
+      root,
+      isOpen: () => open,
+      onDismiss: () => {
+        dismissed += 1
+        open = false
+      },
+      closeOnEscape: false,
+    })
+
+    content.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    expect(dismissed).toBe(0)
+
+    outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    expect(dismissed).toBe(1)
+
+    cleanup()
+    lifecycle.cleanup()
+  })
+
+  it('createPortalLifecycle mounts and restores content', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content"></div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const lifecycle = createPortalLifecycle({ content, root })
+
+    lifecycle.mount()
+    expect(content.parentElement).toBe(document.body)
+
+    lifecycle.restore()
+    expect(content.parentElement).toBe(root)
+
+    lifecycle.cleanup()
     expect(content.parentElement).toBe(root)
   })
 })

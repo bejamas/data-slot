@@ -4,7 +4,7 @@ import ExampleBlock from "../ExampleBlock.astro";
 
 const cssCode = `<div data-slot="popover" class="popover-root">
   <button data-slot="popover-trigger" class="popover-trigger-btn">Open Popover</button>
-  <div data-slot="popover-content" data-position="bottom" class="popover-content" hidden>
+  <div data-slot="popover-content" data-side="bottom" data-align="center" class="popover-content" hidden>
     <div class="popover-title">Popover Panel</div>
     <p class="popover-text">
       Unlike tooltips, popovers stay open until dismissed.
@@ -15,7 +15,7 @@ const cssCode = `<div data-slot="popover" class="popover-root">
 </div>
 
 <style>
-  .popover-root { position: relative; display: inline-block; }
+  .popover-root { display: inline-block; }
   .popover-trigger-btn {
     padding: 0.5rem 1rem;
     background: #1a1a1a;
@@ -24,25 +24,24 @@ const cssCode = `<div data-slot="popover" class="popover-root">
     cursor: pointer;
   }
   .popover-content {
-    position: absolute;
+    position: fixed;
     background: #faf9f7;
     border: 1px solid #ccc;
     padding: 1rem;
-    min-width: 200px;
+    width: min(20rem, calc(100vw - 2rem));
     z-index: 50;
     opacity: 1;
     transition: opacity 0.2s, transform 0.2s;
-  }
-  .popover-content[data-position="bottom"] {
-    top: 100%;
-    left: 0;
-    margin-top: 0.5rem;
   }
   .popover-content[hidden] {
     display: block !important;
     opacity: 0;
     pointer-events: none;
   }
+  .popover-content[hidden][data-side="bottom"] { transform: translateY(-4px); }
+  .popover-content[hidden][data-side="top"] { transform: translateY(4px); }
+  .popover-content[hidden][data-side="left"] { transform: translateX(4px); }
+  .popover-content[hidden][data-side="right"] { transform: translateX(-4px); }
   .popover-title { font-weight: 700; margin-bottom: 0.5rem; }
   .popover-text { color: #666; font-size: 0.9rem; margin-bottom: 0.75rem; }
   .popover-close-btn {
@@ -63,9 +62,10 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
   </button>
   <div
     data-slot="popover-content"
-    data-position="bottom"
-    class="absolute top-full left-0 mt-2 bg-white border border-gray-300
-           p-4 min-w-[200px] z-50 rounded-lg shadow-lg
+    data-side="bottom"
+    data-align="center"
+    class="fixed bg-white border border-gray-300
+           p-4 w-80 max-w-[calc(100vw-2rem)] z-50 rounded-lg shadow-lg
            opacity-100 transition-opacity duration-200"
     hidden
   >
@@ -95,7 +95,7 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
 <ExampleBlock>
   <div slot="preview-css" data-slot="popover" class="popover-root" id="popover-css">
     <button data-slot="popover-trigger" class="popover-trigger-btn">Open Popover</button>
-    <div data-slot="popover-content" class="popover-content" hidden>
+    <div data-slot="popover-content" data-side="bottom" data-align="center" class="popover-content" hidden>
       <div class="popover-title">Popover Panel</div>
       <p class="popover-text">
         Unlike tooltips, popovers stay open until dismissed.
@@ -113,8 +113,9 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
     </button>
     <div
       data-slot="popover-content"
-      data-position="bottom"
-      class="absolute top-full left-0 mt-2 bg-white border border-gray-300 p-4 min-w-[200px] z-50 rounded-lg shadow-lg opacity-100 transition-opacity duration-200"
+      data-side="bottom"
+      data-align="center"
+      class="fixed bg-white border border-gray-300 p-4 w-80 max-w-[calc(100vw-2rem)] z-50 rounded-lg shadow-lg opacity-100 transition-opacity duration-200"
       hidden
     >
       <div class="font-bold mb-2 mt-0">Popover Panel</div>
@@ -133,4 +134,3 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
   <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
 </ExampleBlock>
-

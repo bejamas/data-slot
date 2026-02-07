@@ -47,7 +47,12 @@ import { createPopover } from "@data-slot/popover";
 
 const popover = createPopover(element, {
   defaultOpen: false,
-  position: "bottom",
+  side: "bottom",
+  align: "center",
+  sideOffset: 4,
+  alignOffset: 0,
+  avoidCollisions: true,
+  collisionPadding: 8,
   closeOnClickOutside: true,
   closeOnEscape: true,
   onOpenChange: (open) => console.log(open),
@@ -59,7 +64,13 @@ const popover = createPopover(element, {
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `defaultOpen` | `boolean` | `false` | Initial open state |
-| `position` | `"top" \| "bottom" \| "left" \| "right"` | `"bottom"` | Position relative to trigger |
+| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred side relative to trigger |
+| `align` | `"start" \| "center" \| "end"` | `"center"` | Preferred alignment on the side axis |
+| `sideOffset` | `number` | `4` | Distance from trigger in pixels |
+| `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
+| `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
+| `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
+| `position` | `"top" \| "bottom" \| "left" \| "right"` | - | Deprecated alias for `side` |
 | `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside |
 | `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
@@ -102,16 +113,24 @@ Options can also be set via data attributes on the root element. JS options take
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `data-default-open` | boolean | `false` | Initial open state |
+| `data-side` | string | `"bottom"` | Preferred side |
+| `data-align` | string | `"center"` | Preferred alignment |
+| `data-side-offset` | number | `4` | Distance from trigger (px) |
+| `data-align-offset` | number | `0` | Offset from alignment edge (px) |
+| `data-avoid-collisions` | boolean | `true` | Flip/shift to stay in viewport |
+| `data-collision-padding` | number | `8` | Viewport edge padding (px) |
 | `data-close-on-click-outside` | boolean | `true` | Close when clicking outside |
 | `data-close-on-escape` | boolean | `true` | Close when pressing Escape |
 
 Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
 
-Position is set via `data-position` on the content element:
+Placement can be set on root or content (content takes precedence):
 
 ```html
-<div data-slot="popover-content" data-position="top">
+<div data-slot="popover-content" data-side="top" data-align="end">
 ```
+
+`data-position` is still supported as a deprecated fallback alias for `data-side`.
 
 ```html
 <!-- Popover that stays open when clicking outside -->
@@ -122,7 +141,8 @@ Position is set via `data-position` on the content element:
 
 ## Styling
 
-Use `data-state` and `data-position` attributes:
+Popover position is computed in JavaScript and applied as `position: fixed` + inline `top/left`.
+Use `data-state`, `data-side`, and `data-align` for styling/animation:
 
 ```css
 /* Hidden state */
@@ -130,48 +150,35 @@ Use `data-state` and `data-position` attributes:
   display: none;
 }
 
-/* Positioning */
-[data-slot="popover"] {
-  position: relative;
-}
-
 [data-slot="popover-content"] {
-  position: absolute;
+  position: fixed;
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
 }
 
-[data-slot="popover-content"][data-position="top"] {
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+[data-slot="popover-content"][hidden][data-side="top"] {
+  transform: translateY(4px);
 }
-
-[data-slot="popover-content"][data-position="bottom"] {
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+[data-slot="popover-content"][hidden][data-side="bottom"] {
+  transform: translateY(-4px);
 }
-
-[data-slot="popover-content"][data-position="left"] {
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
+[data-slot="popover-content"][hidden][data-side="left"] {
+  transform: translateX(4px);
 }
-
-[data-slot="popover-content"][data-position="right"] {
-  left: 100%;
-  top: 50%;
-  transform: translateY(-50%);
+[data-slot="popover-content"][hidden][data-side="right"] {
+  transform: translateX(-4px);
 }
 ```
 
 With Tailwind:
 
 ```html
-<div data-slot="popover" class="relative">
+<div data-slot="popover">
   <button data-slot="popover-trigger">Open</button>
-  <div 
-    data-slot="popover-content" 
-    class="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white shadow-lg rounded-lg p-4 hidden data-[state=open]:block"
+  <div
+    data-slot="popover-content"
+    data-side="bottom"
+    data-align="start"
+    class="fixed bg-white shadow-lg rounded-lg p-4 transition data-[state=closed]:opacity-0"
   >
     Content
   </div>
@@ -228,7 +235,11 @@ element.dispatchEvent(
 
 #### Deprecated Shapes
 
-The following shape is deprecated and will be removed in v1.0:
+The following shapes are deprecated and will be removed in the next major release:
+
+- `popover:set` detail `{ value: boolean }` (use `{ open: boolean }`)
+- `position` option (use `side`)
+- `data-position` attribute (use `data-side`)
 
 ```javascript
 // Deprecated: { value: boolean }
@@ -237,9 +248,8 @@ element.dispatchEvent(
 );
 ```
 
-Use `{ open: boolean }` instead.
+Use the replacements listed above.
 
 ## License
 
 MIT
-

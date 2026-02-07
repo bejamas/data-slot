@@ -2,8 +2,13 @@ import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataString,
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
-import { portalToBody, restorePortal } from "@data-slot/core";
-import type { PortalState } from "@data-slot/core";
+import {
+  computeFloatingPosition,
+  ensureItemVisibleInContainer,
+  createPositionSync,
+  createPortalLifecycle,
+  createDismissLayer,
+} from "@data-slot/core";
 
 /** Side of the trigger to place the content */
 export type Side = "top" | "bottom";
@@ -97,9 +102,6 @@ export interface SelectController {
   /** Cleanup all event listeners */
   destroy(): void;
 }
-
-// Opposite sides for flipping
-const OPP: Record<Side, Side> = { top: "bottom", bottom: "top" };
 
 /**
  * Create a select controller for a root element.
@@ -198,18 +200,14 @@ export function createSelect(
   let enabledItems: HTMLElement[] = [];
   let itemToIndex = new Map<HTMLElement, number>();
 
-  // For position syncing while open
-  let positionRafId: number | null = null;
-  const positionCleanups: Array<() => void> = [];
-
   // Hidden input for form integration
   let hiddenInput: HTMLInputElement | null = null;
 
   // Track if this instance locked scroll
   let didLockScroll = false;
 
-  // Portal state for moving content to body
-  const portalState: PortalState = { originalParent: null, originalNextSibling: null, portaled: false };
+  // Portal lifecycle for moving content to body
+  const portal = createPortalLifecycle({ content, root });
 
   const isItemDisabled = (el: HTMLElement) =>
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
@@ -295,20 +293,7 @@ export function createSelect(
     }
   };
 
-  // Compute position for popper mode (side/align)
-  const computePopperPos = (side: Side, align: Align, tr: DOMRect, cr: DOMRect) => {
-    let x = 0, y = 0;
-    if (side === "top") y = tr.top - cr.height - sideOffset;
-    else y = tr.bottom + sideOffset;
-
-    if (align === "start") x = tr.left + alignOffset;
-    else if (align === "center") x = tr.left + tr.width / 2 - cr.width / 2 + alignOffset;
-    else x = tr.right - cr.width - alignOffset;
-
-    return { x, y };
-  };
-
-  // Compute position for item-aligned mode
+  // Compute base position data for item-aligned mode
   const computeItemAlignedPos = (tr: DOMRect, cr: DOMRect) => {
     // Find selected item, or fall back to first enabled item
     const selectedItem = items.find((item) => item.dataset["value"] === currentValue);
@@ -317,28 +302,31 @@ export function createSelect(
     // Calculate x position (align left edges, match trigger width)
     let x = tr.left;
 
-    // Calculate y position so aligned item is at trigger's vertical center
+    // Calculate y position so aligned item is at trigger's vertical center.
+    // This is the base (unclamped) y when content scrollTop is 0.
     let y: number;
-    let itemOffsetTop = 0;
+    let itemTopInContent = 0;
+    let itemHeight = tr.height;
 
     if (alignItem) {
-      // Get the item's position relative to the content
+      // Normalize to content coordinates, independent of current scrollTop.
       const itemRect = alignItem.getBoundingClientRect();
-      itemOffsetTop = itemRect.top - cr.top;
+      itemTopInContent = itemRect.top - cr.top + content.scrollTop;
+      itemHeight = itemRect.height || alignItem.offsetHeight || tr.height;
 
-      // Position content so item is at trigger's vertical center
-      y = tr.top + (tr.height / 2) - (itemRect.height / 2) - itemOffsetTop;
+      // Position content so item is at trigger's vertical center.
+      y = tr.top + (tr.height / 2) - (itemHeight / 2) - itemTopInContent;
     } else {
       // No items at all - align top of content with trigger
       y = tr.top;
     }
 
-    return { x, y, itemOffsetTop };
+    return { x, y, alignItem, itemTopInContent, itemHeight };
   };
 
   const updatePosition = () => {
+    const win = root.ownerDocument.defaultView ?? window;
     const tr = trigger.getBoundingClientRect();
-    const vw = window.innerWidth, vh = window.innerHeight;
 
     // Set min-width to match trigger width
     content.style.minWidth = `${tr.width}px`;
@@ -352,8 +340,18 @@ export function createSelect(
     if (position === "item-aligned") {
       const aligned = computeItemAlignedPos(tr, cr);
       pos = { x: aligned.x, y: aligned.y };
+      const triggerCenterY = tr.top + (tr.height / 2);
+      const minY = collisionPadding;
+      const maxY = window.innerHeight - cr.height - collisionPadding;
+      const clampY = (value: number) =>
+        avoidCollisions
+          ? (maxY < minY ? minY : Math.min(Math.max(value, minY), maxY))
+          : value;
 
       if (avoidCollisions) {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
         // Clamp to viewport vertically
         if (pos.y < collisionPadding) {
           pos.y = collisionPadding;
@@ -369,85 +367,79 @@ export function createSelect(
         }
       }
 
+      // For scrollable content, align deep selected items by adjusting internal scroll,
+      // so the popup stays near the trigger instead of jumping far away.
+      if (aligned.alignItem) {
+        const maxScrollTop = Math.max(0, content.scrollHeight - content.clientHeight);
+
+        if (maxScrollTop > 0) {
+          const getDesiredScrollTop = (currentY: number) =>
+            aligned.itemTopInContent + (aligned.itemHeight / 2) - (triggerCenterY - currentY);
+
+          // Start with popup centered around trigger, then solve scrollTop for alignment.
+          pos.y = clampY(triggerCenterY - (cr.height / 2));
+          let scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
+          content.scrollTop = scrollTop;
+
+          // Recompute y after clamped scroll, then finalize scroll against that y.
+          pos.y = clampY(
+            triggerCenterY - (aligned.itemTopInContent - scrollTop + (aligned.itemHeight / 2))
+          );
+          scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
+          content.scrollTop = scrollTop;
+        }
+      } else {
+        content.scrollTop = 0;
+      }
+
       // Determine effective side based on final position
       side = pos.y < tr.top ? "top" : "bottom";
     } else {
-      // Popper mode
-      side = preferredSide;
-      pos = computePopperPos(side, preferredAlign, tr, cr);
-
-      if (avoidCollisions) {
-        const overflow = (s: Side, p: { x: number; y: number }) =>
-          s === "top" ? p.y < collisionPadding :
-          p.y + cr.height > vh - collisionPadding;
-
-        if (overflow(side, pos)) {
-          const opp = OPP[side];
-          const oppPos = computePopperPos(opp, preferredAlign, tr, cr);
-          if (!overflow(opp, oppPos)) {
-            side = opp;
-            pos = oppPos;
-          }
-        }
-
-        // Clamp to viewport
-        if (pos.x < collisionPadding) pos.x = collisionPadding;
-        else if (pos.x + cr.width > vw - collisionPadding) pos.x = vw - cr.width - collisionPadding;
-        if (pos.y < collisionPadding) pos.y = collisionPadding;
-        else if (pos.y + cr.height > vh - collisionPadding) pos.y = vh - cr.height - collisionPadding;
-      }
+      const floating = computeFloatingPosition({
+        anchorRect: tr,
+        contentRect: cr,
+        side: preferredSide,
+        align: preferredAlign,
+        sideOffset,
+        alignOffset,
+        avoidCollisions,
+        collisionPadding,
+        allowedSides: SIDES,
+      });
+      pos = { x: floating.x, y: floating.y };
+      side = floating.side as Side;
     }
 
-    content.style.position = "fixed";
-    content.style.top = `${pos.y}px`;
-    content.style.left = `${pos.x}px`;
+    if (lockScrollOption) {
+      content.style.position = "fixed";
+      content.style.top = `${pos.y}px`;
+      content.style.left = `${pos.x}px`;
+    } else {
+      content.style.position = "absolute";
+      content.style.top = `${pos.y + win.scrollY}px`;
+      content.style.left = `${pos.x + win.scrollX}px`;
+    }
     content.style.margin = "0";
     content.setAttribute("data-side", side);
     content.setAttribute("data-align", position === "item-aligned" ? "center" : preferredAlign);
   };
 
-  const schedulePosition = () => {
-    if (positionRafId !== null) return;
-    positionRafId = requestAnimationFrame(() => {
-      positionRafId = null;
-      if (isOpen) updatePosition();
-    });
-  };
+  const positionSync = createPositionSync({
+    observedElements: [trigger, content],
+    isActive: () => isOpen,
+    ancestorScroll: lockScrollOption,
+    onUpdate: updatePosition,
+    ignoreScrollTarget: (target) => target instanceof Node && content.contains(target),
+  });
 
-  const cleanupPosition = () => {
-    if (positionRafId !== null) {
-      cancelAnimationFrame(positionRafId);
-      positionRafId = null;
-    }
-    positionCleanups.forEach((fn) => fn());
-    positionCleanups.length = 0;
-  };
-
-  const setupPosition = () => {
-    if (positionCleanups.length > 0) return;
-    const onResize = () => schedulePosition();
-    const onScroll = (e: Event) => {
-      // Ignore scroll events from inside the content (user scrolling the list)
-      if (e.target instanceof Node && content.contains(e.target)) return;
-      schedulePosition();
-    };
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onScroll, true);
-    positionCleanups.push(
-      () => window.removeEventListener("resize", onResize),
-      () => window.removeEventListener("scroll", onScroll, true)
-    );
-    const ro = new ResizeObserver(onResize);
-    ro.observe(trigger);
-    ro.observe(content);
-    positionCleanups.push(() => ro.disconnect());
-  };
-
-  const updateHighlight = (index: number, focus = true) => {
+  const updateHighlight = (index: number, focus = true, ensureVisible = true) => {
     for (let i = 0; i < enabledItems.length; i++) {
       const el = enabledItems[i]!;
       if (i === index) {
         el.setAttribute("data-highlighted", "");
+        if (ensureVisible) {
+          ensureItemVisibleInContainer(el, content);
+        }
         if (focus) el.focus();
       } else {
         el.removeAttribute("data-highlighted");
@@ -491,7 +483,7 @@ export function createSelect(
       previousActiveElement = document.activeElement as HTMLElement;
       isOpen = true;
       setAria(trigger, "expanded", true);
-      portalToBody(content, root, portalState);
+      portal.mount();
       content.hidden = false;
       setDataState("open");
 
@@ -507,19 +499,20 @@ export function createSelect(
       // Highlight selected item if any
       const selectedIndex = enabledItems.findIndex((el) => el.dataset["value"] === currentValue);
       if (selectedIndex >= 0) {
-        updateHighlight(selectedIndex, false);
+        updateHighlight(selectedIndex, false, false);
       } else {
         clearHighlight();
       }
 
-      setupPosition();
+      positionSync.start();
       updatePosition();
+      positionSync.update();
 
       // Use rAF to refine position after browser has fully rendered content,
       // and to highlight item under cursor if pointer opened the select
       requestAnimationFrame(() => {
         if (!isOpen) return;
-        updatePosition();
+        positionSync.update();
 
         // Highlight item under cursor if pointer opened the select
         if (lastPointerX !== 0 || lastPointerY !== 0) {
@@ -538,7 +531,7 @@ export function createSelect(
     } else {
       isOpen = false;
       setAria(trigger, "expanded", false);
-      restorePortal(content, portalState);
+      portal.restore();
       content.hidden = true;
       setDataState("closed");
       clearHighlight();
@@ -551,7 +544,7 @@ export function createSelect(
         didLockScroll = false;
       }
 
-      cleanupPosition();
+      positionSync.stop();
 
       // Skip focus restoration when closing via Tab to allow normal tab navigation
       if (!skipFocusRestore) {
@@ -627,12 +620,16 @@ export function createSelect(
       case "ArrowDown":
         e.preventDefault();
         keyboardMode = true;
-        updateHighlight(highlightedIndex === -1 ? 0 : (highlightedIndex + 1) % len);
+        updateHighlight(
+          highlightedIndex === -1 ? 0 : Math.min(highlightedIndex + 1, len - 1)
+        );
         break;
       case "ArrowUp":
         e.preventDefault();
         keyboardMode = true;
-        updateHighlight(highlightedIndex === -1 ? len - 1 : (highlightedIndex - 1 + len) % len);
+        updateHighlight(
+          highlightedIndex === -1 ? len - 1 : Math.max(highlightedIndex - 1, 0)
+        );
         break;
       case "Home":
         e.preventDefault();
@@ -757,11 +754,13 @@ export function createSelect(
     })
   );
 
-  // Close on click outside
   cleanups.push(
-    on(document, "pointerdown", (e) => {
-      const t = e.target as Node;
-      if (isOpen && !root.contains(t) && !content.contains(t)) updateOpenState(false);
+    createDismissLayer({
+      root,
+      isOpen: () => isOpen,
+      onDismiss: () => updateOpenState(false),
+      closeOnClickOutside: true,
+      closeOnEscape: false,
     })
   );
 
@@ -786,8 +785,8 @@ export function createSelect(
     close: () => updateOpenState(false),
     destroy: () => {
       if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
-      cleanupPosition();
-      restorePortal(content, portalState);
+      positionSync.stop();
+      portal.cleanup();
       // Unlock scroll if still locked
       if (didLockScroll) {
         unlockScroll();

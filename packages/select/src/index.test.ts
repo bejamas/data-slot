@@ -423,7 +423,7 @@ describe("Select", () => {
       controller.destroy();
     });
 
-    it("wraps around with ArrowDown at end", () => {
+    it("stays on last item when pressing ArrowDown at end", () => {
       const { trigger, content, items, controller } = setup();
 
       trigger.click();
@@ -433,11 +433,32 @@ describe("Select", () => {
         new KeyboardEvent("keydown", { key: "End", bubbles: true })
       );
 
-      // ArrowDown should wrap to first
+      // ArrowDown should stay on last
       content.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
       );
+      expect(items[2]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(items[0]?.hasAttribute("data-highlighted")).toBe(false);
+
+      controller.destroy();
+    });
+
+    it("stays on first item when pressing ArrowUp at start", () => {
+      const { trigger, content, items, controller } = setup();
+
+      trigger.click();
+
+      // Navigate to first item
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Home", bubbles: true })
+      );
+
+      // ArrowUp should stay on first
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })
+      );
       expect(items[0]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(items[2]?.hasAttribute("data-highlighted")).toBe(false);
 
       controller.destroy();
     });
@@ -609,6 +630,61 @@ describe("Select", () => {
 
       expect(items[1]?.hasAttribute("data-highlighted")).toBe(true);
 
+      controller.destroy();
+    });
+
+    it("scrolls highlighted item into view during keyboard navigation", () => {
+      const { trigger, content, items, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="item-1">Item 1</div>
+            <div data-slot="select-item" data-value="item-2">Item 2</div>
+            <div data-slot="select-item" data-value="item-3">Item 3</div>
+            <div data-slot="select-item" data-value="item-4">Item 4</div>
+            <div data-slot="select-item" data-value="item-5">Item 5</div>
+            <div data-slot="select-item" data-value="item-6">Item 6</div>
+          </div>
+        </div>
+      `
+      );
+      const rect = (top: number, height: number) =>
+        ({
+          x: 0,
+          y: top,
+          top,
+          left: 0,
+          width: 200,
+          height,
+          right: 200,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 120 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 400 });
+      content.scrollTop = 0;
+      content.getBoundingClientRect = () => rect(0, 120);
+      items.forEach((item, index) => {
+        item.getBoundingClientRect = () => rect(index * 40, 40);
+      });
+
+      trigger.click();
+      const initialScrollTop = content.scrollTop;
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "End", bubbles: true })
+      );
+
+      expect(items[5]?.hasAttribute("data-highlighted")).toBe(true);
+      const itemRect = items[5]!.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      const itemBottomInContent = itemRect.bottom - contentRect.top + initialScrollTop;
+      const expectedScrollTop = itemBottomInContent - content.clientHeight + 4;
+      expect(content.scrollTop).toBe(expectedScrollTop);
       controller.destroy();
     });
   });
@@ -838,6 +914,15 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("uses position: absolute when lockScroll is false", () => {
+      const { trigger, content, controller } = setup({ lockScroll: false });
+
+      trigger.click();
+      expect(content.style.position).toBe("absolute");
+
+      controller.destroy();
+    });
+
     it("sets data-side and data-align attributes when open (item-aligned)", () => {
       const { trigger, content, controller } = setup();
 
@@ -884,6 +969,124 @@ describe("Select", () => {
       trigger.click();
       expect(content.style.minWidth).toBe(`${trigger.getBoundingClientRect().width}px`);
 
+      controller.destroy();
+    });
+
+    it("keeps item-aligned popup near trigger by using internal scroll for deep selections", () => {
+      const { trigger, content, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="item-9">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="item-1">Item 1</div>
+            <div data-slot="select-item" data-value="item-2">Item 2</div>
+            <div data-slot="select-item" data-value="item-3">Item 3</div>
+            <div data-slot="select-item" data-value="item-4">Item 4</div>
+            <div data-slot="select-item" data-value="item-5">Item 5</div>
+            <div data-slot="select-item" data-value="item-6">Item 6</div>
+            <div data-slot="select-item" data-value="item-7">Item 7</div>
+            <div data-slot="select-item" data-value="item-8">Item 8</div>
+            <div data-slot="select-item" data-value="item-9">Item 9</div>
+            <div data-slot="select-item" data-value="item-10">Item 10</div>
+          </div>
+        </div>
+      `
+      );
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-9"]'
+      ) as HTMLElement;
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(400, 80, 180, 40);
+      content.getBoundingClientRect = () => rect(0, 80, 180, 220);
+      selectedItem.getBoundingClientRect = () => rect(420, 80, 180, 32);
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 220 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 640 });
+      content.scrollTop = 0;
+
+      controller.open();
+
+      expect(content.style.top).toBe("310px");
+      expect(content.scrollTop).toBe(326);
+
+      controller.destroy();
+    });
+
+    it("keeps coordinates stable on window scroll when lockScroll is false", async () => {
+      const { trigger, content, controller } = setup({
+        position: "popper",
+        side: "bottom",
+        align: "start",
+        avoidCollisions: false,
+        lockScroll: false,
+      });
+      const waitForRaf = () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
+
+      let anchorTop = 140;
+      const anchorLeft = 56;
+      const anchorWidth = 160;
+      const anchorHeight = 34;
+
+      trigger.getBoundingClientRect = () =>
+        ({
+          x: anchorLeft,
+          y: anchorTop,
+          top: anchorTop,
+          left: anchorLeft,
+          width: anchorWidth,
+          height: anchorHeight,
+          right: anchorLeft + anchorWidth,
+          bottom: anchorTop + anchorHeight,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 240,
+          height: 160,
+          right: 240,
+          bottom: 160,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.click();
+      await waitForRaf();
+      await waitForRaf();
+      await waitForRaf();
+      await waitForRaf();
+
+      const initialTop = content.style.top;
+      const initialLeft = content.style.left;
+
+      anchorTop = 320;
+      window.dispatchEvent(new Event("scroll"));
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(content.style.top).toBe(initialTop);
+      expect(content.style.left).toBe(initialLeft);
       controller.destroy();
     });
   });

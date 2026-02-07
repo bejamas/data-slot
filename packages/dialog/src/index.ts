@@ -2,6 +2,7 @@ import { getPart, getRoots, getDataBool } from "@data-slot/core";
 import { setAria, ensureId, linkLabelledBy } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
+import { createPortalLifecycle } from "@data-slot/core";
 
 export interface DialogOptions {
   /** Initial open state */
@@ -145,10 +146,9 @@ export function createDialog(
   let previousActiveElement: HTMLElement | null = null;
   const cleanups: Array<() => void> = [];
 
-  // Portal: track original position (move to body on first open)
-  let portalOriginalParent: ParentNode | null = null;
-  let portalOriginalNextSibling: ChildNode | null = null;
-  let portalMoved = false;
+  const portalLifecycle = portal
+    ? createPortalLifecycle({ content: portal, root })
+    : null;
 
   // Track if this dialog locked scroll (prevent underflow)
   let didLockScroll = false;
@@ -198,14 +198,8 @@ export function createDialog(
     content.focus();
   };
 
-  // Move portal to body (called on first open)
-  const movePortalToBody = () => {
-    if (portal && !portalMoved) {
-      portalOriginalParent = portal.parentNode;
-      portalOriginalNextSibling = portal.nextSibling;
-      document.body.appendChild(portal);
-      portalMoved = true;
-    }
+  const mountPortal = () => {
+    portalLifecycle?.mount();
   };
 
   // Helper to set data-state on all relevant elements
@@ -227,7 +221,7 @@ export function createDialog(
 
     if (open) {
       // Move portal to body on first open
-      movePortalToBody();
+      mountPortal();
 
       // Store current focus
       previousActiveElement = document.activeElement as HTMLElement;
@@ -348,7 +342,7 @@ export function createDialog(
 
   // Initialize visual state (before controller is defined)
   if (defaultOpen) {
-    movePortalToBody();
+    mountPortal();
     content.hidden = false;
     overlay.hidden = false;
     setDataState("open");
@@ -416,18 +410,7 @@ export function createDialog(
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
 
-      // Robust portal cleanup
-      if (portal && portalMoved) {
-        if (
-          portalOriginalParent &&
-          document.contains(portalOriginalParent as Node)
-        ) {
-          portalOriginalParent.insertBefore(portal, portalOriginalNextSibling);
-        } else {
-          portal.remove();
-        }
-        portalMoved = false;
-      }
+      portalLifecycle?.cleanup();
     },
     // Internal properties for global handler
     _handleKeydown: handleKeydown,
