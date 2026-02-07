@@ -7,6 +7,7 @@ import {
   createDismissLayer,
   computeFloatingPosition,
   createPositionSync,
+  createPortalLifecycle,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -48,6 +49,8 @@ export interface PopoverOptions {
   collisionPadding?: number;
   /** Callback when open state changes */
   onOpenChange?: (open: boolean) => void;
+  /** Portal content to body while open. @default true */
+  portal?: boolean;
   /** Close when clicking outside */
   closeOnClickOutside?: boolean;
   /** Close when pressing Escape */
@@ -99,6 +102,11 @@ export function createPopover(
   const onOpenChange = options.onOpenChange;
   const closeOnClickOutside = options.closeOnClickOutside ?? getDataBool(root, "closeOnClickOutside") ?? true;
   const closeOnEscape = options.closeOnEscape ?? getDataBool(root, "closeOnEscape") ?? true;
+  const portalOption =
+    options.portal ??
+    getDataBool(content, "portal") ??
+    getDataBool(root, "portal") ??
+    true;
 
   // TODO(next-major): remove deprecated `position` option + `data-position` fallback.
   // Canonical placement API is `side`/`align`.
@@ -142,6 +150,7 @@ export function createPopover(
 
   let isOpen = defaultOpen;
   const cleanups: Array<() => void> = [];
+  const portal = createPortalLifecycle({ content, root, enabled: portalOption });
 
   // Focus management state
   let previousActiveElement: HTMLElement | null = null;
@@ -226,6 +235,7 @@ export function createPopover(
     onOpenChange?.(isOpen);
 
     if (open) {
+      portal.mount();
       content.hidden = false;
       root.setAttribute("data-state", "open");
       content.setAttribute("data-state", "open");
@@ -235,6 +245,7 @@ export function createPopover(
       requestAnimationFrame(focusFirst);
     } else {
       positionSync.stop();
+      portal.restore();
       content.hidden = true;
       root.setAttribute("data-state", "closed");
       content.setAttribute("data-state", "closed");
@@ -258,6 +269,7 @@ export function createPopover(
 
   // Focus first element if defaultOpen
   if (defaultOpen) {
+    portal.mount();
     updatePosition();
     positionSync.start();
     positionSync.update();
@@ -308,6 +320,7 @@ export function createPopover(
     },
     destroy: () => {
       positionSync.stop();
+      portal.cleanup();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       cleanupContentFocusable();

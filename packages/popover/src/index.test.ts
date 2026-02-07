@@ -351,6 +351,81 @@ describe('Popover', () => {
     })
   })
 
+  describe('content portaling', () => {
+    it('portals content to body when open and restores on close', () => {
+      const { root, content, controller } = setup()
+      const originalParent = content.parentNode
+
+      controller.open()
+      expect(content.parentNode).toBe(document.body)
+
+      controller.close()
+      expect(content.parentNode).toBe(originalParent)
+      expect(root.contains(content)).toBe(true)
+
+      controller.destroy()
+    })
+
+    it('respects portal: false option', () => {
+      const { root, content, controller } = setup({ portal: false })
+      const originalParent = content.parentNode
+
+      controller.open()
+      expect(content.parentNode).toBe(originalParent)
+      expect(root.contains(content)).toBe(true)
+
+      controller.destroy()
+    })
+
+    it('reads data-portal from content first, then root', () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root" data-portal="true">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content" data-portal="false">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="popover-content"]') as HTMLElement
+      const originalParent = content.parentNode
+      const controller = createPopover(root)
+
+      controller.open()
+      expect(content.parentNode).toBe(originalParent)
+      expect(root.contains(content)).toBe(true)
+
+      controller.destroy()
+    })
+
+    it("reads data-portal='false' from root", () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root" data-portal="false">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="popover-content"]') as HTMLElement
+      const originalParent = content.parentNode
+      const controller = createPopover(root)
+
+      controller.open()
+      expect(content.parentNode).toBe(originalParent)
+      expect(root.contains(content)).toBe(true)
+
+      controller.destroy()
+    })
+
+    it('restores content to root on destroy while open', () => {
+      const { root, content, controller } = setup()
+
+      controller.open()
+      expect(content.parentNode).toBe(document.body)
+
+      controller.destroy()
+      expect(root.contains(content)).toBe(true)
+    })
+  })
+
   // Focus management tests
   describe('focus management', () => {
     it('focuses first focusable element on open', () => {

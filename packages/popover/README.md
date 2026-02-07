@@ -53,6 +53,7 @@ const popover = createPopover(element, {
   alignOffset: 0,
   avoidCollisions: true,
   collisionPadding: 8,
+  portal: true,
   closeOnClickOutside: true,
   closeOnEscape: true,
   onOpenChange: (open) => console.log(open),
@@ -70,6 +71,7 @@ const popover = createPopover(element, {
 | `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
 | `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
 | `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
+| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
 | `position` | `"top" \| "bottom" \| "left" \| "right"` | - | Deprecated alias for `side` |
 | `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside |
 | `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
@@ -119,6 +121,7 @@ Options can also be set via data attributes on the root element. JS options take
 | `data-align-offset` | number | `0` | Offset from alignment edge (px) |
 | `data-avoid-collisions` | boolean | `true` | Flip/shift to stay in viewport |
 | `data-collision-padding` | number | `8` | Viewport edge padding (px) |
+| `data-portal` | boolean | `true` | Portal content to `document.body` while open |
 | `data-close-on-click-outside` | boolean | `true` | Close when clicking outside |
 | `data-close-on-escape` | boolean | `true` | Close when pressing Escape |
 
@@ -141,7 +144,8 @@ Placement can be set on root or content (content takes precedence):
 
 ## Styling
 
-Popover position is computed in JavaScript and applied as `position: fixed` + inline `top/left`.
+Popover position is computed in JavaScript and applied as `position: absolute` + inline `top/left`.
+By default, content is portaled to `document.body` while open, so absolute positioning is based on document coordinates.
 Use `data-state`, `data-side`, and `data-align` for styling/animation:
 
 ```css
@@ -151,7 +155,7 @@ Use `data-state`, `data-side`, and `data-align` for styling/animation:
 }
 
 [data-slot="popover-content"] {
-  position: fixed;
+  position: absolute;
   transition: opacity 0.2s ease-out, transform 0.2s ease-out;
 }
 
@@ -178,7 +182,7 @@ With Tailwind:
     data-slot="popover-content"
     data-side="bottom"
     data-align="start"
-    class="fixed bg-white shadow-lg rounded-lg p-4 transition data-[state=closed]:opacity-0"
+    class="absolute bg-white shadow-lg rounded-lg p-4 transition data-[state=closed]:opacity-0"
   >
     Content
   </div>
