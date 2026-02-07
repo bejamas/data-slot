@@ -1027,6 +1027,226 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("keeps item-aligned popup near trigger for grouped bottom selections", () => {
+      const { trigger, content, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="beef">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-group">
+              <div data-slot="select-label">Fruits</div>
+              <div data-slot="select-item" data-value="apple">Apple</div>
+              <div data-slot="select-item" data-value="banana">Banana</div>
+              <div data-slot="select-item" data-value="cherry">Cherry</div>
+            </div>
+            <div data-slot="select-separator"></div>
+            <div data-slot="select-group">
+              <div data-slot="select-label">Vegetables</div>
+              <div data-slot="select-item" data-value="carrot">Carrot</div>
+              <div data-slot="select-item" data-value="broccoli">Broccoli</div>
+              <div data-slot="select-item" data-value="spinach">Spinach</div>
+            </div>
+            <div data-slot="select-separator"></div>
+            <div data-slot="select-group">
+              <div data-slot="select-label">Proteins</div>
+              <div data-slot="select-item" data-value="tofu">Tofu</div>
+              <div data-slot="select-item" data-value="chicken">Chicken</div>
+              <div data-slot="select-item" data-value="beef">Beef</div>
+            </div>
+          </div>
+        </div>
+      `
+      );
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="beef"]'
+      ) as HTMLElement;
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(520, 80, 180, 40);
+      content.getBoundingClientRect = () => rect(0, 80, 180, 220);
+      selectedItem.getBoundingClientRect = () => rect(690, 80, 180, 32);
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 220 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 840 });
+      content.scrollTop = 0;
+
+      controller.open();
+
+      expect(content.style.top).toBe("430px");
+      expect(content.scrollTop).toBe(596);
+
+      controller.destroy();
+    });
+
+    it("uses select-viewport as the scroll container in item-aligned mode", () => {
+      const { trigger, content, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="item-9">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-viewport">
+              <div data-slot="select-item" data-value="item-1">Item 1</div>
+              <div data-slot="select-item" data-value="item-2">Item 2</div>
+              <div data-slot="select-item" data-value="item-3">Item 3</div>
+              <div data-slot="select-item" data-value="item-4">Item 4</div>
+              <div data-slot="select-item" data-value="item-5">Item 5</div>
+              <div data-slot="select-item" data-value="item-6">Item 6</div>
+              <div data-slot="select-item" data-value="item-7">Item 7</div>
+              <div data-slot="select-item" data-value="item-8">Item 8</div>
+              <div data-slot="select-item" data-value="item-9">Item 9</div>
+              <div data-slot="select-item" data-value="item-10">Item 10</div>
+            </div>
+          </div>
+        </div>
+      `
+      );
+      const viewport = content.querySelector('[data-slot="select-viewport"]') as HTMLElement;
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-9"]'
+      ) as HTMLElement;
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(520, 80, 180, 40);
+      content.getBoundingClientRect = () => rect(0, 80, 180, 220);
+      selectedItem.getBoundingClientRect = () => rect(690, 80, 180, 32);
+
+      Object.defineProperty(viewport, "clientHeight", { configurable: true, value: 220 });
+      Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 840 });
+      viewport.scrollTop = 0;
+      content.scrollTop = 0;
+
+      controller.open();
+
+      expect(content.style.top).toBe("430px");
+      expect(viewport.scrollTop).toBe(596);
+      expect(content.scrollTop).toBe(0);
+
+      controller.destroy();
+    });
+
+    it("keeps item-aligned popup near trigger when deep selection cannot be internally scrolled", () => {
+      const { trigger, content, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="item-9">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="item-1">Item 1</div>
+            <div data-slot="select-item" data-value="item-2">Item 2</div>
+            <div data-slot="select-item" data-value="item-3">Item 3</div>
+            <div data-slot="select-item" data-value="item-4">Item 4</div>
+            <div data-slot="select-item" data-value="item-5">Item 5</div>
+            <div data-slot="select-item" data-value="item-6">Item 6</div>
+            <div data-slot="select-item" data-value="item-7">Item 7</div>
+            <div data-slot="select-item" data-value="item-8">Item 8</div>
+            <div data-slot="select-item" data-value="item-9">Item 9</div>
+            <div data-slot="select-item" data-value="item-10">Item 10</div>
+          </div>
+        </div>
+      `
+      );
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-9"]'
+      ) as HTMLElement;
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(400, 80, 180, 40);
+      content.getBoundingClientRect = () => rect(0, 80, 180, 700);
+      selectedItem.getBoundingClientRect = () => rect(640, 80, 180, 32);
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 700 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 700 });
+      content.scrollTop = 0;
+
+      controller.open();
+
+      const triggerCenterY = 400 + (40 / 2);
+      const centeredY = triggerCenterY - (700 / 2);
+      const minY = 8;
+      const maxY = window.innerHeight - 700 - 8;
+      const expectedY = maxY < minY ? minY : Math.min(Math.max(centeredY, minY), maxY);
+      expect(content.style.top).toBe(`${expectedY}px`);
+      expect(content.scrollTop).toBe(0);
+
+      controller.destroy();
+    });
+
+    it("does not reuse stale pointer coordinates when opened without pointer", async () => {
+      const { trigger, items, controller } = setup({ defaultValue: "banana" });
+      const waitForRaf = () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
+      const originalElementFromPoint = document.elementFromPoint.bind(document);
+
+      try {
+        document.elementFromPoint = () => items[0]!;
+
+        trigger.dispatchEvent(
+          new PointerEvent("pointerdown", { bubbles: true, clientX: 10, clientY: 10 })
+        );
+        trigger.click();
+
+        await waitForRaf();
+        await waitForRaf();
+        expect(items[0]?.hasAttribute("data-highlighted")).toBe(true);
+
+        controller.close();
+        await waitForRaf();
+
+        controller.open();
+        await waitForRaf();
+        await waitForRaf();
+
+        expect(items[1]?.hasAttribute("data-highlighted")).toBe(true);
+        expect(items[0]?.hasAttribute("data-highlighted")).toBe(false);
+      } finally {
+        document.elementFromPoint = originalElementFromPoint;
+        controller.destroy();
+      }
+    });
+
     it("keeps coordinates stable on window scroll when lockScroll is false", async () => {
       const { trigger, content, controller } = setup({
         position: "popper",

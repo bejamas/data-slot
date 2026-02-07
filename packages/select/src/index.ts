@@ -193,6 +193,7 @@ export function createSelect(
   let keyboardMode = false;
   let lastPointerX = 0;
   let lastPointerY = 0;
+  let pendingPointerOpen = false;
   const cleanups: Array<() => void> = [];
 
   // Cached on open
@@ -293,11 +294,37 @@ export function createSelect(
     }
   };
 
+  const getScrollContainer = () =>
+    getPart<HTMLElement>(content, "select-viewport") ?? content;
+
+  const getItemTopInContent = (item: HTMLElement, cr: DOMRect, scrollContainer: HTMLElement) => {
+    // Prefer offset-parent traversal when content is in the chain, and
+    // fall back to rect math otherwise (e.g. before final layout settles).
+    let top = 0;
+    let node: HTMLElement | null = item;
+    while (node && node !== content) {
+      top += node.offsetTop;
+      const parent = node.offsetParent;
+      if (!(parent instanceof HTMLElement)) {
+        top = Number.NaN;
+        break;
+      }
+      node = parent;
+    }
+    if (node === content && Number.isFinite(top)) {
+      return top;
+    }
+
+    const itemRect = item.getBoundingClientRect();
+    return itemRect.top - cr.top + scrollContainer.scrollTop;
+  };
+
   // Compute base position data for item-aligned mode
-  const computeItemAlignedPos = (tr: DOMRect, cr: DOMRect) => {
-    // Find selected item, or fall back to first enabled item
+  const computeItemAlignedPos = (tr: DOMRect, cr: DOMRect, scrollContainer: HTMLElement) => {
+    // Prefer highlighted item, then selected, then first enabled item.
+    const highlightedItem = highlightedIndex >= 0 ? enabledItems[highlightedIndex] : undefined;
     const selectedItem = items.find((item) => item.dataset["value"] === currentValue);
-    const alignItem = selectedItem ?? enabledItems[0];
+    const alignItem = highlightedItem ?? selectedItem ?? enabledItems[0];
 
     // Calculate x position (align left edges, match trigger width)
     let x = tr.left;
@@ -309,10 +336,8 @@ export function createSelect(
     let itemHeight = tr.height;
 
     if (alignItem) {
-      // Normalize to content coordinates, independent of current scrollTop.
-      const itemRect = alignItem.getBoundingClientRect();
-      itemTopInContent = itemRect.top - cr.top + content.scrollTop;
-      itemHeight = itemRect.height || alignItem.offsetHeight || tr.height;
+      itemTopInContent = getItemTopInContent(alignItem, cr, scrollContainer);
+      itemHeight = alignItem.getBoundingClientRect().height || alignItem.offsetHeight || tr.height;
 
       // Position content so item is at trigger's vertical center.
       y = tr.top + (tr.height / 2) - (itemHeight / 2) - itemTopInContent;
@@ -327,6 +352,7 @@ export function createSelect(
   const updatePosition = () => {
     const win = root.ownerDocument.defaultView ?? window;
     const tr = trigger.getBoundingClientRect();
+    const scrollContainer = getScrollContainer();
 
     // Set min-width to match trigger width
     content.style.minWidth = `${tr.width}px`;
@@ -338,58 +364,48 @@ export function createSelect(
     let side: Side = "bottom";
 
     if (position === "item-aligned") {
-      const aligned = computeItemAlignedPos(tr, cr);
+      const aligned = computeItemAlignedPos(tr, cr, scrollContainer);
       pos = { x: aligned.x, y: aligned.y };
       const triggerCenterY = tr.top + (tr.height / 2);
       const minY = collisionPadding;
-      const maxY = window.innerHeight - cr.height - collisionPadding;
+      const maxY = win.innerHeight - cr.height - collisionPadding;
       const clampY = (value: number) =>
         avoidCollisions
           ? (maxY < minY ? minY : Math.min(Math.max(value, minY), maxY))
           : value;
+      const minX = collisionPadding;
+      const maxX = win.innerWidth - cr.width - collisionPadding;
+      const clampX = (value: number) =>
+        avoidCollisions
+          ? (maxX < minX ? minX : Math.min(Math.max(value, minX), maxX))
+          : value;
 
-      if (avoidCollisions) {
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
+      pos.x = clampX(pos.x);
 
-        // Clamp to viewport vertically
-        if (pos.y < collisionPadding) {
-          pos.y = collisionPadding;
-        } else if (pos.y + cr.height > vh - collisionPadding) {
-          pos.y = vh - cr.height - collisionPadding;
-        }
+      // Start by keeping popup near the trigger, then use internal scroll to
+      // align the anchor item as much as possible.
+      pos.y = clampY(triggerCenterY - (cr.height / 2));
 
-        // Clamp to viewport horizontally
-        if (pos.x < collisionPadding) {
-          pos.x = collisionPadding;
-        } else if (pos.x + cr.width > vw - collisionPadding) {
-          pos.x = vw - cr.width - collisionPadding;
-        }
-      }
-
-      // For scrollable content, align deep selected items by adjusting internal scroll,
-      // so the popup stays near the trigger instead of jumping far away.
       if (aligned.alignItem) {
-        const maxScrollTop = Math.max(0, content.scrollHeight - content.clientHeight);
+        const maxScrollTop = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight);
+        const getDesiredScrollTop = (currentY: number) =>
+          aligned.itemTopInContent + (aligned.itemHeight / 2) - (triggerCenterY - currentY);
+        let scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
+
+        scrollContainer.scrollTop = scrollTop;
 
         if (maxScrollTop > 0) {
-          const getDesiredScrollTop = (currentY: number) =>
-            aligned.itemTopInContent + (aligned.itemHeight / 2) - (triggerCenterY - currentY);
-
-          // Start with popup centered around trigger, then solve scrollTop for alignment.
-          pos.y = clampY(triggerCenterY - (cr.height / 2));
-          let scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
-          content.scrollTop = scrollTop;
-
-          // Recompute y after clamped scroll, then finalize scroll against that y.
           pos.y = clampY(
             triggerCenterY - (aligned.itemTopInContent - scrollTop + (aligned.itemHeight / 2))
           );
           scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
-          content.scrollTop = scrollTop;
+          scrollContainer.scrollTop = scrollTop;
+          pos.y = clampY(
+            triggerCenterY - (aligned.itemTopInContent - scrollTop + (aligned.itemHeight / 2))
+          );
         }
       } else {
-        content.scrollTop = 0;
+        scrollContainer.scrollTop = 0;
       }
 
       // Determine effective side based on final position
@@ -433,12 +449,13 @@ export function createSelect(
   });
 
   const updateHighlight = (index: number, focus = true, ensureVisible = true) => {
+    const scrollContainer = getScrollContainer();
     for (let i = 0; i < enabledItems.length; i++) {
       const el = enabledItems[i]!;
       if (i === index) {
         el.setAttribute("data-highlighted", "");
         if (ensureVisible) {
-          ensureItemVisibleInContainer(el, content);
+          ensureItemVisibleInContainer(el, scrollContainer);
         }
         if (focus) el.focus();
       } else {
@@ -480,6 +497,8 @@ export function createSelect(
     if (disabled && open) return;
 
     if (open) {
+      const openedByPointer = pendingPointerOpen;
+      pendingPointerOpen = false;
       previousActiveElement = document.activeElement as HTMLElement;
       isOpen = true;
       setAria(trigger, "expanded", true);
@@ -512,16 +531,17 @@ export function createSelect(
       // and to highlight item under cursor if pointer opened the select
       requestAnimationFrame(() => {
         if (!isOpen) return;
+        updatePosition();
         positionSync.update();
 
         // Highlight item under cursor if pointer opened the select
-        if (lastPointerX !== 0 || lastPointerY !== 0) {
+        if (openedByPointer && (lastPointerX !== 0 || lastPointerY !== 0)) {
           const el = document.elementFromPoint(lastPointerX, lastPointerY);
           const item = el?.closest?.('[data-slot="select-item"]') as HTMLElement | null;
           if (item && !isItemDisabled(item) && content.contains(item)) {
             const index = itemToIndex.get(item);
             if (index !== undefined) {
-              updateHighlight(index, false);
+              updateHighlight(index, false, false);
             }
           }
         }
@@ -530,6 +550,9 @@ export function createSelect(
       content.focus();
     } else {
       isOpen = false;
+      pendingPointerOpen = false;
+      lastPointerX = 0;
+      lastPointerY = 0;
       setAria(trigger, "expanded", false);
       portal.restore();
       content.hidden = true;
@@ -698,6 +721,7 @@ export function createSelect(
       case "ArrowDown":
       case "ArrowUp":
         e.preventDefault();
+        pendingPointerOpen = false;
         updateOpenState(true);
         break;
     }
@@ -717,6 +741,7 @@ export function createSelect(
     on(trigger, "pointerdown", (e) => {
       lastPointerX = e.clientX;
       lastPointerY = e.clientY;
+      pendingPointerOpen = true;
     }),
     on(trigger, "click", () => {
       if (!disabled) updateOpenState(!isOpen);
