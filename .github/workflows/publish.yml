@@ -72,7 +72,7 @@ jobs:
             echo "=== Packed manifest for $dir ($tgz) ==="
             cat "$tmp/package/package.json"
             echo "=== name@version ==="
-            node -p 'const p=require("./package/package.json"); `${p.name}@${p.version}`' "$tmp"
+            echo "$tmp/package/package.json" | jq -r '"\(.name)@\(.version)"'
 
             rm -rf "$tmp" "$tgz"
             popd >/dev/null
