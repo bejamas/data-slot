@@ -65,17 +65,24 @@ jobs:
             tgz="$(ls -1 *.tgz | head -n1)"
             [ -f "$tgz" ] || { echo "No .tgz produced in $dir"; ls -la; exit 1; }
 
+            # Make tgz path absolute before changing dirs
+            local tgz_path
+            tgz_path="$(pwd)/$tgz"
+
             local tmp
             tmp="$(mktemp -d)"
-            tar -xzf "$tgz" -C "$tmp"
+            tar -xzf "$tgz_path" -C "$tmp"
 
             echo "=== Packed manifest for $dir ($tgz) ==="
             cat "$tmp/package/package.json"
 
-            npm publish "$tmp/package" --access public --provenance
+            # Publish from extracted folder (cwd publish)
+            pushd "$tmp/package" >/dev/null
+            npm publish --access public --provenance
+            popd >/dev/null
 
             rm -rf "$tmp"
-            rm -f "$tgz"
+            rm -f "$tgz_path"
             popd >/dev/null
           }
 
