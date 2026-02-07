@@ -18,10 +18,11 @@ jobs:
     permissions:
       contents: write
       id-token: write
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Full history needed for release notes generation
+          fetch-depth: 0
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -40,22 +41,27 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if [ -z "$NPM_TOKEN" ]; then
+          set -euo pipefail
+          if [ -z "${NPM_TOKEN:-}" ]; then
             echo "ERROR: NPM_TOKEN secret is not set!"
             exit 1
           fi
           echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
-          # Verify npm can authenticate (this will fail if token is invalid)
           npm whoami
 
       - name: Publish packages
-        if: ${{ !inputs.dry_run }}
+        # Publish on tag pushes, or on workflow_dispatch when dry_run=false
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
         run: |
           set -euo pipefail
 
-          # Helper function: pack with bun, validate packed manifest, then publish extracted contents.
+          CORE_VERSION="${GITHUB_REF_NAME#v}"
+          [ -n "$CORE_VERSION" ] || { echo "ERROR: CORE_VERSION is empty (tag should look like v0.2.33)"; exit 1; }
+
           publish_pkg() {
             local dir="$1"
+            local core_version="${2:-$CORE_VERSION}"
+
             pushd "$dir" >/dev/null
 
             rm -f ./*.tgz
@@ -65,21 +71,36 @@ jobs:
             tgz="$(ls -1 *.tgz | head -n1)"
             [ -f "$tgz" ] || { echo "No .tgz produced in $dir"; ls -la; exit 1; }
 
-            # Make tgz path absolute before changing dirs
-            local tgz_path
+            local tgz_path tmp manifest
             tgz_path="$(pwd)/$tgz"
-
-            local tmp
             tmp="$(mktemp -d)"
             tar -xzf "$tgz_path" -C "$tmp"
+            manifest="$tmp/package/package.json"
 
-            echo "=== Packed manifest for $dir ($tgz) ==="
-            cat "$tmp/package/package.json"
+            # Only rewrite for non-core packages
+            if [ "$dir" != "packages/core" ]; then
+              echo "=== Before ($dir) ==="
+              grep -n '"@data-slot/core"' "$manifest" || true
 
-            # Publish from extracted folder (cwd publish)
-            pushd "$tmp/package" >/dev/null
-            npm publish --access public --provenance
-            popd >/dev/null
+              # Replace ONLY the @data-slot/core version value (handles "workspace:*" and any prior value)
+              # Expects: "@data-slot/core": "..."
+              sed -i -E 's#("@data-slot/core"[[:space:]]*:[[:space:]]*")[^"]+("#\1'"$core_version"'\2#g' "$manifest"
+
+              echo "=== After ($dir) ==="
+              grep -n '"@data-slot/core"' "$manifest" || true
+
+              # If the package declares @data-slot/core, ensure rewrite succeeded
+              if grep -q '"@data-slot/core"' "$manifest"; then
+                grep -q "\"@data-slot/core\"[[:space:]]*:[[:space:]]*\"$core_version\"" "$manifest" || {
+                  echo "ERROR: failed to rewrite @data-slot/core to $core_version in $dir"
+                  cat "$manifest"
+                  exit 1
+                }
+              fi
+            fi
+
+            # Publish from extracted folder (prevents npm repacking from workspace)
+            npm publish "$tmp/package" --access public --provenance
 
             rm -rf "$tmp"
             rm -f "$tgz_path"
@@ -87,47 +108,50 @@ jobs:
           }
 
           # Publish in dependency order (core first)
-          publish_pkg packages/core
-          publish_pkg packages/accordion
-          publish_pkg packages/dialog
-          publish_pkg packages/collapsible
-          publish_pkg packages/navigation-menu
-          publish_pkg packages/popover
-          publish_pkg packages/tabs
-          publish_pkg packages/tooltip
-          publish_pkg packages/dropdown-menu
-          publish_pkg packages/slider
-          publish_pkg packages/toggle
-          publish_pkg packages/toggle-group
-          publish_pkg packages/select
-          publish_pkg packages/combobox
+          publish_pkg packages/core "$CORE_VERSION"
+          publish_pkg packages/accordion "$CORE_VERSION"
+          publish_pkg packages/dialog "$CORE_VERSION"
+          publish_pkg packages/collapsible "$CORE_VERSION"
+          publish_pkg packages/navigation-menu "$CORE_VERSION"
+          publish_pkg packages/popover "$CORE_VERSION"
+          publish_pkg packages/tabs "$CORE_VERSION"
+          publish_pkg packages/tooltip "$CORE_VERSION"
+          publish_pkg packages/dropdown-menu "$CORE_VERSION"
+          publish_pkg packages/slider "$CORE_VERSION"
+          publish_pkg packages/toggle "$CORE_VERSION"
+          publish_pkg packages/toggle-group "$CORE_VERSION"
+          publish_pkg packages/select "$CORE_VERSION"
+          publish_pkg packages/combobox "$CORE_VERSION"
 
       - name: Dry run - show what would be published
-        if: ${{ inputs.dry_run }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
-          echo "Would publish the following packages:"
+          set -euo pipefail
+          echo "Would publish the following packages (versions from workspace package.json files):"
           for pkg in packages/*/; do
-            name=$(jq -r .name "$pkg/package.json")
-            version=$(jq -r .version "$pkg/package.json")
-            echo "  $name@$version"
+            [ -f "${pkg}package.json" ] || continue
+            name=$(grep -m1 '"name"' "${pkg}package.json" | sed -E 's/.*"name":[[:space:]]*"([^"]+)".*/\1/')
+            version=$(grep -m1 '"version"' "${pkg}package.json" | sed -E 's/.*"version":[[:space:]]*"([^"]+)".*/\1/')
+            echo "  ${name}@${version}"
           done
 
       - name: Generate Release Notes
-        if: ${{ !inputs.dry_run && startsWith(github.ref, 'refs/tags/') }}
+        if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.dry_run && startsWith(github.ref, 'refs/tags/')) }}
         id: release_notes
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          if [ -z "$OPENAI_API_KEY" ]; then
+          set -euo pipefail
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
             echo "OPENAI_API_KEY not set, using default release notes"
             echo "use_default=true" >> $GITHUB_OUTPUT
           else
-            bun run scripts/generate-release-notes.ts ${{ github.ref_name }} > release-notes.md
+            bun run scripts/generate-release-notes.ts "${GITHUB_REF_NAME}" > release-notes.md
             echo "use_default=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Create GitHub Release
-        if: ${{ !inputs.dry_run && startsWith(github.ref, 'refs/tags/') }}
+        if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.dry_run && startsWith(github.ref, 'refs/tags/')) }}
         uses: softprops/action-gh-release@v2
         with:
           body_path: ${{ steps.release_notes.outputs.use_default == 'false' && 'release-notes.md' || '' }}
