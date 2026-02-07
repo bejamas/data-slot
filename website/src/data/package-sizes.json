@@ -7,14 +7,14 @@
   },
   {
     "name": "@data-slot/combobox",
-    "size": 3172,
+    "size": 3218,
     "sizeFormatted": "3.1 KB",
     "description": "Autocomplete input, filterable"
   },
   {
     "name": "@data-slot/select",
-    "size": 3075,
-    "sizeFormatted": "3.0 KB",
+    "size": 3139,
+    "sizeFormatted": "3.1 KB",
     "description": "Dropdown select, form-ready"
   },
   {
@@ -31,8 +31,8 @@
   },
   {
     "name": "@data-slot/dropdown-menu",
-    "size": 2146,
-    "sizeFormatted": "2.1 KB",
+    "size": 2211,
+    "sizeFormatted": "2.2 KB",
     "description": "Action menus, kbd nav"
   },
   {
@@ -49,7 +49,7 @@
   },
   {
     "name": "@data-slot/popover",
-    "size": 1415,
+    "size": 1465,
     "sizeFormatted": "1.4 KB",
     "description": "Anchored floating content"
   },

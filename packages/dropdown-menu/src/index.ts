@@ -212,6 +212,7 @@ export function createDropdownMenu(
   };
 
   const updatePosition = () => {
+    const win = root.ownerDocument.defaultView ?? window;
     const tr = trigger.getBoundingClientRect();
     const cr = content.getBoundingClientRect();
     const pos = computeFloatingPosition({
@@ -225,9 +226,15 @@ export function createDropdownMenu(
       collisionPadding,
     });
 
-    content.style.position = "fixed";
-    content.style.top = `${pos.y}px`;
-    content.style.left = `${pos.x}px`;
+    if (lockScrollOption) {
+      content.style.position = "fixed";
+      content.style.top = `${pos.y}px`;
+      content.style.left = `${pos.x}px`;
+    } else {
+      content.style.position = "absolute";
+      content.style.top = `${pos.y + win.scrollY}px`;
+      content.style.left = `${pos.x + win.scrollX}px`;
+    }
     content.style.margin = "0";
     content.setAttribute("data-side", pos.side);
     content.setAttribute("data-align", pos.align);
@@ -236,6 +243,7 @@ export function createDropdownMenu(
   const positionSync = createPositionSync({
     observedElements: [trigger, content],
     isActive: () => isOpen,
+    ancestorScroll: lockScrollOption,
     onUpdate: updatePosition,
   });
 

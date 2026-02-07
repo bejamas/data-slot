@@ -838,6 +838,15 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("uses position: absolute when lockScroll is false", () => {
+      const { trigger, content, controller } = setup({ lockScroll: false });
+
+      trigger.click();
+      expect(content.style.position).toBe("absolute");
+
+      controller.destroy();
+    });
+
     it("sets data-side and data-align attributes when open (item-aligned)", () => {
       const { trigger, content, controller } = setup();
 
@@ -884,6 +893,69 @@ describe("Select", () => {
       trigger.click();
       expect(content.style.minWidth).toBe(`${trigger.getBoundingClientRect().width}px`);
 
+      controller.destroy();
+    });
+
+    it("keeps coordinates stable on window scroll when lockScroll is false", async () => {
+      const { trigger, content, controller } = setup({
+        position: "popper",
+        side: "bottom",
+        align: "start",
+        avoidCollisions: false,
+        lockScroll: false,
+      });
+      const waitForRaf = () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
+
+      let anchorTop = 140;
+      const anchorLeft = 56;
+      const anchorWidth = 160;
+      const anchorHeight = 34;
+
+      trigger.getBoundingClientRect = () =>
+        ({
+          x: anchorLeft,
+          y: anchorTop,
+          top: anchorTop,
+          left: anchorLeft,
+          width: anchorWidth,
+          height: anchorHeight,
+          right: anchorLeft + anchorWidth,
+          bottom: anchorTop + anchorHeight,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 240,
+          height: 160,
+          right: 240,
+          bottom: 160,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.click();
+      await waitForRaf();
+      await waitForRaf();
+      await waitForRaf();
+      await waitForRaf();
+
+      const initialTop = content.style.top;
+      const initialLeft = content.style.left;
+
+      anchorTop = 320;
+      window.dispatchEvent(new Event("scroll"));
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(content.style.top).toBe(initialTop);
+      expect(content.style.left).toBe(initialLeft);
       controller.destroy();
     });
   });

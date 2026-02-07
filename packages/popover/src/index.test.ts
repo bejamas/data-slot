@@ -246,11 +246,11 @@ describe('Popover', () => {
   })
 
   describe('content positioning', () => {
-    it('uses fixed positioning when open', () => {
+    it('uses absolute positioning when open', () => {
       const { content, controller } = setup()
 
       controller.open()
-      expect(content.style.position).toBe('fixed')
+      expect(content.style.position).toBe('absolute')
       expect(content.style.top).not.toBe('')
       expect(content.style.left).not.toBe('')
 
@@ -292,6 +292,61 @@ describe('Popover', () => {
       expect(content.getAttribute('data-side')).toBe('left')
       expect(content.getAttribute('data-position')).toBe('left')
 
+      controller.destroy()
+    })
+
+    it('keeps coordinates stable on window scroll', async () => {
+      const { trigger, content, controller } = setup({ avoidCollisions: false })
+      const waitForRaf = () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve())
+        })
+
+      let anchorTop = 120
+      const anchorLeft = 80
+      const anchorWidth = 140
+      const anchorHeight = 32
+
+      trigger.getBoundingClientRect = () =>
+        ({
+          x: anchorLeft,
+          y: anchorTop,
+          top: anchorTop,
+          left: anchorLeft,
+          width: anchorWidth,
+          height: anchorHeight,
+          right: anchorLeft + anchorWidth,
+          bottom: anchorTop + anchorHeight,
+          toJSON: () => ({}),
+        }) as DOMRect
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 180,
+          height: 100,
+          right: 180,
+          bottom: 100,
+          toJSON: () => ({}),
+        }) as DOMRect
+
+      controller.open()
+      await waitForRaf()
+      await waitForRaf()
+
+      const initialTop = content.style.top
+      const initialLeft = content.style.left
+
+      anchorTop = 260
+      window.dispatchEvent(new Event('scroll'))
+      await waitForRaf()
+      await waitForRaf()
+
+      expect(content.style.top).toBe(initialTop)
+      expect(content.style.left).toBe(initialLeft)
       controller.destroy()
     })
   })

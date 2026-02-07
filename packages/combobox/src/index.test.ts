@@ -1132,10 +1132,10 @@ describe("Combobox", () => {
   });
 
   describe("content positioning", () => {
-    it("uses position: fixed when open", () => {
+    it("uses position: absolute when open", () => {
       const { content, controller } = setup();
       controller.open();
-      expect(content.style.position).toBe("fixed");
+      expect(content.style.position).toBe("absolute");
       controller.destroy();
     });
 
@@ -1158,6 +1158,63 @@ describe("Combobox", () => {
       const { content, controller } = setup({ align: "end", avoidCollisions: false });
       controller.open();
       expect(content.getAttribute("data-align")).toBe("end");
+      controller.destroy();
+    });
+
+    it("keeps coordinates stable on window scroll", async () => {
+      const { root, content, controller } = setup({ avoidCollisions: false });
+      const waitForRaf = () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
+
+      let anchorTop = 100;
+      const anchorLeft = 40;
+      const anchorWidth = 180;
+      const anchorHeight = 36;
+
+      (root as HTMLElement).getBoundingClientRect = () =>
+        ({
+          x: anchorLeft,
+          y: anchorTop,
+          top: anchorTop,
+          left: anchorLeft,
+          width: anchorWidth,
+          height: anchorHeight,
+          right: anchorLeft + anchorWidth,
+          bottom: anchorTop + anchorHeight,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 220,
+          height: 140,
+          right: 220,
+          bottom: 140,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      controller.open();
+      await waitForRaf();
+      await waitForRaf();
+      await waitForRaf();
+      await waitForRaf();
+
+      const initialTop = content.style.top;
+      const initialLeft = content.style.left;
+
+      anchorTop = 260;
+      window.dispatchEvent(new Event("scroll"));
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(content.style.top).toBe(initialTop);
+      expect(content.style.left).toBe(initialLeft);
       controller.destroy();
     });
   });

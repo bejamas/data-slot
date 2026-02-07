@@ -382,6 +382,7 @@ export function createCombobox(
 
   // Positioning
   const updatePosition = () => {
+    const win = root.ownerDocument.defaultView ?? window;
     // Anchor to root element (contains both input and trigger)
     const anchorRect = (root as HTMLElement).getBoundingClientRect();
     content.style.minWidth = `${anchorRect.width}px`;
@@ -398,9 +399,9 @@ export function createCombobox(
       allowedSides: SIDES,
     });
 
-    content.style.position = "fixed";
-    content.style.top = `${pos.y}px`;
-    content.style.left = `${pos.x}px`;
+    content.style.position = "absolute";
+    content.style.top = `${pos.y + win.scrollY}px`;
+    content.style.left = `${pos.x + win.scrollX}px`;
     content.style.margin = "0";
     content.setAttribute("data-side", pos.side);
     content.setAttribute("data-align", pos.align);
@@ -409,6 +410,7 @@ export function createCombobox(
   const positionSync = createPositionSync({
     observedElements: [root as HTMLElement, content],
     isActive: () => isOpen,
+    ancestorScroll: false,
     onUpdate: updatePosition,
     ignoreScrollTarget: (target) => target instanceof Node && content.contains(target),
   });
