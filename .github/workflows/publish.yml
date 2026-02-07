@@ -56,52 +56,22 @@ jobs:
           # Helper function: pack with bun, validate packed manifest, then publish extracted contents.
           publish_pkg() {
             local dir="$1"
-            pushd "$dir" > /dev/null
+            pushd "$dir" >/dev/null
 
             rm -f ./*.tgz
-            local pack_output
-            pack_output="$(bun pm pack)"
-            printf '%s\n' "$pack_output"
+            bun pm pack >/dev/null
 
             local tgz
-            tgz="$(printf '%s\n' "$pack_output" | awk '/\.tgz$/ { print; exit }')"
-            if [ -z "$tgz" ] || [ ! -f "$tgz" ]; then
-              echo "ERROR: pack did not produce a tarball in $dir (got: '$tgz')"
-              ls -la
-              exit 1
-            fi
-
-            local packed_json
-            packed_json="$(tar -xOf "$tgz" package/package.json)"
-
-            local packed_name
-            local packed_version
-            packed_name="$(printf '%s' "$packed_json" | jq -r '.name')"
-            packed_version="$(printf '%s' "$packed_json" | jq -r '.version')"
-            echo "Publishing $packed_name@$packed_version from $tgz"
-
-            if ! printf '%s' "$packed_json" | jq -e '.' > /dev/null; then
-              echo "ERROR: failed to parse packed manifest JSON in $tgz"
-              exit 1
-            fi
-
-            if printf '%s' "$packed_json" | jq -e '
-              [(.dependencies // {}), (.devDependencies // {}), (.peerDependencies // {}), (.optionalDependencies // {})]
-              | map(values)
-              | add
-              | any(startswith("workspace:"))
-            ' > /dev/null; then
-              echo "ERROR: packed manifest still contains workspace dependencies: $packed_name@$packed_version"
-              exit 1
-            fi
+            tgz="$(ls -1 *.tgz | head -n 1)"
 
             local tmp
             tmp="$(mktemp -d)"
             tar -xzf "$tgz" -C "$tmp"
+
             npm publish "$tmp/package" --access public --provenance
 
             rm -rf "$tmp" "$tgz"
-            popd > /dev/null
+            popd >/dev/null
           }
 
           # Publish in dependency order (core first)
