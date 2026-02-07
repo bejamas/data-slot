@@ -572,10 +572,12 @@ export interface PortalLifecycleOptions {
   root: Element;
   enabled?: boolean;
   state?: PortalState;
+  wrapperSlot?: string;
 }
 
 export interface PortalLifecycleController {
   readonly state: PortalState;
+  readonly container: Element;
   mount(): void;
   restore(): void;
   cleanup(): void;
@@ -583,25 +585,220 @@ export interface PortalLifecycleController {
 
 export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLifecycleController {
   const enabled = options.enabled ?? true;
+  const wrapperSlot = options.wrapperSlot;
   const state: PortalState = options.state ?? {
     originalParent: null,
     originalNextSibling: null,
     portaled: false,
   };
+  const doc = options.root.ownerDocument ?? document;
+  let wrapper: HTMLElement | null = null;
+
+  const ensureWrapper = () => {
+    if (wrapper) return wrapper;
+    const nextWrapper = doc.createElement("div");
+    if (wrapperSlot) {
+      nextWrapper.setAttribute("data-slot", wrapperSlot);
+    }
+    wrapper = nextWrapper;
+    return nextWrapper;
+  };
+
+  const mountWithWrapper = () => {
+    if (state.portaled) return;
+    const parent = options.content.parentNode;
+    if (!parent) return;
+    const nextWrapper = ensureWrapper();
+    parent.insertBefore(nextWrapper, options.content);
+    nextWrapper.appendChild(options.content);
+    portalToBody(nextWrapper, options.root, state);
+  };
+
+  const restoreWithWrapper = () => {
+    if (!state.portaled) return;
+    const currentWrapper = wrapper;
+    if (!currentWrapper) return;
+    restorePortal(currentWrapper, state);
+    const parent = currentWrapper.parentNode;
+    if (parent && parent.isConnected) {
+      parent.insertBefore(options.content, currentWrapper);
+      currentWrapper.remove();
+    } else {
+      options.content.remove();
+    }
+  };
 
   return {
     state,
+    get container() {
+      if (enabled && wrapperSlot && state.portaled && wrapper) {
+        return wrapper;
+      }
+      return options.content;
+    },
     mount: () => {
       if (!enabled) return;
-      portalToBody(options.content, options.root, state);
+      if (wrapperSlot) {
+        mountWithWrapper();
+      } else {
+        portalToBody(options.content, options.root, state);
+      }
     },
     restore: () => {
       if (!enabled) return;
-      restorePortal(options.content, state);
+      if (wrapperSlot) {
+        restoreWithWrapper();
+      } else {
+        restorePortal(options.content, state);
+      }
     },
     cleanup: () => {
       if (!enabled) return;
-      restorePortal(options.content, state);
+      if (wrapperSlot) {
+        restoreWithWrapper();
+      } else {
+        restorePortal(options.content, state);
+      }
+    },
+  };
+}
+
+export interface PresenceLifecycleOptions {
+  element: HTMLElement;
+  onExitComplete: () => void;
+  win?: Window;
+}
+
+export interface PresenceLifecycleController {
+  readonly isExiting: boolean;
+  enter(): void;
+  exit(): void;
+  cleanup(): void;
+}
+
+const parseTimingToMs = (value: string): number => {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return 0;
+  if (trimmed.endsWith("ms")) {
+    const parsed = Number(trimmed.slice(0, -2).trim());
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  if (trimmed.endsWith("s")) {
+    const parsed = Number(trimmed.slice(0, -1).trim());
+    return Number.isFinite(parsed) ? parsed * 1000 : 0;
+  }
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getMaxTimingMs = (durationsRaw: string, delaysRaw: string): number => {
+  const durations = durationsRaw.split(",");
+  const delays = delaysRaw.split(",");
+  const len = Math.max(durations.length, delays.length);
+  let max = 0;
+
+  for (let i = 0; i < len; i++) {
+    const duration = parseTimingToMs(durations[i] ?? durations[durations.length - 1] ?? "0");
+    const delay = parseTimingToMs(delays[i] ?? delays[delays.length - 1] ?? "0");
+    max = Math.max(max, duration + delay);
+  }
+
+  return max;
+};
+
+const getMaxExitDurationMs = (element: HTMLElement): number => {
+  const style = getComputedStyle(element);
+  const transitionMs = getMaxTimingMs(style.transitionDuration, style.transitionDelay);
+  const animationMs = getMaxTimingMs(style.animationDuration, style.animationDelay);
+  return Math.max(transitionMs, animationMs);
+};
+
+export function createPresenceLifecycle(options: PresenceLifecycleOptions): PresenceLifecycleController {
+  const win = options.win ?? window;
+  let exiting = false;
+  let enterRafId: number | null = null;
+  let exitRafId: number | null = null;
+  let exitTimeoutId: number | null = null;
+  let exitCleanups: Array<() => void> = [];
+
+  const clearExitTracking = () => {
+    if (exitRafId !== null) {
+      win.cancelAnimationFrame(exitRafId);
+      exitRafId = null;
+    }
+    if (exitTimeoutId !== null) {
+      win.clearTimeout(exitTimeoutId);
+      exitTimeoutId = null;
+    }
+    exitCleanups.forEach((cleanup) => cleanup());
+    exitCleanups = [];
+  };
+
+  const cancelExit = () => {
+    clearExitTracking();
+    exiting = false;
+    options.element.removeAttribute("data-ending-style");
+  };
+
+  const clearEnterMarker = () => {
+    if (enterRafId !== null) {
+      win.cancelAnimationFrame(enterRafId);
+      enterRafId = null;
+    }
+    options.element.removeAttribute("data-starting-style");
+  };
+
+  const finishExit = () => {
+    if (!exiting) return;
+    clearExitTracking();
+    exiting = false;
+    options.element.removeAttribute("data-ending-style");
+    options.onExitComplete();
+  };
+
+  return {
+    get isExiting() {
+      return exiting;
+    },
+    enter: () => {
+      cancelExit();
+      clearEnterMarker();
+      options.element.setAttribute("data-starting-style", "");
+      enterRafId = win.requestAnimationFrame(() => {
+        enterRafId = null;
+        options.element.removeAttribute("data-starting-style");
+      });
+    },
+    exit: () => {
+      cancelExit();
+      clearEnterMarker();
+      exiting = true;
+      options.element.setAttribute("data-ending-style", "");
+
+      const maxDuration = getMaxExitDurationMs(options.element);
+      if (maxDuration > 0) {
+        const onEnd = (event: Event) => {
+          if (event.target !== options.element) return;
+          finishExit();
+        };
+        options.element.addEventListener("transitionend", onEnd);
+        options.element.addEventListener("animationend", onEnd);
+        exitCleanups.push(() => options.element.removeEventListener("transitionend", onEnd));
+        exitCleanups.push(() => options.element.removeEventListener("animationend", onEnd));
+        exitTimeoutId = win.setTimeout(() => {
+          exitTimeoutId = null;
+          finishExit();
+        }, Math.ceil(maxDuration) + 50);
+      } else {
+        exitRafId = win.requestAnimationFrame(() => {
+          exitRafId = null;
+          finishExit();
+        });
+      }
+    },
+    cleanup: () => {
+      cancelExit();
+      clearEnterMarker();
     },
   };
 }

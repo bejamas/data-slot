@@ -30,18 +30,55 @@ const cssCode = `<div data-slot="popover" class="popover-root">
     padding: 1rem;
     width: min(20rem, calc(100vw - 2rem));
     z-index: 50;
-    opacity: 1;
-    transition: opacity 0.2s, transform 0.2s;
+    transform-origin: var(--transform-origin, center);
+    --popover-slide-x: 0px;
+    --popover-slide-y: -4px;
   }
-  .popover-content[hidden] {
-    display: block !important;
-    opacity: 0;
+  .popover-content[data-side="top"] {
+    --popover-slide-y: 4px;
+  }
+  .popover-content[data-side="bottom"] {
+    --popover-slide-y: -4px;
+  }
+  .popover-content[data-side="left"] {
+    --popover-slide-x: 4px;
+    --popover-slide-y: 0px;
+  }
+  .popover-content[data-side="right"] {
+    --popover-slide-x: -4px;
+    --popover-slide-y: 0px;
+  }
+  .popover-content[data-open] {
+    animation: popover-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .popover-content[data-closed] {
     pointer-events: none;
+    animation: popover-out 120ms ease-in forwards;
   }
-  .popover-content[hidden][data-side="bottom"] { transform: translateY(-4px); }
-  .popover-content[hidden][data-side="top"] { transform: translateY(4px); }
-  .popover-content[hidden][data-side="left"] { transform: translateX(4px); }
-  .popover-content[hidden][data-side="right"] { transform: translateX(-4px); }
+  @keyframes popover-in {
+    from {
+      opacity: 0;
+      scale: 0.96;
+      translate: var(--popover-slide-x) var(--popover-slide-y);
+    }
+    to {
+      opacity: 1;
+      scale: 1;
+      translate: 0 0;
+    }
+  }
+  @keyframes popover-out {
+    from {
+      opacity: 1;
+      scale: 1;
+      translate: 0 0;
+    }
+    to {
+      opacity: 0;
+      scale: 0.96;
+      translate: var(--popover-slide-x) var(--popover-slide-y);
+    }
+  }
   .popover-title { font-weight: 700; margin-bottom: 0.5rem; }
   .popover-text { color: #666; font-size: 0.9rem; margin-bottom: 0.75rem; }
   .popover-close-btn {
@@ -65,8 +102,7 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
     data-side="bottom"
     data-align="center"
     class="fixed bg-white border border-gray-300
-           p-4 w-80 max-w-[calc(100vw-2rem)] z-50 rounded-lg shadow-lg
-           opacity-100 transition-opacity duration-200"
+           p-4 w-80 max-w-[calc(100vw-2rem)] z-50 rounded-lg shadow-lg"
     hidden
   >
     <div class="font-bold mb-2 mt-0">Popover Panel</div>
@@ -84,11 +120,56 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
   </div>
 </div>
 
-/* Note: Add this CSS override to allow transitions with hidden attribute */
-[data-slot="popover-content"][hidden] {
-  display: block !important;
-  opacity: 0;
+/* State-based animation (works with presence lifecycle) */
+[data-slot="popover-content"] {
+  transform-origin: var(--transform-origin, center);
+  --popover-slide-x: 0px;
+  --popover-slide-y: -4px;
+}
+[data-slot="popover-content"][data-side="top"] {
+  --popover-slide-y: 4px;
+}
+[data-slot="popover-content"][data-side="bottom"] {
+  --popover-slide-y: -4px;
+}
+[data-slot="popover-content"][data-side="left"] {
+  --popover-slide-x: 4px;
+  --popover-slide-y: 0px;
+}
+[data-slot="popover-content"][data-side="right"] {
+  --popover-slide-x: -4px;
+  --popover-slide-y: 0px;
+}
+[data-slot="popover-content"][data-open] {
+  animation: popover-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-slot="popover-content"][data-closed] {
   pointer-events: none;
+  animation: popover-out 120ms ease-in forwards;
+}
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+    translate: var(--popover-slide-x) var(--popover-slide-y);
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+@keyframes popover-out {
+  from {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    scale: 0.96;
+    translate: var(--popover-slide-x) var(--popover-slide-y);
+  }
 }`;
 ---
 
@@ -115,7 +196,7 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
       data-slot="popover-content"
       data-side="bottom"
       data-align="center"
-      class="fixed bg-white border border-gray-300 p-4 w-80 max-w-[calc(100vw-2rem)] z-50 rounded-lg shadow-lg opacity-100 transition-opacity duration-200"
+      class="fixed bg-white border border-gray-300 p-4 w-80 max-w-[calc(100vw-2rem)] z-50 rounded-lg shadow-lg"
       hidden
     >
       <div class="font-bold mb-2 mt-0">Popover Panel</div>

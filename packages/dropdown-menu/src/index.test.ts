@@ -34,6 +34,16 @@ describe("DropdownMenu", () => {
     return { root, trigger, content, items, controller };
   };
 
+  const waitForRaf = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+  const waitForClose = async () => {
+    await waitForRaf();
+    await waitForRaf();
+  };
+
   beforeEach(() => {
     document.body.innerHTML = "";
     resetScrollLock();
@@ -125,13 +135,14 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
 
-    it("closes on trigger click when open", () => {
+    it("closes on trigger click when open", async () => {
       const { trigger, content, controller } = setup();
 
       trigger.click();
       expect(content.hidden).toBe(false);
 
       trigger.click();
+      await waitForClose();
       expect(content.hidden).toBe(true);
 
       controller.destroy();
@@ -677,7 +688,7 @@ describe("DropdownMenu", () => {
   });
 
   describe("content positioning", () => {
-    it("portals content to body when open and restores on close", () => {
+    it("portals content to body when open and restores on close", async () => {
       const { root, trigger, content, controller } = setup();
 
       // Content starts inside root
@@ -685,20 +696,24 @@ describe("DropdownMenu", () => {
 
       trigger.click();
       // Content is portaled to body when open
-      expect(content.parentElement).toBe(document.body);
+      const positioner = content.parentElement as HTMLElement;
+      expect(positioner.getAttribute("data-slot")).toBe("dropdown-menu-positioner");
+      expect(positioner.parentElement).toBe(document.body);
 
       trigger.click();
       // Content is restored to root when closed
+      await waitForClose();
       expect(content.parentElement).toBe(root);
 
       controller.destroy();
     });
 
-    it("restores content before applying closed hidden/data-state", () => {
+    it("restores content before applying closed hidden/data-state", async () => {
       const { root, trigger, content, controller } = setup();
 
       trigger.click();
-      expect(content.parentElement).toBe(document.body);
+      const positioner = content.parentElement as HTMLElement;
+      expect(positioner.parentElement).toBe(document.body);
 
       type ParentWithHooks = HTMLElement & {
         appendChild(node: Node): Node;
@@ -714,7 +729,7 @@ describe("DropdownMenu", () => {
         if (node !== content) return;
         observedRestore = true;
         expect(content.hidden).toBe(false);
-        expect(content.getAttribute("data-state")).toBe("open");
+        expect(content.getAttribute("data-state")).toBe("closed");
       };
 
       rootNode.appendChild = ((node: Node) => {
@@ -729,6 +744,7 @@ describe("DropdownMenu", () => {
 
       try {
         controller.close();
+        await waitForClose();
       } finally {
         rootNode.appendChild = originalAppendChild as ParentWithHooks["appendChild"];
         rootNode.insertBefore = originalInsertBefore as ParentWithHooks["insertBefore"];
@@ -746,7 +762,8 @@ describe("DropdownMenu", () => {
       const { root, trigger, content, controller } = setup();
 
       trigger.click();
-      expect(content.parentElement).toBe(document.body);
+      const positioner = content.parentElement as HTMLElement;
+      expect(positioner.parentElement).toBe(document.body);
 
       controller.destroy();
       expect(content.parentElement).toBe(root);
@@ -757,7 +774,8 @@ describe("DropdownMenu", () => {
 
       trigger.click();
       expect(controller.isOpen).toBe(true);
-      expect(content.parentElement).toBe(document.body);
+      const positioner = content.parentElement as HTMLElement;
+      expect(positioner.parentElement).toBe(document.body);
 
       // Click on an item inside the portaled content
       items[0]?.dispatchEvent(
@@ -772,7 +790,9 @@ describe("DropdownMenu", () => {
       const { trigger, content, controller } = setup();
 
       trigger.click();
-      expect(content.style.position).toBe("fixed");
+      const positioner = content.parentElement as HTMLElement;
+      expect(positioner.style.position).toBe("fixed");
+      expect(content.style.position).toBe("");
 
       controller.destroy();
     });
@@ -781,7 +801,9 @@ describe("DropdownMenu", () => {
       const { trigger, content, controller } = setup({ lockScroll: false });
 
       trigger.click();
-      expect(content.style.position).toBe("absolute");
+      const positioner = content.parentElement as HTMLElement;
+      expect(positioner.style.position).toBe("absolute");
+      expect(content.style.position).toBe("");
 
       controller.destroy();
     });
@@ -822,10 +844,6 @@ describe("DropdownMenu", () => {
         avoidCollisions: false,
         lockScroll: false,
       });
-      const waitForRaf = () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => resolve());
-        });
 
       let anchorTop = 110;
       const anchorLeft = 48;
@@ -862,16 +880,15 @@ describe("DropdownMenu", () => {
       await waitForRaf();
       await waitForRaf();
 
-      const initialTop = content.style.top;
-      const initialLeft = content.style.left;
+      const positioner = content.parentElement as HTMLElement;
+      const initialTransform = positioner.style.transform;
 
       anchorTop = 290;
       window.dispatchEvent(new Event("scroll"));
       await waitForRaf();
       await waitForRaf();
 
-      expect(content.style.top).toBe(initialTop);
-      expect(content.style.left).toBe(initialLeft);
+      expect(positioner.style.transform).toBe(initialTransform);
       controller.destroy();
     });
   });

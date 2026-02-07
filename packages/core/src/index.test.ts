@@ -4,7 +4,7 @@ import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
-import { computeFloatingPosition, ensureItemVisibleInContainer, createDismissLayer, createPortalLifecycle, createPositionSync } from './index'
+import { computeFloatingPosition, ensureItemVisibleInContainer, createDismissLayer, createPortalLifecycle, createPresenceLifecycle, createPositionSync } from './index'
 import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
 
@@ -1048,5 +1048,168 @@ describe('core/popup', () => {
 
     lifecycle.cleanup()
     expect(content.parentElement).toBe(root)
+  })
+
+  it('createPortalLifecycle supports wrapper slot for positioner-style portaling', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="content"></div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const content = document.getElementById('content')!
+    const lifecycle = createPortalLifecycle({
+      content,
+      root,
+      wrapperSlot: 'popover-positioner',
+    })
+
+    expect(lifecycle.container).toBe(content)
+
+    lifecycle.mount()
+    const wrapper = content.parentElement as HTMLElement | null
+    expect(wrapper).toBeTruthy()
+    expect(wrapper?.getAttribute('data-slot')).toBe('popover-positioner')
+    expect(wrapper?.parentElement).toBe(document.body)
+    expect(lifecycle.container).toBe(wrapper)
+
+    lifecycle.restore()
+    expect(content.parentElement).toBe(root)
+    expect(lifecycle.container).toBe(content)
+  })
+
+  it('createPresenceLifecycle toggles starting/ending style markers and completes exit', async () => {
+    document.body.innerHTML = `<div id="content"></div>`
+    const content = document.getElementById('content') as HTMLElement
+    const originalGetComputedStyle = window.getComputedStyle
+    let exited = 0
+
+    Object.defineProperty(window, 'getComputedStyle', {
+      configurable: true,
+      value: ((el: Element) => {
+        const style = originalGetComputedStyle.call(window, el)
+        return Object.assign({}, style, {
+          transitionDuration: '50ms',
+          transitionDelay: '0s',
+          animationDuration: '0s',
+          animationDelay: '0s',
+        }) as CSSStyleDeclaration
+      }) as typeof window.getComputedStyle,
+    })
+
+    try {
+      const presence = createPresenceLifecycle({
+        element: content,
+        onExitComplete: () => {
+          exited += 1
+        },
+      })
+
+      presence.enter()
+      expect(content.hasAttribute('data-starting-style')).toBe(true)
+
+      await waitForRaf()
+      expect(content.hasAttribute('data-starting-style')).toBe(false)
+
+      presence.exit()
+      expect(content.hasAttribute('data-ending-style')).toBe(true)
+      content.dispatchEvent(new TransitionEvent('transitionend', { bubbles: true }))
+
+      expect(exited).toBe(1)
+      expect(content.hasAttribute('data-ending-style')).toBe(false)
+
+      presence.cleanup()
+    } finally {
+      Object.defineProperty(window, 'getComputedStyle', {
+        configurable: true,
+        value: originalGetComputedStyle,
+      })
+    }
+  })
+
+  it('createPresenceLifecycle unmounts on next frame when no exit animation exists', async () => {
+    document.body.innerHTML = `<div id="content"></div>`
+    const content = document.getElementById('content') as HTMLElement
+    const originalGetComputedStyle = window.getComputedStyle
+    let exited = 0
+
+    Object.defineProperty(window, 'getComputedStyle', {
+      configurable: true,
+      value: ((el: Element) => {
+        const style = originalGetComputedStyle.call(window, el)
+        return Object.assign({}, style, {
+          transitionDuration: '0s',
+          transitionDelay: '0s',
+          animationDuration: '0s',
+          animationDelay: '0s',
+        }) as CSSStyleDeclaration
+      }) as typeof window.getComputedStyle,
+    })
+
+    try {
+      const presence = createPresenceLifecycle({
+        element: content,
+        onExitComplete: () => {
+          exited += 1
+        },
+      })
+
+      presence.exit()
+      expect(content.hasAttribute('data-ending-style')).toBe(true)
+      await waitForRaf()
+
+      expect(exited).toBe(1)
+      expect(content.hasAttribute('data-ending-style')).toBe(false)
+      presence.cleanup()
+    } finally {
+      Object.defineProperty(window, 'getComputedStyle', {
+        configurable: true,
+        value: originalGetComputedStyle,
+      })
+    }
+  })
+
+  it('createPresenceLifecycle cancels pending exit when reopened', async () => {
+    document.body.innerHTML = `<div id="content"></div>`
+    const content = document.getElementById('content') as HTMLElement
+    const originalGetComputedStyle = window.getComputedStyle
+    let exited = 0
+
+    Object.defineProperty(window, 'getComputedStyle', {
+      configurable: true,
+      value: ((el: Element) => {
+        const style = originalGetComputedStyle.call(window, el)
+        return Object.assign({}, style, {
+          transitionDuration: '120ms',
+          transitionDelay: '0s',
+          animationDuration: '0s',
+          animationDelay: '0s',
+        }) as CSSStyleDeclaration
+      }) as typeof window.getComputedStyle,
+    })
+
+    try {
+      const presence = createPresenceLifecycle({
+        element: content,
+        onExitComplete: () => {
+          exited += 1
+        },
+      })
+
+      presence.exit()
+      expect(presence.isExiting).toBe(true)
+      presence.enter()
+      expect(presence.isExiting).toBe(false)
+      expect(content.hasAttribute('data-ending-style')).toBe(false)
+
+      await new Promise((resolve) => setTimeout(resolve, 170))
+      expect(exited).toBe(0)
+      presence.cleanup()
+    } finally {
+      Object.defineProperty(window, 'getComputedStyle', {
+        configurable: true,
+        value: originalGetComputedStyle,
+      })
+    }
   })
 })

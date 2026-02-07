@@ -7,6 +7,7 @@ import {
   ensureItemVisibleInContainer,
   createPositionSync,
   createPortalLifecycle,
+  createPresenceLifecycle,
   createDismissLayer,
 } from "@data-slot/core";
 
@@ -208,7 +209,13 @@ export function createSelect(
   let didLockScroll = false;
 
   // Portal lifecycle for moving content to body
-  const portal = createPortalLifecycle({ content, root });
+  const portal = createPortalLifecycle({
+    content,
+    root,
+    wrapperSlot: "select-positioner",
+  });
+  let isDestroyed = false;
+  let shouldRestoreFocusOnClose = true;
 
   const isItemDisabled = (el: HTMLElement) =>
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
@@ -350,6 +357,7 @@ export function createSelect(
   };
 
   const updatePosition = () => {
+    const positioner = portal.container as HTMLElement;
     const win = root.ownerDocument.defaultView ?? window;
     const tr = trigger.getBoundingClientRect();
     const scrollContainer = getScrollContainer();
@@ -427,17 +435,24 @@ export function createSelect(
     }
 
     if (lockScrollOption) {
-      content.style.position = "fixed";
-      content.style.top = `${pos.y}px`;
-      content.style.left = `${pos.x}px`;
+      positioner.style.position = "fixed";
+      positioner.style.top = "0px";
+      positioner.style.left = "0px";
+      positioner.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
     } else {
-      content.style.position = "absolute";
-      content.style.top = `${pos.y + win.scrollY}px`;
-      content.style.left = `${pos.x + win.scrollX}px`;
+      positioner.style.position = "absolute";
+      positioner.style.top = "0px";
+      positioner.style.left = "0px";
+      positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
     }
-    content.style.margin = "0";
+    positioner.style.willChange = "transform";
+    positioner.style.margin = "0";
     content.setAttribute("data-side", side);
     content.setAttribute("data-align", position === "item-aligned" ? "center" : preferredAlign);
+    if (positioner !== content) {
+      positioner.setAttribute("data-side", side);
+      positioner.setAttribute("data-align", position === "item-aligned" ? "center" : preferredAlign);
+    }
   };
 
   const positionSync = createPositionSync({
@@ -474,7 +489,47 @@ export function createSelect(
     root.setAttribute("data-state", state);
     trigger.setAttribute("data-state", state);
     content.setAttribute("data-state", state);
+    if (state === "open") {
+      root.setAttribute("data-open", "");
+      trigger.setAttribute("data-open", "");
+      content.setAttribute("data-open", "");
+      root.removeAttribute("data-closed");
+      trigger.removeAttribute("data-closed");
+      content.removeAttribute("data-closed");
+    } else {
+      root.setAttribute("data-closed", "");
+      trigger.setAttribute("data-closed", "");
+      content.setAttribute("data-closed", "");
+      root.removeAttribute("data-open");
+      trigger.removeAttribute("data-open");
+      content.removeAttribute("data-open");
+    }
   };
+
+  const restoreFocus = () => {
+    requestAnimationFrame(() => {
+      if (previousActiveElement && document.contains(previousActiveElement)) {
+        previousActiveElement.focus();
+      } else if (trigger && document.contains(trigger)) {
+        trigger.focus();
+      }
+      previousActiveElement = null;
+    });
+  };
+
+  const presence = createPresenceLifecycle({
+    element: content,
+    onExitComplete: () => {
+      if (isDestroyed) return;
+      portal.restore();
+      content.hidden = true;
+      if (shouldRestoreFocusOnClose) {
+        restoreFocus();
+      } else {
+        previousActiveElement = null;
+      }
+    },
+  });
 
   const updateValueDisplay = () => {
     if (!valueSlot) return;
@@ -499,12 +554,14 @@ export function createSelect(
     if (open) {
       const openedByPointer = pendingPointerOpen;
       pendingPointerOpen = false;
+      shouldRestoreFocusOnClose = true;
       previousActiveElement = document.activeElement as HTMLElement;
       isOpen = true;
       setAria(trigger, "expanded", true);
       portal.mount();
       content.hidden = false;
       setDataState("open");
+      presence.enter();
 
       // Lock scroll
       if (lockScrollOption && !didLockScroll) {
@@ -554,12 +611,11 @@ export function createSelect(
       lastPointerX = 0;
       lastPointerY = 0;
       setAria(trigger, "expanded", false);
-      portal.restore();
-      content.hidden = true;
       setDataState("closed");
       clearHighlight();
       typeaheadBuffer = "";
       keyboardMode = false;
+      shouldRestoreFocusOnClose = !skipFocusRestore;
 
       // Unlock scroll
       if (didLockScroll) {
@@ -568,20 +624,7 @@ export function createSelect(
       }
 
       positionSync.stop();
-
-      // Skip focus restoration when closing via Tab to allow normal tab navigation
-      if (!skipFocusRestore) {
-        requestAnimationFrame(() => {
-          if (previousActiveElement && document.contains(previousActiveElement)) {
-            previousActiveElement.focus();
-          } else if (trigger && document.contains(trigger)) {
-            trigger.focus();
-          }
-          previousActiveElement = null;
-        });
-      } else {
-        previousActiveElement = null;
-      }
+      presence.exit();
     }
 
     emit(root, "select:open-change", { open: isOpen });
@@ -809,8 +852,10 @@ export function createSelect(
     open: () => updateOpenState(true),
     close: () => updateOpenState(false),
     destroy: () => {
+      isDestroyed = true;
       if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
       positionSync.stop();
+      presence.cleanup();
       portal.cleanup();
       // Unlock scroll if still locked
       if (didLockScroll) {

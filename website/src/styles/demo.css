@@ -474,26 +474,68 @@ html {
   padding: 1rem;
   width: min(20rem, calc(100vw - 2rem));
   z-index: 50;
-  opacity: 1;
-  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  transform-origin: var(--transform-origin, center);
+  --popover-slide-x: 0px;
+  --popover-slide-y: -4px;
 }
 
-.popover-content[hidden] {
-  display: block !important;
-  opacity: 0;
+.popover-content[data-side="top"] {
+  --popover-slide-y: 4px;
+}
+.popover-content[data-side="bottom"] {
+  --popover-slide-y: -4px;
+}
+.popover-content[data-side="left"] {
+  --popover-slide-x: 4px;
+  --popover-slide-y: 0px;
+}
+.popover-content[data-side="right"] {
+  --popover-slide-x: -4px;
+  --popover-slide-y: 0px;
+}
+
+.popover-content[data-open] {
+  animation: popover-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.popover-content[data-closed] {
   pointer-events: none;
+  animation: popover-out 120ms ease-in forwards;
 }
-.popover-content[hidden][data-side="bottom"] {
-  transform: translateY(-4px);
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+    translate: var(--popover-slide-x) var(--popover-slide-y);
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
 }
-.popover-content[hidden][data-side="top"] {
-  transform: translateY(4px);
+
+@keyframes popover-out {
+  from {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    scale: 0.96;
+    translate: var(--popover-slide-x) var(--popover-slide-y);
+  }
 }
-.popover-content[hidden][data-side="left"] {
-  transform: translateX(4px);
-}
-.popover-content[hidden][data-side="right"] {
-  transform: translateX(-4px);
+
+@media (prefers-reduced-motion: reduce) {
+  .popover-content[data-open],
+  .popover-content[data-closed],
+  .preview-tailwind [data-slot="popover-content"][data-open],
+  .preview-tailwind [data-slot="popover-content"][data-closed] {
+    animation-duration: 1ms;
+  }
 }
 
 .popover-title {
@@ -800,11 +842,38 @@ html.mode-tailwind .preview-css {
   pointer-events: none;
 }
 
-/* Popover: allow fade transitions */
-.preview-tailwind [data-slot="popover-content"][hidden] {
-  display: block !important;
-  opacity: 0;
+/* Popover: fade + zoom using open/closed state */
+.preview-tailwind [data-slot="popover-content"] {
+  transform-origin: var(--transform-origin, center);
+  --popover-slide-x: 0px;
+  --popover-slide-y: -4px;
+}
+
+.preview-tailwind [data-slot="popover-content"][data-side="top"] {
+  --popover-slide-y: 4px;
+}
+
+.preview-tailwind [data-slot="popover-content"][data-side="bottom"] {
+  --popover-slide-y: -4px;
+}
+
+.preview-tailwind [data-slot="popover-content"][data-side="left"] {
+  --popover-slide-x: 4px;
+  --popover-slide-y: 0px;
+}
+
+.preview-tailwind [data-slot="popover-content"][data-side="right"] {
+  --popover-slide-x: -4px;
+  --popover-slide-y: 0px;
+}
+
+.preview-tailwind [data-slot="popover-content"][data-open] {
+  animation: popover-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.preview-tailwind [data-slot="popover-content"][data-closed] {
   pointer-events: none;
+  animation: popover-out 120ms ease-in forwards;
 }
 
 /* Collapsible: allow grid height animation */
