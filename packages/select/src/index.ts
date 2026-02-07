@@ -620,12 +620,16 @@ export function createSelect(
       case "ArrowDown":
         e.preventDefault();
         keyboardMode = true;
-        updateHighlight(highlightedIndex === -1 ? 0 : (highlightedIndex + 1) % len);
+        updateHighlight(
+          highlightedIndex === -1 ? 0 : Math.min(highlightedIndex + 1, len - 1)
+        );
         break;
       case "ArrowUp":
         e.preventDefault();
         keyboardMode = true;
-        updateHighlight(highlightedIndex === -1 ? len - 1 : (highlightedIndex - 1 + len) % len);
+        updateHighlight(
+          highlightedIndex === -1 ? len - 1 : Math.max(highlightedIndex - 1, 0)
+        );
         break;
       case "Home":
         e.preventDefault();

@@ -423,7 +423,7 @@ describe("Select", () => {
       controller.destroy();
     });
 
-    it("wraps around with ArrowDown at end", () => {
+    it("stays on last item when pressing ArrowDown at end", () => {
       const { trigger, content, items, controller } = setup();
 
       trigger.click();
@@ -433,11 +433,32 @@ describe("Select", () => {
         new KeyboardEvent("keydown", { key: "End", bubbles: true })
       );
 
-      // ArrowDown should wrap to first
+      // ArrowDown should stay on last
       content.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
       );
+      expect(items[2]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(items[0]?.hasAttribute("data-highlighted")).toBe(false);
+
+      controller.destroy();
+    });
+
+    it("stays on first item when pressing ArrowUp at start", () => {
+      const { trigger, content, items, controller } = setup();
+
+      trigger.click();
+
+      // Navigate to first item
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Home", bubbles: true })
+      );
+
+      // ArrowUp should stay on first
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })
+      );
       expect(items[0]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(items[2]?.hasAttribute("data-highlighted")).toBe(false);
 
       controller.destroy();
     });
