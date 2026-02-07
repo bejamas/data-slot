@@ -1,6 +1,6 @@
 {
   "name": "data-slot",
-  "version": "0.2.33",
+  "version": "0.2.34",
   "type": "module",
   "sideEffects": false,
   "description": "Headless UI components for vanilla JavaScript. Convenience re-exports from @data-slot/* packages.",
@@ -181,7 +181,7 @@
   "homepage": "https://github.com/bejamas/data-slot",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bejamas/data-slot",
+    "url": "https://github.com/bejamas/data-slot.git",
     "directory": "packages/data-slot"
   }
 }

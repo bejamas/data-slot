@@ -62,7 +62,7 @@ jobs:
             bun pm pack >/dev/null
 
             local tgz
-            tgz="$(ls -1 *.tgz | head -n 1)"
+            tgz="$(ls -1 *.tgz | head -n1)"
             [ -f "$tgz" ] || { echo "No .tgz produced in $dir"; ls -la; exit 1; }
 
             local tmp
@@ -72,11 +72,11 @@ jobs:
             echo "=== Packed manifest for $dir ($tgz) ==="
             cat "$tmp/package/package.json"
 
-            rm -rf "$tmp" "$tgz"
-            popd >/dev/null
+            npm publish "$tmp/package" --access public --provenance
 
-            # Stop after first package so you can inspect logs
-            exit 1
+            rm -rf "$tmp"
+            rm -f "$tgz"
+            popd >/dev/null
           }
 
           # Publish in dependency order (core first)
