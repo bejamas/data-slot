@@ -4,7 +4,7 @@ import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
-import { computeFloatingPosition, createDismissLayer, createPortalLifecycle } from './index'
+import { computeFloatingPosition, createDismissLayer, createPortalLifecycle, createPositionSync } from './index'
 import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
 
@@ -713,6 +713,8 @@ describe('core/popup', () => {
       height,
     }) as DOMRect
 
+  const waitForRaf = () => new Promise((resolve) => setTimeout(resolve, 20))
+
   beforeEach(() => {
     document.body.innerHTML = ''
   })
@@ -770,9 +772,166 @@ describe('core/popup', () => {
       viewportHeight: 320,
     })
 
+    expect(pos.side).toBe('top')
+    expect(pos.x).toBe(250)
+    expect(pos.y).toBe(166)
+  })
+
+  it('computeFloatingPosition selects the first allowed side that fits', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(180, 170, 20, 20),
+      contentRect: rect(0, 0, 120, 80),
+      side: 'right',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 8,
+      viewportWidth: 220,
+      viewportHeight: 220,
+      allowedSides: ['right', 'bottom', 'left'],
+    })
+
     expect(pos.side).toBe('left')
-    expect(pos.x).toBe(226)
-    expect(pos.y).toBe(230)
+  })
+
+  it('computeFloatingPosition uses least-overflow side when none fit', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(10, 30, 20, 20),
+      contentRect: rect(0, 0, 120, 90),
+      side: 'left',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 8,
+      viewportWidth: 140,
+      viewportHeight: 100,
+      allowedSides: ['left', 'right'],
+    })
+
+    expect(pos.side).toBe('right')
+  })
+
+  it('computeFloatingPosition uses visualViewport offsets while clamping', () => {
+    const original = Object.getOwnPropertyDescriptor(window, 'visualViewport')
+    const fakeVisualViewport = {
+      width: 300,
+      height: 200,
+      offsetLeft: 100,
+      offsetTop: 50,
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent() {
+        return true
+      },
+    } as unknown as VisualViewport
+
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: fakeVisualViewport,
+    })
+
+    try {
+      const pos = computeFloatingPosition({
+        anchorRect: rect(90, 60, 20, 20),
+        contentRect: rect(0, 0, 120, 80),
+        side: 'bottom',
+        align: 'start',
+        sideOffset: 4,
+        alignOffset: 0,
+        avoidCollisions: true,
+        collisionPadding: 10,
+        allowedSides: ['bottom'],
+      })
+
+      expect(pos.side).toBe('bottom')
+      expect(pos.x).toBe(110)
+      expect(pos.y).toBe(84)
+    } finally {
+      if (original) {
+        Object.defineProperty(window, 'visualViewport', original)
+      } else {
+        Reflect.deleteProperty(window as Window & Record<string, unknown>, 'visualViewport')
+      }
+    }
+  })
+
+  it('createPositionSync updates from ancestor scroll', async () => {
+    document.body.innerHTML = `
+      <div id="outer" style="overflow: auto; max-height: 100px;">
+        <div style="height: 300px;">
+          <div id="anchor"></div>
+        </div>
+      </div>
+    `
+    const outer = document.getElementById('outer')!
+    const anchor = document.getElementById('anchor')!
+    let updates = 0
+
+    const sync = createPositionSync({
+      observedElements: [anchor],
+      onUpdate: () => {
+        updates += 1
+      },
+    })
+
+    sync.start()
+    outer.dispatchEvent(new Event('scroll'))
+    await waitForRaf()
+    expect(updates).toBe(1)
+    sync.stop()
+  })
+
+  it('createPositionSync honors ignoreScrollTarget', async () => {
+    document.body.innerHTML = `
+      <div id="content" style="overflow: auto; max-height: 100px;">
+        <div style="height: 300px;"></div>
+      </div>
+    `
+    const content = document.getElementById('content')!
+    let updates = 0
+
+    const sync = createPositionSync({
+      observedElements: [content],
+      onUpdate: () => {
+        updates += 1
+      },
+      ignoreScrollTarget: (target) => target === content,
+    })
+
+    sync.start()
+    content.dispatchEvent(new Event('scroll'))
+    await waitForRaf()
+    expect(updates).toBe(0)
+    sync.stop()
+  })
+
+  it('createPositionSync can disable ancestor scroll listeners', async () => {
+    document.body.innerHTML = `
+      <div id="outer" style="overflow: auto; max-height: 100px;">
+        <div style="height: 300px;">
+          <div id="anchor"></div>
+        </div>
+      </div>
+    `
+    const outer = document.getElementById('outer')!
+    const anchor = document.getElementById('anchor')!
+    let updates = 0
+
+    const sync = createPositionSync({
+      observedElements: [anchor],
+      ancestorScroll: false,
+      onUpdate: () => {
+        updates += 1
+      },
+    })
+
+    sync.start()
+    outer.dispatchEvent(new Event('scroll'))
+    await waitForRaf()
+    expect(updates).toBe(0)
+    sync.stop()
   })
 
   it('createDismissLayer dismisses on outside pointerdown but not on portaled inside click', () => {

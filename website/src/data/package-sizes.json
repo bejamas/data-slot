@@ -1,5 +1,11 @@
 [
   {
+    "name": "@data-slot/core",
+    "size": 3400,
+    "sizeFormatted": "3.3 KB",
+    "description": "Shared utilities"
+  },
+  {
     "name": "@data-slot/combobox",
     "size": 3172,
     "sizeFormatted": "3.1 KB",
@@ -16,12 +22,6 @@
     "size": 3062,
     "sizeFormatted": "3.0 KB",
     "description": "Dropdown navigation menus"
-  },
-  {
-    "name": "@data-slot/core",
-    "size": 2441,
-    "sizeFormatted": "2.4 KB",
-    "description": "Shared utilities"
   },
   {
     "name": "@data-slot/slider",
@@ -48,6 +48,12 @@
     "description": "Modal dialogs, focus trap"
   },
   {
+    "name": "@data-slot/popover",
+    "size": 1415,
+    "sizeFormatted": "1.4 KB",
+    "description": "Anchored floating content"
+  },
+  {
     "name": "@data-slot/accordion",
     "size": 1304,
     "sizeFormatted": "1.3 KB",
@@ -58,12 +64,6 @@
     "size": 1129,
     "sizeFormatted": "1.1 KB",
     "description": "Hover/focus tooltips"
-  },
-  {
-    "name": "@data-slot/popover",
-    "size": 1022,
-    "sizeFormatted": "1022 B",
-    "description": "Anchored floating content"
   },
   {
     "name": "@data-slot/collapsible",
