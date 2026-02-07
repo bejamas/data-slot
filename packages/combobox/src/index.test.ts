@@ -1015,6 +1015,34 @@ describe("Combobox", () => {
       expect(controller.isOpen).toBe(false);
       controller.destroy();
     });
+
+    it("supports controller.setItemToStringValue for selected value display", () => {
+      const { input, controller } = setup({ defaultValue: "banana" });
+      expect(input.value).toBe("Banana");
+
+      controller.setItemToStringValue((_item, value) => value ? `Selected: ${value}` : "");
+      expect(input.value).toBe("Selected: banana");
+
+      controller.setItemToStringValue(null);
+      expect(input.value).toBe("Banana");
+      controller.destroy();
+    });
+
+    it("supports combobox:set inbound event for itemToStringValue", () => {
+      const { root, input, controller } = setup({ defaultValue: "banana" });
+      expect(input.value).toBe("Banana");
+
+      root.dispatchEvent(
+        new CustomEvent("combobox:set", {
+          detail: {
+            itemToStringValue: (_item: HTMLElement | null, value: string | null) =>
+              value ? value.toUpperCase() : "",
+          },
+        })
+      );
+      expect(input.value).toBe("BANANA");
+      controller.destroy();
+    });
   });
 
   describe("form integration", () => {
