@@ -87,7 +87,7 @@ jobs:
           }
 
           # Publish in dependency order (core first)
-          # publish_pkg packages/core
+          publish_pkg packages/core
           publish_pkg packages/accordion
           publish_pkg packages/dialog
           publish_pkg packages/collapsible
