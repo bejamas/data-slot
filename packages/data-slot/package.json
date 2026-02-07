@@ -1,6 +1,6 @@
 {
   "name": "data-slot",
-  "version": "0.2.37",
+  "version": "0.2.38",
   "type": "module",
   "sideEffects": false,
   "description": "Headless UI components for vanilla JavaScript. Convenience re-exports from @data-slot/* packages.",
