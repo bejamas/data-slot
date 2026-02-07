@@ -53,6 +53,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Resolve @data-slot/core version: from tag (e.g. v0.2.10 -> 0.2.10) or from core's package.json
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            CORE_VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            CORE_VERSION=$(jq -r .version packages/core/package.json)
+          fi
+          echo "Using @data-slot/core version: $CORE_VERSION"
+
           # Helper function: pack with bun, validate packed manifest, then publish extracted contents.
           publish_pkg() {
             local dir="$1"
@@ -72,6 +80,12 @@ jobs:
             local tmp
             tmp="$(mktemp -d)"
             tar -xzf "$tgz_path" -C "$tmp"
+
+            # Replace workspace @data-slot/core with published version (skip for core package)
+            if jq -e '.dependencies["@data-slot/core"]' "$tmp/package/package.json" >/dev/null 2>&1; then
+              jq --arg v "$CORE_VERSION" '.dependencies["@data-slot/core"] = $v' "$tmp/package/package.json" > "$tmp/package/package.json.tmp"
+              mv "$tmp/package/package.json.tmp" "$tmp/package/package.json"
+            fi
 
             echo "=== Packed manifest for $dir ($tgz) ==="
             cat "$tmp/package/package.json"
