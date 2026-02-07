@@ -193,6 +193,37 @@ export function computeFloatingPosition(input: ComputeFloatingPositionInput): Fl
   return { x: pos.x, y: pos.y, side, align: input.align };
 }
 
+export function ensureItemVisibleInContainer(
+  item: HTMLElement,
+  container: HTMLElement,
+  padding = 4
+): void {
+  if (container.clientHeight <= 0) return;
+
+  const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+  if (maxScrollTop <= 0) return;
+
+  const itemRect = item.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+
+  const itemTop = itemRect.top - containerRect.top + container.scrollTop;
+  const itemBottom = itemTop + itemRect.height;
+  const visibleTop = container.scrollTop + padding;
+  const visibleBottom = container.scrollTop + container.clientHeight - padding;
+
+  let nextScrollTop = container.scrollTop;
+  if (itemTop < visibleTop) {
+    nextScrollTop = itemTop - padding;
+  } else if (itemBottom > visibleBottom) {
+    nextScrollTop = itemBottom - container.clientHeight + padding;
+  }
+
+  nextScrollTop = Math.min(Math.max(nextScrollTop, 0), maxScrollTop);
+  if (nextScrollTop !== container.scrollTop) {
+    container.scrollTop = nextScrollTop;
+  }
+}
+
 export interface PositionSyncOptions {
   onUpdate: () => void;
   isActive?: () => boolean;

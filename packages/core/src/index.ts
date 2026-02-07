@@ -5,6 +5,7 @@ export { on, emit, composeHandlers } from "./events.ts";
 export { lockScroll, unlockScroll } from "./scroll.ts";
 export {
   computeFloatingPosition,
+  ensureItemVisibleInContainer,
   createDismissLayer,
   createPortalLifecycle,
   createPositionSync,

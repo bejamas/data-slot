@@ -11,6 +11,7 @@ import {
   on,
   emit,
   computeFloatingPosition,
+  ensureItemVisibleInContainer,
   createPositionSync,
   createPortalLifecycle,
   createDismissLayer,
@@ -415,6 +416,13 @@ export function createCombobox(
     ignoreScrollTarget: (target) => target instanceof Node && content.contains(target),
   });
 
+  const getHighlightScrollContainer = (item: HTMLElement): HTMLElement => {
+    if (list && list.contains(item) && list.scrollHeight > list.clientHeight) {
+      return list;
+    }
+    return content;
+  };
+
   // Highlighting
   const updateHighlight = (index: number) => {
     for (let i = 0; i < enabledVisibleItems.length; i++) {
@@ -422,6 +430,7 @@ export function createCombobox(
       if (i === index) {
         el.setAttribute("data-highlighted", "");
         input.setAttribute("aria-activedescendant", el.id);
+        ensureItemVisibleInContainer(el, getHighlightScrollContainer(el));
       } else {
         el.removeAttribute("data-highlighted");
       }

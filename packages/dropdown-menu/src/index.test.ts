@@ -457,6 +457,39 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
 
+    it("scrolls highlighted item into view during keyboard navigation", () => {
+      const { trigger, content, items, controller } = setup();
+      const rect = (top: number, height: number) =>
+        ({
+          x: 0,
+          y: top,
+          top,
+          left: 0,
+          width: 200,
+          height,
+          right: 200,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 100 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 300 });
+      content.scrollTop = 0;
+      content.getBoundingClientRect = () => rect(0, 100);
+      items.forEach((item, index) => {
+        item.getBoundingClientRect = () => rect(index * 70, 30);
+      });
+
+      trigger.click();
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "End", bubbles: true })
+      );
+
+      expect(items[2]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(content.scrollTop).toBe(74);
+      controller.destroy();
+    });
+
     it("selects item with Enter", () => {
       const { root, trigger, content, controller } = setup();
 

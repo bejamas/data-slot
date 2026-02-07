@@ -4,6 +4,7 @@ import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
 import {
   computeFloatingPosition,
+  ensureItemVisibleInContainer,
   createPositionSync,
   createPortalLifecycle,
   createDismissLayer,
@@ -431,11 +432,14 @@ export function createSelect(
     ignoreScrollTarget: (target) => target instanceof Node && content.contains(target),
   });
 
-  const updateHighlight = (index: number, focus = true) => {
+  const updateHighlight = (index: number, focus = true, ensureVisible = true) => {
     for (let i = 0; i < enabledItems.length; i++) {
       const el = enabledItems[i]!;
       if (i === index) {
         el.setAttribute("data-highlighted", "");
+        if (ensureVisible) {
+          ensureItemVisibleInContainer(el, content);
+        }
         if (focus) el.focus();
       } else {
         el.removeAttribute("data-highlighted");
@@ -495,7 +499,7 @@ export function createSelect(
       // Highlight selected item if any
       const selectedIndex = enabledItems.findIndex((el) => el.dataset["value"] === currentValue);
       if (selectedIndex >= 0) {
-        updateHighlight(selectedIndex, false);
+        updateHighlight(selectedIndex, false, false);
       } else {
         clearHighlight();
       }

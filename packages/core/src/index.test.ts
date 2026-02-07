@@ -4,7 +4,7 @@ import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
-import { computeFloatingPosition, createDismissLayer, createPortalLifecycle, createPositionSync } from './index'
+import { computeFloatingPosition, ensureItemVisibleInContainer, createDismissLayer, createPortalLifecycle, createPositionSync } from './index'
 import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
 
@@ -855,6 +855,66 @@ describe('core/popup', () => {
         Reflect.deleteProperty(window as Window & Record<string, unknown>, 'visualViewport')
       }
     }
+  })
+
+  it('ensureItemVisibleInContainer does not scroll when item is already visible', () => {
+    document.body.innerHTML = `
+      <div id="container">
+        <div id="item"></div>
+      </div>
+    `
+    const container = document.getElementById('container') as HTMLElement
+    const item = document.getElementById('item') as HTMLElement
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, value: 100 })
+    Object.defineProperty(container, 'scrollHeight', { configurable: true, value: 400 })
+    container.scrollTop = 40
+
+    container.getBoundingClientRect = () => rect(0, 0, 200, 100)
+    item.getBoundingClientRect = () => rect(0, 20, 200, 20)
+
+    ensureItemVisibleInContainer(item, container)
+    expect(container.scrollTop).toBe(40)
+  })
+
+  it('ensureItemVisibleInContainer scrolls down when item is below viewport', () => {
+    document.body.innerHTML = `
+      <div id="container">
+        <div id="item"></div>
+      </div>
+    `
+    const container = document.getElementById('container') as HTMLElement
+    const item = document.getElementById('item') as HTMLElement
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, value: 100 })
+    Object.defineProperty(container, 'scrollHeight', { configurable: true, value: 400 })
+    container.scrollTop = 0
+
+    container.getBoundingClientRect = () => rect(0, 0, 200, 100)
+    item.getBoundingClientRect = () => rect(0, 140, 200, 30)
+
+    ensureItemVisibleInContainer(item, container)
+    expect(container.scrollTop).toBe(74)
+  })
+
+  it('ensureItemVisibleInContainer scrolls up when item is above viewport', () => {
+    document.body.innerHTML = `
+      <div id="container">
+        <div id="item"></div>
+      </div>
+    `
+    const container = document.getElementById('container') as HTMLElement
+    const item = document.getElementById('item') as HTMLElement
+
+    Object.defineProperty(container, 'clientHeight', { configurable: true, value: 100 })
+    Object.defineProperty(container, 'scrollHeight', { configurable: true, value: 400 })
+    container.scrollTop = 80
+
+    container.getBoundingClientRect = () => rect(0, 0, 200, 100)
+    item.getBoundingClientRect = () => rect(0, -40, 200, 20)
+
+    ensureItemVisibleInContainer(item, container)
+    expect(container.scrollTop).toBe(36)
   })
 
   it('createPositionSync updates from ancestor scroll', async () => {

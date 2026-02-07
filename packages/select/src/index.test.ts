@@ -611,6 +611,61 @@ describe("Select", () => {
 
       controller.destroy();
     });
+
+    it("scrolls highlighted item into view during keyboard navigation", () => {
+      const { trigger, content, items, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="item-1">Item 1</div>
+            <div data-slot="select-item" data-value="item-2">Item 2</div>
+            <div data-slot="select-item" data-value="item-3">Item 3</div>
+            <div data-slot="select-item" data-value="item-4">Item 4</div>
+            <div data-slot="select-item" data-value="item-5">Item 5</div>
+            <div data-slot="select-item" data-value="item-6">Item 6</div>
+          </div>
+        </div>
+      `
+      );
+      const rect = (top: number, height: number) =>
+        ({
+          x: 0,
+          y: top,
+          top,
+          left: 0,
+          width: 200,
+          height,
+          right: 200,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 120 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 400 });
+      content.scrollTop = 0;
+      content.getBoundingClientRect = () => rect(0, 120);
+      items.forEach((item, index) => {
+        item.getBoundingClientRect = () => rect(index * 40, 40);
+      });
+
+      trigger.click();
+      const initialScrollTop = content.scrollTop;
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "End", bubbles: true })
+      );
+
+      expect(items[5]?.hasAttribute("data-highlighted")).toBe(true);
+      const itemRect = items[5]!.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      const itemBottomInContent = itemRect.bottom - contentRect.top + initialScrollTop;
+      const expectedScrollTop = itemBottomInContent - content.clientHeight + 4;
+      expect(content.scrollTop).toBe(expectedScrollTop);
+      controller.destroy();
+    });
   });
 
   describe("typeahead", () => {

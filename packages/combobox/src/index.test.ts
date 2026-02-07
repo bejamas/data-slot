@@ -538,6 +538,57 @@ describe("Combobox", () => {
       controller.destroy();
     });
 
+    it("scrolls highlighted item into view when navigating with keyboard", () => {
+      const { input, content, items, controller } = setup(
+        {},
+        `
+        <div data-slot="combobox" id="root">
+          <input data-slot="combobox-input" />
+          <button data-slot="combobox-trigger">▼</button>
+          <div data-slot="combobox-content" hidden>
+            <div data-slot="combobox-list">
+              <div data-slot="combobox-item" data-value="item-1">Item 1</div>
+              <div data-slot="combobox-item" data-value="item-2">Item 2</div>
+              <div data-slot="combobox-item" data-value="item-3">Item 3</div>
+              <div data-slot="combobox-item" data-value="item-4">Item 4</div>
+              <div data-slot="combobox-item" data-value="item-5">Item 5</div>
+              <div data-slot="combobox-item" data-value="item-6">Item 6</div>
+            </div>
+          </div>
+        </div>
+      `
+      );
+      const rect = (top: number, height: number) =>
+        ({
+          x: 0,
+          y: top,
+          top,
+          left: 0,
+          width: 200,
+          height,
+          right: 200,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 120 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 400 });
+      content.scrollTop = 0;
+      content.getBoundingClientRect = () => rect(0, 120);
+      items.forEach((item, index) => {
+        item.getBoundingClientRect = () => rect(index * 40, 40);
+      });
+
+      controller.open();
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "End", bubbles: true })
+      );
+
+      expect(items[5]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(content.scrollTop).toBe(124);
+      controller.destroy();
+    });
+
     it("Enter selects highlighted item", () => {
       const { input, controller } = setup();
       controller.open();

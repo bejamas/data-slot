@@ -12,6 +12,7 @@ import {
   lockScroll,
   unlockScroll,
   computeFloatingPosition,
+  ensureItemVisibleInContainer,
   createPositionSync,
   createPortalLifecycle,
   createDismissLayer,
@@ -252,6 +253,7 @@ export function createDropdownMenu(
       const el = enabledItems[i]!;
       if (i === index) {
         el.setAttribute("data-highlighted", "");
+        ensureItemVisibleInContainer(el, content);
         if (focus) el.focus();
       } else {
         el.removeAttribute("data-highlighted");
