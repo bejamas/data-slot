@@ -14,6 +14,7 @@ import {
   ensureItemVisibleInContainer,
   createPositionSync,
   createPortalLifecycle,
+  createPresenceLifecycle,
   createDismissLayer,
 } from "@data-slot/core";
 
@@ -176,6 +177,7 @@ export function createCombobox(
 
   // Portal lifecycle
   const portal = createPortalLifecycle({ content, root });
+  let isDestroyed = false;
 
   const isItemDisabled = (el: HTMLElement) =>
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
@@ -401,8 +403,10 @@ export function createCombobox(
     });
 
     content.style.position = "absolute";
-    content.style.top = `${pos.y + win.scrollY}px`;
-    content.style.left = `${pos.x + win.scrollX}px`;
+    content.style.top = "0px";
+    content.style.left = "0px";
+    content.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+    content.style.willChange = "transform";
     content.style.margin = "0";
     content.setAttribute("data-side", pos.side);
     content.setAttribute("data-align", pos.align);
@@ -448,7 +452,31 @@ export function createCombobox(
     root.setAttribute("data-state", state);
     content.setAttribute("data-state", state);
     if (trigger) trigger.setAttribute("data-state", state);
+    if (state === "open") {
+      root.setAttribute("data-open", "");
+      content.setAttribute("data-open", "");
+      if (trigger) trigger.setAttribute("data-open", "");
+      root.removeAttribute("data-closed");
+      content.removeAttribute("data-closed");
+      if (trigger) trigger.removeAttribute("data-closed");
+    } else {
+      root.setAttribute("data-closed", "");
+      content.setAttribute("data-closed", "");
+      if (trigger) trigger.setAttribute("data-closed", "");
+      root.removeAttribute("data-open");
+      content.removeAttribute("data-open");
+      if (trigger) trigger.removeAttribute("data-open");
+    }
   };
+
+  const presence = createPresenceLifecycle({
+    element: content,
+    onExitComplete: () => {
+      if (isDestroyed) return;
+      portal.restore();
+      content.hidden = true;
+    },
+  });
 
   const updateOpenState = (open: boolean, skipFocusRestore = false) => {
     if (isOpen === open) return;
@@ -460,6 +488,7 @@ export function createCombobox(
       portal.mount();
       content.hidden = false;
       setDataState("open");
+      presence.enter();
 
       cacheItems();
       keyboardMode = false;
@@ -488,13 +517,12 @@ export function createCombobox(
     } else {
       isOpen = false;
       setAria(input, "expanded", false);
-      portal.restore();
-      content.hidden = true;
       setDataState("closed");
       clearHighlight();
       keyboardMode = false;
 
       positionSync.stop();
+      presence.exit();
 
       // Restore input text to committed value's label
       const committedLabel = getLabelForValue(currentValue);
@@ -760,7 +788,9 @@ export function createCombobox(
     open: () => updateOpenState(true),
     close: () => updateOpenState(false),
     destroy: () => {
+      isDestroyed = true;
       positionSync.stop();
+      presence.cleanup();
       portal.cleanup();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;

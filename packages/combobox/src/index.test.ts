@@ -34,6 +34,16 @@ describe("Combobox", () => {
     return { root, input, triggerBtn, content, list, items, emptySlot, controller };
   };
 
+  const waitForRaf = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+  const waitForClose = async () => {
+    await waitForRaf();
+    await waitForRaf();
+  };
+
   beforeEach(() => {
     document.body.innerHTML = "";
   });
@@ -1112,7 +1122,7 @@ describe("Combobox", () => {
   });
 
   describe("content portaling", () => {
-    it("portals content to body when open and restores on close", () => {
+    it("portals content to body when open and restores on close", async () => {
       const { root, content, controller } = setup();
       // Content starts inside root
       expect(root.contains(content)).toBe(true);
@@ -1121,11 +1131,12 @@ describe("Combobox", () => {
       expect(content.parentElement).toBe(document.body);
 
       controller.close();
+      await waitForClose();
       expect(root.contains(content)).toBe(true);
       controller.destroy();
     });
 
-    it("restores content before applying closed hidden/data-state", () => {
+    it("restores content before applying closed hidden/data-state", async () => {
       const { root, content, controller } = setup();
       controller.open();
       expect(content.parentElement).toBe(document.body);
@@ -1144,7 +1155,7 @@ describe("Combobox", () => {
         if (node !== content) return;
         observedRestore = true;
         expect(content.hidden).toBe(false);
-        expect(content.getAttribute("data-state")).toBe("open");
+        expect(content.getAttribute("data-state")).toBe("closed");
       };
 
       rootNode.appendChild = ((node: Node) => {
@@ -1159,6 +1170,7 @@ describe("Combobox", () => {
 
       try {
         controller.close();
+        await waitForClose();
       } finally {
         rootNode.appendChild = originalAppendChild as ParentWithHooks["appendChild"];
         rootNode.insertBefore = originalInsertBefore as ParentWithHooks["insertBefore"];
@@ -1214,10 +1226,6 @@ describe("Combobox", () => {
 
     it("keeps coordinates stable on window scroll", async () => {
       const { root, content, controller } = setup({ avoidCollisions: false });
-      const waitForRaf = () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => resolve());
-        });
 
       let anchorTop = 100;
       const anchorLeft = 40;
@@ -1256,16 +1264,14 @@ describe("Combobox", () => {
       await waitForRaf();
       await waitForRaf();
 
-      const initialTop = content.style.top;
-      const initialLeft = content.style.left;
+      const initialTransform = content.style.transform;
 
       anchorTop = 260;
       window.dispatchEvent(new Event("scroll"));
       await waitForRaf();
       await waitForRaf();
 
-      expect(content.style.top).toBe(initialTop);
-      expect(content.style.left).toBe(initialLeft);
+      expect(content.style.transform).toBe(initialTransform);
       controller.destroy();
     });
   });
