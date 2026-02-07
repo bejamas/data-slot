@@ -23,6 +23,16 @@ describe('Popover', () => {
     return { root, trigger, content, closeBtn, controller }
   }
 
+  const waitForRaf = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve())
+    })
+
+  const waitForClose = async () => {
+    await waitForRaf()
+    await waitForRaf()
+  }
+
   it('initializes with content hidden', () => {
     const { content, controller } = setup()
 
@@ -42,13 +52,14 @@ describe('Popover', () => {
     controller.destroy()
   })
 
-  it('closes on close button click', () => {
+  it('closes on close button click', async () => {
     const { trigger, content, closeBtn, controller } = setup()
 
     trigger.click()
     expect(content.hidden).toBe(false)
 
     closeBtn.click()
+    await waitForClose()
     expect(content.hidden).toBe(true)
 
     controller.destroy()
@@ -194,7 +205,7 @@ describe('Popover', () => {
     controller.destroy()
   })
 
-  it('create binds all popover components and returns controllers', () => {
+  it('create binds all popover components and returns controllers', async () => {
     document.body.innerHTML = `
       <div data-slot="popover">
         <button data-slot="popover-trigger">Open</button>
@@ -214,6 +225,7 @@ describe('Popover', () => {
 
     // Can control programmatically
     controllers[0]?.close()
+    await waitForClose()
     expect(content.hidden).toBe(true)
 
     controllers.forEach(c => c.destroy())
@@ -251,8 +263,9 @@ describe('Popover', () => {
 
       controller.open()
       expect(content.style.position).toBe('absolute')
-      expect(content.style.top).not.toBe('')
-      expect(content.style.left).not.toBe('')
+      expect(content.style.top).toBe('0px')
+      expect(content.style.left).toBe('0px')
+      expect(content.style.transform).toContain('translate3d(')
 
       controller.destroy()
     })
@@ -297,10 +310,6 @@ describe('Popover', () => {
 
     it('keeps coordinates stable on window scroll', async () => {
       const { trigger, content, controller } = setup({ avoidCollisions: false })
-      const waitForRaf = () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => resolve())
-        })
 
       let anchorTop = 120
       const anchorLeft = 80
@@ -337,22 +346,20 @@ describe('Popover', () => {
       await waitForRaf()
       await waitForRaf()
 
-      const initialTop = content.style.top
-      const initialLeft = content.style.left
+      const initialTransform = content.style.transform
 
       anchorTop = 260
       window.dispatchEvent(new Event('scroll'))
       await waitForRaf()
       await waitForRaf()
 
-      expect(content.style.top).toBe(initialTop)
-      expect(content.style.left).toBe(initialLeft)
+      expect(content.style.transform).toBe(initialTransform)
       controller.destroy()
     })
   })
 
   describe('content portaling', () => {
-    it('portals content to body when open and restores on close', () => {
+    it('portals content to body when open and restores on close', async () => {
       const { root, content, controller } = setup()
       const originalParent = content.parentNode
 
@@ -360,6 +367,7 @@ describe('Popover', () => {
       expect(content.parentNode).toBe(document.body)
 
       controller.close()
+      await waitForClose()
       expect(content.parentNode).toBe(originalParent)
       expect(root.contains(content)).toBe(true)
 
@@ -503,7 +511,7 @@ describe('Popover', () => {
       })
     })
 
-    it('restores focus to previous element on close', () => {
+    it('restores focus to previous element on close', async () => {
       document.body.innerHTML = `
         <button id="outside-btn">Outside</button>
         <div data-slot="popover" id="root">
@@ -522,19 +530,13 @@ describe('Popover', () => {
       expect(document.activeElement).toBe(trigger)
 
       controller.open()
+      await waitForRaf()
+      controller.close()
+      await waitForRaf()
+      await waitForRaf()
 
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          // Now close
-          controller.close()
-
-          requestAnimationFrame(() => {
-            expect(document.activeElement).toBe(trigger)
-            controller.destroy()
-            resolve()
-          })
-        })
-      })
+      expect(document.activeElement).toBe(trigger)
+      controller.destroy()
     })
   })
 

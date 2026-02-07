@@ -8,6 +8,7 @@ export {
   ensureItemVisibleInContainer,
   createDismissLayer,
   createPortalLifecycle,
+  createPresenceLifecycle,
   createPositionSync,
 } from "./popup.ts";
 export type {
@@ -21,4 +22,6 @@ export type {
   DismissLayerOptions,
   PortalLifecycleOptions,
   PortalLifecycleController,
+  PresenceLifecycleOptions,
+  PresenceLifecycleController,
 } from "./popup.ts";

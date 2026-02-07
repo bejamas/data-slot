@@ -31,6 +31,24 @@ describe("Select", () => {
     return { root, trigger, content, valueSlot, items, controller };
   };
 
+  const waitForRaf = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+  const waitForClose = async () => {
+    await waitForRaf();
+    await waitForRaf();
+  };
+
+  const getTranslate3dY = (transform: string): number => {
+    const match = /translate3d\([^,]+,\s*([-\d.]+)px,\s*0(?:px)?\)/.exec(transform);
+    if (!match) {
+      throw new Error(`Expected translate3d transform, got "${transform}"`);
+    }
+    return Number(match[1]);
+  };
+
   beforeEach(() => {
     document.body.innerHTML = "";
     resetScrollLock();
@@ -159,13 +177,14 @@ describe("Select", () => {
       controller.destroy();
     });
 
-    it("closes on trigger click when open", () => {
+    it("closes on trigger click when open", async () => {
       const { trigger, content, controller } = setup();
 
       trigger.click();
       expect(content.hidden).toBe(false);
 
       trigger.click();
+      await waitForClose();
       expect(content.hidden).toBe(true);
 
       controller.destroy();
@@ -1021,7 +1040,7 @@ describe("Select", () => {
 
       controller.open();
 
-      expect(content.style.top).toBe("310px");
+      expect(getTranslate3dY(content.style.transform)).toBe(310);
       expect(content.scrollTop).toBe(326);
 
       controller.destroy();
@@ -1086,7 +1105,7 @@ describe("Select", () => {
 
       controller.open();
 
-      expect(content.style.top).toBe("430px");
+      expect(getTranslate3dY(content.style.transform)).toBe(430);
       expect(content.scrollTop).toBe(596);
 
       controller.destroy();
@@ -1145,7 +1164,7 @@ describe("Select", () => {
 
       controller.open();
 
-      expect(content.style.top).toBe("430px");
+      expect(getTranslate3dY(content.style.transform)).toBe(430);
       expect(viewport.scrollTop).toBe(596);
       expect(content.scrollTop).toBe(0);
 
@@ -1206,7 +1225,7 @@ describe("Select", () => {
       const minY = 8;
       const maxY = window.innerHeight - 700 - 8;
       const expectedY = maxY < minY ? minY : Math.min(Math.max(centeredY, minY), maxY);
-      expect(content.style.top).toBe(`${expectedY}px`);
+      expect(getTranslate3dY(content.style.transform)).toBe(expectedY);
       expect(content.scrollTop).toBe(0);
 
       controller.destroy();
@@ -1214,10 +1233,6 @@ describe("Select", () => {
 
     it("does not reuse stale pointer coordinates when opened without pointer", async () => {
       const { trigger, items, controller } = setup({ defaultValue: "banana" });
-      const waitForRaf = () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => resolve());
-        });
       const originalElementFromPoint = document.elementFromPoint.bind(document);
 
       try {
@@ -1233,7 +1248,7 @@ describe("Select", () => {
         expect(items[0]?.hasAttribute("data-highlighted")).toBe(true);
 
         controller.close();
-        await waitForRaf();
+        await waitForClose();
 
         controller.open();
         await waitForRaf();
@@ -1255,11 +1270,6 @@ describe("Select", () => {
         avoidCollisions: false,
         lockScroll: false,
       });
-      const waitForRaf = () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => resolve());
-        });
-
       let anchorTop = 140;
       const anchorLeft = 56;
       const anchorWidth = 160;
@@ -1297,16 +1307,14 @@ describe("Select", () => {
       await waitForRaf();
       await waitForRaf();
 
-      const initialTop = content.style.top;
-      const initialLeft = content.style.left;
+      const initialTransform = content.style.transform;
 
       anchorTop = 320;
       window.dispatchEvent(new Event("scroll"));
       await waitForRaf();
       await waitForRaf();
 
-      expect(content.style.top).toBe(initialTop);
-      expect(content.style.left).toBe(initialLeft);
+      expect(content.style.transform).toBe(initialTransform);
       controller.destroy();
     });
   });
@@ -2001,7 +2009,7 @@ describe("Select", () => {
   });
 
   describe("content portaling", () => {
-    it("portals content to body when open and restores on close", () => {
+    it("portals content to body when open and restores on close", async () => {
       const { root, trigger, content, controller } = setup();
 
       // Content starts inside root
@@ -2012,13 +2020,14 @@ describe("Select", () => {
       expect(content.parentElement).toBe(document.body);
 
       controller.close();
+      await waitForClose();
       // Content is restored to root when closed
       expect(content.parentElement).toBe(root);
 
       controller.destroy();
     });
 
-    it("restores content before applying closed hidden/data-state", () => {
+    it("restores content before applying closed hidden/data-state", async () => {
       const { root, trigger, content, controller } = setup();
 
       trigger.click();
@@ -2038,7 +2047,7 @@ describe("Select", () => {
         if (node !== content) return;
         observedRestore = true;
         expect(content.hidden).toBe(false);
-        expect(content.getAttribute("data-state")).toBe("open");
+        expect(content.getAttribute("data-state")).toBe("closed");
       };
 
       rootNode.appendChild = ((node: Node) => {
@@ -2053,6 +2062,7 @@ describe("Select", () => {
 
       try {
         controller.close();
+        await waitForClose();
       } finally {
         rootNode.appendChild = originalAppendChild as ParentWithHooks["appendChild"];
         rootNode.insertBefore = originalInsertBefore as ParentWithHooks["insertBefore"];

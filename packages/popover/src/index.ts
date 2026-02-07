@@ -8,6 +8,7 @@ import {
   computeFloatingPosition,
   createPositionSync,
   createPortalLifecycle,
+  createPresenceLifecycle,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -151,6 +152,7 @@ export function createPopover(
   let isOpen = defaultOpen;
   const cleanups: Array<() => void> = [];
   const portal = createPortalLifecycle({ content, root, enabled: portalOption });
+  let isDestroyed = false;
 
   // Focus management state
   let previousActiveElement: HTMLElement | null = null;
@@ -204,14 +206,54 @@ export function createPopover(
     });
 
     content.style.position = "absolute";
-    content.style.top = `${pos.y + win.scrollY}px`;
-    content.style.left = `${pos.x + win.scrollX}px`;
+    content.style.top = "0px";
+    content.style.left = "0px";
+    content.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+    content.style.willChange = "transform";
     content.style.margin = "0";
     content.setAttribute("data-side", pos.side);
     content.setAttribute("data-align", pos.align);
     // TODO(next-major): stop mirroring computed side to legacy `data-position`.
     content.setAttribute("data-position", pos.side);
   };
+
+  const setDataState = (state: "open" | "closed") => {
+    root.setAttribute("data-state", state);
+    content.setAttribute("data-state", state);
+    if (state === "open") {
+      root.setAttribute("data-open", "");
+      content.setAttribute("data-open", "");
+      root.removeAttribute("data-closed");
+      content.removeAttribute("data-closed");
+    } else {
+      root.setAttribute("data-closed", "");
+      content.setAttribute("data-closed", "");
+      root.removeAttribute("data-open");
+      content.removeAttribute("data-open");
+    }
+  };
+
+  const restoreFocus = () => {
+    requestAnimationFrame(() => {
+      if (previousActiveElement && previousActiveElement.isConnected) {
+        previousActiveElement.focus();
+      } else {
+        trigger.focus();
+      }
+      previousActiveElement = null;
+    });
+  };
+
+  const presence = createPresenceLifecycle({
+    element: content,
+    onExitComplete: () => {
+      if (isDestroyed) return;
+      portal.restore();
+      content.hidden = true;
+      cleanupContentFocusable();
+      restoreFocus();
+    },
+  });
 
   const positionSync = createPositionSync({
     observedElements: [trigger, content],
@@ -231,45 +273,35 @@ export function createPopover(
     isOpen = open;
     setAria(trigger, "expanded", isOpen);
 
-    emit(root, "popover:change", { open: isOpen });
-    onOpenChange?.(isOpen);
-
     if (open) {
       portal.mount();
       content.hidden = false;
-      root.setAttribute("data-state", "open");
-      content.setAttribute("data-state", "open");
+      setDataState("open");
+      presence.enter();
       updatePosition();
       positionSync.start();
       positionSync.update();
       requestAnimationFrame(focusFirst);
     } else {
+      setDataState("closed");
+      presence.exit();
       positionSync.stop();
-      portal.restore();
-      content.hidden = true;
-      root.setAttribute("data-state", "closed");
-      content.setAttribute("data-state", "closed");
-      cleanupContentFocusable();
-      requestAnimationFrame(() => {
-        if (previousActiveElement && previousActiveElement.isConnected) {
-          previousActiveElement.focus();
-        } else {
-          trigger.focus();
-        }
-        previousActiveElement = null;
-      });
     }
+
+    emit(root, "popover:change", { open: isOpen });
+    onOpenChange?.(isOpen);
   };
 
   // Initialize state
   setAria(trigger, "expanded", isOpen);
+  setDataState(isOpen ? "open" : "closed");
   content.hidden = !isOpen;
-  root.setAttribute("data-state", isOpen ? "open" : "closed");
-  content.setAttribute("data-state", isOpen ? "open" : "closed");
 
   // Focus first element if defaultOpen
   if (defaultOpen) {
     portal.mount();
+    presence.enter();
+    content.hidden = false;
     updatePosition();
     positionSync.start();
     positionSync.update();
@@ -319,7 +351,9 @@ export function createPopover(
       return isOpen;
     },
     destroy: () => {
+      isDestroyed = true;
       positionSync.stop();
+      presence.cleanup();
       portal.cleanup();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;

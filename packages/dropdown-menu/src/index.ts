@@ -15,6 +15,7 @@ import {
   ensureItemVisibleInContainer,
   createPositionSync,
   createPortalLifecycle,
+  createPresenceLifecycle,
   createDismissLayer,
 } from "@data-slot/core";
 
@@ -176,6 +177,7 @@ export function createDropdownMenu(
 
   // Portal lifecycle for moving content to body
   const portal = createPortalLifecycle({ content, root });
+  let isDestroyed = false;
 
   // Cached on open - avoids repeated DOM queries
   let items: HTMLElement[] = [];
@@ -229,13 +231,16 @@ export function createDropdownMenu(
 
     if (lockScrollOption) {
       content.style.position = "fixed";
-      content.style.top = `${pos.y}px`;
-      content.style.left = `${pos.x}px`;
+      content.style.top = "0px";
+      content.style.left = "0px";
+      content.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
     } else {
       content.style.position = "absolute";
-      content.style.top = `${pos.y + win.scrollY}px`;
-      content.style.left = `${pos.x + win.scrollX}px`;
+      content.style.top = "0px";
+      content.style.left = "0px";
+      content.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
     }
+    content.style.willChange = "transform";
     content.style.margin = "0";
     content.setAttribute("data-side", pos.side);
     content.setAttribute("data-align", pos.align);
@@ -270,7 +275,39 @@ export function createDropdownMenu(
   const setDataState = (state: "open" | "closed") => {
     root.setAttribute("data-state", state);
     content.setAttribute("data-state", state);
+    if (state === "open") {
+      root.setAttribute("data-open", "");
+      content.setAttribute("data-open", "");
+      root.removeAttribute("data-closed");
+      content.removeAttribute("data-closed");
+    } else {
+      root.setAttribute("data-closed", "");
+      content.setAttribute("data-closed", "");
+      root.removeAttribute("data-open");
+      content.removeAttribute("data-open");
+    }
   };
+
+  const restoreFocus = () => {
+    requestAnimationFrame(() => {
+      if (previousActiveElement && document.contains(previousActiveElement)) {
+        previousActiveElement.focus();
+      } else if (trigger && document.contains(trigger)) {
+        trigger.focus();
+      }
+      previousActiveElement = null;
+    });
+  };
+
+  const presence = createPresenceLifecycle({
+    element: content,
+    onExitComplete: () => {
+      if (isDestroyed) return;
+      portal.restore();
+      content.hidden = true;
+      restoreFocus();
+    },
+  });
 
   const updateState = (open: boolean) => {
     if (isOpen === open) return;
@@ -282,6 +319,7 @@ export function createDropdownMenu(
       portal.mount();
       content.hidden = false;
       setDataState("open");
+      presence.enter();
 
       // Lock scroll
       if (lockScrollOption && !didLockScroll) {
@@ -300,8 +338,6 @@ export function createDropdownMenu(
     } else {
       isOpen = false;
       setAria(trigger, "expanded", false);
-      portal.restore();
-      content.hidden = true;
       setDataState("closed");
       clearHighlight();
       typeaheadBuffer = "";
@@ -314,15 +350,7 @@ export function createDropdownMenu(
       }
 
       positionSync.stop();
-
-      requestAnimationFrame(() => {
-        if (previousActiveElement && document.contains(previousActiveElement)) {
-          previousActiveElement.focus();
-        } else if (trigger && document.contains(trigger)) {
-          trigger.focus();
-        }
-        previousActiveElement = null;
-      });
+      presence.exit();
     }
 
     emit(root, "dropdown-menu:change", { open: isOpen });
@@ -484,8 +512,10 @@ export function createDropdownMenu(
     toggle: () => updateState(!isOpen),
     get isOpen() { return isOpen; },
     destroy: () => {
+      isDestroyed = true;
       if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
       positionSync.stop();
+      presence.cleanup();
       portal.cleanup();
       // Unlock scroll if still locked
       if (didLockScroll) {
