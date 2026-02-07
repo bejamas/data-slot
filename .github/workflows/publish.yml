@@ -84,7 +84,7 @@ jobs:
 
               # Replace ONLY the @data-slot/core version value (handles "workspace:*" and any prior value)
               # Expects: "@data-slot/core": "..."
-              sed -i -E 's#("@data-slot/core"[[:space:]]*:[[:space:]]*")[^"]+("#\1'"$core_version"'\2#g' "$manifest"
+              sed -i -E "s#\"@data-slot/core\"[[:space:]]*:[[:space:]]*\"[^\"]+\"#\"@data-slot/core\": \"${core_version}\"#g" "$manifest"
 
               echo "=== After ($dir) ==="
               grep -n '"@data-slot/core"' "$manifest" || true
