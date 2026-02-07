@@ -71,8 +71,6 @@ jobs:
 
             echo "=== Packed manifest for $dir ($tgz) ==="
             cat "$tmp/package/package.json"
-            echo "=== name@version ==="
-            echo "$tmp/package/package.json" | jq -r '"\(.name)@\(.version)"'
 
             rm -rf "$tmp" "$tgz"
             popd >/dev/null
