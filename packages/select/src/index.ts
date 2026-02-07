@@ -292,7 +292,7 @@ export function createSelect(
     }
   };
 
-  // Compute position for item-aligned mode
+  // Compute base position data for item-aligned mode
   const computeItemAlignedPos = (tr: DOMRect, cr: DOMRect) => {
     // Find selected item, or fall back to first enabled item
     const selectedItem = items.find((item) => item.dataset["value"] === currentValue);
@@ -301,23 +301,26 @@ export function createSelect(
     // Calculate x position (align left edges, match trigger width)
     let x = tr.left;
 
-    // Calculate y position so aligned item is at trigger's vertical center
+    // Calculate y position so aligned item is at trigger's vertical center.
+    // This is the base (unclamped) y when content scrollTop is 0.
     let y: number;
-    let itemOffsetTop = 0;
+    let itemTopInContent = 0;
+    let itemHeight = tr.height;
 
     if (alignItem) {
-      // Get the item's position relative to the content
+      // Normalize to content coordinates, independent of current scrollTop.
       const itemRect = alignItem.getBoundingClientRect();
-      itemOffsetTop = itemRect.top - cr.top;
+      itemTopInContent = itemRect.top - cr.top + content.scrollTop;
+      itemHeight = itemRect.height || alignItem.offsetHeight || tr.height;
 
-      // Position content so item is at trigger's vertical center
-      y = tr.top + (tr.height / 2) - (itemRect.height / 2) - itemOffsetTop;
+      // Position content so item is at trigger's vertical center.
+      y = tr.top + (tr.height / 2) - (itemHeight / 2) - itemTopInContent;
     } else {
       // No items at all - align top of content with trigger
       y = tr.top;
     }
 
-    return { x, y, itemOffsetTop };
+    return { x, y, alignItem, itemTopInContent, itemHeight };
   };
 
   const updatePosition = () => {
@@ -336,6 +339,13 @@ export function createSelect(
     if (position === "item-aligned") {
       const aligned = computeItemAlignedPos(tr, cr);
       pos = { x: aligned.x, y: aligned.y };
+      const triggerCenterY = tr.top + (tr.height / 2);
+      const minY = collisionPadding;
+      const maxY = window.innerHeight - cr.height - collisionPadding;
+      const clampY = (value: number) =>
+        avoidCollisions
+          ? (maxY < minY ? minY : Math.min(Math.max(value, minY), maxY))
+          : value;
 
       if (avoidCollisions) {
         const vw = window.innerWidth;
@@ -354,6 +364,31 @@ export function createSelect(
         } else if (pos.x + cr.width > vw - collisionPadding) {
           pos.x = vw - cr.width - collisionPadding;
         }
+      }
+
+      // For scrollable content, align deep selected items by adjusting internal scroll,
+      // so the popup stays near the trigger instead of jumping far away.
+      if (aligned.alignItem) {
+        const maxScrollTop = Math.max(0, content.scrollHeight - content.clientHeight);
+
+        if (maxScrollTop > 0) {
+          const getDesiredScrollTop = (currentY: number) =>
+            aligned.itemTopInContent + (aligned.itemHeight / 2) - (triggerCenterY - currentY);
+
+          // Start with popup centered around trigger, then solve scrollTop for alignment.
+          pos.y = clampY(triggerCenterY - (cr.height / 2));
+          let scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
+          content.scrollTop = scrollTop;
+
+          // Recompute y after clamped scroll, then finalize scroll against that y.
+          pos.y = clampY(
+            triggerCenterY - (aligned.itemTopInContent - scrollTop + (aligned.itemHeight / 2))
+          );
+          scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
+          content.scrollTop = scrollTop;
+        }
+      } else {
+        content.scrollTop = 0;
       }
 
       // Determine effective side based on final position

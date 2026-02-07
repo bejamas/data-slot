@@ -896,6 +896,61 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("keeps item-aligned popup near trigger by using internal scroll for deep selections", () => {
+      const { trigger, content, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="item-9">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="item-1">Item 1</div>
+            <div data-slot="select-item" data-value="item-2">Item 2</div>
+            <div data-slot="select-item" data-value="item-3">Item 3</div>
+            <div data-slot="select-item" data-value="item-4">Item 4</div>
+            <div data-slot="select-item" data-value="item-5">Item 5</div>
+            <div data-slot="select-item" data-value="item-6">Item 6</div>
+            <div data-slot="select-item" data-value="item-7">Item 7</div>
+            <div data-slot="select-item" data-value="item-8">Item 8</div>
+            <div data-slot="select-item" data-value="item-9">Item 9</div>
+            <div data-slot="select-item" data-value="item-10">Item 10</div>
+          </div>
+        </div>
+      `
+      );
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-9"]'
+      ) as HTMLElement;
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(400, 80, 180, 40);
+      content.getBoundingClientRect = () => rect(0, 80, 180, 220);
+      selectedItem.getBoundingClientRect = () => rect(420, 80, 180, 32);
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 220 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 640 });
+      content.scrollTop = 0;
+
+      controller.open();
+
+      expect(content.style.top).toBe("310px");
+      expect(content.scrollTop).toBe(326);
+
+      controller.destroy();
+    });
+
     it("keeps coordinates stable on window scroll when lockScroll is false", async () => {
       const { trigger, content, controller } = setup({
         position: "popper",

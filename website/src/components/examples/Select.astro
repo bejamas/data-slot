@@ -20,6 +20,21 @@ const cssCode = `<label for="fruit-select" class="select-field-label">Fruit</lab
       <div data-slot="select-item" data-value="orange" data-label="Orange" class="select-item">
         Orange<span class="select-check">✓</span>
       </div>
+      <div data-slot="select-item" data-value="mango" data-label="Mango" class="select-item">
+        Mango<span class="select-check">✓</span>
+      </div>
+      <div data-slot="select-item" data-value="grape" data-label="Grape" class="select-item">
+        Grape<span class="select-check">✓</span>
+      </div>
+      <div data-slot="select-item" data-value="pear" data-label="Pear" class="select-item">
+        Pear<span class="select-check">✓</span>
+      </div>
+      <div data-slot="select-item" data-value="peach" data-label="Peach" class="select-item">
+        Peach<span class="select-check">✓</span>
+      </div>
+      <div data-slot="select-item" data-value="pineapple" data-label="Pineapple" class="select-item">
+        Pineapple<span class="select-check">✓</span>
+      </div>
     </div>
     <div data-slot="select-separator" class="select-separator"></div>
     <div data-slot="select-group">
@@ -29,6 +44,18 @@ const cssCode = `<label for="fruit-select" class="select-field-label">Fruit</lab
       </div>
       <div data-slot="select-item" data-value="broccoli" data-label="Broccoli" class="select-item">
         Broccoli<span class="select-check">✓</span>
+      </div>
+      <div data-slot="select-item" data-value="cucumber" data-label="Cucumber" class="select-item">
+        Cucumber<span class="select-check">✓</span>
+      </div>
+      <div data-slot="select-item" data-value="tomato" data-label="Tomato" class="select-item">
+        Tomato<span class="select-check">✓</span>
+      </div>
+      <div data-slot="select-item" data-value="pepper" data-label="Bell Pepper" class="select-item">
+        Bell Pepper<span class="select-check">✓</span>
+      </div>
+      <div data-slot="select-item" data-value="zucchini" data-label="Zucchini" class="select-item">
+        Zucchini<span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="spinach" data-label="Spinach" data-disabled class="select-item disabled">
         Spinach (out of stock)<span class="select-check">✓</span>
@@ -68,6 +95,8 @@ const cssCode = `<label for="fruit-select" class="select-field-label">Fruit</lab
     background: #faf9f7;
     border: 1px solid #ccc;
     min-width: 180px;
+    max-height: 220px;
+    overflow-y: auto;
     padding: 0.25rem;
     z-index: 50;
   }
@@ -120,7 +149,7 @@ const tailwindCode = `<label for="fruit-select" class="block text-sm font-medium
   <div
     data-slot="select-content"
     class="absolute top-full left-0 mt-1 bg-white border border-gray-300
-           min-w-[180px] p-1 z-50 rounded-lg shadow-lg"
+           min-w-[180px] max-h-[220px] overflow-y-auto p-1 z-50 rounded-lg shadow-lg"
     hidden
   >
     <div data-slot="select-group">
@@ -154,6 +183,51 @@ const tailwindCode = `<label for="fruit-select" class="block text-sm font-medium
       >
         Orange<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
+      <div
+        data-slot="select-item"
+        data-value="mango"
+        data-label="Mango"
+        class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
+               data-[highlighted]:bg-gray-100"
+      >
+        Mango<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
+      <div
+        data-slot="select-item"
+        data-value="grape"
+        data-label="Grape"
+        class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
+               data-[highlighted]:bg-gray-100"
+      >
+        Grape<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
+      <div
+        data-slot="select-item"
+        data-value="pear"
+        data-label="Pear"
+        class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
+               data-[highlighted]:bg-gray-100"
+      >
+        Pear<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
+      <div
+        data-slot="select-item"
+        data-value="peach"
+        data-label="Peach"
+        class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
+               data-[highlighted]:bg-gray-100"
+      >
+        Peach<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
+      <div
+        data-slot="select-item"
+        data-value="pineapple"
+        data-label="Pineapple"
+        class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
+               data-[highlighted]:bg-gray-100"
+      >
+        Pineapple<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
     </div>
     <div data-slot="select-separator" class="h-px bg-gray-200 my-1"></div>
     <div data-slot="select-group">
@@ -180,6 +254,42 @@ const tailwindCode = `<label for="fruit-select" class="block text-sm font-medium
       </div>
       <div
         data-slot="select-item"
+        data-value="cucumber"
+        data-label="Cucumber"
+        class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
+               data-[highlighted]:bg-gray-100"
+      >
+        Cucumber<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
+      <div
+        data-slot="select-item"
+        data-value="tomato"
+        data-label="Tomato"
+        class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
+               data-[highlighted]:bg-gray-100"
+      >
+        Tomato<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
+      <div
+        data-slot="select-item"
+        data-value="pepper"
+        data-label="Bell Pepper"
+        class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
+               data-[highlighted]:bg-gray-100"
+      >
+        Bell Pepper<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
+      <div
+        data-slot="select-item"
+        data-value="zucchini"
+        data-label="Zucchini"
+        class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
+               data-[highlighted]:bg-gray-100"
+      >
+        Zucchini<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
+      <div
+        data-slot="select-item"
         data-value="spinach"
         data-label="Spinach"
         data-disabled
@@ -191,6 +301,7 @@ const tailwindCode = `<label for="fruit-select" class="block text-sm font-medium
     </div>
   </div>
 </div>`;
+
 ---
 
 <ExampleBlock>
@@ -212,6 +323,21 @@ const tailwindCode = `<label for="fruit-select" class="block text-sm font-medium
         <div data-slot="select-item" data-value="orange" data-label="Orange" class="select-item">
           Orange<span class="select-check">✓</span>
         </div>
+        <div data-slot="select-item" data-value="mango" data-label="Mango" class="select-item">
+          Mango<span class="select-check">✓</span>
+        </div>
+        <div data-slot="select-item" data-value="grape" data-label="Grape" class="select-item">
+          Grape<span class="select-check">✓</span>
+        </div>
+        <div data-slot="select-item" data-value="pear" data-label="Pear" class="select-item">
+          Pear<span class="select-check">✓</span>
+        </div>
+        <div data-slot="select-item" data-value="peach" data-label="Peach" class="select-item">
+          Peach<span class="select-check">✓</span>
+        </div>
+        <div data-slot="select-item" data-value="pineapple" data-label="Pineapple" class="select-item">
+          Pineapple<span class="select-check">✓</span>
+        </div>
       </div>
       <div data-slot="select-separator" class="select-separator"></div>
       <div data-slot="select-group">
@@ -221,6 +347,18 @@ const tailwindCode = `<label for="fruit-select" class="block text-sm font-medium
         </div>
         <div data-slot="select-item" data-value="broccoli" data-label="Broccoli" class="select-item">
           Broccoli<span class="select-check">✓</span>
+        </div>
+        <div data-slot="select-item" data-value="cucumber" data-label="Cucumber" class="select-item">
+          Cucumber<span class="select-check">✓</span>
+        </div>
+        <div data-slot="select-item" data-value="tomato" data-label="Tomato" class="select-item">
+          Tomato<span class="select-check">✓</span>
+        </div>
+        <div data-slot="select-item" data-value="pepper" data-label="Bell Pepper" class="select-item">
+          Bell Pepper<span class="select-check">✓</span>
+        </div>
+        <div data-slot="select-item" data-value="zucchini" data-label="Zucchini" class="select-item">
+          Zucchini<span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="spinach" data-label="Spinach" data-disabled class="select-item disabled">
           Spinach (out of stock)<span class="select-check">✓</span>
@@ -240,7 +378,7 @@ const tailwindCode = `<label for="fruit-select" class="block text-sm font-medium
     </button>
     <div
       data-slot="select-content"
-      class="absolute top-full left-0 mt-1 bg-white border border-gray-300 min-w-[180px] p-1 z-50 rounded-lg shadow-lg"
+      class="absolute top-full left-0 mt-1 bg-white border border-gray-300 min-w-[180px] max-h-[220px] overflow-y-auto p-1 z-50 rounded-lg shadow-lg"
       hidden
     >
       <div data-slot="select-group">
@@ -269,6 +407,46 @@ const tailwindCode = `<label for="fruit-select" class="block text-sm font-medium
         >
           Orange<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
+        <div
+          data-slot="select-item"
+          data-value="mango"
+          data-label="Mango"
+          class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+        >
+          Mango<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        </div>
+        <div
+          data-slot="select-item"
+          data-value="grape"
+          data-label="Grape"
+          class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+        >
+          Grape<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        </div>
+        <div
+          data-slot="select-item"
+          data-value="pear"
+          data-label="Pear"
+          class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+        >
+          Pear<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        </div>
+        <div
+          data-slot="select-item"
+          data-value="peach"
+          data-label="Peach"
+          class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+        >
+          Peach<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        </div>
+        <div
+          data-slot="select-item"
+          data-value="pineapple"
+          data-label="Pineapple"
+          class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+        >
+          Pineapple<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        </div>
       </div>
       <div data-slot="select-separator" class="h-px bg-gray-200 my-1"></div>
       <div data-slot="select-group">
@@ -288,6 +466,38 @@ const tailwindCode = `<label for="fruit-select" class="block text-sm font-medium
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
           Broccoli<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        </div>
+        <div
+          data-slot="select-item"
+          data-value="cucumber"
+          data-label="Cucumber"
+          class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+        >
+          Cucumber<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        </div>
+        <div
+          data-slot="select-item"
+          data-value="tomato"
+          data-label="Tomato"
+          class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+        >
+          Tomato<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        </div>
+        <div
+          data-slot="select-item"
+          data-value="pepper"
+          data-label="Bell Pepper"
+          class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+        >
+          Bell Pepper<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        </div>
+        <div
+          data-slot="select-item"
+          data-value="zucchini"
+          data-label="Zucchini"
+          class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+        >
+          Zucchini<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -336,6 +546,8 @@ const tailwindCode = `<label for="fruit-select" class="block text-sm font-medium
     background: #faf9f7;
     border: 1px solid #ccc;
     min-width: 180px;
+    max-height: 220px;
+    overflow-y: auto;
     padding: 0.25rem;
     z-index: 50;
   }
