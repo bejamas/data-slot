@@ -63,15 +63,22 @@ jobs:
 
             local tgz
             tgz="$(ls -1 *.tgz | head -n 1)"
+            [ -f "$tgz" ] || { echo "No .tgz produced in $dir"; ls -la; exit 1; }
 
             local tmp
             tmp="$(mktemp -d)"
             tar -xzf "$tgz" -C "$tmp"
 
-            npm publish "$tmp/package" --access public --provenance
+            echo "=== Packed manifest for $dir ($tgz) ==="
+            cat "$tmp/package/package.json"
+            echo "=== name@version ==="
+            node -p 'const p=require("./package/package.json"); `${p.name}@${p.version}`' "$tmp"
 
             rm -rf "$tmp" "$tgz"
             popd >/dev/null
+
+            # Stop after first package so you can inspect logs
+            exit 1
           }
 
           # Publish in dependency order (core first)
