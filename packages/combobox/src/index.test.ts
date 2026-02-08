@@ -479,8 +479,14 @@ describe("Combobox", () => {
     it("ArrowDown navigates visible items", () => {
       const { input, items, controller } = setup();
       controller.open();
-      // autoHighlight=true means first item (Apple) is already highlighted on open
+      expect(items[0]?.hasAttribute("data-highlighted")).toBe(false);
+
+      // ArrowDown first highlights first item (Apple)
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
       expect(items[0]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(items[1]?.hasAttribute("data-highlighted")).toBe(false);
 
       // ArrowDown moves to second item (Banana)
       input.dispatchEvent(
@@ -488,13 +494,6 @@ describe("Combobox", () => {
       );
       expect(items[0]?.hasAttribute("data-highlighted")).toBe(false);
       expect(items[1]?.hasAttribute("data-highlighted")).toBe(true);
-
-      // ArrowDown moves to third item (Other)
-      input.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
-      );
-      expect(items[1]?.hasAttribute("data-highlighted")).toBe(false);
-      expect(items[2]?.hasAttribute("data-highlighted")).toBe(true);
       controller.destroy();
     });
 
@@ -609,10 +608,8 @@ describe("Combobox", () => {
     });
 
     it("Enter selects highlighted item", () => {
-      const { input, controller } = setup();
+      const { input, controller } = setup({ autoHighlight: true });
       controller.open();
-      // autoHighlight=true means Apple is already highlighted
-      // Enter should select the highlighted item
       input.dispatchEvent(
         new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
       );
@@ -1363,23 +1360,23 @@ describe("Combobox", () => {
   });
 
   describe("auto-highlight", () => {
-    it("highlights first visible item when autoHighlight is true (default)", () => {
+    it("does not highlight first visible item by default", () => {
       const { input, items, controller } = setup();
       controller.open();
       input.value = "a";
       input.dispatchEvent(new Event("input", { bubbles: true }));
 
-      expect(items[0]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(items[0]?.hasAttribute("data-highlighted")).toBe(false);
       controller.destroy();
     });
 
-    it("does not highlight when autoHighlight is false", () => {
-      const { input, items, controller } = setup({ autoHighlight: false });
+    it("highlights when autoHighlight is true", () => {
+      const { input, items, controller } = setup({ autoHighlight: true });
       controller.open();
       input.value = "a";
       input.dispatchEvent(new Event("input", { bubbles: true }));
 
-      expect(items[0]?.hasAttribute("data-highlighted")).toBe(false);
+      expect(items[0]?.hasAttribute("data-highlighted")).toBe(true);
       controller.destroy();
     });
 

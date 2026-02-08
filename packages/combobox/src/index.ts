@@ -49,7 +49,7 @@ export interface ComboboxOptions {
   name?: string;
   /** Open popup when input receives focus @default true */
   openOnFocus?: boolean;
-  /** Auto-highlight first visible item when filtering @default true */
+  /** Auto-highlight first visible item when filtering @default false */
   autoHighlight?: boolean;
   /** Custom filter function. Return true to show item. */
   filter?: (inputValue: string, itemValue: string, itemLabel: string) => boolean;
@@ -127,7 +127,7 @@ export function createCombobox(
   const required = options.required ?? getDataBool(root, "required") ?? false;
   const name = options.name ?? getDataString(root, "name") ?? null;
   const openOnFocus = options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? true;
-  const autoHighlight = options.autoHighlight ?? getDataBool(root, "autoHighlight") ?? true;
+  const autoHighlight = options.autoHighlight ?? getDataBool(root, "autoHighlight") ?? false;
   const customFilter = options.filter ?? null;
   const onValueChange = options.onValueChange;
   const onOpenChange = options.onOpenChange;
