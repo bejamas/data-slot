@@ -1,4 +1,13 @@
-import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataEnum } from "@data-slot/core";
+import {
+  getPart,
+  getParts,
+  getRoots,
+  getDataBool,
+  getDataNumber,
+  getDataEnum,
+  containsWithPortals,
+  createPortalLifecycle,
+} from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { createDismissLayer } from "@data-slot/core";
@@ -87,6 +96,24 @@ export function createNavigationMenu(
   let isRootHovered: boolean = false; // Track if pointer is over root
 
   const cleanups: Array<() => void> = [];
+  const contentPortals = new Map<HTMLElement, ReturnType<typeof createPortalLifecycle>>();
+
+  const updateContentPositioner = (content: HTMLElement) => {
+    const portal = contentPortals.get(content);
+    if (!portal) return;
+    const positioner = portal.container as HTMLElement;
+    const win = root.ownerDocument.defaultView ?? window;
+    const rootRect = (root as HTMLElement).getBoundingClientRect();
+
+    positioner.style.position = "absolute";
+    positioner.style.top = "0px";
+    positioner.style.left = "0px";
+    positioner.style.transform = `translate3d(${rootRect.left + win.scrollX}px, ${rootRect.top + win.scrollY}px, 0)`;
+    positioner.style.width = `${rootRect.width}px`;
+    positioner.style.height = `${rootRect.height}px`;
+    positioner.style.margin = "0";
+    positioner.style.willChange = "transform";
+  };
 
   // ResizeObserver for active panel - handles fonts/images/content changes after open
   let activeRO: ResizeObserver | null = null;
@@ -98,6 +125,10 @@ export function createNavigationMenu(
     activeRO.observe(data.content);
   };
   cleanups.push(() => activeRO?.disconnect());
+  cleanups.push(() => {
+    contentPortals.forEach((portal) => portal.cleanup());
+    contentPortals.clear();
+  });
 
   // Build a map of items with their triggers and content
   const itemMap = new Map<
@@ -128,6 +159,15 @@ export function createNavigationMenu(
         "start";
 
       itemMap.set(value, { item, trigger, content, index: validIndex++, align });
+      contentPortals.set(
+        content,
+        createPortalLifecycle({
+          content,
+          root,
+          enabled: true,
+          wrapperSlot: "navigation-menu-positioner",
+        })
+      );
 
       // Setup ARIA - link trigger to content bidirectionally
       const safe = safeId(value);
@@ -236,6 +276,7 @@ export function createNavigationMenu(
       viewport.style.left = `${left}px`;
       // Also position the content element itself
       content.style.left = `${left}px`;
+      updateContentPositioner(content);
 
       // If child has margin-top, create/update hover bridge to cover the gap
       const totalGap = childMarginTop + viewportMarginTop;
@@ -324,7 +365,7 @@ export function createNavigationMenu(
 
       // If closing and focus is inside content, move focus to last trigger first
       const active = document.activeElement as HTMLElement | null;
-      if (value === null && active && root.contains(active)) {
+      if (value === null && active && containsWithPortals(root, active)) {
         const lastTrigger = prevValue ? itemMap.get(prevValue)?.trigger : null;
         if (lastTrigger) lastTrigger.focus();
       }
@@ -343,6 +384,8 @@ export function createNavigationMenu(
         item.setAttribute("data-state", isActive ? "open" : "closed");
 
         if (!isActive) {
+          const portal = contentPortals.get(content);
+          portal?.restore();
           content.setAttribute("data-state", "inactive");
           content.setAttribute("aria-hidden", "true");
           setInert(content, true);
@@ -361,6 +404,9 @@ export function createNavigationMenu(
 
       // Update new active content
       if (newData) {
+        const portal = contentPortals.get(newData.content);
+        portal?.mount();
+
         if (direction) {
           const enterDirection =
             direction === "right" ? "from-right" : "from-left";
@@ -567,6 +613,14 @@ export function createNavigationMenu(
     cleanups.push(
       on(content, "pointerenter", () => {
         clearTimers();
+      }),
+      on(content, "pointerleave", (e) => {
+        if (clickLocked) return;
+        const next = (e as PointerEvent).relatedTarget as Node | null;
+        if (!containsWithPortals(root, next)) {
+          updateState(null);
+          updateIndicator(null);
+        }
       })
     );
   });
@@ -680,7 +734,7 @@ export function createNavigationMenu(
 
   // Helper to check if this menu instance is active (focused, hovered, or locked)
   const isMenuActive = () =>
-    root.contains(document.activeElement) || isRootHovered || clickLocked;
+    containsWithPortals(root, document.activeElement) || isRootHovered || clickLocked;
 
   const closeMenuAndUnlock = () => {
     clickLocked = false;
@@ -712,7 +766,7 @@ export function createNavigationMenu(
   cleanups.push(
     on(document, "focusin", (e) => {
       if (currentValue === null) return;
-      if (!root.contains(e.target as Node)) {
+      if (!containsWithPortals(root, e.target as Node)) {
         closeMenuAndUnlock();
       }
     })
@@ -726,13 +780,17 @@ export function createNavigationMenu(
       closeOnClickOutside: true,
       closeOnEscape: true,
       preventEscapeDefault: false,
-      isInside: (target) => !!target && root.contains(target),
+      isInside: (target) => !!target && containsWithPortals(root, target),
     })
   );
 
   // Recompute indicator position on window resize or list scroll
   cleanups.push(
     on(window, "resize", () => {
+      if (currentValue) {
+        const data = itemMap.get(currentValue);
+        if (data) requestAnimationFrame(() => updateContentPositioner(data.content));
+      }
       if (hoveredTrigger)
         requestAnimationFrame(() => updateIndicator(hoveredTrigger));
     }),

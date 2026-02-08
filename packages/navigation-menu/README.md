@@ -145,8 +145,13 @@ Can be set on:
 
 - `navigation-menu-indicator` - Animated highlight that follows the hovered trigger
 - `navigation-menu-viewport` - Container for content with size transitions
+- `navigation-menu-positioner` - Generated wrapper used while active content is portaled to `document.body`
 
 ## Styling
+
+Active `navigation-menu-content` is portaled to `document.body` while open. A generated
+`navigation-menu-positioner` wrapper is positioned at the navigation root and contains the
+active panel so submenu layers are not clipped by local stacking contexts.
 
 ### Basic Styling
 
@@ -284,4 +289,3 @@ element.dispatchEvent(
 ## License
 
 MIT
-

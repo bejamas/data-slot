@@ -2,6 +2,17 @@ import { describe, expect, it } from "bun:test";
 import { createNavigationMenu, create } from "./index";
 
 describe("NavigationMenu", () => {
+  const getPositioner = (content: HTMLElement): HTMLElement => {
+    const parent = content.parentElement;
+    if (!(parent instanceof HTMLElement)) {
+      throw new Error("Expected content to have a parent element");
+    }
+    if (parent.getAttribute("data-slot") !== "navigation-menu-positioner") {
+      throw new Error("Expected content to be wrapped by navigation-menu-positioner");
+    }
+    return parent;
+  };
+
   const setup = (options: Parameters<typeof createNavigationMenu>[1] = {}) => {
     document.body.innerHTML = `
       <nav data-slot="navigation-menu" id="root">
@@ -59,6 +70,8 @@ describe("NavigationMenu", () => {
     controller.open("products");
     expect(contents[0]?.hidden).toBe(false);
     expect(contents[0]?.getAttribute("data-state")).toBe("active");
+    const positioner = getPositioner(contents[0]!);
+    expect(positioner.parentElement).toBe(document.body);
     expect(controller.value).toBe("products");
 
     controller.destroy();
@@ -75,6 +88,7 @@ describe("NavigationMenu", () => {
     contents.forEach((content) => {
       expect(content.hidden).toBe(true);
     });
+    expect(contents[0]?.closest('[data-slot="navigation-menu-positioner"]')).toBeNull();
 
     controller.destroy();
   });
@@ -298,6 +312,26 @@ describe("NavigationMenu", () => {
 
     outside.focus();
     expect(controller.value).toBe(null);
+
+    controller.destroy();
+  });
+
+  it("closes when pointer leaves portaled content to outside", async () => {
+    const { root, contents, controller } = setup({ delayClose: 0 });
+    controller.open("products");
+
+    const content = contents[0]!;
+    content.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
+    content.dispatchEvent(
+      new PointerEvent("pointerleave", {
+        bubbles: true,
+        relatedTarget: document.body,
+      } as PointerEventInit)
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(controller.value).toBe(null);
+    expect(root.getAttribute("data-state")).toBe("closed");
 
     controller.destroy();
   });
