@@ -390,19 +390,15 @@ export function createSelect(
 
       pos.x = clampX(pos.x);
 
-      // Start by keeping popup near the trigger, then use internal scroll to
-      // align the anchor item as much as possible.
-      pos.y = clampY(triggerCenterY - (cr.height / 2));
-
       if (aligned.alignItem) {
         const maxScrollTop = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight);
         const getDesiredScrollTop = (currentY: number) =>
           aligned.itemTopInContent + (aligned.itemHeight / 2) - (triggerCenterY - currentY);
-        let scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
-
-        scrollContainer.scrollTop = scrollTop;
-
         if (maxScrollTop > 0) {
+          // Keep popup near the trigger and use internal scroll to align.
+          pos.y = clampY(triggerCenterY - (cr.height / 2));
+          let scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
+          scrollContainer.scrollTop = scrollTop;
           pos.y = clampY(
             triggerCenterY - (aligned.itemTopInContent - scrollTop + (aligned.itemHeight / 2))
           );
@@ -411,9 +407,14 @@ export function createSelect(
           pos.y = clampY(
             triggerCenterY - (aligned.itemTopInContent - scrollTop + (aligned.itemHeight / 2))
           );
+        } else {
+          // No internal scrolling: align directly from item geometry.
+          scrollContainer.scrollTop = 0;
+          pos.y = clampY(aligned.y);
         }
       } else {
         scrollContainer.scrollTop = 0;
+        pos.y = clampY(aligned.y);
       }
 
       // Determine effective side based on final position

@@ -999,6 +999,57 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("aligns selected item in item-aligned mode when there is no internal scroll", () => {
+      const { trigger, content, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="item-3">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="item-1">Item 1</div>
+            <div data-slot="select-item" data-value="item-2">Item 2</div>
+            <div data-slot="select-item" data-value="item-3">Item 3</div>
+          </div>
+        </div>
+      `
+      );
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-3"]'
+      ) as HTMLElement;
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(400, 80, 180, 40);
+      content.getBoundingClientRect = () => rect(0, 80, 180, 120);
+      selectedItem.getBoundingClientRect = () => rect(64, 80, 180, 32);
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 120 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 120 });
+      content.scrollTop = 0;
+
+      controller.open();
+
+      const triggerCenterY = 400 + (40 / 2);
+      const selectedCenterInContent = 64 + (32 / 2);
+      const expectedY = triggerCenterY - selectedCenterInContent;
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(expectedY);
+      expect(content.scrollTop).toBe(0);
+
+      controller.destroy();
+    });
+
     it("keeps item-aligned popup near trigger by using internal scroll for deep selections", () => {
       const { trigger, content, controller } = setup(
         {},
@@ -1179,7 +1230,63 @@ describe("Select", () => {
       controller.destroy();
     });
 
-    it("keeps item-aligned popup near trigger when deep selection cannot be internally scrolled", () => {
+    it("aligns selected item with select-viewport when there is no internal scroll", () => {
+      const { trigger, content, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="item-3">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-viewport">
+              <div data-slot="select-item" data-value="item-1">Item 1</div>
+              <div data-slot="select-item" data-value="item-2">Item 2</div>
+              <div data-slot="select-item" data-value="item-3">Item 3</div>
+            </div>
+          </div>
+        </div>
+      `
+      );
+      const viewport = content.querySelector('[data-slot="select-viewport"]') as HTMLElement;
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-3"]'
+      ) as HTMLElement;
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(400, 80, 180, 40);
+      content.getBoundingClientRect = () => rect(0, 80, 180, 120);
+      selectedItem.getBoundingClientRect = () => rect(64, 80, 180, 32);
+
+      Object.defineProperty(viewport, "clientHeight", { configurable: true, value: 120 });
+      Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 120 });
+      viewport.scrollTop = 0;
+      content.scrollTop = 0;
+
+      controller.open();
+
+      const triggerCenterY = 400 + (40 / 2);
+      const selectedCenterInContent = 64 + (32 / 2);
+      const expectedY = triggerCenterY - selectedCenterInContent;
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(expectedY);
+      expect(viewport.scrollTop).toBe(0);
+      expect(content.scrollTop).toBe(0);
+
+      controller.destroy();
+    });
+
+    it("aligns selected item as much as possible when deep selection cannot be internally scrolled", () => {
       const { trigger, content, controller } = setup(
         {},
         `
@@ -1229,10 +1336,11 @@ describe("Select", () => {
       controller.open();
 
       const triggerCenterY = 400 + (40 / 2);
-      const centeredY = triggerCenterY - (700 / 2);
+      const selectedCenterInContent = 640 + (32 / 2);
+      const alignedY = triggerCenterY - selectedCenterInContent;
       const minY = 8;
       const maxY = window.innerHeight - 700 - 8;
-      const expectedY = maxY < minY ? minY : Math.min(Math.max(centeredY, minY), maxY);
+      const expectedY = maxY < minY ? minY : Math.min(Math.max(alignedY, minY), maxY);
       expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(expectedY);
       expect(content.scrollTop).toBe(0);
 
