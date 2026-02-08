@@ -36,7 +36,7 @@ export interface DialogController {
   _closeOnEscape?: boolean;
   /** Internal: content element for focus trap */
   _content?: HTMLElement;
-  /** Internal: overlay element for z-index */
+  /** Internal: overlay element for stack metadata */
   _overlay?: HTMLElement;
 }
 
@@ -50,13 +50,20 @@ const dialogStack: DialogController[] = [];
 // Single global keydown handler
 let globalKeydownCleanup: (() => void) | null = null;
 
-// Reindex z-index for all dialogs in stack
+// Reindex dialog stack metadata (no hardcoded z-index; styling stays in user CSS)
 function reindexStack() {
-  const zBase = 1000;
   dialogStack.forEach((d, idx) => {
-    const z = zBase + idx * 10;
-    if (d._overlay) d._overlay.style.zIndex = String(z);
-    if (d._content) d._content.style.zIndex = String(z + 1);
+    const stackIndex = String(idx);
+    if (d._overlay) {
+      d._overlay.setAttribute("data-stack-index", stackIndex);
+      d._overlay.style.setProperty("--dialog-stack-index", stackIndex);
+      d._overlay.style.setProperty("--dialog-overlay-stack-index", stackIndex);
+    }
+    if (d._content) {
+      d._content.setAttribute("data-stack-index", stackIndex);
+      d._content.style.setProperty("--dialog-stack-index", stackIndex);
+      d._content.style.setProperty("--dialog-content-stack-index", stackIndex);
+    }
   });
 }
 
@@ -210,10 +217,14 @@ export function createDialog(
     content.setAttribute("data-state", state);
   };
 
-  // Clear z-index on close
-  const clearZIndex = () => {
-    overlay.style.zIndex = "";
-    content.style.zIndex = "";
+  // Clear stack metadata on close
+  const clearStackMetadata = () => {
+    overlay.removeAttribute("data-stack-index");
+    content.removeAttribute("data-stack-index");
+    overlay.style.removeProperty("--dialog-stack-index");
+    overlay.style.removeProperty("--dialog-overlay-stack-index");
+    content.style.removeProperty("--dialog-stack-index");
+    content.style.removeProperty("--dialog-content-stack-index");
   };
 
   const updateState = (open: boolean, force = false) => {
@@ -248,8 +259,8 @@ export function createDialog(
       // Teardown global handler if no dialogs left
       teardownGlobalKeydownHandler();
 
-      // Clear z-index and reindex remaining
-      clearZIndex();
+      // Clear stack metadata and reindex remaining dialogs
+      clearStackMetadata();
       reindexStack();
 
       // Unlock scroll (only if we locked it)

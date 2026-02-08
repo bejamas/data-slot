@@ -415,6 +415,48 @@ describe("Dialog", () => {
     controller2.destroy();
   });
 
+  it("does not set inline z-index and exposes stack metadata for styling", () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog" id="dialog1">
+        <div data-slot="dialog-overlay" id="overlay1"></div>
+        <div data-slot="dialog-content" id="content1">Dialog 1</div>
+      </div>
+      <div data-slot="dialog" id="dialog2">
+        <div data-slot="dialog-overlay" id="overlay2"></div>
+        <div data-slot="dialog-content" id="content2">Dialog 2</div>
+      </div>
+    `;
+
+    const controller1 = createDialog(document.getElementById("dialog1")!);
+    const controller2 = createDialog(document.getElementById("dialog2")!);
+    const overlay1 = document.getElementById("overlay1") as HTMLElement;
+    const content1 = document.getElementById("content1") as HTMLElement;
+    const overlay2 = document.getElementById("overlay2") as HTMLElement;
+    const content2 = document.getElementById("content2") as HTMLElement;
+
+    controller1.open();
+    controller2.open();
+
+    expect(overlay1.style.zIndex).toBe("");
+    expect(content1.style.zIndex).toBe("");
+    expect(overlay2.style.zIndex).toBe("");
+    expect(content2.style.zIndex).toBe("");
+
+    expect(overlay1.getAttribute("data-stack-index")).toBe("0");
+    expect(content1.getAttribute("data-stack-index")).toBe("0");
+    expect(overlay2.getAttribute("data-stack-index")).toBe("1");
+    expect(content2.getAttribute("data-stack-index")).toBe("1");
+
+    controller2.close();
+    expect(overlay2.hasAttribute("data-stack-index")).toBe(false);
+    expect(content2.hasAttribute("data-stack-index")).toBe(false);
+    expect(overlay1.getAttribute("data-stack-index")).toBe("0");
+    expect(content1.getAttribute("data-stack-index")).toBe("0");
+
+    controller1.destroy();
+    controller2.destroy();
+  });
+
   it("handles stacked dialogs - scroll lock uses ref counting", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="dialog1">

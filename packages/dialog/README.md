@@ -156,6 +156,14 @@ Use `data-state` attributes for CSS styling:
 }
 ```
 
+Stacking is intentionally not hardcoded in JavaScript. Configure `z-index` in your CSS.  
+When multiple dialogs are open, `data-stack-index` and CSS variables are exposed on
+`dialog-overlay` and `dialog-content`:
+- `data-stack-index`
+- `--dialog-stack-index`
+- `--dialog-overlay-stack-index` (overlay)
+- `--dialog-content-stack-index` (content)
+
 With Tailwind:
 
 ```html
@@ -235,4 +243,3 @@ Use `{ open: boolean }` instead.
 ## License
 
 MIT
-
