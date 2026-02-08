@@ -100,7 +100,7 @@ Options can be passed via JavaScript or data attributes (JS takes precedence).
 | `required` | `data-required` | `boolean` | `false` | Form validation required |
 | `name` | `data-name` | `string` | - | Form field name (creates hidden input) |
 | `openOnFocus` | `data-open-on-focus` | `boolean` | `true` | Open popup when input is focused |
-| `autoHighlight` | `data-auto-highlight` | `boolean` | `false` | Auto-highlight first visible item when filtering |
+| `autoHighlight` | `data-auto-highlight` | `boolean` | `false` | Auto-highlight first visible item after non-whitespace query input |
 | `filter` | - | `function` | substring | Custom filter function |
 | `itemToStringValue` | - | `(item: HTMLElement \| null, value: string \| null) => string` | item label | Custom text resolver for selected value shown in input |
 | `side` | `data-side` | `"top" \| "bottom"` | `"bottom"` | Popup placement |

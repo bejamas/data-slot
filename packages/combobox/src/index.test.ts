@@ -610,6 +610,8 @@ describe("Combobox", () => {
     it("Enter selects highlighted item", () => {
       const { input, controller } = setup({ autoHighlight: true });
       controller.open();
+      input.value = "a";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
       input.dispatchEvent(
         new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
       );
@@ -1377,6 +1379,16 @@ describe("Combobox", () => {
       input.dispatchEvent(new Event("input", { bubbles: true }));
 
       expect(items[0]?.hasAttribute("data-highlighted")).toBe(true);
+      controller.destroy();
+    });
+
+    it("does not auto-highlight for whitespace-only input", () => {
+      const { input, items, controller } = setup({ autoHighlight: true });
+      controller.open();
+      input.value = "   ";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+
+      expect(items[0]?.hasAttribute("data-highlighted")).toBe(false);
       controller.destroy();
     });
 

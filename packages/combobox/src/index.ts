@@ -527,8 +527,6 @@ export function createCombobox(
       const selectedIndex = enabledVisibleItems.findIndex((el) => getItemValue(el) === currentValue);
       if (selectedIndex >= 0) {
         updateHighlight(selectedIndex);
-      } else if (autoHighlight && enabledVisibleItems.length > 0) {
-        updateHighlight(0);
       } else {
         clearHighlight();
       }
@@ -683,6 +681,7 @@ export function createCombobox(
   // Handle input events (user typing)
   const handleInput = () => {
     const val = input.value;
+    const hasTypedQuery = val.trim() !== "";
 
     // Emit user-initiated input change
     emit(root, "combobox:input-change", { inputValue: val });
@@ -691,12 +690,17 @@ export function createCombobox(
     // Open if not already open
     if (!isOpen) {
       updateOpenState(true);
+      if (autoHighlight && hasTypedQuery && enabledVisibleItems.length > 0) {
+        updateHighlight(0);
+      } else if (highlightedIndex !== -1) {
+        clearHighlight();
+      }
     } else {
       // Re-filter
       applyFilter(val);
 
-      // Auto-highlight first visible item
-      if (autoHighlight && enabledVisibleItems.length > 0) {
+      // Auto-highlight only after non-whitespace query input.
+      if (autoHighlight && hasTypedQuery && enabledVisibleItems.length > 0) {
         updateHighlight(0);
       } else {
         clearHighlight();
