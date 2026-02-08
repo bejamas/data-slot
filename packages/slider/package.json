@@ -1,6 +1,6 @@
 {
   "name": "@data-slot/slider",
-  "version": "0.2.46",
+  "version": "0.2.47",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
