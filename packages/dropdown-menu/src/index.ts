@@ -13,6 +13,7 @@ import {
   unlockScroll,
   computeFloatingPosition,
   ensureItemVisibleInContainer,
+  focusElement,
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
@@ -300,9 +301,9 @@ export function createDropdownMenu(
   const restoreFocus = () => {
     requestAnimationFrame(() => {
       if (previousActiveElement && document.contains(previousActiveElement)) {
-        previousActiveElement.focus();
+        focusElement(previousActiveElement);
       } else if (trigger && document.contains(trigger)) {
-        trigger.focus();
+        focusElement(trigger);
       }
       previousActiveElement = null;
     });

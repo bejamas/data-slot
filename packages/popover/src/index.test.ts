@@ -545,6 +545,43 @@ describe('Popover', () => {
       expect(document.activeElement).toBe(trigger)
       controller.destroy()
     })
+
+    it('restores focus with preventScroll on close', async () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">
+            <input type="text" />
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const trigger = root.querySelector('[data-slot="popover-trigger"]') as HTMLButtonElement
+      const controller = createPopover(root)
+
+      trigger.focus()
+
+      const calls: unknown[][] = []
+      const originalFocus = trigger.focus.bind(trigger)
+      ;(trigger as HTMLButtonElement & { focus: (...args: unknown[]) => void }).focus = (...args: unknown[]) => {
+        calls.push(args)
+      }
+
+      try {
+        controller.open()
+        await waitForRaf()
+        controller.close()
+        await waitForRaf()
+        await waitForRaf()
+
+        expect(calls.some((args) => JSON.stringify(args) === JSON.stringify([{ preventScroll: true }]))).toBe(true)
+      } finally {
+        ;(trigger as HTMLButtonElement & { focus: (...args: unknown[]) => void }).focus = originalFocus as unknown as (
+          ...args: unknown[]
+        ) => void
+        controller.destroy()
+      }
+    })
   })
 
   // Data attribute tests

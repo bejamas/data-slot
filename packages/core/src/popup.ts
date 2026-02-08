@@ -101,6 +101,15 @@ const computeBasePosition = (
   return { x, y };
 };
 
+export const focusElement = (el: HTMLElement | null | undefined): void => {
+  if (!el) return;
+  try {
+    el.focus({ preventScroll: true });
+  } catch {
+    el.focus();
+  }
+};
+
 const getMainAxisOverflow = (
   side: PopupSide,
   pos: { x: number; y: number },

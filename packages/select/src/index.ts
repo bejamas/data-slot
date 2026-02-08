@@ -5,6 +5,7 @@ import { lockScroll, unlockScroll } from "@data-slot/core";
 import {
   computeFloatingPosition,
   ensureItemVisibleInContainer,
+  focusElement,
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
@@ -510,9 +511,9 @@ export function createSelect(
   const restoreFocus = () => {
     requestAnimationFrame(() => {
       if (previousActiveElement && document.contains(previousActiveElement)) {
-        previousActiveElement.focus();
+        focusElement(previousActiveElement);
       } else if (trigger && document.contains(trigger)) {
-        trigger.focus();
+        focusElement(trigger);
       }
       previousActiveElement = null;
     });

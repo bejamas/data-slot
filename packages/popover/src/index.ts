@@ -6,6 +6,7 @@ import {
   getDataNumber,
   createDismissLayer,
   computeFloatingPosition,
+  focusElement,
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
@@ -262,9 +263,9 @@ export function createPopover(
   const restoreFocus = () => {
     requestAnimationFrame(() => {
       if (previousActiveElement && previousActiveElement.isConnected) {
-        previousActiveElement.focus();
+        focusElement(previousActiveElement);
       } else {
-        trigger.focus();
+        focusElement(trigger);
       }
       previousActiveElement = null;
     });

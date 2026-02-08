@@ -6,6 +6,7 @@ export { lockScroll, unlockScroll } from "./scroll.ts";
 export {
   computeFloatingPosition,
   ensureItemVisibleInContainer,
+  focusElement,
   createDismissLayer,
   createPortalLifecycle,
   createPresenceLifecycle,

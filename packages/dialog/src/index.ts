@@ -2,7 +2,7 @@ import { getPart, getRoots, getDataBool } from "@data-slot/core";
 import { setAria, ensureId, linkLabelledBy } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
-import { createPortalLifecycle, createDismissLayer } from "@data-slot/core";
+import { createPortalLifecycle, createDismissLayer, focusElement } from "@data-slot/core";
 
 export interface DialogOptions {
   /** Initial open state */
@@ -272,9 +272,9 @@ export function createDialog(
           document.contains(elementToFocus) &&
           typeof elementToFocus.focus === "function"
         ) {
-          elementToFocus.focus();
+          focusElement(elementToFocus);
         } else if (trigger && document.contains(trigger)) {
-          trigger.focus();
+          focusElement(trigger);
         }
         // If neither available, let focus remain where it is
       });

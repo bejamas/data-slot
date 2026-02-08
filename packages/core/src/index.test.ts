@@ -4,7 +4,7 @@ import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
-import { computeFloatingPosition, ensureItemVisibleInContainer, createDismissLayer, createPortalLifecycle, createPresenceLifecycle, createPositionSync } from './index'
+import { computeFloatingPosition, ensureItemVisibleInContainer, focusElement, createDismissLayer, createPortalLifecycle, createPresenceLifecycle, createPositionSync } from './index'
 import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
 
@@ -1152,6 +1152,52 @@ describe('core/popup', () => {
 
     cleanupInner()
     cleanupOuter()
+  })
+
+  it('focusElement prefers preventScroll when available', () => {
+    document.body.innerHTML = `<button id="btn">Button</button>`
+    const btn = document.getElementById('btn') as HTMLButtonElement
+    const calls: unknown[][] = []
+
+    const originalFocus = btn.focus.bind(btn)
+    ;(btn as HTMLButtonElement & { focus: (...args: unknown[]) => void }).focus = (...args: unknown[]) => {
+      calls.push(args)
+    }
+
+    try {
+      focusElement(btn)
+      expect(calls).toHaveLength(1)
+      expect(calls[0]).toEqual([{ preventScroll: true }])
+    } finally {
+      ;(btn as HTMLButtonElement & { focus: (...args: unknown[]) => void }).focus = originalFocus as unknown as (
+        ...args: unknown[]
+      ) => void
+    }
+  })
+
+  it('focusElement falls back to plain focus when options are unsupported', () => {
+    document.body.innerHTML = `<button id="btn">Button</button>`
+    const btn = document.getElementById('btn') as HTMLButtonElement
+    const calls: unknown[][] = []
+
+    const originalFocus = btn.focus.bind(btn)
+    ;(btn as HTMLButtonElement & { focus: (...args: unknown[]) => void }).focus = (...args: unknown[]) => {
+      calls.push(args)
+      if (args.length > 0) {
+        throw new TypeError('focus options not supported')
+      }
+    }
+
+    try {
+      focusElement(btn)
+      expect(calls).toHaveLength(2)
+      expect(calls[0]).toEqual([{ preventScroll: true }])
+      expect(calls[1]).toEqual([])
+    } finally {
+      ;(btn as HTMLButtonElement & { focus: (...args: unknown[]) => void }).focus = originalFocus as unknown as (
+        ...args: unknown[]
+      ) => void
+    }
   })
 
   it('createPortalLifecycle mounts and restores content', () => {
