@@ -2,7 +2,7 @@ import { getPart, getRoots, getDataBool } from "@data-slot/core";
 import { setAria, ensureId, linkLabelledBy } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
-import { createPortalLifecycle } from "@data-slot/core";
+import { createPortalLifecycle, createDismissLayer } from "@data-slot/core";
 
 export interface DialogOptions {
   /** Initial open state */
@@ -32,8 +32,6 @@ export interface DialogController {
   destroy(): void;
   /** Internal: handle keydown for focus trap (used by global handler) */
   _handleKeydown?(e: KeyboardEvent): void;
-  /** Internal: options for global handler */
-  _closeOnEscape?: boolean;
   /** Internal: content element for focus trap */
   _content?: HTMLElement;
   /** Internal: overlay element for stack metadata */
@@ -44,7 +42,7 @@ export interface DialogController {
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-// Dialog stack for managing Escape key
+// Dialog stack for focus-trap routing
 const dialogStack: DialogController[] = [];
 
 // Single global keydown handler
@@ -75,13 +73,6 @@ function setupGlobalKeydownHandler() {
 
     const topmost = dialogStack[dialogStack.length - 1];
     if (!topmost || !topmost.isOpen) return;
-
-    // Escape key - only topmost dialog responds
-    if (e.key === "Escape" && topmost._closeOnEscape) {
-      e.preventDefault();
-      topmost.close();
-      return;
-    }
 
     // Tab key - focus trap handled by each dialog
     if (e.key === "Tab" && topmost._handleKeydown) {
@@ -396,6 +387,18 @@ export function createDialog(
     );
   }
 
+  // Escape dismissal is routed via global dismiss-layer stack so nested
+  // popups/selects/comboboxes close before the dialog.
+  cleanups.push(
+    createDismissLayer({
+      root,
+      isOpen: () => isOpen,
+      onDismiss: () => updateState(false),
+      closeOnClickOutside: false,
+      closeOnEscape,
+    })
+  );
+
   const controller: DialogController = {
     open: () => updateState(true),
     close: () => updateState(false),
@@ -425,7 +428,6 @@ export function createDialog(
     },
     // Internal properties for global handler
     _handleKeydown: handleKeydown,
-    _closeOnEscape: closeOnEscape,
     _content: content,
     _overlay: overlay,
   };

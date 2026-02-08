@@ -530,40 +530,133 @@ export interface DismissLayerOptions {
   isInside?: (target: Node | null) => boolean;
 }
 
+interface DismissLayerEntry {
+  isOpen: () => boolean;
+  onDismiss: () => void;
+  isInside: (target: Node | null) => boolean;
+  closeOnClickOutside: boolean;
+  closeOnEscape: boolean;
+  preventEscapeDefault: boolean;
+  wasOpen: boolean;
+  openOrder: number;
+}
+
+interface DismissLayerStore {
+  layers: DismissLayerEntry[];
+  openSequence: number;
+  cleanup: () => void;
+}
+
+const dismissLayerStores = new WeakMap<Document, DismissLayerStore>();
+
+const syncLayerOpenState = (store: DismissLayerStore, layer: DismissLayerEntry): boolean => {
+  const open = layer.isOpen();
+  if (open && !layer.wasOpen) {
+    store.openSequence += 1;
+    layer.openOrder = store.openSequence;
+  }
+  layer.wasOpen = open;
+  return open;
+};
+
+const getTopmostOpenLayer = (
+  store: DismissLayerStore,
+  predicate?: (layer: DismissLayerEntry) => boolean
+): DismissLayerEntry | null => {
+  let topmost: DismissLayerEntry | null = null;
+  for (const layer of store.layers) {
+    const open = syncLayerOpenState(store, layer);
+    if (!open) continue;
+    if (predicate && !predicate(layer)) continue;
+    if (!topmost || layer.openOrder > topmost.openOrder) {
+      topmost = layer;
+    }
+  }
+  return topmost;
+};
+
+const createDismissLayerStore = (doc: Document): DismissLayerStore => {
+  const store: DismissLayerStore = {
+    layers: [],
+    openSequence: 0,
+    cleanup: () => {},
+  };
+
+  const pointerCleanup = on(doc, "pointerdown", (event) => {
+    const target = event.target as Node | null;
+    const topmost = getTopmostOpenLayer(store);
+    if (!topmost || !topmost.closeOnClickOutside) return;
+    if (topmost.isInside(target)) return;
+    topmost.onDismiss();
+  });
+
+  const keydownCleanup = on(doc, "keydown", (event) => {
+    if (event.key !== "Escape") return;
+    // If a focused control already handled Escape (e.g. select/combobox),
+    // do not cascade to outer layers.
+    if (event.defaultPrevented) return;
+
+    const target = event.target as Node | null;
+    const topmostFromTarget = getTopmostOpenLayer(
+      store,
+      (layer) => layer.closeOnEscape && layer.isInside(target)
+    );
+    const topmost = topmostFromTarget ?? getTopmostOpenLayer(store, (layer) => layer.closeOnEscape);
+    if (!topmost) return;
+
+    if (topmost.preventEscapeDefault) {
+      event.preventDefault();
+    }
+    topmost.onDismiss();
+  });
+
+  store.cleanup = () => {
+    pointerCleanup();
+    keydownCleanup();
+    store.layers.length = 0;
+  };
+
+  return store;
+};
+
+const getDismissLayerStore = (doc: Document): DismissLayerStore => {
+  const existing = dismissLayerStores.get(doc);
+  if (existing) return existing;
+  const created = createDismissLayerStore(doc);
+  dismissLayerStores.set(doc, created);
+  return created;
+};
+
 export function createDismissLayer(options: DismissLayerOptions): () => void {
   const doc = options.root.ownerDocument ?? document;
-  const isInside = options.isInside ?? ((target: Node | null) => containsWithPortals(options.root, target));
-  const closeOnClickOutside = options.closeOnClickOutside ?? true;
-  const closeOnEscape = options.closeOnEscape ?? true;
-  const preventEscapeDefault = options.preventEscapeDefault ?? true;
-  const cleanups: Array<() => void> = [];
+  const store = getDismissLayerStore(doc);
+  const entry: DismissLayerEntry = {
+    isOpen: options.isOpen,
+    onDismiss: options.onDismiss,
+    isInside: options.isInside ?? ((target: Node | null) => containsWithPortals(options.root, target)),
+    closeOnClickOutside: options.closeOnClickOutside ?? true,
+    closeOnEscape: options.closeOnEscape ?? true,
+    preventEscapeDefault: options.preventEscapeDefault ?? true,
+    wasOpen: false,
+    openOrder: 0,
+  };
 
-  if (closeOnClickOutside) {
-    cleanups.push(
-      on(doc, "pointerdown", (e) => {
-        if (!options.isOpen()) return;
-        const target = e.target as Node | null;
-        if (!isInside(target)) {
-          options.onDismiss();
-        }
-      })
-    );
+  if (syncLayerOpenState(store, entry)) {
+    // Layer starts open (e.g. defaultOpen).
+    entry.wasOpen = true;
   }
 
-  if (closeOnEscape) {
-    cleanups.push(
-      on(doc, "keydown", (e) => {
-        if (!options.isOpen()) return;
-        if (e.key !== "Escape") return;
-        if (preventEscapeDefault) e.preventDefault();
-        options.onDismiss();
-      })
-    );
-  }
+  store.layers.push(entry);
 
   return () => {
-    cleanups.forEach((fn) => fn());
-    cleanups.length = 0;
+    const idx = store.layers.indexOf(entry);
+    if (idx !== -1) {
+      store.layers.splice(idx, 1);
+    }
+    if (store.layers.length === 0) {
+      store.cleanup();
+      dismissLayerStores.delete(doc);
+    }
   };
 }
 

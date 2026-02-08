@@ -1030,6 +1030,130 @@ describe('core/popup', () => {
     lifecycle.cleanup()
   })
 
+  it('createDismissLayer dismisses only the topmost open layer on Escape', () => {
+    document.body.innerHTML = `
+      <div id="outer">
+        <button id="inner"></button>
+      </div>
+    `
+    const outer = document.getElementById('outer')!
+    const inner = document.getElementById('inner')!
+
+    let outerOpen = true
+    let innerOpen = true
+    let outerDismissed = 0
+    let innerDismissed = 0
+
+    const cleanupOuter = createDismissLayer({
+      root: outer,
+      isOpen: () => outerOpen,
+      onDismiss: () => {
+        outerDismissed += 1
+        outerOpen = false
+      },
+      closeOnClickOutside: false,
+      closeOnEscape: true,
+    })
+
+    const cleanupInner = createDismissLayer({
+      root: inner,
+      isOpen: () => innerOpen,
+      onDismiss: () => {
+        innerDismissed += 1
+        innerOpen = false
+      },
+      closeOnClickOutside: false,
+      closeOnEscape: true,
+    })
+
+    inner.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+
+    expect(innerDismissed).toBe(1)
+    expect(outerDismissed).toBe(0)
+
+    cleanupInner()
+    cleanupOuter()
+  })
+
+  it('createDismissLayer respects Escape already handled by inner control', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <input id="input" />
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const input = document.getElementById('input')!
+
+    let open = true
+    let dismissed = 0
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') e.preventDefault()
+    })
+
+    const cleanup = createDismissLayer({
+      root,
+      isOpen: () => open,
+      onDismiss: () => {
+        dismissed += 1
+        open = false
+      },
+      closeOnClickOutside: false,
+      closeOnEscape: true,
+    })
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(dismissed).toBe(0)
+
+    cleanup()
+  })
+
+  it('createDismissLayer dismisses only one topmost layer on outside pointerdown', () => {
+    document.body.innerHTML = `
+      <div id="outer">
+        <div id="inner"></div>
+      </div>
+      <div id="outside"></div>
+    `
+    const outer = document.getElementById('outer')!
+    const inner = document.getElementById('inner')!
+    const outside = document.getElementById('outside')!
+
+    let outerOpen = true
+    let innerOpen = true
+    let outerDismissed = 0
+    let innerDismissed = 0
+
+    const cleanupOuter = createDismissLayer({
+      root: outer,
+      isOpen: () => outerOpen,
+      onDismiss: () => {
+        outerDismissed += 1
+        outerOpen = false
+      },
+      closeOnClickOutside: true,
+      closeOnEscape: false,
+    })
+
+    const cleanupInner = createDismissLayer({
+      root: inner,
+      isOpen: () => innerOpen,
+      onDismiss: () => {
+        innerDismissed += 1
+        innerOpen = false
+      },
+      closeOnClickOutside: true,
+      closeOnEscape: false,
+    })
+
+    outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    expect(innerDismissed).toBe(1)
+    expect(outerDismissed).toBe(0)
+
+    cleanupInner()
+    cleanupOuter()
+  })
+
   it('createPortalLifecycle mounts and restores content', () => {
     document.body.innerHTML = `
       <div id="root">

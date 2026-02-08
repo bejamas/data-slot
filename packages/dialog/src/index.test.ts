@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import { createDialog, create } from "./index";
+import { createPopover } from "../../popover/src/index";
 
 describe("Dialog", () => {
   const setup = (options: Parameters<typeof createDialog>[1] = {}) => {
@@ -413,6 +414,46 @@ describe("Dialog", () => {
 
     controller1.destroy();
     controller2.destroy();
+  });
+
+  it("Escape closes inner popover before dialog", () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog" id="dialog-root">
+        <button data-slot="dialog-trigger">Open dialog</button>
+        <div data-slot="dialog-overlay"></div>
+        <div data-slot="dialog-content">
+          <div data-slot="popover" id="popover-root">
+            <button data-slot="popover-trigger" id="popover-trigger">Open popover</button>
+            <div data-slot="popover-content">Inner popover content</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const dialogRoot = document.getElementById("dialog-root")!;
+    const popoverRoot = document.getElementById("popover-root")!;
+    const popoverTrigger = document.getElementById("popover-trigger") as HTMLButtonElement;
+    const dialogController = createDialog(dialogRoot);
+    const popoverController = createPopover(popoverRoot);
+
+    dialogController.open();
+    popoverTrigger.click();
+    expect(dialogController.isOpen).toBe(true);
+    expect(popoverController.isOpen).toBe(true);
+
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    expect(popoverController.isOpen).toBe(false);
+    expect(dialogController.isOpen).toBe(true);
+
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    expect(dialogController.isOpen).toBe(false);
+
+    popoverController.destroy();
+    dialogController.destroy();
   });
 
   it("does not set inline z-index and exposes stack metadata for styling", () => {
