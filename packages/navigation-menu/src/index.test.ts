@@ -52,6 +52,17 @@ describe("NavigationMenu", () => {
     return { root, triggers, contents, viewport, controller };
   };
 
+  const getViewportPositioner = (viewport: HTMLElement): HTMLElement => {
+    const parent = viewport.parentElement;
+    if (!(parent instanceof HTMLElement)) {
+      throw new Error("Expected viewport to have a parent element");
+    }
+    if (parent.getAttribute("data-slot") !== "navigation-menu-viewport-positioner") {
+      throw new Error("Expected viewport to be wrapped by navigation-menu-viewport-positioner");
+    }
+    return parent;
+  };
+
   it("initializes with all content hidden", () => {
     const { contents, controller } = setup();
 
@@ -65,20 +76,22 @@ describe("NavigationMenu", () => {
   });
 
   it("opens on programmatic open()", () => {
-    const { contents, controller } = setup();
+    const { contents, viewport, controller } = setup();
 
     controller.open("products");
     expect(contents[0]?.hidden).toBe(false);
     expect(contents[0]?.getAttribute("data-state")).toBe("active");
     const positioner = getPositioner(contents[0]!);
     expect(positioner.parentElement).toBe(document.body);
+    const viewportPositioner = getViewportPositioner(viewport);
+    expect(viewportPositioner.parentElement).toBe(document.body);
     expect(controller.value).toBe("products");
 
     controller.destroy();
   });
 
   it("closes on programmatic close()", () => {
-    const { contents, controller } = setup();
+    const { contents, viewport, controller } = setup();
 
     controller.open("products");
     expect(controller.value).toBe("products");
@@ -89,6 +102,7 @@ describe("NavigationMenu", () => {
       expect(content.hidden).toBe(true);
     });
     expect(contents[0]?.closest('[data-slot="navigation-menu-positioner"]')).toBeNull();
+    expect(viewport.closest('[data-slot="navigation-menu-viewport-positioner"]')).toBeNull();
 
     controller.destroy();
   });

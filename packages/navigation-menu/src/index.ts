@@ -97,11 +97,35 @@ export function createNavigationMenu(
 
   const cleanups: Array<() => void> = [];
   const contentPortals = new Map<HTMLElement, ReturnType<typeof createPortalLifecycle>>();
+  const viewportPortal = viewport
+    ? createPortalLifecycle({
+        content: viewport,
+        root,
+        enabled: true,
+        wrapperSlot: "navigation-menu-viewport-positioner",
+      })
+    : null;
 
   const updateContentPositioner = (content: HTMLElement) => {
     const portal = contentPortals.get(content);
     if (!portal) return;
     const positioner = portal.container as HTMLElement;
+    const win = root.ownerDocument.defaultView ?? window;
+    const rootRect = (root as HTMLElement).getBoundingClientRect();
+
+    positioner.style.position = "absolute";
+    positioner.style.top = "0px";
+    positioner.style.left = "0px";
+    positioner.style.transform = `translate3d(${rootRect.left + win.scrollX}px, ${rootRect.top + win.scrollY}px, 0)`;
+    positioner.style.width = `${rootRect.width}px`;
+    positioner.style.height = `${rootRect.height}px`;
+    positioner.style.margin = "0";
+    positioner.style.willChange = "transform";
+  };
+
+  const updateViewportPositioner = () => {
+    if (!viewport || !viewportPortal) return;
+    const positioner = viewportPortal.container as HTMLElement;
     const win = root.ownerDocument.defaultView ?? window;
     const rootRect = (root as HTMLElement).getBoundingClientRect();
 
@@ -128,6 +152,7 @@ export function createNavigationMenu(
   cleanups.push(() => {
     contentPortals.forEach((portal) => portal.cleanup());
     contentPortals.clear();
+    viewportPortal?.cleanup();
   });
 
   // Build a map of items with their triggers and content
@@ -277,6 +302,7 @@ export function createNavigationMenu(
       // Also position the content element itself
       content.style.left = `${left}px`;
       updateContentPositioner(content);
+      updateViewportPositioner();
 
       // If child has margin-top, create/update hover bridge to cover the gap
       const totalGap = childMarginTop + viewportMarginTop;
@@ -404,6 +430,7 @@ export function createNavigationMenu(
 
       // Update new active content
       if (newData) {
+        viewportPortal?.mount();
         const portal = contentPortals.get(newData.content);
         portal?.mount();
 
@@ -424,6 +451,7 @@ export function createNavigationMenu(
         observeActiveContent(newData);
         updateIndicator(newData.trigger); // Indicator follows active trigger
       } else {
+        viewportPortal?.restore();
         observeActiveContent(null);
       }
 
@@ -787,6 +815,9 @@ export function createNavigationMenu(
   // Recompute indicator position on window resize or list scroll
   cleanups.push(
     on(window, "resize", () => {
+      if (currentValue) {
+        requestAnimationFrame(() => updateViewportPositioner());
+      }
       if (currentValue) {
         const data = itemMap.get(currentValue);
         if (data) requestAnimationFrame(() => updateContentPositioner(data.content));
