@@ -121,6 +121,7 @@ export function createNavigationMenu(
     positioner.style.height = `${rootRect.height}px`;
     positioner.style.margin = "0";
     positioner.style.willChange = "transform";
+    positioner.style.pointerEvents = "none";
   };
 
   const updateViewportPositioner = () => {
@@ -137,6 +138,7 @@ export function createNavigationMenu(
     positioner.style.height = `${rootRect.height}px`;
     positioner.style.margin = "0";
     positioner.style.willChange = "transform";
+    positioner.style.pointerEvents = "none";
   };
 
   // ResizeObserver for active panel - handles fonts/images/content changes after open
@@ -445,6 +447,7 @@ export function createNavigationMenu(
         newData.content.removeAttribute("aria-hidden");
         setInert(newData.content, false);
         newData.content.hidden = false;
+        newData.content.style.pointerEvents = "auto";
         previousIndex = newData.index;
 
         updateViewportSize(newData.content, newData.trigger, newData.align);
@@ -470,6 +473,7 @@ export function createNavigationMenu(
       // Update viewport state
       if (viewport) {
         viewport.setAttribute("data-state", isOpen ? "open" : "closed");
+        viewport.style.pointerEvents = isOpen ? "auto" : "none";
 
         // Set data-instant on initial open to skip size animation
         if (isOpen && !isSwitching) {
@@ -612,7 +616,9 @@ export function createNavigationMenu(
     on(root, "pointerenter", () => {
       isRootHovered = true;
     }),
-    on(root, "pointerleave", () => {
+    on(root, "pointerleave", (e) => {
+      const next = (e as PointerEvent).relatedTarget as Node | null;
+      if (containsWithPortals(root, next)) return;
       isRootHovered = false;
       if (!clickLocked) {
         updateState(null);

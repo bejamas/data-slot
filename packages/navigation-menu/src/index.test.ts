@@ -350,6 +350,25 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("stays open when pointer leaves root into portaled content", () => {
+    const { root, contents, controller } = setup({ delayClose: 0 });
+    controller.open("products");
+    expect(controller.value).toBe("products");
+
+    const content = contents[0]!;
+    root.dispatchEvent(
+      new PointerEvent("pointerleave", {
+        bubbles: true,
+        relatedTarget: content,
+      } as PointerEventInit)
+    );
+
+    expect(controller.value).toBe("products");
+    expect(root.getAttribute("data-state")).toBe("open");
+
+    controller.destroy();
+  });
+
   it("handles keyboard navigation with ArrowRight", () => {
     const { triggers, controller } = setup();
 

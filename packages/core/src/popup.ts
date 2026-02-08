@@ -701,6 +701,8 @@ export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLi
     const nextWrapper = doc.createElement("div");
     if (wrapperSlot) {
       nextWrapper.setAttribute("data-slot", wrapperSlot);
+      nextWrapper.style.isolation = "isolate";
+      nextWrapper.style.zIndex = "50";
     }
     wrapper = nextWrapper;
     return nextWrapper;

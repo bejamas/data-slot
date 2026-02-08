@@ -1240,6 +1240,8 @@ describe('core/popup', () => {
     const wrapper = content.parentElement as HTMLElement | null
     expect(wrapper).toBeTruthy()
     expect(wrapper?.getAttribute('data-slot')).toBe('popover-positioner')
+    expect(wrapper?.style.isolation).toBe('isolate')
+    expect(wrapper?.style.zIndex).toBe('50')
     expect(wrapper?.parentElement).toBe(document.body)
     expect(lifecycle.container).toBe(wrapper)
 
