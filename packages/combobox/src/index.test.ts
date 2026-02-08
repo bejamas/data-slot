@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from "bun:test";
 import { createCombobox, create } from "./index";
+import { createDialog } from "../../dialog/src/index";
 
 describe("Combobox", () => {
   const setup = (options: Parameters<typeof createCombobox>[1] = {}, html?: string) => {
@@ -789,10 +790,26 @@ describe("Combobox", () => {
   });
 
   describe("opening behavior", () => {
-    it("opens on focus when openOnFocus is true (default)", () => {
+    it("opens on focus after pointer intent when openOnFocus is true (default)", () => {
       const { input, controller } = setup();
+      input.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
       input.dispatchEvent(new Event("focus", { bubbles: true }));
       expect(controller.isOpen).toBe(true);
+      controller.destroy();
+    });
+
+    it("opens on focus after Tab intent when openOnFocus is true (default)", () => {
+      const { input, controller } = setup();
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+      input.dispatchEvent(new Event("focus", { bubbles: true }));
+      expect(controller.isOpen).toBe(true);
+      controller.destroy();
+    });
+
+    it("does not open on focus without user intent", () => {
+      const { input, controller } = setup();
+      input.dispatchEvent(new Event("focus", { bubbles: true }));
+      expect(controller.isOpen).toBe(false);
       controller.destroy();
     });
 
@@ -844,6 +861,39 @@ describe("Combobox", () => {
       controller.open();
       expect(controller.isOpen).toBe(false);
       controller.destroy();
+    });
+
+    it("does not auto-open when dialog autofocuses combobox input", async () => {
+      document.body.innerHTML = `
+        <div data-slot="dialog" id="dialog-root">
+          <button data-slot="dialog-trigger">Open</button>
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">
+            <div data-slot="combobox" id="combobox-root">
+              <input data-slot="combobox-input" />
+              <div data-slot="combobox-content" hidden>
+                <div data-slot="combobox-list">
+                  <div data-slot="combobox-item" data-value="apple">Apple</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const dialogRoot = document.getElementById("dialog-root")!;
+      const comboboxRoot = document.getElementById("combobox-root")!;
+      const dialogController = createDialog(dialogRoot);
+      const comboboxController = createCombobox(comboboxRoot);
+
+      dialogController.open();
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(comboboxController.isOpen).toBe(false);
+
+      dialogController.destroy();
+      comboboxController.destroy();
     });
 
     it("sets data-state on root, content, and trigger", () => {
@@ -1534,6 +1584,7 @@ describe("Combobox", () => {
         changeCount++;
       });
 
+      input.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
       input.dispatchEvent(new Event("focus", { bubbles: true }));
       expect(changeCount).toBe(1);
 
@@ -1724,6 +1775,7 @@ describe("Combobox", () => {
       const input = root.querySelector('[data-slot="combobox-input"]') as HTMLInputElement;
       const controller = createCombobox(root);
 
+      input.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
       input.dispatchEvent(new Event("focus", { bubbles: true }));
       expect(controller.isOpen).toBe(true);
 

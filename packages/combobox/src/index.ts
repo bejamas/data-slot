@@ -172,6 +172,10 @@ export function createCombobox(
   let highlightedIndex = -1;
   let keyboardMode = false;
   const cleanups: Array<() => void> = [];
+  const doc = root.ownerDocument ?? document;
+  const FOCUS_OPEN_INTENT_WINDOW_MS = 750;
+  let lastTabKeydownAt = -Infinity;
+  let openOnNextFocusFromPointer = false;
 
   // Cached on open
   let allItems: HTMLElement[] = [];
@@ -708,7 +712,10 @@ export function createCombobox(
     if (disabled) return;
     // Select all text for easy re-type
     input.select();
-    if (openOnFocus && !isOpen) {
+    const now = Date.now();
+    const hasIntent = openOnNextFocusFromPointer || now - lastTabKeydownAt <= FOCUS_OPEN_INTENT_WINDOW_MS;
+    openOnNextFocusFromPointer = false;
+    if (openOnFocus && !isOpen && hasIntent) {
       updateOpenState(true);
     }
   };
@@ -723,6 +730,14 @@ export function createCombobox(
 
   // Event listeners
   cleanups.push(
+    on(doc, "keydown", (e) => {
+      if ((e as KeyboardEvent).key === "Tab") {
+        lastTabKeydownAt = Date.now();
+      }
+    }, { capture: true }),
+    on(input, "pointerdown", () => {
+      openOnNextFocusFromPointer = true;
+    }),
     on(input, "input", handleInput),
     on(input, "keydown", handleKeydown),
     on(input, "focus", handleFocus)
