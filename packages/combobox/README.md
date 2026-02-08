@@ -102,6 +102,7 @@ Options can be passed via JavaScript or data attributes (JS takes precedence).
 | `openOnFocus` | `data-open-on-focus` | `boolean` | `true` | Open popup when input is focused |
 | `autoHighlight` | `data-auto-highlight` | `boolean` | `true` | Auto-highlight first visible item when filtering |
 | `filter` | - | `function` | substring | Custom filter function |
+| `itemToStringValue` | - | `(item: HTMLElement \| null, value: string \| null) => string` | item label | Custom text resolver for selected value shown in input |
 | `side` | `data-side` | `"top" \| "bottom"` | `"bottom"` | Popup placement |
 | `align` | `data-align` | `"start" \| "center" \| "end"` | `"start"` | Popup alignment |
 | `sideOffset` | `data-side-offset` | `number` | `4` | Distance from input (px) |
@@ -128,6 +129,7 @@ interface ComboboxController {
   clear(): void;                      // Clear selection
   open(): void;                       // Open the popup
   close(): void;                      // Close the popup
+  setItemToStringValue(itemToStringValue: ((item: HTMLElement | null, value: string | null) => string) | null): void;
   destroy(): void;                    // Cleanup
 }
 ```
@@ -161,6 +163,11 @@ root.dispatchEvent(new CustomEvent('combobox:set', {
 // Set open state
 root.dispatchEvent(new CustomEvent('combobox:set', {
   detail: { open: true }
+}));
+
+// Set runtime selected-value text formatter
+root.dispatchEvent(new CustomEvent('combobox:set', {
+  detail: { itemToStringValue: (item, value) => value ? value.toUpperCase() : '' }
 }));
 ```
 

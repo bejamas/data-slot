@@ -26,6 +26,8 @@ const SIDES = ["top", "bottom"] as const;
 export type Align = "start" | "center" | "end";
 const ALIGNS = ["start", "center", "end"] as const;
 
+export type ComboboxItemToStringValue = (item: HTMLElement | null, value: string | null) => string;
+
 export interface ComboboxOptions {
   /** Initial selected value */
   defaultValue?: string;
@@ -51,6 +53,8 @@ export interface ComboboxOptions {
   autoHighlight?: boolean;
   /** Custom filter function. Return true to show item. */
   filter?: (inputValue: string, itemValue: string, itemLabel: string) => boolean;
+  /** Custom text resolver for the selected value shown in the input */
+  itemToStringValue?: ComboboxItemToStringValue;
 
   // Positioning props
   /** @default "bottom" */
@@ -82,6 +86,8 @@ export interface ComboboxController {
   open(): void;
   /** Close the popup */
   close(): void;
+  /** Set or clear runtime selected-value text resolver */
+  setItemToStringValue(itemToStringValue: ComboboxItemToStringValue | null): void;
   /** Cleanup all event listeners */
   destroy(): void;
 }
@@ -97,7 +103,7 @@ export interface ComboboxController {
  * - **Outbound** `combobox:input-change` (on root): Fires when user types.
  *   `event.detail: { inputValue: string }`
  * - **Inbound** `combobox:set` (on root): Set value, open state, or input value.
- *   `event.detail: { value?: string | null, open?: boolean, inputValue?: string }`
+ *   `event.detail: { value?: string | null, open?: boolean, inputValue?: string, itemToStringValue?: ComboboxItemToStringValue | null }`
  */
 export function createCombobox(
   root: Element,
@@ -126,6 +132,7 @@ export function createCombobox(
   const onValueChange = options.onValueChange;
   const onOpenChange = options.onOpenChange;
   const onInputValueChange = options.onInputValueChange;
+  let itemToStringValue = options.itemToStringValue ?? null;
 
   // Positioning options
   const preferredSide =
@@ -204,12 +211,19 @@ export function createCombobox(
   const getItemValue = (el: HTMLElement): string | undefined =>
     el.hasAttribute("data-value") ? el.getAttribute("data-value")! : undefined;
 
-  // Get the label for a given value by searching all items
-  const getLabelForValue = (value: string | null): string => {
-    if (value === null) return "";
+  const getItemByValue = (value: string | null): HTMLElement | null => {
+    if (value === null) return null;
     const container = list ?? content;
     const items = getParts<HTMLElement>(container, "combobox-item");
-    const item = items.find((el) => getItemValue(el) === value);
+    return items.find((el) => getItemValue(el) === value) ?? null;
+  };
+
+  // Get the display text for a given value
+  const getLabelForValue = (value: string | null): string => {
+    const item = getItemByValue(value);
+    if (itemToStringValue) {
+      return itemToStringValue(item, value);
+    }
     return item ? getItemLabel(item) : "";
   };
 
@@ -785,6 +799,10 @@ export function createCombobox(
       if (detail?.inputValue !== undefined) {
         input.value = detail.inputValue;
       }
+      if (detail?.itemToStringValue !== undefined) {
+        itemToStringValue = detail.itemToStringValue;
+        input.value = getLabelForValue(currentValue);
+      }
     })
   );
 
@@ -796,6 +814,10 @@ export function createCombobox(
     clear: () => updateValue(null),
     open: () => updateOpenState(true),
     close: () => updateOpenState(false),
+    setItemToStringValue: (nextItemToStringValue: ComboboxItemToStringValue | null) => {
+      itemToStringValue = nextItemToStringValue;
+      input.value = getLabelForValue(currentValue);
+    },
     destroy: () => {
       isDestroyed = true;
       positionSync.stop();
