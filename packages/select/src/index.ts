@@ -328,10 +328,10 @@ export function createSelect(
 
   // Compute base position data for item-aligned mode
   const computeItemAlignedPos = (tr: DOMRect, cr: DOMRect, scrollContainer: HTMLElement) => {
-    // Prefer highlighted item, then selected, then first enabled item.
+    // Prefer selected item for stable anchoring, then highlighted, then first enabled item.
     const highlightedItem = highlightedIndex >= 0 ? enabledItems[highlightedIndex] : undefined;
     const selectedItem = items.find((item) => item.dataset["value"] === currentValue);
-    const alignItem = highlightedItem ?? selectedItem ?? enabledItems[0];
+    const alignItem = selectedItem ?? highlightedItem ?? enabledItems[0];
 
     // Calculate x position (align left edges, match trigger width)
     let x = tr.left;

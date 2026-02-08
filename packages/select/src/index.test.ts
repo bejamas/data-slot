@@ -1050,6 +1050,66 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("keeps selected item anchoring even when pointer highlights another item on open", async () => {
+      const { trigger, content, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="item-3">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="item-1">Item 1</div>
+            <div data-slot="select-item" data-value="item-2">Item 2</div>
+            <div data-slot="select-item" data-value="item-3">Item 3</div>
+          </div>
+        </div>
+      `
+      );
+      const middleItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-2"]'
+      ) as HTMLElement;
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-3"]'
+      ) as HTMLElement;
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(400, 80, 180, 40);
+      content.getBoundingClientRect = () => rect(0, 80, 180, 120);
+      selectedItem.getBoundingClientRect = () => rect(64, 80, 180, 32);
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 120 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 120 });
+      content.scrollTop = 0;
+
+      trigger.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, clientX: 100, clientY: 100 })
+      );
+      trigger.click();
+
+      middleItem.dispatchEvent(new PointerEvent("pointermove", { bubbles: true }));
+      await waitForRaf();
+      await waitForRaf();
+
+      const triggerCenterY = 400 + (40 / 2);
+      const selectedCenterInContent = 64 + (32 / 2);
+      const expectedY = triggerCenterY - selectedCenterInContent;
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(expectedY);
+
+      controller.destroy();
+    });
+
     it("keeps item-aligned popup near trigger by using internal scroll for deep selections", () => {
       const { trigger, content, controller } = setup(
         {},
