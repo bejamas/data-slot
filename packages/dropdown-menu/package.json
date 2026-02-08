@@ -1,6 +1,6 @@
 {
   "name": "@data-slot/dropdown-menu",
-  "version": "0.2.43",
+  "version": "0.2.44",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
