@@ -114,6 +114,16 @@ export function createCombobox(
   const list = getPart<HTMLElement>(root, "combobox-list") ?? getPart<HTMLElement>(content ?? root, "combobox-list");
   const trigger = getPart<HTMLElement>(root, "combobox-trigger");
   const emptySlot = getPart<HTMLElement>(list ?? content ?? root, "combobox-empty");
+  const authoredPositionerCandidate = getPart<HTMLElement>(root, "combobox-positioner");
+  const authoredPositioner =
+    authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)
+      ? authoredPositionerCandidate
+      : null;
+  const authoredPortalCandidate = getPart<HTMLElement>(root, "combobox-portal");
+  const authoredPortal =
+    authoredPortalCandidate && authoredPositioner && authoredPortalCandidate.contains(authoredPositioner)
+      ? authoredPortalCandidate
+      : null;
 
   if (!input || !content) {
     throw new Error("Combobox requires combobox-input and combobox-content slots");
@@ -190,7 +200,9 @@ export function createCombobox(
   const portal = createPortalLifecycle({
     content,
     root,
-    wrapperSlot: "combobox-positioner",
+    wrapperSlot: authoredPositioner ? undefined : "combobox-positioner",
+    container: authoredPositioner ?? undefined,
+    mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   let isDestroyed = false;
 

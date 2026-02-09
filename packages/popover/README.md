@@ -107,6 +107,21 @@ const popover = createPopover(element, {
 ### Optional Slots
 
 - `popover-close` - Button to close the popover
+- `popover-positioner` - Optional authored positioning wrapper (when provided, reused instead of generated wrapper)
+- `popover-portal` - Optional authored portal wrapper that can contain `popover-positioner`
+
+### Composed Portal Markup (Optional)
+
+```html
+<div data-slot="popover">
+  <button data-slot="popover-trigger">Trigger</button>
+  <div data-slot="popover-portal">
+    <div data-slot="popover-positioner">
+      <div data-slot="popover-content">Content</div>
+    </div>
+  </div>
+</div>
+```
 
 ### Data Attributes
 
@@ -145,9 +160,10 @@ Placement can be set on root or content (content takes precedence):
 ## Styling
 
 Popover position is computed in JavaScript and applied as `position: absolute` + inline `transform: translate3d(...)`.
-By default, content is portaled to `document.body` while open (document coordinates). In this mode, a generated `popover-positioner` wrapper receives the positioning transform. If `portal` is disabled, positioning is applied directly to `popover-content`.
+By default, content is portaled to `document.body` while open (document coordinates). If you provide authored `popover-positioner` / `popover-portal` slots, those are reused. Otherwise a transient `popover-positioner` wrapper is generated.
+If `portal` is disabled, positioning is applied directly to `popover-content`.
 Use `data-open`/`data-closed` and `data-side` for styling/animation.
-When portaling is enabled (default), a transient wrapper with `data-slot="popover-positioner"` is created while open and receives the positioning transform. This keeps `popover-content` free for transform animations.
+This keeps `popover-content` free for transform animations.
 
 ```css
 [data-slot="popover-content"] {

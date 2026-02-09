@@ -71,6 +71,22 @@ controller.destroy();
 | `combobox-label` | Group label (inside a `combobox-group`) |
 | `combobox-separator` | Visual divider between items/groups |
 | `combobox-empty` | Message shown when no items match filter |
+| `combobox-positioner` | Optional authored positioning wrapper (reused instead of generated wrapper) |
+| `combobox-portal` | Optional authored portal wrapper that can contain `combobox-positioner` |
+
+### Composed Portal Markup (Optional)
+
+```html
+<div data-slot="combobox">
+  <input data-slot="combobox-input" />
+  <button data-slot="combobox-trigger">▼</button>
+  <div data-slot="combobox-portal">
+    <div data-slot="combobox-positioner">
+      <div data-slot="combobox-content" hidden>...</div>
+    </div>
+  </div>
+</div>
+```
 
 ### Native Label Support
 

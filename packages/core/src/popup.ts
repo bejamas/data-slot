@@ -675,6 +675,16 @@ export interface PortalLifecycleOptions {
   enabled?: boolean;
   state?: PortalState;
   wrapperSlot?: string;
+  /**
+   * Optional authored element used for positioning/state attributes.
+   * When provided, `container` is always this element.
+   */
+  container?: Element;
+  /**
+   * Optional authored element to portal to `document.body`.
+   * Defaults to `container` (if provided), otherwise `content`.
+   */
+  mountTarget?: Element;
 }
 
 export interface PortalLifecycleController {
@@ -688,6 +698,8 @@ export interface PortalLifecycleController {
 export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLifecycleController {
   const enabled = options.enabled ?? true;
   const wrapperSlot = options.wrapperSlot;
+  const authoredContainer = options.container;
+  const mountTarget = options.mountTarget ?? authoredContainer ?? options.content;
   const state: PortalState = options.state ?? {
     originalParent: null,
     originalNextSibling: null,
@@ -718,6 +730,12 @@ export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLi
     portalToBody(nextWrapper, options.root, state);
   };
 
+  const mountCustomTarget = () => {
+    if (state.portaled) return;
+    if (!(mountTarget as Node).isConnected) return;
+    portalToBody(mountTarget, options.root, state);
+  };
+
   const restoreWithWrapper = () => {
     if (!state.portaled) return;
     const currentWrapper = wrapper;
@@ -732,9 +750,17 @@ export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLi
     }
   };
 
+  const restoreCustomTarget = () => {
+    if (!state.portaled) return;
+    restorePortal(mountTarget, state);
+  };
+
   return {
     state,
     get container() {
+      if (authoredContainer) {
+        return authoredContainer;
+      }
       if (enabled && wrapperSlot && state.portaled && wrapper) {
         return wrapper;
       }
@@ -742,6 +768,10 @@ export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLi
     },
     mount: () => {
       if (!enabled) return;
+      if (authoredContainer || options.mountTarget) {
+        mountCustomTarget();
+        return;
+      }
       if (wrapperSlot) {
         mountWithWrapper();
       } else {
@@ -750,6 +780,10 @@ export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLi
     },
     restore: () => {
       if (!enabled) return;
+      if (authoredContainer || options.mountTarget) {
+        restoreCustomTarget();
+        return;
+      }
       if (wrapperSlot) {
         restoreWithWrapper();
       } else {
@@ -758,6 +792,10 @@ export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLi
     },
     cleanup: () => {
       if (!enabled) return;
+      if (authoredContainer || options.mountTarget) {
+        restoreCustomTarget();
+        return;
+      }
       if (wrapperSlot) {
         restoreWithWrapper();
       } else {

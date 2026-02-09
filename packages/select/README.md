@@ -68,6 +68,23 @@ controller.destroy();
 | `select-group` | Groups related items |
 | `select-label` | Group label (inside a `select-group`) |
 | `select-separator` | Visual divider between items/groups |
+| `select-positioner` | Optional authored positioning wrapper (reused instead of generated wrapper) |
+| `select-portal` | Optional authored portal wrapper that can contain `select-positioner` |
+
+### Composed Portal Markup (Optional)
+
+```html
+<div data-slot="select">
+  <button data-slot="select-trigger">
+    <span data-slot="select-value"></span>
+  </button>
+  <div data-slot="select-portal">
+    <div data-slot="select-positioner">
+      <div data-slot="select-content" hidden>...</div>
+    </div>
+  </div>
+</div>
+```
 
 ### Native Label Support
 

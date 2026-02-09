@@ -78,6 +78,16 @@ export function createNavigationMenu(
   const items = getParts<HTMLElement>(root, "navigation-menu-item");
   const viewport = getPart<HTMLElement>(root, "navigation-menu-viewport");
   const indicator = getPart<HTMLElement>(root, "navigation-menu-indicator");
+  const findSlotAncestor = (el: HTMLElement, slot: string): HTMLElement | null => {
+    let current: HTMLElement | null = el.parentElement;
+    while (current && current !== root) {
+      if (current.getAttribute("data-slot") === slot) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+    return null;
+  };
 
   if (!list || items.length === 0) {
     throw new Error(
@@ -97,12 +107,23 @@ export function createNavigationMenu(
 
   const cleanups: Array<() => void> = [];
   const contentPortals = new Map<HTMLElement, ReturnType<typeof createPortalLifecycle>>();
+  const usedAuthoredContentPositioners = new Set<HTMLElement>();
+  const authoredViewportPositioner = viewport
+    ? findSlotAncestor(viewport, "navigation-menu-viewport-positioner")
+    : null;
+  const authoredViewportPortal = authoredViewportPositioner
+    ? findSlotAncestor(authoredViewportPositioner, "navigation-menu-portal")
+    : null;
   const viewportPortal = viewport
     ? createPortalLifecycle({
         content: viewport,
         root,
         enabled: true,
-        wrapperSlot: "navigation-menu-viewport-positioner",
+        wrapperSlot: authoredViewportPositioner ? undefined : "navigation-menu-viewport-positioner",
+        container: authoredViewportPositioner ?? undefined,
+        mountTarget: authoredViewportPositioner
+          ? authoredViewportPortal ?? authoredViewportPositioner
+          : undefined,
       })
     : null;
 
@@ -186,13 +207,25 @@ export function createNavigationMenu(
         "start";
 
       itemMap.set(value, { item, trigger, content, index: validIndex++, align });
+      let authoredPositioner = findSlotAncestor(content, "navigation-menu-positioner");
+      if (authoredPositioner && usedAuthoredContentPositioners.has(authoredPositioner)) {
+        authoredPositioner = null;
+      }
+      if (authoredPositioner) {
+        usedAuthoredContentPositioners.add(authoredPositioner);
+      }
+      const authoredPortal = authoredPositioner
+        ? findSlotAncestor(authoredPositioner, "navigation-menu-portal")
+        : null;
       contentPortals.set(
         content,
         createPortalLifecycle({
           content,
           root,
           enabled: true,
-          wrapperSlot: "navigation-menu-positioner",
+          wrapperSlot: authoredPositioner ? undefined : "navigation-menu-positioner",
+          container: authoredPositioner ?? undefined,
+          mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
         })
       );
 

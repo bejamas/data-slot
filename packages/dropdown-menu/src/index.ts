@@ -118,6 +118,16 @@ export function createDropdownMenu(
 ): DropdownMenuController {
   const trigger = getPart<HTMLElement>(root, "dropdown-menu-trigger");
   const content = getPart<HTMLElement>(root, "dropdown-menu-content");
+  const authoredPositionerCandidate = getPart<HTMLElement>(root, "dropdown-menu-positioner");
+  const authoredPositioner =
+    authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)
+      ? authoredPositionerCandidate
+      : null;
+  const authoredPortalCandidate = getPart<HTMLElement>(root, "dropdown-menu-portal");
+  const authoredPortal =
+    authoredPortalCandidate && authoredPositioner && authoredPortalCandidate.contains(authoredPositioner)
+      ? authoredPortalCandidate
+      : null;
 
   if (!trigger || !content) {
     throw new Error("DropdownMenu requires trigger and content slots");
@@ -180,7 +190,9 @@ export function createDropdownMenu(
   const portal = createPortalLifecycle({
     content,
     root,
-    wrapperSlot: "dropdown-menu-positioner",
+    wrapperSlot: authoredPositioner ? undefined : "dropdown-menu-positioner",
+    container: authoredPositioner ?? undefined,
+    mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   let isDestroyed = false;
 

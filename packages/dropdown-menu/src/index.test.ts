@@ -708,6 +708,39 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
 
+    it("uses authored portal and positioner slots when provided", async () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root">
+          <button data-slot="dropdown-menu-trigger">Menu</button>
+          <div data-slot="dropdown-menu-portal" id="portal">
+            <div data-slot="dropdown-menu-positioner" id="positioner">
+              <div data-slot="dropdown-menu-content">
+                <button data-slot="dropdown-menu-item" data-value="one">One</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLElement;
+      const portal = document.getElementById("portal") as HTMLElement;
+      const positioner = document.getElementById("positioner") as HTMLElement;
+      const content = root.querySelector('[data-slot="dropdown-menu-content"]') as HTMLElement;
+      const controller = createDropdownMenu(root);
+
+      trigger.click();
+      expect(portal.parentElement).toBe(document.body);
+      expect(content.parentElement).toBe(positioner);
+      expect(positioner.style.transform).toContain("translate3d(");
+
+      controller.close();
+      await waitForClose();
+      expect(portal.parentElement).toBe(root);
+      expect(content.parentElement).toBe(positioner);
+
+      controller.destroy();
+    });
+
     it("restores content before applying closed hidden/data-state", async () => {
       const { root, trigger, content, controller } = setup();
 

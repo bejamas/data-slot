@@ -52,7 +52,7 @@ const cssCode = `<nav data-slot="navigation-menu" class="nav-menu">
 </style>`;
 
 const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
-  <ul data-slot="navigation-menu-list" class="flex list-none relative">
+  <ul data-slot="navigation-menu-list" class="flex relative list-none">
     <li data-slot="navigation-menu-item" data-value="products" class="static">
       <button
         data-slot="navigation-menu-trigger"
@@ -74,8 +74,8 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
         hidden
       >
         <div class="grid grid-cols-2 gap-3 w-[380px]">
-          <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-            <div class="font-medium mb-1">Analytics</div>
+          <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <div class="mb-1 font-medium">Analytics</div>
             <div class="text-sm text-muted">Real-time metrics</div>
           </a>
           <!-- More links... -->
@@ -121,28 +121,31 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
 
 <ExampleBlock label="mega menu with directional animations">
   <nav slot="preview-css" data-slot="navigation-menu" class="nav-menu" id="nav-menu-css">
+  
     <ul data-slot="navigation-menu-list" class="nav-menu-list">
       <li data-slot="navigation-menu-item" data-value="products" class="nav-menu-item">
         <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Products</button>
-        <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
-          <div class="nav-menu-grid">
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Analytics</div>
-              <div class="nav-menu-link-desc">Real-time metrics</div>
-            </a>
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Automation</div>
-              <div class="nav-menu-link-desc">Workflow tools</div>
-            </a>
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Security</div>
-              <div class="nav-menu-link-desc">Enterprise-grade</div>
-            </a>
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Integrations</div>
-              <div class="nav-menu-link-desc">Connect everything</div>
-            </a>
-          </div>
+          <div data-slot="navigation-menu-positioner" class="isolate z-50">
+            <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
+              <div class="nav-menu-grid">
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Analytics</div>
+                  <div class="nav-menu-link-desc">Real-time metrics</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Automation</div>
+                  <div class="nav-menu-link-desc">Workflow tools</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Security</div>
+                  <div class="nav-menu-link-desc">Enterprise-grade</div>
+                </a>
+                <a href="#" class="nav-menu-link">
+                  <div class="nav-menu-link-title">Integrations</div>
+                  <div class="nav-menu-link-desc">Connect everything</div>
+                </a>
+              </div>
+            </div>
         </div>
       </li>
       <li data-slot="navigation-menu-item" data-value="solutions" class="nav-menu-item">
@@ -212,7 +215,9 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
       </li>
       <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
     </ul>
-    <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
+  
+        <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
+
   </nav>
   
   <nav slot="preview-tailwind" data-slot="navigation-menu" class="relative" id="nav-menu-tw">
@@ -239,20 +244,20 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
           hidden
         >
           <div class="grid grid-cols-2 gap-3 w-[380px] p-2">
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors no-underline text-inherit">
-              <div class="font-medium mb-1">Analytics</div>
+            <a href="#" class="block p-3 no-underline rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Analytics</div>
               <div class="text-sm text-muted">Real-time metrics</div>
             </a>
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Automation</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Automation</div>
               <div class="text-sm text-muted">Workflow tools</div>
             </a>
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Security</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Security</div>
               <div class="text-sm text-muted">Enterprise-grade</div>
             </a>
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Integrations</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Integrations</div>
               <div class="text-sm text-muted">Connect everything</div>
             </a>
           </div>
@@ -271,20 +276,20 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
           hidden
         >
           <div class="grid grid-cols-2 gap-2 w-[380px] p-2">
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Startups</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Startups</div>
               <div class="text-sm text-muted">Move fast</div>
             </a>
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Enterprise</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Enterprise</div>
               <div class="text-sm text-muted">Scale securely</div>
             </a>
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Agencies</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Agencies</div>
               <div class="text-sm text-muted">Client projects</div>
             </a>
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">E-commerce</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">E-commerce</div>
               <div class="text-sm text-muted">Sell online</div>
             </a>
           </div>
@@ -303,28 +308,28 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
           hidden
         >
           <div class="grid grid-cols-3 gap-3 p-2 w-[520px]">
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Documentation</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Documentation</div>
               <div class="text-sm text-muted">Get started</div>
             </a>
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Blog</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Blog</div>
               <div class="text-sm text-muted">Latest updates</div>
             </a>
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Contact</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Contact</div>
               <div class="text-sm text-muted">Get in touch</div>
             </a>
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Support</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Support</div>
               <div class="text-sm text-muted">Get help</div>
             </a>
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Training</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Training</div>
               <div class="text-sm text-muted">Learn new skills</div>
             </a>
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">Events</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">Events</div>
               <div class="text-sm text-muted">Upcoming webinars</div>
             </a>
           </div>
@@ -343,8 +348,8 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
           hidden
         >
           <div class="w-[140px] p-2">
-            <a href="#" class="block p-3 rounded hover:bg-code-bg transition-colors text-inherit">
-              <div class="font-medium mb-1">About Us</div>
+            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+              <div class="mb-1 font-medium">About Us</div>
               <div class="text-sm text-muted">Our story</div>
             </a>
           </div>
@@ -366,10 +371,10 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
     <p class="mt-3 text-muted">
       Hover between items — content slides with direction. Viewport animates smoothly.
     </p>
-    <p class="text-muted mt-3">
+    <p class="mt-3 text-muted">
       CSS variables: <code>--viewport-left</code>, <code>--viewport-width</code>, <code>--viewport-height</code>, <code>--motion-direction</code>.
     </p>
-    <p class="text-muted mt-3">
+    <p class="mt-3 text-muted">
       Use <code>data-align="start|center|end"</code> on items to control alignment.
     </p>
   </div>
