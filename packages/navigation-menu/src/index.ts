@@ -7,6 +7,7 @@ import {
   getDataEnum,
   containsWithPortals,
   createPortalLifecycle,
+  createPresenceLifecycle,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -104,9 +105,11 @@ export function createNavigationMenu(
   let clickLocked: boolean = false; // When true, menu stays open until click outside or toggle
   let isPointerDown: boolean = false; // Track if we're in a click sequence (pointerdown fired)
   let isRootHovered: boolean = false; // Track if pointer is over root
+  let isDestroyed = false;
 
   const cleanups: Array<() => void> = [];
   const contentPortals = new Map<HTMLElement, ReturnType<typeof createPortalLifecycle>>();
+  const contentPresence = new Map<HTMLElement, ReturnType<typeof createPresenceLifecycle>>();
   const usedAuthoredContentPositioners = new Set<HTMLElement>();
   const authoredViewportPositioner = viewport
     ? findSlotAncestor(viewport, "navigation-menu-viewport-positioner")
@@ -124,6 +127,17 @@ export function createNavigationMenu(
         mountTarget: authoredViewportPositioner
           ? authoredViewportPortal ?? authoredViewportPositioner
           : undefined,
+      })
+    : null;
+  const viewportPresence = viewport
+    ? createPresenceLifecycle({
+        element: viewport,
+        onExitComplete: () => {
+          if (isDestroyed) return;
+          viewportPortal?.restore();
+          viewport.hidden = true;
+          viewport.style.pointerEvents = "none";
+        },
       })
     : null;
 
@@ -173,6 +187,9 @@ export function createNavigationMenu(
   };
   cleanups.push(() => activeRO?.disconnect());
   cleanups.push(() => {
+    contentPresence.forEach((presence) => presence.cleanup());
+    contentPresence.clear();
+    viewportPresence?.cleanup();
     contentPortals.forEach((portal) => portal.cleanup());
     contentPortals.clear();
     viewportPortal?.cleanup();
@@ -226,6 +243,19 @@ export function createNavigationMenu(
           wrapperSlot: authoredPositioner ? undefined : "navigation-menu-positioner",
           container: authoredPositioner ?? undefined,
           mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
+        })
+      );
+      contentPresence.set(
+        content,
+        createPresenceLifecycle({
+          element: content,
+          onExitComplete: () => {
+            if (isDestroyed) return;
+            const portal = contentPortals.get(content);
+            portal?.restore();
+            content.hidden = true;
+            content.style.pointerEvents = "none";
+          },
         })
       );
 
@@ -446,19 +476,29 @@ export function createNavigationMenu(
 
         if (!isActive) {
           const portal = contentPortals.get(content);
-          portal?.restore();
+          const presence = contentPresence.get(content);
           content.setAttribute("data-state", "inactive");
           content.setAttribute("aria-hidden", "true");
           setInert(content, true);
-          content.hidden = true;
+          content.style.pointerEvents = "none";
 
           // Set exit motion on the previous content (only when switching)
           if (wasActive && direction) {
             const exitDirection =
               direction === "right" ? "to-left" : "to-right";
             content.setAttribute("data-motion", exitDirection);
-          } else {
+          } else if (wasActive) {
             content.removeAttribute("data-motion");
+          }
+
+          if (wasActive) {
+            presence?.exit();
+          } else if (!presence?.isExiting) {
+            content.removeAttribute("data-motion");
+            portal?.restore();
+            content.hidden = true;
+          } else {
+            // Preserve current exit motion while this panel is finishing an exit animation.
           }
         }
       });
@@ -466,8 +506,16 @@ export function createNavigationMenu(
       // Update new active content
       if (newData) {
         viewportPortal?.mount();
+        if (viewport) {
+          viewport.hidden = false;
+        }
+        if (prevValue === null) {
+          viewportPresence?.enter();
+        }
         const portal = contentPortals.get(newData.content);
         portal?.mount();
+        const presence = contentPresence.get(newData.content);
+        presence?.enter();
 
         if (direction) {
           const enterDirection =
@@ -487,7 +535,7 @@ export function createNavigationMenu(
         observeActiveContent(newData);
         updateIndicator(newData.trigger); // Indicator follows active trigger
       } else {
-        viewportPortal?.restore();
+        viewportPresence?.exit();
         observeActiveContent(null);
       }
 
@@ -548,6 +596,8 @@ export function createNavigationMenu(
   root.setAttribute("data-state", "closed");
   if (viewport) {
     viewport.setAttribute("data-state", "closed");
+    viewport.hidden = true;
+    viewport.style.pointerEvents = "none";
   }
   if (indicator) {
     indicator.setAttribute("data-state", "hidden");
@@ -566,6 +616,7 @@ export function createNavigationMenu(
     content.tabIndex = -1; // Make focusable for ArrowDown fallback
     setInert(content, true);
     content.hidden = true;
+    content.style.pointerEvents = "none";
   });
 
   // Pointer handlers for items
@@ -894,6 +945,7 @@ export function createNavigationMenu(
     open: (value: string) => updateState(value, true),
     close: () => updateState(null, true),
     destroy: () => {
+      isDestroyed = true;
       clearTimers();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;

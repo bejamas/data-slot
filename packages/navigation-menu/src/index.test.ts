@@ -2,6 +2,11 @@ import { describe, expect, it } from "bun:test";
 import { createNavigationMenu, create } from "./index";
 
 describe("NavigationMenu", () => {
+  const waitForPresenceExit = () =>
+    new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    );
+
   const getPositioner = (content: HTMLElement): HTMLElement => {
     const parent = content.parentElement;
     if (!(parent instanceof HTMLElement)) {
@@ -90,7 +95,7 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("closes on programmatic close()", () => {
+  it("closes on programmatic close()", async () => {
     const { contents, viewport, controller } = setup();
 
     controller.open("products");
@@ -98,6 +103,7 @@ describe("NavigationMenu", () => {
 
     controller.close();
     expect(controller.value).toBe(null);
+    await waitForPresenceExit();
     contents.forEach((content) => {
       expect(content.hidden).toBe(true);
     });
@@ -107,7 +113,7 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("switches between items", () => {
+  it("switches between items", async () => {
     const { contents, controller } = setup();
 
     controller.open("products");
@@ -115,6 +121,7 @@ describe("NavigationMenu", () => {
     expect(contents[1]?.hidden).toBe(true);
 
     controller.open("solutions");
+    await waitForPresenceExit();
     expect(contents[0]?.hidden).toBe(true);
     expect(contents[1]?.hidden).toBe(false);
     expect(controller.value).toBe("solutions");
@@ -474,7 +481,7 @@ describe("NavigationMenu", () => {
     controllers.forEach((c) => c.destroy());
   });
 
-  it("uses authored portal/positioner slots when provided", () => {
+  it("uses authored portal/positioner slots when provided", async () => {
     document.body.innerHTML = `
       <nav data-slot="navigation-menu" id="root">
         <ul data-slot="navigation-menu-list">
@@ -510,6 +517,7 @@ describe("NavigationMenu", () => {
     expect(viewport.parentElement).toBe(viewportPositioner);
 
     controller.close();
+    await waitForPresenceExit();
     expect(contentPortal.parentElement).toBe(root.querySelector('[data-slot="navigation-menu-item"]'));
     expect(viewportPortal.parentElement).toBe(root);
 
