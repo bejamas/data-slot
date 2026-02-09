@@ -439,6 +439,36 @@ describe('Popover', () => {
       controller.destroy()
       expect(root.contains(content)).toBe(true)
     })
+
+    it('uses authored portal and positioner slots when provided', async () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-portal" id="portal">
+            <div data-slot="popover-positioner" id="positioner">
+              <div data-slot="popover-content">Content</div>
+            </div>
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const portal = document.getElementById('portal') as HTMLElement
+      const positioner = document.getElementById('positioner') as HTMLElement
+      const content = root.querySelector('[data-slot="popover-content"]') as HTMLElement
+      const controller = createPopover(root)
+
+      controller.open()
+      expect(portal.parentElement).toBe(document.body)
+      expect(content.parentElement).toBe(positioner)
+      expect(positioner.style.transform).toContain('translate3d(')
+
+      controller.close()
+      await waitForClose()
+      expect(portal.parentElement).toBe(root)
+      expect(content.parentElement).toBe(positioner)
+
+      controller.destroy()
+    })
   })
 
   // Focus management tests

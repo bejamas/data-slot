@@ -2264,6 +2264,41 @@ describe("Select", () => {
       controller.destroy();
       expect(content.parentElement).toBe(root);
     });
+
+    it("uses authored portal and positioner slots when provided", async () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="root">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-portal" id="portal">
+            <div data-slot="select-positioner" id="positioner">
+              <div data-slot="select-content">
+                <div data-slot="select-item" data-value="apple">Apple</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const portal = document.getElementById("portal") as HTMLElement;
+      const positioner = document.getElementById("positioner") as HTMLElement;
+      const trigger = root.querySelector('[data-slot="select-trigger"]') as HTMLElement;
+      const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
+      const controller = createSelect(root);
+
+      trigger.click();
+      expect(portal.parentElement).toBe(document.body);
+      expect(content.parentElement).toBe(positioner);
+      expect(positioner.style.transform).toContain("translate3d(");
+
+      controller.close();
+      await waitForClose();
+      expect(portal.parentElement).toBe(root);
+      expect(content.parentElement).toBe(positioner);
+
+      controller.destroy();
+    });
   });
 
   describe("scroll lock", () => {

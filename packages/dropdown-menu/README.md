@@ -64,6 +64,21 @@ controller.destroy();
 | `dropdown-menu-item` | Clickable menu item |
 | `dropdown-menu-separator` | Visual divider |
 | `dropdown-menu-shortcut` | Keyboard shortcut hint |
+| `dropdown-menu-positioner` | Optional authored positioning wrapper (reused instead of generated wrapper) |
+| `dropdown-menu-portal` | Optional authored portal wrapper that can contain `dropdown-menu-positioner` |
+
+### Composed Portal Markup (Optional)
+
+```html
+<div data-slot="dropdown-menu">
+  <button data-slot="dropdown-menu-trigger">Options</button>
+  <div data-slot="dropdown-menu-portal">
+    <div data-slot="dropdown-menu-positioner">
+      <div data-slot="dropdown-menu-content">...</div>
+    </div>
+  </div>
+</div>
+```
 
 ## Data Attributes
 

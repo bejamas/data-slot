@@ -145,14 +145,16 @@ Can be set on:
 
 - `navigation-menu-indicator` - Animated highlight that follows the hovered trigger
 - `navigation-menu-viewport` - Container for content with size transitions
-- `navigation-menu-positioner` - Generated wrapper used while active content is portaled to `document.body`
-- `navigation-menu-viewport-positioner` - Generated wrapper used while viewport is portaled to `document.body`
+- `navigation-menu-positioner` - Positioning wrapper for active content (generated if not authored)
+- `navigation-menu-viewport-positioner` - Positioning wrapper for viewport (generated if not authored)
+- `navigation-menu-portal` - Optional authored portal wrapper that can contain positioners
 
 ## Styling
 
 Active `navigation-menu-content` and `navigation-menu-viewport` are portaled to `document.body`
-while open. Generated `navigation-menu-positioner` and `navigation-menu-viewport-positioner`
-wrappers are positioned at the navigation root so submenu layers are not clipped by local
+while open. If authored `navigation-menu-portal` / positioner slots are present, they are reused.
+Otherwise, `navigation-menu-positioner` and `navigation-menu-viewport-positioner` wrappers are
+generated and positioned at the navigation root so submenu layers are not clipped by local
 stacking contexts.
 
 ### Basic Styling

@@ -1250,6 +1250,41 @@ describe('core/popup', () => {
     expect(lifecycle.container).toBe(content)
   })
 
+  it('createPortalLifecycle supports authored container + mount target', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div data-slot="popover-portal" id="portal">
+          <div data-slot="popover-positioner" id="positioner">
+            <div id="content"></div>
+          </div>
+        </div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const portal = document.getElementById('portal')!
+    const positioner = document.getElementById('positioner')!
+    const content = document.getElementById('content')!
+    const lifecycle = createPortalLifecycle({
+      content,
+      root,
+      container: positioner,
+      mountTarget: portal,
+    })
+
+    expect(lifecycle.container).toBe(positioner)
+    lifecycle.mount()
+    expect(portal.parentElement).toBe(document.body)
+    expect(positioner.parentElement).toBe(portal)
+    expect(content.parentElement).toBe(positioner)
+    expect(lifecycle.container).toBe(positioner)
+
+    lifecycle.restore()
+    expect(portal.parentElement).toBe(root)
+    expect(positioner.parentElement).toBe(portal)
+    expect(content.parentElement).toBe(positioner)
+    expect(lifecycle.container).toBe(positioner)
+  })
+
   it('createPresenceLifecycle toggles starting/ending style markers and completes exit', async () => {
     document.body.innerHTML = `<div id="content"></div>`
     const content = document.getElementById('content') as HTMLElement

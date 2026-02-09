@@ -93,6 +93,16 @@ export function createPopover(
   const trigger = getPart<HTMLElement>(root, "popover-trigger");
   const content = getPart<HTMLElement>(root, "popover-content");
   const closeBtn = getPart<HTMLElement>(root, "popover-close");
+  const authoredPositionerCandidate = getPart<HTMLElement>(root, "popover-positioner");
+  const authoredPositioner =
+    authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)
+      ? authoredPositionerCandidate
+      : null;
+  const authoredPortalCandidate = getPart<HTMLElement>(root, "popover-portal");
+  const authoredPortal =
+    authoredPortalCandidate && authoredPositioner && authoredPortalCandidate.contains(authoredPositioner)
+      ? authoredPortalCandidate
+      : null;
 
   if (!trigger || !content) {
     throw new Error("Popover requires trigger and content slots");
@@ -156,7 +166,9 @@ export function createPopover(
     content,
     root,
     enabled: portalOption,
-    wrapperSlot: "popover-positioner",
+    wrapperSlot: authoredPositioner ? undefined : "popover-positioner",
+    container: authoredPositioner ?? undefined,
+    mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   let isDestroyed = false;
 

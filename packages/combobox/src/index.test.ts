@@ -1277,6 +1277,41 @@ describe("Combobox", () => {
       controller.destroy();
       expect(root.contains(content)).toBe(true);
     });
+
+    it("uses authored portal and positioner slots when provided", async () => {
+      document.body.innerHTML = `
+        <div data-slot="combobox" id="root">
+          <input data-slot="combobox-input" />
+          <button data-slot="combobox-trigger" type="button">Toggle</button>
+          <div data-slot="combobox-portal" id="portal">
+            <div data-slot="combobox-positioner" id="positioner">
+              <div data-slot="combobox-content" hidden>
+                <div data-slot="combobox-list">
+                  <div data-slot="combobox-item" data-value="apple">Apple</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const portal = document.getElementById("portal") as HTMLElement;
+      const positioner = document.getElementById("positioner") as HTMLElement;
+      const content = root.querySelector('[data-slot="combobox-content"]') as HTMLElement;
+      const controller = createCombobox(root);
+
+      controller.open();
+      expect(portal.parentElement).toBe(document.body);
+      expect(content.parentElement).toBe(positioner);
+      expect(positioner.style.transform).toContain("translate3d(");
+
+      controller.close();
+      await waitForClose();
+      expect(portal.parentElement).toBe(root);
+      expect(content.parentElement).toBe(positioner);
+
+      controller.destroy();
+    });
   });
 
   describe("content positioning", () => {

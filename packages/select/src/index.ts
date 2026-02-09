@@ -131,6 +131,16 @@ export function createSelect(
   const trigger = getPart<HTMLElement>(root, "select-trigger");
   const content = getPart<HTMLElement>(root, "select-content");
   const valueSlot = getPart<HTMLElement>(root, "select-value");
+  const authoredPositionerCandidate = getPart<HTMLElement>(root, "select-positioner");
+  const authoredPositioner =
+    authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)
+      ? authoredPositionerCandidate
+      : null;
+  const authoredPortalCandidate = getPart<HTMLElement>(root, "select-portal");
+  const authoredPortal =
+    authoredPortalCandidate && authoredPositioner && authoredPortalCandidate.contains(authoredPositioner)
+      ? authoredPortalCandidate
+      : null;
 
   if (!trigger || !content) {
     throw new Error("Select requires trigger and content slots");
@@ -213,7 +223,9 @@ export function createSelect(
   const portal = createPortalLifecycle({
     content,
     root,
-    wrapperSlot: "select-positioner",
+    wrapperSlot: authoredPositioner ? undefined : "select-positioner",
+    container: authoredPositioner ?? undefined,
+    mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   let isDestroyed = false;
   let shouldRestoreFocusOnClose = true;

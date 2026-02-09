@@ -474,6 +474,48 @@ describe("NavigationMenu", () => {
     controllers.forEach((c) => c.destroy());
   });
 
+  it("uses authored portal/positioner slots when provided", () => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-portal" id="content-portal">
+              <div data-slot="navigation-menu-positioner" id="content-positioner">
+                <div data-slot="navigation-menu-content">Products content</div>
+              </div>
+            </div>
+          </li>
+        </ul>
+        <div data-slot="navigation-menu-portal" id="viewport-portal">
+          <div data-slot="navigation-menu-viewport-positioner" id="viewport-positioner">
+            <div data-slot="navigation-menu-viewport"></div>
+          </div>
+        </div>
+      </nav>
+    `;
+    const root = document.getElementById("root")!;
+    const contentPortal = document.getElementById("content-portal") as HTMLElement;
+    const contentPositioner = document.getElementById("content-positioner") as HTMLElement;
+    const viewportPortal = document.getElementById("viewport-portal") as HTMLElement;
+    const viewportPositioner = document.getElementById("viewport-positioner") as HTMLElement;
+    const content = root.querySelector('[data-slot="navigation-menu-content"]') as HTMLElement;
+    const viewport = root.querySelector('[data-slot="navigation-menu-viewport"]') as HTMLElement;
+    const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+    controller.open("products");
+    expect(contentPortal.parentElement).toBe(document.body);
+    expect(viewportPortal.parentElement).toBe(document.body);
+    expect(content.parentElement).toBe(contentPositioner);
+    expect(viewport.parentElement).toBe(viewportPositioner);
+
+    controller.close();
+    expect(contentPortal.parentElement).toBe(root.querySelector('[data-slot="navigation-menu-item"]'));
+    expect(viewportPortal.parentElement).toBe(root);
+
+    controller.destroy();
+  });
+
   // Content keyboard navigation tests
   describe("content keyboard navigation", () => {
     // Helper to flush requestAnimationFrame
