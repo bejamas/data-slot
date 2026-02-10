@@ -28,7 +28,7 @@ const descriptions: Record<string, string> = {
   "navigation-menu": "Dropdown navigation menus",
   "dropdown-menu": "Action menus, kbd nav",
   select: "Dropdown select, form-ready",
-  combobox: "Autocomplete input, filterable",
+  combobox: "Autocomplete input",
   slider: "Single/range value sliders",
 };
 
@@ -70,7 +70,7 @@ function getPackageSizes(): PackageInfo[] {
 
     if (!existsSync(filePath)) {
       console.warn(
-        `Warning: ${name}/dist/index.js not found. Run build first.`
+        `Warning: ${name}/dist/index.js not found. Run build first.`,
       );
       continue;
     }
@@ -125,8 +125,8 @@ function main() {
   for (const pkg of packages) {
     console.log(
       `${pkg.name.padEnd(maxNameLen)}  ${pkg.sizeFormatted.padStart(
-        maxSizeLen
-      )}  ${pkg.description}`
+        maxSizeLen,
+      )}  ${pkg.description}`,
     );
   }
 

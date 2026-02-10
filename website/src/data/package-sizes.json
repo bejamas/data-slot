@@ -9,7 +9,7 @@
     "name": "@data-slot/combobox",
     "size": 3218,
     "sizeFormatted": "3.1 KB",
-    "description": "Autocomplete input, filterable"
+    "description": "Autocomplete input"
   },
   {
     "name": "@data-slot/select",
