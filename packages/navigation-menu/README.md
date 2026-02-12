@@ -77,6 +77,7 @@ const menu = createNavigationMenu(element, {
 | `sideOffset` | `number` | `0` | Distance from trigger to viewport (px) |
 | `alignOffset` | `number` | `0` | Cross-axis alignment offset (px) |
 | `onValueChange` | `(value: string \| null) => void` | `undefined` | Callback when active item changes |
+| `debugSafeTriangle` | `boolean` | `false` | Show red hover safe-triangle debug overlay |
 
 ### Data Attributes
 
@@ -91,6 +92,7 @@ Options can also be set via data attributes on the root element. JS options take
 | `data-align` | string | `"start"` | Viewport alignment: `"start"`, `"center"`, or `"end"` |
 | `data-side-offset` | number | `0` | Distance from trigger to viewport (px) |
 | `data-align-offset` | number | `0` | Cross-axis alignment offset (px) |
+| `data-debug-safe-triangle` | boolean | `false` | Show red hover safe-triangle debug overlay |
 
 Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
 
@@ -157,7 +159,9 @@ Their `data-side` / `data-align` are mirrored output values and are not used as 
 - `navigation-menu-indicator` - Animated highlight that follows the hovered trigger
 - `navigation-menu-viewport` - Container for content with size transitions
 - `navigation-menu-viewport-positioner` - Positioning wrapper for viewport (generated if not authored)
+- `navigation-menu-bridge` - Hover safety shield (gap bridge + triangle corridor)
 - `navigation-menu-portal` - Optional authored portal wrapper that can contain positioners
+- `navigation-menu-safe-triangle` - Debug-only hover safety polygon (rendered when enabled)
 
 ## Styling
 

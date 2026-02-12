@@ -406,10 +406,9 @@ describe("NavigationMenu", () => {
 
     expect(bridge).toBeTruthy();
     expect(bridge.parentElement).toBe(viewportPositioner);
-    expect(bridge.style.height).toBe("12px");
-    expect(bridge.style.width).toBe("300px");
-    expect(bridge.style.top).toBe("28px");
-    expect(bridge.style.left).toBe("20px");
+    expect(parseFloat(bridge.style.height)).toBeGreaterThan(0);
+    expect(parseFloat(bridge.style.width)).toBeGreaterThan(0);
+    expect(bridge.style.clipPath.includes("polygon(")).toBe(true);
     expect(bridge.style.transform).toBe("none");
 
     // Simulate leaving root across the gap; entering the bridge should cancel delayed close.
@@ -423,6 +422,217 @@ describe("NavigationMenu", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 40));
     expect(controller.value).toBe("products");
+
+    controller.destroy();
+  });
+
+  it("keeps menu open while pointer moves through safe triangle toward viewport", async () => {
+    const { root, triggers, contents, viewport, controller } = setup({ delayClose: 0 });
+    const trigger = triggers[0]!;
+    const content = contents[0]!;
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    trigger.getBoundingClientRect = () => rect(120, 100, 140, 40);
+    content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+    viewport.getBoundingClientRect = () => rect(120, 152, 300, 180);
+
+    controller.open("products");
+    await waitForPresenceExit();
+
+    root.dispatchEvent(
+      new PointerEvent("pointerleave", {
+        bubbles: true,
+        relatedTarget: null,
+        clientX: 180,
+        clientY: 140,
+      } as PointerEventInit)
+    );
+    const viewportPositioner = getViewportPositioner(viewport);
+    const bridge = viewportPositioner.querySelector(
+      '[data-slot="navigation-menu-bridge"]'
+    ) as HTMLElement;
+    bridge.dispatchEvent(
+      new PointerEvent("pointerenter", {
+        bubbles: true,
+        clientX: 210,
+        clientY: 146,
+      } as PointerEventInit)
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(controller.value).toBe("products");
+
+    bridge.dispatchEvent(
+      new PointerEvent("pointerleave", {
+        bubbles: true,
+        relatedTarget: null,
+      } as PointerEventInit)
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(controller.value).toBe(null);
+
+    controller.destroy();
+  });
+
+  it("does not switch to another item when pointer enters it through safe triangle", async () => {
+    const { root, triggers, contents, viewport, controller } = setup({ delayClose: 0 });
+    const productsTrigger = triggers[0]!;
+    const solutionsTrigger = triggers[1]!;
+    const solutionsItem = solutionsTrigger.closest(
+      '[data-slot="navigation-menu-item"]'
+    ) as HTMLElement;
+    const content = contents[0]!;
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    productsTrigger.getBoundingClientRect = () => rect(120, 100, 140, 40);
+    solutionsTrigger.getBoundingClientRect = () => rect(280, 100, 140, 40);
+    content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+    viewport.getBoundingClientRect = () => rect(120, 152, 300, 180);
+
+    controller.open("products");
+    await waitForPresenceExit();
+    expect(controller.value).toBe("products");
+
+    productsTrigger.dispatchEvent(
+      new PointerEvent("pointerleave", {
+        bubbles: true,
+        relatedTarget: null,
+        clientX: 190,
+        clientY: 140,
+      } as PointerEventInit)
+    );
+
+    const viewportPositioner = getViewportPositioner(viewport);
+    const bridge = viewportPositioner.querySelector(
+      '[data-slot="navigation-menu-bridge"]'
+    ) as HTMLElement;
+    bridge.dispatchEvent(
+      new PointerEvent("pointerenter", {
+        bubbles: true,
+        clientX: 220,
+        clientY: 146,
+      } as PointerEventInit)
+    );
+
+    const throughTriangle = { bubbles: true, clientX: 220, clientY: 146 } as PointerEventInit;
+    root.dispatchEvent(new PointerEvent("pointerenter", throughTriangle));
+    solutionsTrigger.dispatchEvent(new PointerEvent("pointerenter", throughTriangle));
+    solutionsItem.dispatchEvent(new PointerEvent("pointerenter", throughTriangle));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(controller.value).toBe("products");
+
+    controller.destroy();
+  });
+
+  it("renders safe triangle debug overlay when data-debug-safe-triangle is enabled", async () => {
+    const { root, triggers, contents, viewport, controller } = setup({
+      delayClose: 0,
+      debugSafeTriangle: true,
+    });
+    const trigger = triggers[0]!;
+    const content = contents[0]!;
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    trigger.getBoundingClientRect = () => rect(120, 100, 140, 40);
+    content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+    viewport.getBoundingClientRect = () => rect(120, 152, 300, 180);
+
+    controller.open("products");
+    await waitForPresenceExit();
+
+    root.dispatchEvent(
+      new PointerEvent("pointerleave", {
+        bubbles: true,
+        relatedTarget: null,
+        clientX: 180,
+        clientY: 140,
+      } as PointerEventInit)
+    );
+
+    const overlay = document.body.querySelector(
+      '[data-slot="navigation-menu-safe-triangle"]'
+    ) as HTMLElement;
+    expect(overlay).toBeTruthy();
+    expect(overlay.style.display).toBe("block");
+    expect(overlay.style.clipPath.includes("polygon(")).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("keeps safe triangle debug overlay visible while menu is open", async () => {
+    const { root, triggers, contents, viewport, controller } = setup({
+      delayClose: 0,
+      debugSafeTriangle: true,
+    });
+    const trigger = triggers[0]!;
+    const content = contents[0]!;
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    trigger.getBoundingClientRect = () => rect(120, 100, 140, 40);
+    content.getBoundingClientRect = () => rect(120, 152, 300, 180);
+    viewport.getBoundingClientRect = () => rect(120, 152, 300, 180);
+
+    controller.open("products");
+    await waitForPresenceExit();
+
+    const overlay = document.body.querySelector(
+      '[data-slot="navigation-menu-safe-triangle"]'
+    ) as HTMLElement;
+    expect(overlay).toBeTruthy();
+    expect(overlay.style.display).toBe("block");
+    expect(overlay.style.clipPath.includes("polygon(")).toBe(true);
 
     controller.destroy();
   });

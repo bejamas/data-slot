@@ -27,6 +27,17 @@ interface PlacementConfig {
   alignOffset: number;
 }
 
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface HoverSafeTriangle {
+  apex: Point;
+  edgeA: Point;
+  edgeB: Point;
+}
+
 export interface NavigationMenuOptions {
   /** Delay before opening on hover (ms) */
   delayOpen?: number;
@@ -44,6 +55,8 @@ export interface NavigationMenuOptions {
   alignOffset?: number;
   /** Callback when active item changes */
   onValueChange?: (value: string | null) => void;
+  /** Debug hover safe-triangle polygon */
+  debugSafeTriangle?: boolean;
 }
 
 export interface NavigationMenuController {
@@ -77,16 +90,26 @@ export interface NavigationMenuController {
  */
 export function createNavigationMenu(
   root: Element,
-  options: NavigationMenuOptions = {}
+  options: NavigationMenuOptions = {},
 ): NavigationMenuController {
   // Resolve options with explicit precedence: JS > data-* > default
-  const delayOpen = options.delayOpen ?? getDataNumber(root, "delayOpen") ?? 200;
-  const delayClose = options.delayClose ?? getDataNumber(root, "delayClose") ?? 150;
-  const openOnFocus = options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? true;
+  const delayOpen =
+    options.delayOpen ?? getDataNumber(root, "delayOpen") ?? 200;
+  const delayClose =
+    options.delayClose ?? getDataNumber(root, "delayClose") ?? 150;
+  const openOnFocus =
+    options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? true;
   const rootSide = options.side ?? getDataEnum(root, "side", SIDES) ?? "bottom";
-  const rootAlign = options.align ?? getDataEnum(root, "align", ALIGNS) ?? "start";
-  const rootSideOffset = options.sideOffset ?? getDataNumber(root, "sideOffset") ?? 0;
-  const rootAlignOffset = options.alignOffset ?? getDataNumber(root, "alignOffset") ?? 0;
+  const rootAlign =
+    options.align ?? getDataEnum(root, "align", ALIGNS) ?? "start";
+  const rootSideOffset =
+    options.sideOffset ?? getDataNumber(root, "sideOffset") ?? 0;
+  const rootAlignOffset =
+    options.alignOffset ?? getDataNumber(root, "alignOffset") ?? 0;
+  const debugSafeTriangle =
+    options.debugSafeTriangle ??
+    getDataBool(root, "debugSafeTriangle") ??
+    false;
   const onValueChange = options.onValueChange;
 
   // Sanitize value for use in IDs (spaces/slashes -> dashes)
@@ -101,7 +124,10 @@ export function createNavigationMenu(
   const items = getParts<HTMLElement>(root, "navigation-menu-item");
   const viewport = getPart<HTMLElement>(root, "navigation-menu-viewport");
   const indicator = getPart<HTMLElement>(root, "navigation-menu-indicator");
-  const findSlotAncestor = (el: HTMLElement, slot: string): HTMLElement | null => {
+  const findSlotAncestor = (
+    el: HTMLElement,
+    slot: string,
+  ): HTMLElement | null => {
     let current: HTMLElement | null = el.parentElement;
     while (current && current !== root) {
       if (current.getAttribute("data-slot") === slot) {
@@ -114,7 +140,7 @@ export function createNavigationMenu(
 
   if (!list || items.length === 0) {
     throw new Error(
-      "NavigationMenu requires navigation-menu-list and at least one navigation-menu-item"
+      "NavigationMenu requires navigation-menu-list and at least one navigation-menu-item",
     );
   }
 
@@ -128,9 +154,14 @@ export function createNavigationMenu(
   let isPointerDown: boolean = false; // Track if we're in a click sequence (pointerdown fired)
   let isRootHovered: boolean = false; // Track if pointer is over root
   let isDestroyed = false;
+  let activeSafetyTriangle: HoverSafeTriangle | null = null;
+  let hoverSafeTriangleOverlay: HTMLElement | null = null;
 
   const cleanups: Array<() => void> = [];
-  const contentPresence = new Map<HTMLElement, ReturnType<typeof createPresenceLifecycle>>();
+  const contentPresence = new Map<
+    HTMLElement,
+    ReturnType<typeof createPresenceLifecycle>
+  >();
   const contentPlacement = new Map<
     HTMLElement,
     {
@@ -145,7 +176,8 @@ export function createNavigationMenu(
   const authoredLegacyViewportPositioner = viewport
     ? findSlotAncestor(viewport, "navigation-menu-positioner")
     : null;
-  const authoredAnyViewportPositioner = authoredViewportPositioner ?? authoredLegacyViewportPositioner;
+  const authoredAnyViewportPositioner =
+    authoredViewportPositioner ?? authoredLegacyViewportPositioner;
   const authoredViewportPortal = authoredAnyViewportPositioner
     ? findSlotAncestor(authoredAnyViewportPositioner, "navigation-menu-portal")
     : null;
@@ -154,10 +186,12 @@ export function createNavigationMenu(
         content: viewport,
         root,
         enabled: true,
-        wrapperSlot: authoredAnyViewportPositioner ? undefined : "navigation-menu-viewport-positioner",
+        wrapperSlot: authoredAnyViewportPositioner
+          ? undefined
+          : "navigation-menu-viewport-positioner",
         container: authoredAnyViewportPositioner ?? undefined,
         mountTarget: authoredAnyViewportPositioner
-          ? authoredViewportPortal ?? authoredAnyViewportPositioner
+          ? (authoredViewportPortal ?? authoredAnyViewportPositioner)
           : undefined,
       })
     : null;
@@ -234,7 +268,11 @@ export function createNavigationMenu(
   // ResizeObserver for active panel - handles fonts/images/content changes after open
   let activeRO: ResizeObserver | null = null;
   const observeActiveContent = (
-    data: { item: HTMLElement; content: HTMLElement; trigger: HTMLElement } | null
+    data: {
+      item: HTMLElement;
+      content: HTMLElement;
+      trigger: HTMLElement;
+    } | null,
   ) => {
     activeRO?.disconnect();
     activeRO = null;
@@ -270,7 +308,10 @@ export function createNavigationMenu(
     }
   >();
 
-  const resolvePlacement = (item: HTMLElement, content: HTMLElement): PlacementConfig => {
+  const resolvePlacement = (
+    item: HTMLElement,
+    content: HTMLElement,
+  ): PlacementConfig => {
     return {
       side:
         options.side ??
@@ -320,7 +361,7 @@ export function createNavigationMenu(
             content.hidden = true;
             content.style.pointerEvents = "none";
           },
-        })
+        }),
       );
 
       // Setup ARIA - link trigger to content bidirectionally
@@ -347,7 +388,7 @@ export function createNavigationMenu(
   // Get focusable elements in a content panel
   const getFocusableElements = (content: HTMLElement): HTMLElement[] => {
     return Array.from(
-      content.querySelectorAll<HTMLElement>(focusableSelector)
+      content.querySelectorAll<HTMLElement>(focusableSelector),
     ).filter((el) => !el.hidden && !el.closest("[hidden]"));
   };
 
@@ -368,7 +409,9 @@ export function createNavigationMenu(
     if (!viewport) return null;
     const container = viewportPortal?.container;
     if (container instanceof HTMLElement) return container;
-    return viewport.parentElement instanceof HTMLElement ? viewport.parentElement : viewport;
+    return viewport.parentElement instanceof HTMLElement
+      ? viewport.parentElement
+      : viewport;
   };
 
   const getOrCreateHoverBridge = (): HTMLElement => {
@@ -376,12 +419,21 @@ export function createNavigationMenu(
     if (!hoverBridge) {
       hoverBridge = document.createElement("div");
       hoverBridge.setAttribute("data-slot", "navigation-menu-bridge");
-      hoverBridge.style.cssText = "position: absolute; pointer-events: auto; z-index: 0;";
-      // Bridge keeps menu open when hovered
+      hoverBridge.style.cssText =
+        "position: absolute; pointer-events: auto; z-index: 0; display: none;";
+      // Shield keeps menu open while crossing root->popup gap.
       cleanups.push(
         on(hoverBridge, "pointerenter", () => {
           clearTimers();
-        })
+        }),
+        on(hoverBridge, "pointerleave", (e) => {
+          if (clickLocked || currentValue === null) return;
+          const next = (e as PointerEvent).relatedTarget as Node | null;
+          if (isNodeInsideActivePopup(next)) return;
+          if (next && containsWithPortals(root, next)) return;
+          updateState(null);
+          updateIndicator(null);
+        }),
       );
     }
     if (host && hoverBridge.parentElement !== host) {
@@ -390,10 +442,351 @@ export function createNavigationMenu(
     return hoverBridge;
   };
 
+  const hideHoverBridge = () => {
+    if (!hoverBridge) return;
+    hoverBridge.style.height = "0";
+    hoverBridge.style.width = "0";
+    hoverBridge.style.top = "0px";
+    hoverBridge.style.left = "0px";
+    hoverBridge.style.right = "0px";
+    hoverBridge.style.bottom = "auto";
+    hoverBridge.style.transform = "none";
+    hoverBridge.style.clipPath = "none";
+    hoverBridge.style.display = "none";
+  };
+
+  const getOrCreateHoverSafeTriangleOverlay = (): HTMLElement | null => {
+    if (!debugSafeTriangle) return null;
+    const host = root.ownerDocument.body;
+    if (!host) return null;
+    if (!hoverSafeTriangleOverlay) {
+      hoverSafeTriangleOverlay = root.ownerDocument.createElement("div");
+      hoverSafeTriangleOverlay.setAttribute(
+        "data-slot",
+        "navigation-menu-safe-triangle",
+      );
+      hoverSafeTriangleOverlay.style.cssText = [
+        "position: fixed",
+        "pointer-events: none",
+        "display: none",
+        "z-index: 2147483647",
+        "background: rgba(255, 0, 0, 0.18)",
+        "border: 1px solid rgba(255, 0, 0, 0.45)",
+      ].join("; ");
+    }
+    if (hoverSafeTriangleOverlay.parentElement !== host) {
+      host.appendChild(hoverSafeTriangleOverlay);
+    }
+    return hoverSafeTriangleOverlay;
+  };
+
+  const hideHoverSafeTriangleOverlay = () => {
+    if (!hoverSafeTriangleOverlay) return;
+    hoverSafeTriangleOverlay.style.width = "0";
+    hoverSafeTriangleOverlay.style.height = "0";
+    hoverSafeTriangleOverlay.style.clipPath = "none";
+    hoverSafeTriangleOverlay.style.display = "none";
+  };
+
+  const clearHoverSafetyState = () => {
+    activeSafetyTriangle = null;
+    if (!debugSafeTriangle) hideHoverSafeTriangleOverlay();
+  };
+
+  const drawHoverSafeTriangle = (triangle: HoverSafeTriangle) => {
+    const overlay = getOrCreateHoverSafeTriangleOverlay();
+    if (!overlay) return;
+
+    const ax = triangle.apex.x;
+    const ay = triangle.apex.y;
+    const bx = triangle.edgeA.x;
+    const by = triangle.edgeA.y;
+    const cx = triangle.edgeB.x;
+    const cy = triangle.edgeB.y;
+    const minX = Math.min(ax, bx, cx);
+    const minY = Math.min(ay, by, cy);
+    const maxX = Math.max(ax, bx, cx);
+    const maxY = Math.max(ay, by, cy);
+    const width = Math.max(1, maxX - minX);
+    const height = Math.max(1, maxY - minY);
+    const normalize = (x: number, y: number) =>
+      `${((x - minX) / width) * 100}% ${((y - minY) / height) * 100}%`;
+
+    overlay.style.display = "block";
+    overlay.style.left = `${minX}px`;
+    overlay.style.top = `${minY}px`;
+    overlay.style.width = `${width}px`;
+    overlay.style.height = `${height}px`;
+    overlay.style.clipPath = `polygon(${normalize(ax, ay)}, ${normalize(bx, by)}, ${normalize(cx, cy)})`;
+  };
+
+  const sign = (p1: Point, p2: Point, p3: Point): number =>
+    (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+
+  const isPointInTriangle = (
+    point: Point,
+    a: Point,
+    b: Point,
+    c: Point,
+  ): boolean => {
+    const d1 = sign(point, a, b);
+    const d2 = sign(point, b, c);
+    const d3 = sign(point, c, a);
+    const hasNeg = d1 < 0 || d2 < 0 || d3 < 0;
+    const hasPos = d1 > 0 || d2 > 0 || d3 > 0;
+    return !(hasNeg && hasPos);
+  };
+
+  const getFacingEdge = (
+    apex: Point,
+    rootRect: DOMRect,
+    viewportRect: DOMRect,
+  ): [Point, Point] => {
+    const epsilon = 0.5;
+    if (viewportRect.top >= rootRect.bottom - epsilon) {
+      return [
+        { x: viewportRect.left, y: viewportRect.top },
+        { x: viewportRect.right, y: viewportRect.top },
+      ];
+    }
+    if (viewportRect.bottom <= rootRect.top + epsilon) {
+      return [
+        { x: viewportRect.left, y: viewportRect.bottom },
+        { x: viewportRect.right, y: viewportRect.bottom },
+      ];
+    }
+    if (viewportRect.left >= rootRect.right - epsilon) {
+      return [
+        { x: viewportRect.left, y: viewportRect.top },
+        { x: viewportRect.left, y: viewportRect.bottom },
+      ];
+    }
+    if (viewportRect.right <= rootRect.left + epsilon) {
+      return [
+        { x: viewportRect.right, y: viewportRect.top },
+        { x: viewportRect.right, y: viewportRect.bottom },
+      ];
+    }
+
+    const edges: Array<[Point, Point]> = [
+      [
+        { x: viewportRect.left, y: viewportRect.top },
+        { x: viewportRect.right, y: viewportRect.top },
+      ],
+      [
+        { x: viewportRect.right, y: viewportRect.top },
+        { x: viewportRect.right, y: viewportRect.bottom },
+      ],
+      [
+        { x: viewportRect.left, y: viewportRect.bottom },
+        { x: viewportRect.right, y: viewportRect.bottom },
+      ],
+      [
+        { x: viewportRect.left, y: viewportRect.top },
+        { x: viewportRect.left, y: viewportRect.bottom },
+      ],
+    ];
+    const distanceToEdge = ([p1, p2]: [Point, Point]): number => {
+      if (p1.y === p2.y) return Math.abs(apex.y - p1.y);
+      return Math.abs(apex.x - p1.x);
+    };
+    let best = edges[0]!;
+    let bestDistance = distanceToEdge(best);
+    for (let i = 1; i < edges.length; i++) {
+      const edge = edges[i]!;
+      const distance = distanceToEdge(edge);
+      if (distance < bestDistance) {
+        best = edge;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  };
+
+  const getActiveData = () =>
+    currentValue ? (itemMap.get(currentValue) ?? null) : null;
+  const SAFETY_EDGE_INSET = 10;
+
+  const buildSafetyTriangle = (
+    triggerRect: DOMRect,
+    rootRect: DOMRect,
+    targetRect: DOMRect,
+  ): HoverSafeTriangle | null => {
+    if (targetRect.width <= 0 || targetRect.height <= 0) return null;
+    const apex: Point = {
+      x: triggerRect.left + triggerRect.width / 2,
+      y: triggerRect.top + triggerRect.height * 0.62,
+    };
+    let [edgeA, edgeB] = getFacingEdge(apex, rootRect, targetRect);
+    const minBaseSpan = 28;
+    if (edgeA.x === edgeB.x) {
+      const minY = Math.min(edgeA.y, edgeB.y);
+      const maxY = Math.max(edgeA.y, edgeB.y);
+      const span = maxY - minY;
+      const inset =
+        span <= minBaseSpan
+          ? 0
+          : Math.min(SAFETY_EDGE_INSET, (span - minBaseSpan) / 2);
+      edgeA = { x: edgeA.x, y: minY + inset };
+      edgeB = { x: edgeB.x, y: maxY - inset };
+    } else {
+      const minX = Math.min(edgeA.x, edgeB.x);
+      const maxX = Math.max(edgeA.x, edgeB.x);
+      const span = maxX - minX;
+      const inset =
+        span <= minBaseSpan
+          ? 0
+          : Math.min(SAFETY_EDGE_INSET, (span - minBaseSpan) / 2);
+      edgeA = { x: minX + inset, y: edgeA.y };
+      edgeB = { x: maxX - inset, y: edgeB.y };
+    }
+    return { apex, edgeA, edgeB };
+  };
+
+  const getCurrentSafetyTriangle = (): HoverSafeTriangle | null => {
+    if (!viewport || currentValue === null) return null;
+    const activeData = getActiveData();
+    if (!activeData) return null;
+    const rootRect = (root as HTMLElement).getBoundingClientRect();
+    const triggerRect = activeData.trigger.getBoundingClientRect();
+    const viewportRect = viewport.getBoundingClientRect();
+    const contentRect = activeData.content.getBoundingClientRect();
+    const targetRect =
+      viewportRect.width > 0 && viewportRect.height > 0
+        ? viewportRect
+        : contentRect;
+    const triangle = buildSafetyTriangle(triggerRect, rootRect, targetRect);
+    activeSafetyTriangle = triangle;
+    return triangle;
+  };
+
+  const isPointerInsideSafetyCorridor = (event: PointerEvent): boolean => {
+    const triangle = getCurrentSafetyTriangle();
+    if (!triangle) return false;
+    const point: Point = { x: event.clientX, y: event.clientY };
+    return isPointInTriangle(
+      point,
+      triangle.apex,
+      triangle.edgeA,
+      triangle.edgeB,
+    );
+  };
+
+  const toLocalPoint = (point: Point, rootRect: DOMRect): Point => ({
+    x: point.x - rootRect.left,
+    y: point.y - rootRect.top,
+  });
+
+  const buildConvexHull = (points: Point[]): Point[] => {
+    if (points.length <= 1) return points.slice();
+    const key = (point: Point) => `${point.x.toFixed(3)}:${point.y.toFixed(3)}`;
+    const unique = new Map<string, Point>();
+    for (const point of points) unique.set(key(point), point);
+    const sorted = Array.from(unique.values()).sort((a, b) => {
+      if (a.x === b.x) return a.y - b.y;
+      return a.x - b.x;
+    });
+    if (sorted.length <= 2) return sorted;
+    const cross = (o: Point, a: Point, b: Point): number =>
+      (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+
+    const lower: Point[] = [];
+    for (const point of sorted) {
+      while (
+        lower.length >= 2 &&
+        cross(lower[lower.length - 2]!, lower[lower.length - 1]!, point) <= 0
+      ) {
+        lower.pop();
+      }
+      lower.push(point);
+    }
+
+    const upper: Point[] = [];
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      const point = sorted[i]!;
+      while (
+        upper.length >= 2 &&
+        cross(upper[upper.length - 2]!, upper[upper.length - 1]!, point) <= 0
+      ) {
+        upper.pop();
+      }
+      upper.push(point);
+    }
+
+    lower.pop();
+    upper.pop();
+    return lower.concat(upper);
+  };
+
+  const setHoverShieldShape = (points: Point[]) => {
+    if (points.length < 3) {
+      hideHoverBridge();
+      return;
+    }
+    const hull = buildConvexHull(points);
+    if (hull.length < 3) {
+      hideHoverBridge();
+      return;
+    }
+    const minX = Math.min(...hull.map((point) => point.x));
+    const minY = Math.min(...hull.map((point) => point.y));
+    const maxX = Math.max(...hull.map((point) => point.x));
+    const maxY = Math.max(...hull.map((point) => point.y));
+    const width = Math.max(1, maxX - minX);
+    const height = Math.max(1, maxY - minY);
+    const normalize = (point: Point) =>
+      `${((point.x - minX) / width) * 100}% ${((point.y - minY) / height) * 100}%`;
+
+    const bridge = getOrCreateHoverBridge();
+    bridge.style.display = "block";
+    bridge.style.transform = "none";
+    bridge.style.bottom = "auto";
+    bridge.style.right = "auto";
+    bridge.style.left = `${minX}px`;
+    bridge.style.top = `${minY}px`;
+    bridge.style.width = `${width}px`;
+    bridge.style.height = `${height}px`;
+    bridge.style.clipPath = `polygon(${hull.map(normalize).join(", ")})`;
+  };
+
+  const updateDebugSafeTrianglePreview = () => {
+    if (!debugSafeTriangle) return;
+    const triangle = getCurrentSafetyTriangle();
+    if (!triangle) {
+      hideHoverSafeTriangleOverlay();
+      return;
+    }
+    drawHoverSafeTriangle(triangle);
+  };
+
+  const isNodeInsideActivePopup = (node: Node | null): boolean => {
+    if (!node) return false;
+    const activeData = getActiveData();
+    if (activeData?.content.contains(node)) return true;
+    if (viewport?.contains(node)) return true;
+    if (hoverBridge?.contains(node)) return true;
+    const container = viewportPortal?.container;
+    if (container instanceof HTMLElement && container.contains(node))
+      return true;
+    return false;
+  };
+
+  cleanups.push(clearHoverSafetyState);
+  cleanups.push(hideHoverBridge);
+  cleanups.push(() => {
+    hideHoverSafeTriangleOverlay();
+    if (hoverSafeTriangleOverlay?.parentElement) {
+      hoverSafeTriangleOverlay.parentElement.removeChild(
+        hoverSafeTriangleOverlay,
+      );
+    }
+    hoverSafeTriangleOverlay = null;
+  });
+
   const updateViewportSize = (
     content: HTMLElement,
     trigger: HTMLElement,
-    placement: PlacementConfig
+    placement: PlacementConfig,
   ) => {
     if (!viewport) return;
 
@@ -403,8 +796,12 @@ export function createNavigationMenu(
       const lastChild = content.lastElementChild as HTMLElement | null;
       const firstStyle = firstChild ? getComputedStyle(firstChild) : null;
       const lastStyle = lastChild ? getComputedStyle(lastChild) : null;
-      const firstMarginTop = firstStyle ? parseFloat(firstStyle.marginTop) || 0 : 0;
-      const lastMarginBottom = lastStyle ? parseFloat(lastStyle.marginBottom) || 0 : 0;
+      const firstMarginTop = firstStyle
+        ? parseFloat(firstStyle.marginTop) || 0
+        : 0;
+      const lastMarginBottom = lastStyle
+        ? parseFloat(lastStyle.marginBottom) || 0
+        : 0;
       const measureAxis = (...values: number[]): number => {
         let max = 0;
         for (const value of values) {
@@ -418,13 +815,13 @@ export function createNavigationMenu(
         contentRect.width,
         content.scrollWidth,
         content.offsetWidth,
-        content.clientWidth
+        content.clientWidth,
       );
       const layoutHeight = measureAxis(
         contentRect.height,
         content.scrollHeight,
         content.offsetHeight,
-        content.clientHeight
+        content.clientHeight,
       );
       // Include outer margins used by content wrappers (commonly collapsed on first/last child).
       const contentHeight = layoutHeight + firstMarginTop + lastMarginBottom;
@@ -479,8 +876,10 @@ export function createNavigationMenu(
       }
       updateViewportPositioner();
 
-      // Cover pointer gaps between root and viewport (e.g. side-offset), plus legacy margin gaps.
+      // Build unified hover shield (rectangular gap bridge + triangular safety corridor).
       const viewportRect = viewport.getBoundingClientRect();
+      const shieldPoints: Point[] = [];
+
       const rootBottomGap = Math.max(0, viewportRect.top - rootRect.bottom); // viewport below
       const rootTopGap = Math.max(0, rootRect.top - viewportRect.bottom); // viewport above
       const rootRightGap = Math.max(0, viewportRect.left - rootRect.right); // viewport right
@@ -488,48 +887,69 @@ export function createNavigationMenu(
       const marginGap = Math.max(0, firstMarginTop + viewportMarginTop);
       const verticalGap = Math.max(rootBottomGap, rootTopGap, marginGap);
       const horizontalGap = Math.max(rootRightGap, rootLeftGap);
-      const totalGap = Math.max(verticalGap, horizontalGap);
-      if (totalGap > 0) {
-        const bridge = getOrCreateHoverBridge();
-        bridge.style.transform = "none";
-        bridge.style.bottom = "auto";
-        bridge.style.right = "auto";
-        if (verticalGap >= horizontalGap) {
-          const gap = Math.max(rootBottomGap, rootTopGap, marginGap);
-          bridge.style.width = `${contentWidth}px`;
-          bridge.style.height = `${gap}px`;
-          bridge.style.left = `${left}px`;
+      const triangle = buildSafetyTriangle(triggerRect, rootRect, viewportRect);
+      activeSafetyTriangle = triangle;
 
-          if (rootTopGap > rootBottomGap && rootTopGap >= marginGap) {
-            // Viewport is above root (top side): extend bridge downward.
-            bridge.style.top = `${top + contentHeight}px`;
-          } else {
-            // Viewport is below root (bottom side) or margin-based gap: extend bridge upward.
-            bridge.style.top = `${top - gap}px`;
-          }
-        } else {
-          const gap = Math.max(rootRightGap, rootLeftGap);
-          bridge.style.height = `${contentHeight}px`;
-          bridge.style.width = `${gap}px`;
-          bridge.style.top = `${top}px`;
+      const addRectPoints = (
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+      ) => {
+        if (width <= 0 || height <= 0) return;
+        shieldPoints.push(
+          { x, y },
+          { x: x + width, y },
+          { x: x + width, y: y + height },
+          { x, y: y + height },
+        );
+      };
 
-          if (rootLeftGap > rootRightGap) {
-            // Viewport is left of root: extend bridge rightward.
-            bridge.style.left = `${left + contentWidth}px`;
-          } else {
-            // Viewport is right of root: extend bridge leftward.
-            bridge.style.left = `${left - gap}px`;
-          }
+      if (verticalGap >= horizontalGap && verticalGap > 0) {
+        const gap = Math.max(rootBottomGap, rootTopGap, marginGap);
+        let rectX = left;
+        const rectY =
+          rootTopGap > rootBottomGap && rootTopGap >= marginGap
+            ? top + contentHeight
+            : top - gap;
+        let rectWidth = contentWidth;
+        if (triangle) {
+          const bridgePad = 8;
+          const baseMinX =
+            Math.min(triangle.edgeA.x, triangle.edgeB.x) - rootRect.left;
+          const baseMaxX =
+            Math.max(triangle.edgeA.x, triangle.edgeB.x) - rootRect.left;
+          rectX = baseMinX - bridgePad;
+          rectWidth = baseMaxX - baseMinX + bridgePad * 2;
         }
-      } else if (hoverBridge) {
-        hoverBridge.style.height = "0";
-        hoverBridge.style.width = "0";
-        hoverBridge.style.top = "0px";
-        hoverBridge.style.left = "0px";
-        hoverBridge.style.right = "0px";
-        hoverBridge.style.bottom = "auto";
-        hoverBridge.style.transform = "none";
+        addRectPoints(rectX, rectY, rectWidth, gap);
+      } else if (horizontalGap > 0) {
+        const gap = Math.max(rootRightGap, rootLeftGap);
+        let rectY = top;
+        const rectX =
+          rootLeftGap > rootRightGap ? left + contentWidth : left - gap;
+        let rectHeight = contentHeight;
+        if (triangle) {
+          const bridgePad = 8;
+          const baseMinY =
+            Math.min(triangle.edgeA.y, triangle.edgeB.y) - rootRect.top;
+          const baseMaxY =
+            Math.max(triangle.edgeA.y, triangle.edgeB.y) - rootRect.top;
+          rectY = baseMinY - bridgePad;
+          rectHeight = baseMaxY - baseMinY + bridgePad * 2;
+        }
+        addRectPoints(rectX, rectY, gap, rectHeight);
       }
+
+      if (triangle) {
+        const apex = toLocalPoint(triangle.apex, rootRect);
+        const edgeA = toLocalPoint(triangle.edgeA, rootRect);
+        const edgeB = toLocalPoint(triangle.edgeB, rootRect);
+        shieldPoints.push(apex, edgeA, edgeB);
+      }
+
+      setHoverShieldShape(shieldPoints);
+      updateDebugSafeTrianglePreview();
     });
   };
 
@@ -555,12 +975,12 @@ export function createNavigationMenu(
 
     indicator.style.setProperty(
       "--indicator-left",
-      `${triggerRect.left - listRect.left}px`
+      `${triggerRect.left - listRect.left}px`,
     );
     indicator.style.setProperty("--indicator-width", `${triggerRect.width}px`);
     indicator.style.setProperty(
       "--indicator-top",
-      `${triggerRect.top - listRect.top}px`
+      `${triggerRect.top - listRect.top}px`,
     );
 
     // Get viewport's margin-top to determine if there's visual separation
@@ -573,12 +993,13 @@ export function createNavigationMenu(
 
     indicator.style.setProperty(
       "--indicator-height",
-      `${triggerRect.height - borderOverlap}px`
+      `${triggerRect.height - borderOverlap}px`,
     );
     indicator.setAttribute("data-state", "visible");
   };
 
   const updateState = (value: string | null, immediate = false) => {
+    clearHoverSafetyState();
     // Skip if value hasn't changed
     if (value === currentValue) {
       clearTimers();
@@ -686,6 +1107,8 @@ export function createNavigationMenu(
         observeActiveContent(newData);
         updateIndicator(newData.trigger); // Indicator follows active trigger
       } else {
+        hideHoverBridge();
+        clearHoverSafetyState();
         viewportPresence?.exit();
         observeActiveContent(null);
       }
@@ -696,7 +1119,7 @@ export function createNavigationMenu(
       if (direction) {
         root.setAttribute(
           "data-motion",
-          direction === "right" ? "from-right" : "from-left"
+          direction === "right" ? "from-right" : "from-left",
         );
       } else {
         root.removeAttribute("data-motion");
@@ -717,7 +1140,7 @@ export function createNavigationMenu(
         if (direction) {
           viewport.style.setProperty(
             "--motion-direction",
-            direction === "right" ? "1" : "-1"
+            direction === "right" ? "1" : "-1",
           );
         }
       }
@@ -725,6 +1148,7 @@ export function createNavigationMenu(
       currentValue = value;
       pendingValue = null; // Clear pending since we've completed the update
       if (value === null) updateIndicator(null); // Clear indicator on close
+      updateDebugSafeTrianglePreview();
       emit(root, "navigation-menu:change", { value });
       onValueChange?.(value);
     };
@@ -774,31 +1198,51 @@ export function createNavigationMenu(
   itemMap.forEach(({ item, trigger }, value) => {
     // Pointer enter on trigger - update indicator (skip if click-locked)
     cleanups.push(
-      on(trigger, "pointerenter", () => {
+      on(trigger, "pointerenter", (e) => {
         if (!clickLocked) {
+          if (
+            currentValue !== value &&
+            isPointerInsideSafetyCorridor(e as PointerEvent)
+          ) {
+            return;
+          }
           updateIndicator(trigger);
         }
-      })
+      }),
     );
 
     // Pointer enter on item - update state (content will trigger this too)
     // Skip if click-locked to keep the locked item's content visible
     cleanups.push(
-      on(item, "pointerenter", () => {
+      on(item, "pointerenter", (e) => {
         if (!clickLocked) {
+          if (
+            currentValue !== value &&
+            isPointerInsideSafetyCorridor(e as PointerEvent)
+          ) {
+            return;
+          }
           updateState(value);
         }
-      })
+      }),
     );
 
-    // Pointer leave on item - cancel pending open if leaving before delay
+    // Pointer leave on item - cancel pending open and close when leaving active item to outside.
     cleanups.push(
-      on(item, "pointerleave", () => {
+      on(item, "pointerleave", (e) => {
         if (pendingValue === value && currentValue === null) {
           clearTimers();
           pendingValue = null;
         }
-      })
+        if (currentValue === value && !clickLocked) {
+          const next = (e as PointerEvent).relatedTarget as Node | null;
+          if (isNodeInsideActivePopup(next)) return;
+          if (!next || !containsWithPortals(root, next)) {
+            updateState(null);
+            updateIndicator(null);
+          }
+        }
+      }),
     );
 
     // Focus on trigger - update state unless focus is from a pointer click
@@ -808,14 +1252,14 @@ export function createNavigationMenu(
           if (openOnFocus) updateState(value, true);
           updateIndicator(trigger);
         }
-      })
+      }),
     );
 
     // Track pointer down to coordinate with focus events
     cleanups.push(
       on(trigger, "pointerdown", () => {
         isPointerDown = true;
-      })
+      }),
     );
 
     // Click on trigger - toggles and locks open state
@@ -841,7 +1285,7 @@ export function createNavigationMenu(
         }
 
         isPointerDown = false;
-      })
+      }),
     );
   });
 
@@ -853,20 +1297,28 @@ export function createNavigationMenu(
     }),
     on(root, "pointerleave", (e) => {
       const next = (e as PointerEvent).relatedTarget as Node | null;
-      if (containsWithPortals(root, next)) return;
+      if (isNodeInsideActivePopup(next)) return;
       isRootHovered = false;
       if (!clickLocked) {
+        if (isPointerInsideSafetyCorridor(e as PointerEvent)) {
+          clearTimers();
+          return;
+        }
         updateState(null);
         updateIndicator(null);
       }
     }),
-    on(root, "pointerdown", clearTimers)
+    on(root, "pointerdown", () => {
+      clearHoverSafetyState();
+      clearTimers();
+    }),
   );
 
   // Handle viewport hover to keep menu open + recompute size after transitions
   if (viewport) {
     cleanups.push(
       on(viewport, "pointerenter", () => {
+        clearHoverSafetyState();
         clearTimers();
       }),
       on(viewport, "transitionend", (e) => {
@@ -876,7 +1328,7 @@ export function createNavigationMenu(
           const placement = resolvePlacement(data.item, data.content);
           updateViewportSize(data.content, data.trigger, placement);
         }
-      })
+      }),
     );
   }
 
@@ -884,16 +1336,18 @@ export function createNavigationMenu(
   itemMap.forEach(({ content }) => {
     cleanups.push(
       on(content, "pointerenter", () => {
+        clearHoverSafetyState();
         clearTimers();
       }),
       on(content, "pointerleave", (e) => {
         if (clickLocked) return;
         const next = (e as PointerEvent).relatedTarget as Node | null;
+        if (isNodeInsideActivePopup(next)) return;
         if (!containsWithPortals(root, next)) {
           updateState(null);
           updateIndicator(null);
         }
-      })
+      }),
     );
   });
 
@@ -955,7 +1409,7 @@ export function createNavigationMenu(
         nextTrigger.focus();
         updateIndicator(nextTrigger);
       }
-    })
+    }),
   );
 
   // Keyboard navigation within content panels
@@ -1000,18 +1454,22 @@ export function createNavigationMenu(
             break;
           }
         }
-      })
+      }),
     );
   });
 
   // Helper to check if this menu instance is active (focused, hovered, or locked)
   const isMenuActive = () =>
-    containsWithPortals(root, document.activeElement) || isRootHovered || clickLocked;
+    containsWithPortals(root, document.activeElement) ||
+    isRootHovered ||
+    clickLocked;
 
   const closeMenuAndUnlock = () => {
+    clearHoverSafetyState();
     clickLocked = false;
     updateState(null, true);
     updateIndicator(null);
+    updateDebugSafeTrianglePreview();
   };
 
   // Reset isPointerDown on document pointerup/pointercancel (capture phase)
@@ -1022,7 +1480,7 @@ export function createNavigationMenu(
       () => {
         isPointerDown = false;
       },
-      { capture: true }
+      { capture: true },
     ),
     on(
       document,
@@ -1030,8 +1488,8 @@ export function createNavigationMenu(
       () => {
         isPointerDown = false;
       },
-      { capture: true }
-    )
+      { capture: true },
+    ),
   );
 
   // Close when focus leaves root (and unlock clickLocked)
@@ -1041,7 +1499,7 @@ export function createNavigationMenu(
       if (!containsWithPortals(root, e.target as Node)) {
         closeMenuAndUnlock();
       }
-    })
+    }),
   );
 
   cleanups.push(
@@ -1053,7 +1511,7 @@ export function createNavigationMenu(
       closeOnEscape: true,
       preventEscapeDefault: false,
       isInside: (target) => !!target && containsWithPortals(root, target),
-    })
+    }),
   );
 
   // Recompute indicator position on window resize or list scroll
@@ -1068,13 +1526,15 @@ export function createNavigationMenu(
     on(list, "scroll", () => {
       if (hoveredTrigger)
         requestAnimationFrame(() => updateIndicator(hoveredTrigger));
-    })
+    }),
   );
 
   // Inbound event
   cleanups.push(
     on(root, "navigation-menu:set", (e) => {
-      const detail = (e as CustomEvent).detail as { value?: string | null } | null;
+      const detail = (e as CustomEvent).detail as {
+        value?: string | null;
+      } | null;
       if (detail?.value === undefined) return;
 
       if (detail.value === null) {
@@ -1085,7 +1545,7 @@ export function createNavigationMenu(
         const data = itemMap.get(detail.value);
         if (data) updateIndicator(data.trigger);
       }
-    })
+    }),
   );
 
   const controller: NavigationMenuController = {
@@ -1113,7 +1573,7 @@ const bound = new WeakSet<Element>();
  * Returns array of controllers for programmatic access
  */
 export function create(
-  scope: ParentNode = document
+  scope: ParentNode = document,
 ): NavigationMenuController[] {
   const controllers: NavigationMenuController[] = [];
 
