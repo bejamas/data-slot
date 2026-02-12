@@ -397,27 +397,51 @@ export function createNavigationMenu(
   ) => {
     if (!viewport) return;
 
-    // Measure after content is visible using rAF + getBoundingClientRect for abs/transform panels
+    // Measure after content is visible.
     requestAnimationFrame(() => {
-      // Measure the first child inside content to capture its margin
-      // (margins aren't included in parent's getBoundingClientRect)
       const firstChild = content.firstElementChild as HTMLElement | null;
-      const childRect = firstChild?.getBoundingClientRect();
-      const childStyle = firstChild ? getComputedStyle(firstChild) : null;
-      const childMarginTop = childStyle ? parseFloat(childStyle.marginTop) || 0 : 0;
-      const childMarginBottom = childStyle ? parseFloat(childStyle.marginBottom) || 0 : 0;
-
-      // Use child measurements if available, otherwise fall back to content
-      const rect = childRect ?? content.getBoundingClientRect();
-      const contentHeight = rect.height + childMarginTop + childMarginBottom;
+      const lastChild = content.lastElementChild as HTMLElement | null;
+      const firstStyle = firstChild ? getComputedStyle(firstChild) : null;
+      const lastStyle = lastChild ? getComputedStyle(lastChild) : null;
+      const firstMarginTop = firstStyle ? parseFloat(firstStyle.marginTop) || 0 : 0;
+      const lastMarginBottom = lastStyle ? parseFloat(lastStyle.marginBottom) || 0 : 0;
+      const measureAxis = (...values: number[]): number => {
+        let max = 0;
+        for (const value of values) {
+          if (Number.isFinite(value)) max = Math.max(max, value);
+        }
+        return max;
+      };
+      const contentRect = content.getBoundingClientRect();
+      // Prefer intrinsic layout dimensions so transform-based animations don't shrink measurements.
+      const contentWidth = measureAxis(
+        contentRect.width,
+        content.scrollWidth,
+        content.offsetWidth,
+        content.clientWidth
+      );
+      const layoutHeight = measureAxis(
+        contentRect.height,
+        content.scrollHeight,
+        content.offsetHeight,
+        content.clientHeight
+      );
+      // Include outer margins used by content wrappers (commonly collapsed on first/last child).
+      const contentHeight = layoutHeight + firstMarginTop + lastMarginBottom;
+      const floatingRect = {
+        top: contentRect.top,
+        left: contentRect.left,
+        width: contentWidth,
+        height: contentHeight,
+        right: contentRect.left + contentWidth,
+        bottom: contentRect.top + contentHeight,
+      };
 
       // Get viewport margin-top for hover bridge calculation
       const viewportStyle = getComputedStyle(viewport);
       const viewportMarginTop = parseFloat(viewportStyle.marginTop) || 0;
 
-      // Use content's rect for width (may differ from child)
-      const contentRect = content.getBoundingClientRect();
-      viewport.style.setProperty("--viewport-width", `${contentRect.width}px`);
+      viewport.style.setProperty("--viewport-width", `${contentWidth}px`);
       // Viewport height is just the content height - margins are outside the box
       viewport.style.setProperty("--viewport-height", `${contentHeight}px`);
 
@@ -425,7 +449,7 @@ export function createNavigationMenu(
       const triggerRect = trigger.getBoundingClientRect();
       const pos = computeFloatingPosition({
         anchorRect: triggerRect,
-        contentRect: rect,
+        contentRect: floatingRect,
         side: placement.side,
         align: placement.align,
         sideOffset: placement.sideOffset,
@@ -462,7 +486,7 @@ export function createNavigationMenu(
       const rootTopGap = Math.max(0, rootRect.top - viewportRect.bottom); // viewport above
       const rootRightGap = Math.max(0, viewportRect.left - rootRect.right); // viewport right
       const rootLeftGap = Math.max(0, rootRect.left - viewportRect.right); // viewport left
-      const marginGap = Math.max(0, childMarginTop + viewportMarginTop);
+      const marginGap = Math.max(0, firstMarginTop + viewportMarginTop);
       const verticalGap = Math.max(rootBottomGap, rootTopGap, marginGap);
       const horizontalGap = Math.max(rootRightGap, rootLeftGap);
       const totalGap = Math.max(verticalGap, horizontalGap);
@@ -473,7 +497,7 @@ export function createNavigationMenu(
         bridge.style.right = "auto";
         if (verticalGap >= horizontalGap) {
           const gap = Math.max(rootBottomGap, rootTopGap, marginGap);
-          bridge.style.width = `${contentRect.width}px`;
+          bridge.style.width = `${contentWidth}px`;
           bridge.style.height = `${gap}px`;
           bridge.style.left = `${left}px`;
 
@@ -492,7 +516,7 @@ export function createNavigationMenu(
 
           if (rootLeftGap > rootRightGap) {
             // Viewport is left of root: extend bridge rightward.
-            bridge.style.left = `${left + contentRect.width}px`;
+            bridge.style.left = `${left + contentWidth}px`;
           } else {
             // Viewport is right of root: extend bridge leftward.
             bridge.style.left = `${left - gap}px`;

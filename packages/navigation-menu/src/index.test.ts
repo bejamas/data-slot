@@ -427,6 +427,48 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("uses intrinsic content dimensions when transformed content rect is smaller", async () => {
+    const { root, triggers, contents, viewport, controller } = setup({ align: "center" });
+    const trigger = triggers[0]!;
+    const content = contents[0]!;
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    trigger.getBoundingClientRect = () => rect(120, 100, 100, 40);
+    // Simulate transform-shrunken visual rect during enter animation.
+    content.getBoundingClientRect = () => rect(0, 0, 190, 171);
+    Object.defineProperty(content, "scrollWidth", {
+      configurable: true,
+      get: () => 200,
+    });
+    Object.defineProperty(content, "scrollHeight", {
+      configurable: true,
+      get: () => 180,
+    });
+
+    controller.open("products");
+    await waitForPresenceExit();
+
+    expect(viewport.style.getPropertyValue("--viewport-width")).toBe("200px");
+    expect(viewport.style.getPropertyValue("--viewport-height")).toBe("180px");
+    expect(viewport.style.top).toBe("40px");
+    expect(viewport.style.left).toBe("-30px");
+
+    controller.destroy();
+  });
+
   it("handles keyboard navigation with ArrowRight", () => {
     const { triggers, controller } = setup();
 
