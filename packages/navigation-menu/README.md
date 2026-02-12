@@ -72,6 +72,10 @@ const menu = createNavigationMenu(element, {
 | `delayOpen` | `number` | `200` | Delay before opening on hover (ms) |
 | `delayClose` | `number` | `150` | Delay before closing on mouse leave (ms) |
 | `openOnFocus` | `boolean` | `true` | Whether focusing a trigger opens its content |
+| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Viewport side relative to trigger |
+| `align` | `"start" \| "center" \| "end"` | `"start"` | Viewport alignment on cross-axis |
+| `sideOffset` | `number` | `0` | Distance from trigger to viewport (px) |
+| `alignOffset` | `number` | `0` | Cross-axis alignment offset (px) |
 | `onValueChange` | `(value: string \| null) => void` | `undefined` | Callback when active item changes |
 
 ### Data Attributes
@@ -83,19 +87,25 @@ Options can also be set via data attributes on the root element. JS options take
 | `data-delay-open` | number | `200` | Delay before opening on hover (ms) |
 | `data-delay-close` | number | `150` | Delay before closing on mouse leave (ms) |
 | `data-open-on-focus` | boolean | `true` | Whether focusing a trigger opens its content |
+| `data-side` | string | `"bottom"` | Side: `"top"`, `"right"`, `"bottom"`, `"left"` |
 | `data-align` | string | `"start"` | Viewport alignment: `"start"`, `"center"`, or `"end"` |
+| `data-side-offset` | number | `0` | Distance from trigger to viewport (px) |
+| `data-align-offset` | number | `0` | Cross-axis alignment offset (px) |
 
 Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
 
-The `data-align` attribute controls how the viewport is positioned relative to the active trigger:
+Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align-offset`) control
+how the viewport is positioned relative to the active trigger:
 - `start` - Align viewport left edge with trigger left edge (default)
 - `center` - Center viewport under trigger
 - `end` - Align viewport right edge with trigger right edge
 
 Can be set on:
-1. `navigation-menu-content` (highest priority)
-2. `navigation-menu-item`
-3. `navigation-menu` root (lowest priority, applies to all items)
+1. `navigation-menu-viewport-positioner` (or legacy `navigation-menu-positioner`) (highest priority)
+: Legacy `navigation-menu-positioner` is supported both as a viewport wrapper and as a content wrapper.
+2. `navigation-menu-content`
+3. `navigation-menu-item`
+4. `navigation-menu` root (lowest priority, applies to all items)
 
 ```html
 <!-- Faster hover response, no auto-open on focus -->
@@ -145,17 +155,18 @@ Can be set on:
 
 - `navigation-menu-indicator` - Animated highlight that follows the hovered trigger
 - `navigation-menu-viewport` - Container for content with size transitions
-- `navigation-menu-positioner` - Positioning wrapper for active content (generated if not authored)
 - `navigation-menu-viewport-positioner` - Positioning wrapper for viewport (generated if not authored)
 - `navigation-menu-portal` - Optional authored portal wrapper that can contain positioners
 
 ## Styling
 
-Active `navigation-menu-content` and `navigation-menu-viewport` are portaled to `document.body`
-while open. If authored `navigation-menu-portal` / positioner slots are present, they are reused.
-Otherwise, `navigation-menu-positioner` and `navigation-menu-viewport-positioner` wrappers are
-generated and positioned at the navigation root so submenu layers are not clipped by local
-stacking contexts.
+`navigation-menu-viewport` is portaled to `document.body` while open. If authored
+`navigation-menu-portal` / `navigation-menu-viewport-positioner` slots are present, they are
+reused. Otherwise, a `navigation-menu-viewport-positioner` wrapper is generated and positioned
+at the navigation root so submenu layers are not clipped by local stacking contexts.
+
+The active `navigation-menu-content` panel is mounted inside `navigation-menu-viewport` while open
+and restored to its original markup location when inactive/closed.
 
 ### Basic Styling
 
@@ -171,10 +182,11 @@ stacking contexts.
 
 /* Viewport sizing and positioning */
 [data-slot="navigation-menu-viewport"] {
+  top: var(--viewport-top, 100%);
   left: var(--viewport-left, 0);
   width: var(--viewport-width);
   height: var(--viewport-height);
-  transition: left 0.3s, width 0.3s, height 0.3s;
+  transition: top 0.3s, left 0.3s, width 0.3s, height 0.3s;
 }
 
 /* Skip animation on initial open */
@@ -193,7 +205,9 @@ stacking contexts.
 
 ### Motion Animations
 
-Content panels receive `data-motion` attributes for enter/exit animations:
+Content panels receive `data-motion` attributes for directional enter/exit animations.
+Both content and viewport also receive `data-starting-style` / `data-ending-style` markers from
+presence lifecycle hooks, so you can style smooth fade/scale transitions before unmount.
 
 ```css
 /* Entering from right */
@@ -204,6 +218,12 @@ Content panels receive `data-motion` attributes for enter/exit animations:
 /* Exiting to left */
 [data-slot="navigation-menu-content"][data-motion="to-left"] {
   animation: slideToLeft 0.2s;
+}
+
+/* Presence lifecycle helpers */
+[data-slot="navigation-menu-content"][data-ending-style],
+[data-slot="navigation-menu-viewport"][data-ending-style] {
+  opacity: 0;
 }
 
 @keyframes slideFromRight {
@@ -221,6 +241,7 @@ Content panels receive `data-motion` attributes for enter/exit animations:
 
 | Variable | Element | Description |
 |----------|---------|-------------|
+| `--viewport-top` | viewport | Top offset based on side/sideOffset |
 | `--viewport-left` | viewport | Left offset based on alignment |
 | `--viewport-width` | viewport | Width of active content |
 | `--viewport-height` | viewport | Height of active content |

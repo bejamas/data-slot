@@ -7,17 +7,6 @@ describe("NavigationMenu", () => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
     );
 
-  const getPositioner = (content: HTMLElement): HTMLElement => {
-    const parent = content.parentElement;
-    if (!(parent instanceof HTMLElement)) {
-      throw new Error("Expected content to have a parent element");
-    }
-    if (parent.getAttribute("data-slot") !== "navigation-menu-positioner") {
-      throw new Error("Expected content to be wrapped by navigation-menu-positioner");
-    }
-    return parent;
-  };
-
   const setup = (options: Parameters<typeof createNavigationMenu>[1] = {}) => {
     document.body.innerHTML = `
       <nav data-slot="navigation-menu" id="root">
@@ -82,12 +71,13 @@ describe("NavigationMenu", () => {
 
   it("opens on programmatic open()", () => {
     const { contents, viewport, controller } = setup();
+    const originalParent = contents[0]?.parentElement;
 
     controller.open("products");
     expect(contents[0]?.hidden).toBe(false);
     expect(contents[0]?.getAttribute("data-state")).toBe("active");
-    const positioner = getPositioner(contents[0]!);
-    expect(positioner.parentElement).toBe(document.body);
+    expect(contents[0]?.parentElement).toBe(viewport);
+    expect(originalParent?.contains(contents[0]!)).toBe(false);
     const viewportPositioner = getViewportPositioner(viewport);
     expect(viewportPositioner.parentElement).toBe(document.body);
     expect(controller.value).toBe("products");
@@ -97,6 +87,7 @@ describe("NavigationMenu", () => {
 
   it("closes on programmatic close()", async () => {
     const { contents, viewport, controller } = setup();
+    const originalParent = contents[0]?.parentElement;
 
     controller.open("products");
     expect(controller.value).toBe("products");
@@ -107,7 +98,7 @@ describe("NavigationMenu", () => {
     contents.forEach((content) => {
       expect(content.hidden).toBe(true);
     });
-    expect(contents[0]?.closest('[data-slot="navigation-menu-positioner"]')).toBeNull();
+    expect(contents[0]?.parentElement).toBe(originalParent);
     expect(viewport.closest('[data-slot="navigation-menu-viewport-positioner"]')).toBeNull();
 
     controller.destroy();
@@ -115,15 +106,20 @@ describe("NavigationMenu", () => {
 
   it("switches between items", async () => {
     const { contents, controller } = setup();
+    const originalFirstParent = contents[0]?.parentElement;
+    const originalSecondParent = contents[1]?.parentElement;
 
     controller.open("products");
     expect(contents[0]?.hidden).toBe(false);
+    expect(contents[0]?.parentElement).not.toBe(originalFirstParent);
     expect(contents[1]?.hidden).toBe(true);
 
     controller.open("solutions");
     await waitForPresenceExit();
     expect(contents[0]?.hidden).toBe(true);
+    expect(contents[0]?.parentElement).toBe(originalFirstParent);
     expect(contents[1]?.hidden).toBe(false);
+    expect(contents[1]?.parentElement).not.toBe(originalSecondParent);
     expect(controller.value).toBe("solutions");
 
     controller.destroy();
@@ -376,6 +372,61 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("bridges side-offset gap between root and viewport", async () => {
+    const { root, triggers, contents, viewport, controller } = setup({ delayClose: 30 });
+    const trigger = triggers[0]!;
+    const content = contents[0]!;
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    trigger.getBoundingClientRect = () => rect(120, 100, 140, 40);
+    content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+    // Simulate a 12px side-offset gap from root bottom (140) to viewport top (152)
+    viewport.getBoundingClientRect = () => rect(100, 152, 300, 180);
+
+    controller.open("products");
+    await waitForPresenceExit();
+
+    const viewportPositioner = getViewportPositioner(viewport);
+    const bridge = viewportPositioner.querySelector(
+      '[data-slot="navigation-menu-bridge"]'
+    ) as HTMLElement;
+
+    expect(bridge).toBeTruthy();
+    expect(bridge.parentElement).toBe(viewportPositioner);
+    expect(bridge.style.height).toBe("12px");
+    expect(bridge.style.width).toBe("300px");
+    expect(bridge.style.top).toBe("28px");
+    expect(bridge.style.left).toBe("20px");
+    expect(bridge.style.transform).toBe("none");
+
+    // Simulate leaving root across the gap; entering the bridge should cancel delayed close.
+    root.dispatchEvent(
+      new PointerEvent("pointerleave", {
+        bubbles: true,
+        relatedTarget: null,
+      } as PointerEventInit)
+    );
+    bridge.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
+
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(controller.value).toBe("products");
+
+    controller.destroy();
+  });
+
   it("handles keyboard navigation with ArrowRight", () => {
     const { triggers, controller } = setup();
 
@@ -511,13 +562,14 @@ describe("NavigationMenu", () => {
     const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
 
     controller.open("products");
-    expect(contentPortal.parentElement).toBe(document.body);
+    expect(contentPortal.parentElement).toBe(root.querySelector('[data-slot="navigation-menu-item"]'));
     expect(viewportPortal.parentElement).toBe(document.body);
-    expect(content.parentElement).toBe(contentPositioner);
+    expect(content.parentElement).toBe(viewport);
     expect(viewport.parentElement).toBe(viewportPositioner);
 
     controller.close();
     await waitForPresenceExit();
+    expect(content.parentElement).toBe(contentPositioner);
     expect(contentPortal.parentElement).toBe(root.querySelector('[data-slot="navigation-menu-item"]'));
     expect(viewportPortal.parentElement).toBe(root);
 
@@ -857,6 +909,218 @@ describe("NavigationMenu", () => {
       trigger.focus();
       // With openOnFocus: true from JS, focus should open the menu
       expect(controller.value).toBe("products");
+
+      controller.destroy();
+    });
+
+    it("placement attributes resolve as positioner > content > item > root", async () => {
+      document.body.innerHTML = `
+        <nav
+          data-slot="navigation-menu"
+          id="root"
+          data-side="top"
+          data-align="end"
+          data-side-offset="2"
+          data-align-offset="3"
+        >
+          <ul data-slot="navigation-menu-list">
+            <li
+              data-slot="navigation-menu-item"
+              data-value="products"
+              data-align="center"
+              data-side-offset="8"
+              data-align-offset="6"
+            >
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div
+                data-slot="navigation-menu-content"
+                data-side="bottom"
+                data-align-offset="12"
+              >
+                Content
+              </div>
+            </li>
+          </ul>
+          <div
+            data-slot="navigation-menu-viewport-positioner"
+            data-side="left"
+            data-align="end"
+            data-side-offset="10"
+            data-align-offset="5"
+          >
+            <div data-slot="navigation-menu-viewport"></div>
+          </div>
+        </nav>
+      `;
+      const root = document.getElementById("root") as HTMLElement;
+      const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+      const content = root.querySelector('[data-slot="navigation-menu-content"]') as HTMLElement;
+      const viewport = root.querySelector('[data-slot="navigation-menu-viewport"]') as HTMLElement;
+      const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+      const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+        ({
+          x: left,
+          y: top,
+          left,
+          top,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+      trigger.getBoundingClientRect = () => rect(150, 100, 100, 40);
+      content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+
+      controller.open("products");
+      await waitForPresenceExit();
+
+      expect(viewport.getAttribute("data-side")).toBe("left");
+      expect(viewport.getAttribute("data-align")).toBe("end");
+      expect(content.getAttribute("data-side")).toBe("left");
+      expect(content.getAttribute("data-align")).toBe("end");
+      expect(viewport.style.top).toBe("-145px");
+      expect(viewport.style.left).toBe("-260px");
+
+      const viewportPositioner = getViewportPositioner(viewport);
+      expect(viewportPositioner.getAttribute("data-side")).toBe("left");
+      expect(viewportPositioner.getAttribute("data-align")).toBe("end");
+
+      controller.destroy();
+    });
+
+    it("reads placement from legacy navigation-menu-positioner around content", async () => {
+      document.body.innerHTML = `
+        <nav
+          data-slot="navigation-menu"
+          id="root"
+          data-side="top"
+          data-align="end"
+          data-side-offset="2"
+          data-align-offset="3"
+        >
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div
+                data-slot="navigation-menu-positioner"
+                data-side="bottom"
+                data-align="start"
+                data-side-offset="14"
+                data-align-offset="9"
+              >
+                <div data-slot="navigation-menu-content">Content</div>
+              </div>
+            </li>
+          </ul>
+          <div data-slot="navigation-menu-viewport"></div>
+        </nav>
+      `;
+      const root = document.getElementById("root") as HTMLElement;
+      const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+      const content = root.querySelector('[data-slot="navigation-menu-content"]') as HTMLElement;
+      const viewport = root.querySelector('[data-slot="navigation-menu-viewport"]') as HTMLElement;
+      const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+      const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+        ({
+          x: left,
+          y: top,
+          left,
+          top,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+      trigger.getBoundingClientRect = () => rect(150, 100, 100, 40);
+      content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+
+      controller.open("products");
+      await waitForPresenceExit();
+
+      expect(viewport.getAttribute("data-side")).toBe("bottom");
+      expect(viewport.getAttribute("data-align")).toBe("start");
+      expect(content.getAttribute("data-side")).toBe("bottom");
+      expect(content.getAttribute("data-align")).toBe("start");
+      expect(viewport.style.top).toBe("54px");
+      expect(viewport.style.left).toBe("59px");
+
+      controller.destroy();
+    });
+
+    it("JS placement options override data attributes", async () => {
+      document.body.innerHTML = `
+        <nav
+          data-slot="navigation-menu"
+          id="root"
+          data-side="top"
+          data-align="end"
+          data-side-offset="20"
+          data-align-offset="30"
+        >
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div
+                data-slot="navigation-menu-content"
+                data-side="left"
+                data-align="end"
+                data-side-offset="16"
+                data-align-offset="12"
+              >
+                Content
+              </div>
+            </li>
+          </ul>
+          <div data-slot="navigation-menu-viewport"></div>
+        </nav>
+      `;
+      const root = document.getElementById("root") as HTMLElement;
+      const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+      const content = root.querySelector('[data-slot="navigation-menu-content"]') as HTMLElement;
+      const viewport = root.querySelector('[data-slot="navigation-menu-viewport"]') as HTMLElement;
+      const controller = createNavigationMenu(root, {
+        delayOpen: 0,
+        delayClose: 0,
+        side: "bottom",
+        align: "start",
+        sideOffset: 4,
+        alignOffset: 7,
+      });
+
+      const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+        ({
+          x: left,
+          y: top,
+          left,
+          top,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+      trigger.getBoundingClientRect = () => rect(150, 100, 100, 40);
+      content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+
+      controller.open("products");
+      await waitForPresenceExit();
+
+      expect(viewport.getAttribute("data-side")).toBe("bottom");
+      expect(viewport.getAttribute("data-align")).toBe("start");
+      expect(content.getAttribute("data-side")).toBe("bottom");
+      expect(content.getAttribute("data-align")).toBe("start");
+      expect(viewport.style.top).toBe("44px");
+      expect(viewport.style.left).toBe("57px");
 
       controller.destroy();
     });

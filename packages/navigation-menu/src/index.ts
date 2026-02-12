@@ -6,6 +6,7 @@ import {
   getDataNumber,
   getDataEnum,
   containsWithPortals,
+  computeFloatingPosition,
   createPortalLifecycle,
   createPresenceLifecycle,
 } from "@data-slot/core";
@@ -16,6 +17,15 @@ import { createDismissLayer } from "@data-slot/core";
 /** Alignment of the viewport relative to the trigger */
 export type Align = "start" | "center" | "end";
 const ALIGNS = ["start", "center", "end"] as const;
+const SIDES = ["top", "right", "bottom", "left"] as const;
+type Side = (typeof SIDES)[number];
+
+interface PlacementConfig {
+  side: Side;
+  align: Align;
+  sideOffset: number;
+  alignOffset: number;
+}
 
 export interface NavigationMenuOptions {
   /** Delay before opening on hover (ms) */
@@ -24,6 +34,14 @@ export interface NavigationMenuOptions {
   delayClose?: number;
   /** Whether focusing a trigger opens its content (default: true) */
   openOnFocus?: boolean;
+  /** Preferred side of viewport relative to trigger */
+  side?: Side;
+  /** Alignment of viewport relative to trigger */
+  align?: Align;
+  /** Distance from trigger to viewport (px) */
+  sideOffset?: number;
+  /** Offset along alignment axis (px) */
+  alignOffset?: number;
   /** Callback when active item changes */
   onValueChange?: (value: string | null) => void;
 }
@@ -65,6 +83,10 @@ export function createNavigationMenu(
   const delayOpen = options.delayOpen ?? getDataNumber(root, "delayOpen") ?? 200;
   const delayClose = options.delayClose ?? getDataNumber(root, "delayClose") ?? 150;
   const openOnFocus = options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? true;
+  const rootSide = options.side ?? getDataEnum(root, "side", SIDES) ?? "bottom";
+  const rootAlign = options.align ?? getDataEnum(root, "align", ALIGNS) ?? "start";
+  const rootSideOffset = options.sideOffset ?? getDataNumber(root, "sideOffset") ?? 0;
+  const rootAlignOffset = options.alignOffset ?? getDataNumber(root, "alignOffset") ?? 0;
   const onValueChange = options.onValueChange;
 
   // Sanitize value for use in IDs (spaces/slashes -> dashes)
@@ -108,24 +130,34 @@ export function createNavigationMenu(
   let isDestroyed = false;
 
   const cleanups: Array<() => void> = [];
-  const contentPortals = new Map<HTMLElement, ReturnType<typeof createPortalLifecycle>>();
   const contentPresence = new Map<HTMLElement, ReturnType<typeof createPresenceLifecycle>>();
-  const usedAuthoredContentPositioners = new Set<HTMLElement>();
+  const contentPlacement = new Map<
+    HTMLElement,
+    {
+      originalParent: ParentNode | null;
+      originalNextSibling: ChildNode | null;
+      mountedInViewport: boolean;
+    }
+  >();
   const authoredViewportPositioner = viewport
     ? findSlotAncestor(viewport, "navigation-menu-viewport-positioner")
     : null;
-  const authoredViewportPortal = authoredViewportPositioner
-    ? findSlotAncestor(authoredViewportPositioner, "navigation-menu-portal")
+  const authoredLegacyViewportPositioner = viewport
+    ? findSlotAncestor(viewport, "navigation-menu-positioner")
+    : null;
+  const authoredAnyViewportPositioner = authoredViewportPositioner ?? authoredLegacyViewportPositioner;
+  const authoredViewportPortal = authoredAnyViewportPositioner
+    ? findSlotAncestor(authoredAnyViewportPositioner, "navigation-menu-portal")
     : null;
   const viewportPortal = viewport
     ? createPortalLifecycle({
         content: viewport,
         root,
         enabled: true,
-        wrapperSlot: authoredViewportPositioner ? undefined : "navigation-menu-viewport-positioner",
-        container: authoredViewportPositioner ?? undefined,
-        mountTarget: authoredViewportPositioner
-          ? authoredViewportPortal ?? authoredViewportPositioner
+        wrapperSlot: authoredAnyViewportPositioner ? undefined : "navigation-menu-viewport-positioner",
+        container: authoredAnyViewportPositioner ?? undefined,
+        mountTarget: authoredAnyViewportPositioner
+          ? authoredViewportPortal ?? authoredAnyViewportPositioner
           : undefined,
       })
     : null;
@@ -141,22 +173,45 @@ export function createNavigationMenu(
       })
     : null;
 
-  const updateContentPositioner = (content: HTMLElement) => {
-    const portal = contentPortals.get(content);
-    if (!portal) return;
-    const positioner = portal.container as HTMLElement;
-    const win = root.ownerDocument.defaultView ?? window;
-    const rootRect = (root as HTMLElement).getBoundingClientRect();
+  const mountContentInViewport = (content: HTMLElement) => {
+    if (!viewport) return;
+    const existing = contentPlacement.get(content) ?? {
+      originalParent: null,
+      originalNextSibling: null,
+      mountedInViewport: false,
+    };
 
-    positioner.style.position = "absolute";
-    positioner.style.top = "0px";
-    positioner.style.left = "0px";
-    positioner.style.transform = `translate3d(${rootRect.left + win.scrollX}px, ${rootRect.top + win.scrollY}px, 0)`;
-    positioner.style.width = `${rootRect.width}px`;
-    positioner.style.height = `${rootRect.height}px`;
-    positioner.style.margin = "0";
-    positioner.style.willChange = "transform";
-    positioner.style.pointerEvents = "none";
+    if (!existing.mountedInViewport) {
+      existing.originalParent = content.parentNode;
+      existing.originalNextSibling = content.nextSibling;
+      existing.mountedInViewport = true;
+      contentPlacement.set(content, existing);
+    }
+
+    if (content.parentNode !== viewport) {
+      viewport.appendChild(content);
+    }
+  };
+
+  const restoreContentPlacement = (content: HTMLElement) => {
+    const existing = contentPlacement.get(content);
+    if (!existing || !existing.mountedInViewport) return;
+
+    const parent = existing.originalParent;
+    const sibling = existing.originalNextSibling;
+    if (parent && (parent as Node).isConnected) {
+      if (sibling && sibling.parentNode === parent) {
+        parent.insertBefore(content, sibling);
+      } else {
+        parent.appendChild(content);
+      }
+    } else {
+      content.remove();
+    }
+
+    existing.mountedInViewport = false;
+    existing.originalParent = null;
+    existing.originalNextSibling = null;
   };
 
   const updateViewportPositioner = () => {
@@ -178,20 +233,34 @@ export function createNavigationMenu(
 
   // ResizeObserver for active panel - handles fonts/images/content changes after open
   let activeRO: ResizeObserver | null = null;
-  const observeActiveContent = (data: { content: HTMLElement; trigger: HTMLElement; align: Align } | null) => {
+  const observeActiveContent = (
+    data: {
+      item: HTMLElement;
+      content: HTMLElement;
+      trigger: HTMLElement;
+      contentPositioner: HTMLElement | null;
+    } | null
+  ) => {
     activeRO?.disconnect();
     activeRO = null;
     if (!viewport || !data) return;
-    activeRO = new ResizeObserver(() => updateViewportSize(data.content, data.trigger, data.align));
+    activeRO = new ResizeObserver(() => {
+      const placement = resolvePlacement(data.item, data.content, data.contentPositioner);
+      updateViewportSize(data.content, data.trigger, placement);
+    });
     activeRO.observe(data.content);
   };
   cleanups.push(() => activeRO?.disconnect());
   cleanups.push(() => {
     contentPresence.forEach((presence) => presence.cleanup());
     contentPresence.clear();
+    contentPlacement.forEach((_state, content) => {
+      restoreContentPlacement(content);
+      content.hidden = true;
+      content.style.pointerEvents = "none";
+    });
+    contentPlacement.clear();
     viewportPresence?.cleanup();
-    contentPortals.forEach((portal) => portal.cleanup());
-    contentPortals.clear();
     viewportPortal?.cleanup();
   });
 
@@ -202,10 +271,77 @@ export function createNavigationMenu(
       item: HTMLElement;
       trigger: HTMLElement;
       content: HTMLElement;
+      contentPositioner: HTMLElement | null;
       index: number;
-      align: Align;
     }
   >();
+
+  const resolvePlacement = (
+    item: HTMLElement,
+    content: HTMLElement,
+    contentPositioner: HTMLElement | null
+  ): PlacementConfig => {
+    const livePositioner =
+      viewportPortal?.container instanceof HTMLElement && viewportPortal.container !== viewport
+        ? (viewportPortal.container as HTMLElement)
+        : null;
+    const positionerSources = [
+      livePositioner,
+      authoredAnyViewportPositioner,
+      contentPositioner,
+    ] as const;
+    const readPositionerEnum = <T extends string>(
+      key: string,
+      values: readonly T[]
+    ): T | null => {
+      for (const source of positionerSources) {
+        if (!source) continue;
+        const value = getDataEnum(source, key, values);
+        if (value !== null && value !== undefined) return value;
+      }
+      return null;
+    };
+    const readPositionerNumber = (key: string): number | null => {
+      for (const source of positionerSources) {
+        if (!source) continue;
+        const value = getDataNumber(source, key);
+        if (value !== null && value !== undefined) return value;
+      }
+      return null;
+    };
+
+    const positionerSide = readPositionerEnum("side", SIDES);
+    const positionerAlign = readPositionerEnum("align", ALIGNS);
+    const positionerSideOffset = readPositionerNumber("sideOffset");
+    const positionerAlignOffset = readPositionerNumber("alignOffset");
+
+    return {
+      side:
+        options.side ??
+        positionerSide ??
+        getDataEnum(content, "side", SIDES) ??
+        getDataEnum(item, "side", SIDES) ??
+        rootSide,
+      align:
+        options.align ??
+        positionerAlign ??
+        getDataEnum(content, "align", ALIGNS) ??
+        getDataEnum(item, "align", ALIGNS) ??
+        rootAlign,
+      sideOffset:
+        options.sideOffset ??
+        positionerSideOffset ??
+        getDataNumber(content, "sideOffset") ??
+        getDataNumber(item, "sideOffset") ??
+        rootSideOffset,
+      alignOffset:
+        options.alignOffset ??
+        positionerAlignOffset ??
+        getDataNumber(content, "alignOffset") ??
+        getDataNumber(item, "alignOffset") ??
+        rootAlignOffset,
+    };
+  };
 
   let validIndex = 0;
   items.forEach((item) => {
@@ -216,43 +352,21 @@ export function createNavigationMenu(
     const content = getPart<HTMLElement>(item, "navigation-menu-content");
 
     if (trigger && content) {
-      // Read alignment: content > item > root (default: start)
-      const align =
-        getDataEnum(content, "align", ALIGNS) ??
-        getDataEnum(item, "align", ALIGNS) ??
-        getDataEnum(root, "align", ALIGNS) ??
-        "start";
-
-      itemMap.set(value, { item, trigger, content, index: validIndex++, align });
-      let authoredPositioner = findSlotAncestor(content, "navigation-menu-positioner");
-      if (authoredPositioner && usedAuthoredContentPositioners.has(authoredPositioner)) {
-        authoredPositioner = null;
-      }
-      if (authoredPositioner) {
-        usedAuthoredContentPositioners.add(authoredPositioner);
-      }
-      const authoredPortal = authoredPositioner
-        ? findSlotAncestor(authoredPositioner, "navigation-menu-portal")
-        : null;
-      contentPortals.set(
+      const contentPositioner = findSlotAncestor(content, "navigation-menu-positioner");
+      itemMap.set(value, {
+        item,
+        trigger,
         content,
-        createPortalLifecycle({
-          content,
-          root,
-          enabled: true,
-          wrapperSlot: authoredPositioner ? undefined : "navigation-menu-positioner",
-          container: authoredPositioner ?? undefined,
-          mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
-        })
-      );
+        contentPositioner,
+        index: validIndex++,
+      });
       contentPresence.set(
         content,
         createPresenceLifecycle({
           element: content,
           onExitComplete: () => {
             if (isDestroyed) return;
-            const portal = contentPortals.get(content);
-            portal?.restore();
+            restoreContentPlacement(content);
             content.hidden = true;
             content.style.pointerEvents = "none";
           },
@@ -300,17 +414,19 @@ export function createNavigationMenu(
 
   // Create hover bridge element for covering margin gaps
   let hoverBridge: HTMLElement | null = null;
+  const getBridgeHost = (): HTMLElement | null => {
+    if (!viewport) return null;
+    const container = viewportPortal?.container;
+    if (container instanceof HTMLElement) return container;
+    return viewport.parentElement instanceof HTMLElement ? viewport.parentElement : viewport;
+  };
 
   const getOrCreateHoverBridge = (): HTMLElement => {
+    const host = getBridgeHost();
     if (!hoverBridge) {
       hoverBridge = document.createElement("div");
       hoverBridge.setAttribute("data-slot", "navigation-menu-bridge");
-      hoverBridge.style.cssText =
-        "position: absolute; left: 0; right: 0; top: 0; pointer-events: auto; z-index: -1;";
-      // Insert bridge at the start of viewport
-      if (viewport) {
-        viewport.insertBefore(hoverBridge, viewport.firstChild);
-      }
+      hoverBridge.style.cssText = "position: absolute; pointer-events: auto; z-index: 0;";
       // Bridge keeps menu open when hovered
       cleanups.push(
         on(hoverBridge, "pointerenter", () => {
@@ -318,10 +434,17 @@ export function createNavigationMenu(
         })
       );
     }
+    if (host && hoverBridge.parentElement !== host) {
+      host.insertBefore(hoverBridge, host.firstChild);
+    }
     return hoverBridge;
   };
 
-  const updateViewportSize = (content: HTMLElement, trigger: HTMLElement, align: Align) => {
+  const updateViewportSize = (
+    content: HTMLElement,
+    trigger: HTMLElement,
+    placement: PlacementConfig
+  ) => {
     if (!viewport) return;
 
     // Measure after content is visible using rAF + getBoundingClientRect for abs/transform panels
@@ -348,35 +471,91 @@ export function createNavigationMenu(
       // Viewport height is just the content height - margins are outside the box
       viewport.style.setProperty("--viewport-height", `${contentHeight}px`);
 
-      // Calculate horizontal position based on alignment
       const rootRect = (root as HTMLElement).getBoundingClientRect();
       const triggerRect = trigger.getBoundingClientRect();
+      const pos = computeFloatingPosition({
+        anchorRect: triggerRect,
+        contentRect: rect,
+        side: placement.side,
+        align: placement.align,
+        sideOffset: placement.sideOffset,
+        alignOffset: placement.alignOffset,
+        avoidCollisions: false,
+        collisionPadding: 0,
+        allowedSides: SIDES,
+      });
+      const left = pos.x - rootRect.left;
+      const top = pos.y - rootRect.top;
 
-      let left: number;
-      if (align === "center") {
-        left = triggerRect.left - rootRect.left + triggerRect.width / 2 - rect.width / 2;
-      } else if (align === "end") {
-        left = triggerRect.right - rootRect.left - rect.width;
-      } else {
-        left = triggerRect.left - rootRect.left; // start (default)
-      }
-
+      viewport.style.setProperty("--viewport-top", `${top}px`);
       viewport.style.setProperty("--viewport-left", `${left}px`);
-      // Set left directly on viewport (in case CSS variable isn't read)
+      // Set position directly on viewport (in case CSS variables are not read)
+      viewport.style.top = `${top}px`;
       viewport.style.left = `${left}px`;
-      // Also position the content element itself
-      content.style.left = `${left}px`;
-      updateContentPositioner(content);
+      // Active content is mounted inside viewport.
+      content.style.top = "0px";
+      content.style.left = "0px";
+      viewport.setAttribute("data-side", pos.side);
+      viewport.setAttribute("data-align", pos.align);
+      content.setAttribute("data-side", pos.side);
+      content.setAttribute("data-align", pos.align);
+      const positioner = viewportPortal?.container as HTMLElement | undefined;
+      if (positioner && positioner !== viewport) {
+        positioner.setAttribute("data-side", pos.side);
+        positioner.setAttribute("data-align", pos.align);
+      }
       updateViewportPositioner();
 
-      // If child has margin-top, create/update hover bridge to cover the gap
-      const totalGap = childMarginTop + viewportMarginTop;
+      // Cover pointer gaps between root and viewport (e.g. side-offset), plus legacy margin gaps.
+      const viewportRect = viewport.getBoundingClientRect();
+      const rootBottomGap = Math.max(0, viewportRect.top - rootRect.bottom); // viewport below
+      const rootTopGap = Math.max(0, rootRect.top - viewportRect.bottom); // viewport above
+      const rootRightGap = Math.max(0, viewportRect.left - rootRect.right); // viewport right
+      const rootLeftGap = Math.max(0, rootRect.left - viewportRect.right); // viewport left
+      const marginGap = Math.max(0, childMarginTop + viewportMarginTop);
+      const verticalGap = Math.max(rootBottomGap, rootTopGap, marginGap);
+      const horizontalGap = Math.max(rootRightGap, rootLeftGap);
+      const totalGap = Math.max(verticalGap, horizontalGap);
       if (totalGap > 0) {
         const bridge = getOrCreateHoverBridge();
-        bridge.style.height = `${totalGap}px`;
-        bridge.style.transform = `translateY(-${totalGap}px)`;
+        bridge.style.transform = "none";
+        bridge.style.bottom = "auto";
+        bridge.style.right = "auto";
+        if (verticalGap >= horizontalGap) {
+          const gap = Math.max(rootBottomGap, rootTopGap, marginGap);
+          bridge.style.width = `${contentRect.width}px`;
+          bridge.style.height = `${gap}px`;
+          bridge.style.left = `${left}px`;
+
+          if (rootTopGap > rootBottomGap && rootTopGap >= marginGap) {
+            // Viewport is above root (top side): extend bridge downward.
+            bridge.style.top = `${top + contentHeight}px`;
+          } else {
+            // Viewport is below root (bottom side) or margin-based gap: extend bridge upward.
+            bridge.style.top = `${top - gap}px`;
+          }
+        } else {
+          const gap = Math.max(rootRightGap, rootLeftGap);
+          bridge.style.height = `${contentHeight}px`;
+          bridge.style.width = `${gap}px`;
+          bridge.style.top = `${top}px`;
+
+          if (rootLeftGap > rootRightGap) {
+            // Viewport is left of root: extend bridge rightward.
+            bridge.style.left = `${left + contentRect.width}px`;
+          } else {
+            // Viewport is right of root: extend bridge leftward.
+            bridge.style.left = `${left - gap}px`;
+          }
+        }
       } else if (hoverBridge) {
         hoverBridge.style.height = "0";
+        hoverBridge.style.width = "0";
+        hoverBridge.style.top = "0px";
+        hoverBridge.style.left = "0px";
+        hoverBridge.style.right = "0px";
+        hoverBridge.style.bottom = "auto";
+        hoverBridge.style.transform = "none";
       }
     });
   };
@@ -475,7 +654,6 @@ export function createNavigationMenu(
         item.setAttribute("data-state", isActive ? "open" : "closed");
 
         if (!isActive) {
-          const portal = contentPortals.get(content);
           const presence = contentPresence.get(content);
           content.setAttribute("data-state", "inactive");
           content.setAttribute("aria-hidden", "true");
@@ -495,7 +673,7 @@ export function createNavigationMenu(
             presence?.exit();
           } else if (!presence?.isExiting) {
             content.removeAttribute("data-motion");
-            portal?.restore();
+            restoreContentPlacement(content);
             content.hidden = true;
           } else {
             // Preserve current exit motion while this panel is finishing an exit animation.
@@ -512,8 +690,7 @@ export function createNavigationMenu(
         if (prevValue === null) {
           viewportPresence?.enter();
         }
-        const portal = contentPortals.get(newData.content);
-        portal?.mount();
+        mountContentInViewport(newData.content);
         const presence = contentPresence.get(newData.content);
         presence?.enter();
 
@@ -531,7 +708,12 @@ export function createNavigationMenu(
         newData.content.style.pointerEvents = "auto";
         previousIndex = newData.index;
 
-        updateViewportSize(newData.content, newData.trigger, newData.align);
+        const placement = resolvePlacement(
+          newData.item,
+          newData.content,
+          newData.contentPositioner
+        );
+        updateViewportSize(newData.content, newData.trigger, placement);
         observeActiveContent(newData);
         updateIndicator(newData.trigger); // Indicator follows active trigger
       } else {
@@ -721,7 +903,14 @@ export function createNavigationMenu(
       on(viewport, "transitionend", (e) => {
         if (e.target !== viewport) return; // Ignore bubbling from children
         const data = currentValue ? itemMap.get(currentValue) : null;
-        if (data) updateViewportSize(data.content, data.trigger, data.align);
+        if (data) {
+          const placement = resolvePlacement(
+            data.item,
+            data.content,
+            data.contentPositioner
+          );
+          updateViewportSize(data.content, data.trigger, placement);
+        }
       })
     );
   }
@@ -907,10 +1096,6 @@ export function createNavigationMenu(
     on(window, "resize", () => {
       if (currentValue) {
         requestAnimationFrame(() => updateViewportPositioner());
-      }
-      if (currentValue) {
-        const data = itemMap.get(currentValue);
-        if (data) requestAnimationFrame(() => updateContentPositioner(data.content));
       }
       if (hoveredTrigger)
         requestAnimationFrame(() => updateIndicator(hoveredTrigger));
