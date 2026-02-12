@@ -101,11 +101,12 @@ how the viewport is positioned relative to the active trigger:
 - `end` - Align viewport right edge with trigger right edge
 
 Can be set on:
-1. `navigation-menu-viewport-positioner` (or legacy `navigation-menu-positioner`) (highest priority)
-: Legacy `navigation-menu-positioner` is supported both as a viewport wrapper and as a content wrapper.
-2. `navigation-menu-content`
-3. `navigation-menu-item`
-4. `navigation-menu` root (lowest priority, applies to all items)
+1. `navigation-menu-content` (highest priority, per-panel)
+2. `navigation-menu-item`
+3. `navigation-menu` root (lowest priority, global default)
+
+`navigation-menu-viewport-positioner` / `navigation-menu-positioner` are styling containers.
+Their `data-side` / `data-align` are mirrored output values and are not used as placement inputs.
 
 ```html
 <!-- Faster hover response, no auto-open on focus -->

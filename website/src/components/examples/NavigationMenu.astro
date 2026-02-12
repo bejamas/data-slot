@@ -120,7 +120,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
 ---
 
 <ExampleBlock label="mega menu with directional animations">
-  <nav slot="preview-css" data-slot="navigation-menu" class="nav-menu" id="nav-menu-css">
+  <nav slot="preview-css" data-slot="navigation-menu" class="nav-menu" id="nav-menu-css"  data-side-offset="8">
   
     <ul data-slot="navigation-menu-list" class="nav-menu-list">
       <li data-slot="navigation-menu-item" data-value="products" class="nav-menu-item">
@@ -148,7 +148,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
       </li>
       <li data-slot="navigation-menu-item" data-value="solutions" class="nav-menu-item">
         <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Solutions</button>
-        <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
+        <div data-slot="navigation-menu-content" class="nav-menu-content" hidden data-align="center">
           <div class="nav-menu-grid">
             <a href="#" class="nav-menu-link">
               <div class="nav-menu-link-title">Startups</div>
@@ -171,7 +171,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
       </li>
       <li data-slot="navigation-menu-item" data-value="resources" class="nav-menu-item">
         <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Resources</button>
-        <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
+        <div data-slot="navigation-menu-content" class="nav-menu-content" hidden data-align="center">
           <div class="nav-menu-grid-wide">
             <a href="#" class="nav-menu-link">
               <div class="nav-menu-link-title">Documentation</div>
@@ -214,7 +214,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
       <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
     </ul>
   
-    <div data-slot="navigation-menu-positioner" class="isolate z-50" data-side-offset="4">
+    <div data-slot="navigation-menu-positioner" class="isolate z-50">
         <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
     </div>
 

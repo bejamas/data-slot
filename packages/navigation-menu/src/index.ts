@@ -234,18 +234,13 @@ export function createNavigationMenu(
   // ResizeObserver for active panel - handles fonts/images/content changes after open
   let activeRO: ResizeObserver | null = null;
   const observeActiveContent = (
-    data: {
-      item: HTMLElement;
-      content: HTMLElement;
-      trigger: HTMLElement;
-      contentPositioner: HTMLElement | null;
-    } | null
+    data: { item: HTMLElement; content: HTMLElement; trigger: HTMLElement } | null
   ) => {
     activeRO?.disconnect();
     activeRO = null;
     if (!viewport || !data) return;
     activeRO = new ResizeObserver(() => {
-      const placement = resolvePlacement(data.item, data.content, data.contentPositioner);
+      const placement = resolvePlacement(data.item, data.content);
       updateViewportSize(data.content, data.trigger, placement);
     });
     activeRO.observe(data.content);
@@ -271,72 +266,29 @@ export function createNavigationMenu(
       item: HTMLElement;
       trigger: HTMLElement;
       content: HTMLElement;
-      contentPositioner: HTMLElement | null;
       index: number;
     }
   >();
 
-  const resolvePlacement = (
-    item: HTMLElement,
-    content: HTMLElement,
-    contentPositioner: HTMLElement | null
-  ): PlacementConfig => {
-    const livePositioner =
-      viewportPortal?.container instanceof HTMLElement && viewportPortal.container !== viewport
-        ? (viewportPortal.container as HTMLElement)
-        : null;
-    const positionerSources = [
-      livePositioner,
-      authoredAnyViewportPositioner,
-      contentPositioner,
-    ] as const;
-    const readPositionerEnum = <T extends string>(
-      key: string,
-      values: readonly T[]
-    ): T | null => {
-      for (const source of positionerSources) {
-        if (!source) continue;
-        const value = getDataEnum(source, key, values);
-        if (value !== null && value !== undefined) return value;
-      }
-      return null;
-    };
-    const readPositionerNumber = (key: string): number | null => {
-      for (const source of positionerSources) {
-        if (!source) continue;
-        const value = getDataNumber(source, key);
-        if (value !== null && value !== undefined) return value;
-      }
-      return null;
-    };
-
-    const positionerSide = readPositionerEnum("side", SIDES);
-    const positionerAlign = readPositionerEnum("align", ALIGNS);
-    const positionerSideOffset = readPositionerNumber("sideOffset");
-    const positionerAlignOffset = readPositionerNumber("alignOffset");
-
+  const resolvePlacement = (item: HTMLElement, content: HTMLElement): PlacementConfig => {
     return {
       side:
         options.side ??
-        positionerSide ??
         getDataEnum(content, "side", SIDES) ??
         getDataEnum(item, "side", SIDES) ??
         rootSide,
       align:
         options.align ??
-        positionerAlign ??
         getDataEnum(content, "align", ALIGNS) ??
         getDataEnum(item, "align", ALIGNS) ??
         rootAlign,
       sideOffset:
         options.sideOffset ??
-        positionerSideOffset ??
         getDataNumber(content, "sideOffset") ??
         getDataNumber(item, "sideOffset") ??
         rootSideOffset,
       alignOffset:
         options.alignOffset ??
-        positionerAlignOffset ??
         getDataNumber(content, "alignOffset") ??
         getDataNumber(item, "alignOffset") ??
         rootAlignOffset,
@@ -352,12 +304,10 @@ export function createNavigationMenu(
     const content = getPart<HTMLElement>(item, "navigation-menu-content");
 
     if (trigger && content) {
-      const contentPositioner = findSlotAncestor(content, "navigation-menu-positioner");
       itemMap.set(value, {
         item,
         trigger,
         content,
-        contentPositioner,
         index: validIndex++,
       });
       contentPresence.set(
@@ -708,11 +658,7 @@ export function createNavigationMenu(
         newData.content.style.pointerEvents = "auto";
         previousIndex = newData.index;
 
-        const placement = resolvePlacement(
-          newData.item,
-          newData.content,
-          newData.contentPositioner
-        );
+        const placement = resolvePlacement(newData.item, newData.content);
         updateViewportSize(newData.content, newData.trigger, placement);
         observeActiveContent(newData);
         updateIndicator(newData.trigger); // Indicator follows active trigger
@@ -904,11 +850,7 @@ export function createNavigationMenu(
         if (e.target !== viewport) return; // Ignore bubbling from children
         const data = currentValue ? itemMap.get(currentValue) : null;
         if (data) {
-          const placement = resolvePlacement(
-            data.item,
-            data.content,
-            data.contentPositioner
-          );
+          const placement = resolvePlacement(data.item, data.content);
           updateViewportSize(data.content, data.trigger, placement);
         }
       })

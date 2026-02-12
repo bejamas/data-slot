@@ -913,7 +913,7 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
 
-    it("placement attributes resolve as positioner > content > item > root", async () => {
+    it("placement attributes resolve as content > item > root", async () => {
       document.body.innerHTML = `
         <nav
           data-slot="navigation-menu"
@@ -978,21 +978,22 @@ describe("NavigationMenu", () => {
       controller.open("products");
       await waitForPresenceExit();
 
-      expect(viewport.getAttribute("data-side")).toBe("left");
-      expect(viewport.getAttribute("data-align")).toBe("end");
-      expect(content.getAttribute("data-side")).toBe("left");
-      expect(content.getAttribute("data-align")).toBe("end");
-      expect(viewport.style.top).toBe("-145px");
-      expect(viewport.style.left).toBe("-260px");
+      expect(viewport.getAttribute("data-side")).toBe("bottom");
+      expect(viewport.getAttribute("data-align")).toBe("center");
+      expect(content.getAttribute("data-side")).toBe("bottom");
+      expect(content.getAttribute("data-align")).toBe("center");
+      expect(viewport.style.top).toBe("48px");
+      expect(viewport.style.left).toBe("-38px");
 
       const viewportPositioner = getViewportPositioner(viewport);
-      expect(viewportPositioner.getAttribute("data-side")).toBe("left");
-      expect(viewportPositioner.getAttribute("data-align")).toBe("end");
+      // Positioner mirrors resolved values for styling, but is not an input source.
+      expect(viewportPositioner.getAttribute("data-side")).toBe("bottom");
+      expect(viewportPositioner.getAttribute("data-align")).toBe("center");
 
       controller.destroy();
     });
 
-    it("reads placement from legacy navigation-menu-positioner around content", async () => {
+    it("ignores legacy navigation-menu-positioner around content for placement input", async () => {
       document.body.innerHTML = `
         <nav
           data-slot="navigation-menu"
@@ -1045,12 +1046,88 @@ describe("NavigationMenu", () => {
       controller.open("products");
       await waitForPresenceExit();
 
-      expect(viewport.getAttribute("data-side")).toBe("bottom");
+      // Wrapper attrs are ignored; placement falls back to root defaults.
+      expect(viewport.getAttribute("data-side")).toBe("top");
+      expect(viewport.getAttribute("data-align")).toBe("end");
+      expect(content.getAttribute("data-side")).toBe("top");
+      expect(content.getAttribute("data-align")).toBe("end");
+      expect(viewport.style.top).toBe("-182px");
+      expect(viewport.style.left).toBe("-153px");
+
+      controller.destroy();
+    });
+
+    it("recomputes placement per active content when items use different aligns", async () => {
+      document.body.innerHTML = `
+        <nav data-slot="navigation-menu" id="root">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div
+                data-slot="navigation-menu-content"
+                data-side="bottom"
+                data-align="start"
+                data-side-offset="8"
+              >
+                Products content
+              </div>
+            </li>
+            <li data-slot="navigation-menu-item" data-value="solutions">
+              <button data-slot="navigation-menu-trigger">Solutions</button>
+              <div
+                data-slot="navigation-menu-content"
+                data-side="bottom"
+                data-align="center"
+                data-side-offset="8"
+              >
+                Solutions content
+              </div>
+            </li>
+          </ul>
+          <div data-slot="navigation-menu-viewport"></div>
+        </nav>
+      `;
+
+      const root = document.getElementById("root") as HTMLElement;
+      const triggers = root.querySelectorAll(
+        '[data-slot="navigation-menu-trigger"]'
+      ) as NodeListOf<HTMLElement>;
+      const contents = root.querySelectorAll(
+        '[data-slot="navigation-menu-content"]'
+      ) as NodeListOf<HTMLElement>;
+      const viewport = root.querySelector('[data-slot="navigation-menu-viewport"]') as HTMLElement;
+      const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+      const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+        ({
+          x: left,
+          y: top,
+          left,
+          top,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+      triggers[0]!.getBoundingClientRect = () => rect(120, 100, 100, 40);
+      triggers[1]!.getBoundingClientRect = () => rect(280, 100, 100, 40);
+      contents[0]!.getBoundingClientRect = () => rect(0, 0, 200, 180);
+      contents[1]!.getBoundingClientRect = () => rect(0, 0, 200, 180);
+
+      controller.open("products");
+      await waitForPresenceExit();
       expect(viewport.getAttribute("data-align")).toBe("start");
-      expect(content.getAttribute("data-side")).toBe("bottom");
-      expect(content.getAttribute("data-align")).toBe("start");
-      expect(viewport.style.top).toBe("54px");
-      expect(viewport.style.left).toBe("59px");
+      expect(viewport.style.top).toBe("48px");
+      expect(viewport.style.left).toBe("20px");
+
+      controller.open("solutions");
+      await waitForPresenceExit();
+      expect(viewport.getAttribute("data-align")).toBe("center");
+      expect(viewport.style.top).toBe("48px");
+      expect(viewport.style.left).toBe("130px");
 
       controller.destroy();
     });
