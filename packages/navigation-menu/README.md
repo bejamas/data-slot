@@ -183,11 +183,12 @@ and restored to its original markup location when inactive/closed.
 
 /* Viewport sizing and positioning */
 [data-slot="navigation-menu-viewport"] {
-  top: var(--viewport-top, 100%);
-  left: var(--viewport-left, 0);
+  top: 0;
+  left: 0;
+  transform: translate3d(0, 0, 0);
   width: var(--viewport-width);
   height: var(--viewport-height);
-  transition: top 0.3s, left 0.3s, width 0.3s, height 0.3s;
+  transition: transform 0.3s, width 0.3s, height 0.3s;
 }
 
 /* Skip animation on initial open */
@@ -242,8 +243,6 @@ presence lifecycle hooks, so you can style smooth fade/scale transitions before 
 
 | Variable | Element | Description |
 |----------|---------|-------------|
-| `--viewport-top` | viewport | Top offset based on side/sideOffset |
-| `--viewport-left` | viewport | Left offset based on alignment |
 | `--viewport-width` | viewport | Width of active content |
 | `--viewport-height` | viewport | Height of active content |
 | `--indicator-left` | indicator | Left offset from list |

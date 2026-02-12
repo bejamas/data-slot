@@ -461,11 +461,10 @@ export function createNavigationMenu(
       const left = pos.x - rootRect.left;
       const top = pos.y - rootRect.top;
 
-      viewport.style.setProperty("--viewport-top", `${top}px`);
-      viewport.style.setProperty("--viewport-left", `${left}px`);
-      // Set position directly on viewport (in case CSS variables are not read)
-      viewport.style.top = `${top}px`;
-      viewport.style.left = `${left}px`;
+      viewport.style.top = "0px";
+      viewport.style.left = "0px";
+      viewport.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+      viewport.style.willChange = "transform,width,height";
       // Active content is mounted inside viewport.
       content.style.top = "0px";
       content.style.left = "0px";

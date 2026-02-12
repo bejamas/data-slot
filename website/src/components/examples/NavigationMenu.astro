@@ -38,14 +38,15 @@ const cssCode = `<nav data-slot="navigation-menu" class="nav-menu">
   .nav-menu-trigger[data-state="open"]::after { transform: rotate(180deg); }
   .nav-menu-viewport {
     position: absolute;
-    top: 100%;
-    left: var(--viewport-left, 0);
+    top: 0;
+    left: 0;
+    transform: translate3d(0, 0, 0);
     background: #faf9f7;
     border-radius: 8px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.12);
     width: var(--viewport-width, 0);
     height: var(--viewport-height, 0);
-    transition: left 0.25s, width 0.25s, height 0.25s;
+    transition: transform 0.25s, width 0.25s, height 0.25s;
   }
   .nav-menu-content { position: absolute; top: 100%; padding: 1.5rem 1rem; }
   .nav-menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; width: 380px; }
@@ -93,20 +94,20 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
   </ul>
   <div
     data-slot="navigation-menu-viewport"
-    class="absolute top-full bg-bg rounded-lg shadow-lg
+    class="absolute top-0 left-0 bg-bg rounded-lg shadow-lg
            overflow-hidden mt-2 opacity-0 pointer-events-none
            data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
-    style="left: var(--viewport-left, 0); width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
+    style="width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
   ></div>
 </nav>
 
 /* CSS needed for animations (viewport size + content direction) */
 [data-slot="navigation-menu-viewport"] {
-  transition: left 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1),
               width 0.25s cubic-bezier(0.32, 0.72, 0, 1),
               height 0.25s cubic-bezier(0.32, 0.72, 0, 1),
               opacity 0.15s ease;
-  will-change: left, width, height;
+  will-change: transform, width, height;
 }
 [data-slot="navigation-menu-viewport"][data-instant] {
   transition: opacity 0.15s ease;
@@ -363,8 +364,8 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
     </ul>
     <div
       data-slot="navigation-menu-viewport"
-      class="absolute mt-2 data-instant:transition-opacity duration-150 top-full bg-bg rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12),0_0_0_1px_var(--color-border)] overflow-hidden opacity-0 pointer-events-none data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
-      style="left: var(--viewport-left, 0); width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
+      class="absolute mt-2 data-instant:transition-opacity duration-150 top-0 left-0 bg-bg rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12),0_0_0_1px_var(--color-border)] overflow-hidden opacity-0 pointer-events-none data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
+      style="width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
     ></div>
   </nav>
   <div slot="note">
@@ -372,7 +373,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
       Hover between items — content slides with direction. Viewport animates smoothly.
     </p>
     <p class="mt-3 text-muted">
-      CSS variables: <code>--viewport-left</code>, <code>--viewport-width</code>, <code>--viewport-height</code>, <code>--motion-direction</code>.
+      CSS variables: <code>--viewport-width</code>, <code>--viewport-height</code>, <code>--motion-direction</code>.
     </p>
     <p class="mt-3 text-muted">
       Use <code>data-align="start|center|end"</code> on items to control alignment.
@@ -381,4 +382,3 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
   <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
 </ExampleBlock>
-

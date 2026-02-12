@@ -463,8 +463,9 @@ describe("NavigationMenu", () => {
 
     expect(viewport.style.getPropertyValue("--viewport-width")).toBe("200px");
     expect(viewport.style.getPropertyValue("--viewport-height")).toBe("180px");
-    expect(viewport.style.top).toBe("40px");
-    expect(viewport.style.left).toBe("-30px");
+    expect(viewport.style.top).toBe("0px");
+    expect(viewport.style.left).toBe("0px");
+    expect(viewport.style.transform).toBe("translate3d(-30px, 40px, 0)");
 
     controller.destroy();
   });
@@ -1024,8 +1025,9 @@ describe("NavigationMenu", () => {
       expect(viewport.getAttribute("data-align")).toBe("center");
       expect(content.getAttribute("data-side")).toBe("bottom");
       expect(content.getAttribute("data-align")).toBe("center");
-      expect(viewport.style.top).toBe("48px");
-      expect(viewport.style.left).toBe("-38px");
+      expect(viewport.style.top).toBe("0px");
+      expect(viewport.style.left).toBe("0px");
+      expect(viewport.style.transform).toBe("translate3d(-38px, 48px, 0)");
 
       const viewportPositioner = getViewportPositioner(viewport);
       // Positioner mirrors resolved values for styling, but is not an input source.
@@ -1093,8 +1095,9 @@ describe("NavigationMenu", () => {
       expect(viewport.getAttribute("data-align")).toBe("end");
       expect(content.getAttribute("data-side")).toBe("top");
       expect(content.getAttribute("data-align")).toBe("end");
-      expect(viewport.style.top).toBe("-182px");
-      expect(viewport.style.left).toBe("-153px");
+      expect(viewport.style.top).toBe("0px");
+      expect(viewport.style.left).toBe("0px");
+      expect(viewport.style.transform).toBe("translate3d(-153px, -182px, 0)");
 
       controller.destroy();
     });
@@ -1162,14 +1165,16 @@ describe("NavigationMenu", () => {
       controller.open("products");
       await waitForPresenceExit();
       expect(viewport.getAttribute("data-align")).toBe("start");
-      expect(viewport.style.top).toBe("48px");
-      expect(viewport.style.left).toBe("20px");
+      expect(viewport.style.top).toBe("0px");
+      expect(viewport.style.left).toBe("0px");
+      expect(viewport.style.transform).toBe("translate3d(20px, 48px, 0)");
 
       controller.open("solutions");
       await waitForPresenceExit();
       expect(viewport.getAttribute("data-align")).toBe("center");
-      expect(viewport.style.top).toBe("48px");
-      expect(viewport.style.left).toBe("130px");
+      expect(viewport.style.top).toBe("0px");
+      expect(viewport.style.left).toBe("0px");
+      expect(viewport.style.transform).toBe("translate3d(130px, 48px, 0)");
 
       controller.destroy();
     });
@@ -1238,8 +1243,9 @@ describe("NavigationMenu", () => {
       expect(viewport.getAttribute("data-align")).toBe("start");
       expect(content.getAttribute("data-side")).toBe("bottom");
       expect(content.getAttribute("data-align")).toBe("start");
-      expect(viewport.style.top).toBe("44px");
-      expect(viewport.style.left).toBe("57px");
+      expect(viewport.style.top).toBe("0px");
+      expect(viewport.style.left).toBe("0px");
+      expect(viewport.style.transform).toBe("translate3d(57px, 44px, 0)");
 
       controller.destroy();
     });
