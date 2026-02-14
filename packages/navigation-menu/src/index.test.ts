@@ -158,6 +158,59 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("sets data-instant on indicator for initial show, then clears it", async () => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+          <div data-slot="navigation-menu-indicator"></div>
+        </ul>
+        <div data-slot="navigation-menu-viewport"></div>
+      </nav>
+    `;
+
+    const root = document.getElementById("root")!;
+    const trigger = document.querySelector(
+      '[data-slot="navigation-menu-trigger"]'
+    ) as HTMLElement;
+    const list = document.querySelector('[data-slot="navigation-menu-list"]') as HTMLElement;
+    const indicator = document.querySelector(
+      '[data-slot="navigation-menu-indicator"]'
+    ) as HTMLElement;
+    const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    list.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    trigger.getBoundingClientRect = () => rect(120, 100, 140, 40);
+
+    trigger.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
+
+    expect(indicator.getAttribute("data-state")).toBe("visible");
+    expect(indicator.hasAttribute("data-instant")).toBe(true);
+
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve(undefined))),
+    );
+    expect(indicator.hasAttribute("data-instant")).toBe(false);
+
+    controller.destroy();
+  });
+
   it("does NOT set data-motion on initial open", () => {
     const { root, contents, controller } = setup();
 

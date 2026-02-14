@@ -156,6 +156,7 @@ export function createNavigationMenu(
   let isDestroyed = false;
   let activeSafetyTriangle: HoverSafeTriangle | null = null;
   let hoverSafeTriangleOverlay: HTMLElement | null = null;
+  let indicatorInstantRaf: number | null = null;
 
   const cleanups: Array<() => void> = [];
   const contentPresence = new Map<
@@ -400,6 +401,13 @@ export function createNavigationMenu(
     if (closeTimeout) {
       clearTimeout(closeTimeout);
       closeTimeout = null;
+    }
+  };
+
+  const clearIndicatorInstantRaf = () => {
+    if (indicatorInstantRaf !== null) {
+      cancelAnimationFrame(indicatorInstantRaf);
+      indicatorInstantRaf = null;
     }
   };
 
@@ -772,6 +780,7 @@ export function createNavigationMenu(
   };
 
   cleanups.push(clearHoverSafetyState);
+  cleanups.push(clearIndicatorInstantRaf);
   cleanups.push(hideHoverBridge);
   cleanups.push(() => {
     hideHoverSafeTriangleOverlay();
@@ -966,8 +975,22 @@ export function createNavigationMenu(
 
     if (!trigger) {
       // Hide indicator when not hovering any trigger
+      clearIndicatorInstantRaf();
+      indicator.removeAttribute("data-instant");
       indicator.setAttribute("data-state", "hidden");
       return;
+    }
+
+    const wasHidden = indicator.getAttribute("data-state") !== "visible";
+    if (wasHidden) {
+      clearIndicatorInstantRaf();
+      indicator.setAttribute("data-instant", "");
+      indicatorInstantRaf = requestAnimationFrame(() => {
+        indicatorInstantRaf = requestAnimationFrame(() => {
+          indicator.removeAttribute("data-instant");
+          indicatorInstantRaf = null;
+        });
+      });
     }
 
     const listRect = list.getBoundingClientRect();

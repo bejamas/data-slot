@@ -358,7 +358,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
       </li>
       <div
         data-slot="navigation-menu-indicator"
-        class="absolute bg-code-bg z-0 rounded-md transition-all duration-150 pointer-events-none opacity-0 data-[state=visible]:opacity-100"
+        class="absolute bg-code-bg z-0 rounded-md transition-all data-instant:transition-opacity duration-150 pointer-events-none opacity-0 data-[state=visible]:opacity-100"
         style="left: var(--indicator-left, 0); top: var(--indicator-top, 0); width: var(--indicator-width, 0); height: var(--indicator-height, 0);"
       ></div>
     </ul>
