@@ -53,6 +53,8 @@ export interface NavigationMenuOptions {
   sideOffset?: number;
   /** Offset along alignment axis (px) */
   alignOffset?: number;
+  /** Enable hover safe-triangle behavior (opt-in) */
+  safeTriangle?: boolean;
   /** Callback when active item changes */
   onValueChange?: (value: string | null) => void;
   /** Debug hover safe-triangle polygon */
@@ -106,10 +108,13 @@ export function createNavigationMenu(
     options.sideOffset ?? getDataNumber(root, "sideOffset") ?? 0;
   const rootAlignOffset =
     options.alignOffset ?? getDataNumber(root, "alignOffset") ?? 0;
+  const safeTriangle =
+    options.safeTriangle ?? getDataBool(root, "safeTriangle") ?? false;
   const debugSafeTriangle =
     options.debugSafeTriangle ??
     getDataBool(root, "debugSafeTriangle") ??
     false;
+  const safeTriangleEnabled = safeTriangle || debugSafeTriangle;
   const onValueChange = options.onValueChange;
 
   // Sanitize value for use in IDs (spaces/slashes -> dashes)
@@ -652,6 +657,7 @@ export function createNavigationMenu(
   };
 
   const getCurrentSafetyTriangle = (): HoverSafeTriangle | null => {
+    if (!safeTriangleEnabled) return null;
     if (!viewport || currentValue === null) return null;
     const activeData = getActiveData();
     if (!activeData) return null;
@@ -896,7 +902,9 @@ export function createNavigationMenu(
       const marginGap = Math.max(0, firstMarginTop + viewportMarginTop);
       const verticalGap = Math.max(rootBottomGap, rootTopGap, marginGap);
       const horizontalGap = Math.max(rootRightGap, rootLeftGap);
-      const triangle = buildSafetyTriangle(triggerRect, rootRect, viewportRect);
+      const triangle = safeTriangleEnabled
+        ? buildSafetyTriangle(triggerRect, rootRect, viewportRect)
+        : null;
       activeSafetyTriangle = triangle;
 
       const addRectPoints = (

@@ -480,7 +480,10 @@ describe("NavigationMenu", () => {
   });
 
   it("keeps menu open while pointer moves through safe triangle toward viewport", async () => {
-    const { root, triggers, contents, viewport, controller } = setup({ delayClose: 0 });
+    const { root, triggers, contents, viewport, controller } = setup({
+      delayClose: 0,
+      safeTriangle: true,
+    });
     const trigger = triggers[0]!;
     const content = contents[0]!;
 
@@ -540,7 +543,10 @@ describe("NavigationMenu", () => {
   });
 
   it("does not switch to another item when pointer enters it through safe triangle", async () => {
-    const { root, triggers, contents, viewport, controller } = setup({ delayClose: 0 });
+    const { root, triggers, contents, viewport, controller } = setup({
+      delayClose: 0,
+      safeTriangle: true,
+    });
     const productsTrigger = triggers[0]!;
     const solutionsTrigger = triggers[1]!;
     const solutionsItem = solutionsTrigger.closest(
@@ -599,6 +605,48 @@ describe("NavigationMenu", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(controller.value).toBe("products");
+
+    controller.destroy();
+  });
+
+  it("does switch when entering another item if safe triangle is disabled", async () => {
+    const { root, triggers, contents, viewport, controller } = setup({ delayClose: 0 });
+    const productsTrigger = triggers[0]!;
+    const solutionsTrigger = triggers[1]!;
+    const solutionsItem = solutionsTrigger.closest(
+      '[data-slot="navigation-menu-item"]'
+    ) as HTMLElement;
+    const content = contents[0]!;
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    productsTrigger.getBoundingClientRect = () => rect(120, 100, 140, 40);
+    solutionsTrigger.getBoundingClientRect = () => rect(280, 100, 140, 40);
+    content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+    viewport.getBoundingClientRect = () => rect(120, 152, 300, 180);
+
+    controller.open("products");
+    await waitForPresenceExit();
+
+    const throughPath = { bubbles: true, clientX: 220, clientY: 146 } as PointerEventInit;
+    root.dispatchEvent(new PointerEvent("pointerenter", throughPath));
+    solutionsTrigger.dispatchEvent(new PointerEvent("pointerenter", throughPath));
+    solutionsItem.dispatchEvent(new PointerEvent("pointerenter", throughPath));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(controller.value).toBe("solutions");
 
     controller.destroy();
   });

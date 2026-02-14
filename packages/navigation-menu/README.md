@@ -76,6 +76,7 @@ const menu = createNavigationMenu(element, {
 | `align` | `"start" \| "center" \| "end"` | `"start"` | Viewport alignment on cross-axis |
 | `sideOffset` | `number` | `0` | Distance from trigger to viewport (px) |
 | `alignOffset` | `number` | `0` | Cross-axis alignment offset (px) |
+| `safeTriangle` | `boolean` | `false` | Enable hover safe-triangle switching guard |
 | `onValueChange` | `(value: string \| null) => void` | `undefined` | Callback when active item changes |
 | `debugSafeTriangle` | `boolean` | `false` | Show red hover safe-triangle debug overlay |
 
@@ -92,6 +93,7 @@ Options can also be set via data attributes on the root element. JS options take
 | `data-align` | string | `"start"` | Viewport alignment: `"start"`, `"center"`, or `"end"` |
 | `data-side-offset` | number | `0` | Distance from trigger to viewport (px) |
 | `data-align-offset` | number | `0` | Cross-axis alignment offset (px) |
+| `data-safe-triangle` | boolean | `false` | Enable hover safe-triangle switching guard |
 | `data-debug-safe-triangle` | boolean | `false` | Show red hover safe-triangle debug overlay |
 
 Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
