@@ -1342,11 +1342,17 @@ describe("NavigationMenu", () => {
       expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
         "138px -8px",
       );
+      expect(content.style.getPropertyValue("--transform-origin")).toBe(
+        "138px -8px",
+      );
 
       const viewportPositioner = getViewportPositioner(viewport);
       // Positioner mirrors resolved values for styling, but is not an input source.
       expect(viewportPositioner.getAttribute("data-side")).toBe("bottom");
       expect(viewportPositioner.getAttribute("data-align")).toBe("center");
+      expect(viewportPositioner.style.getPropertyValue("--transform-origin")).toBe(
+        "100px 40px",
+      );
 
       controller.destroy();
     });
@@ -1414,6 +1420,13 @@ describe("NavigationMenu", () => {
       expect(viewport.style.transform).toBe("translate3d(-153px, -182px, 0)");
       expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
         "303px 182px",
+      );
+      expect(content.style.getPropertyValue("--transform-origin")).toBe(
+        "303px 182px",
+      );
+      const viewportPositioner = getViewportPositioner(viewport);
+      expect(viewportPositioner.style.getPropertyValue("--transform-origin")).toBe(
+        "150px 0px",
       );
 
       controller.destroy();
@@ -1488,6 +1501,10 @@ describe("NavigationMenu", () => {
       expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
         "0px -8px",
       );
+      let viewportPositioner = getViewportPositioner(viewport);
+      expect(viewportPositioner.style.getPropertyValue("--transform-origin")).toBe(
+        "20px 40px",
+      );
 
       controller.open("solutions");
       await waitForPresenceExit();
@@ -1497,6 +1514,10 @@ describe("NavigationMenu", () => {
       expect(viewport.style.transform).toBe("translate3d(130px, 48px, 0)");
       expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
         "100px -8px",
+      );
+      viewportPositioner = getViewportPositioner(viewport);
+      expect(viewportPositioner.style.getPropertyValue("--transform-origin")).toBe(
+        "230px 40px",
       );
 
       controller.destroy();

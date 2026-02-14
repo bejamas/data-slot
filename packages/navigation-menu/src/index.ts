@@ -900,18 +900,20 @@ export function createNavigationMenu(
       );
       const transformOriginX = originAnchor.x - (rootRect.left + left);
       const transformOriginY = originAnchor.y - (rootRect.top + top);
+      const positionerOriginX = originAnchor.x - rootRect.left;
+      const positionerOriginY = originAnchor.y - rootRect.top;
+      const viewportTransformOrigin = `${transformOriginX}px ${transformOriginY}px`;
+      const positionerTransformOrigin = `${positionerOriginX}px ${positionerOriginY}px`;
 
       viewport.style.top = "0px";
       viewport.style.left = "0px";
       viewport.style.transform = `translate3d(${left}px, ${top}px, 0)`;
       viewport.style.willChange = "transform,width,height";
-      viewport.style.setProperty(
-        "--transform-origin",
-        `${transformOriginX}px ${transformOriginY}px`,
-      );
+      viewport.style.setProperty("--transform-origin", viewportTransformOrigin);
       // Active content is mounted inside viewport.
       content.style.top = "0px";
       content.style.left = "0px";
+      content.style.setProperty("--transform-origin", viewportTransformOrigin);
       viewport.setAttribute("data-side", pos.side);
       viewport.setAttribute("data-align", pos.align);
       content.setAttribute("data-side", pos.side);
@@ -920,6 +922,10 @@ export function createNavigationMenu(
       if (positioner && positioner !== viewport) {
         positioner.setAttribute("data-side", pos.side);
         positioner.setAttribute("data-align", pos.align);
+        positioner.style.setProperty(
+          "--transform-origin",
+          positionerTransformOrigin,
+        );
       }
       updateViewportPositioner();
 

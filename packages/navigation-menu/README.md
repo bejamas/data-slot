@@ -252,7 +252,7 @@ presence lifecycle hooks, so you can style smooth fade/scale transitions before 
 |----------|---------|-------------|
 | `--viewport-width` | viewport | Width of active content |
 | `--viewport-height` | viewport | Height of active content |
-| `--transform-origin` | viewport | Pixel origin anchored to trigger (`side` + `align`) |
+| `--transform-origin` | viewport/content/positioner | Pixel origin anchored to trigger (`side` + `align`), scoped to each element's coordinate space |
 | `--indicator-left` | indicator | Left offset from list |
 | `--indicator-width` | indicator | Width of hovered trigger |
 | `--indicator-top` | indicator | Top offset from list |
