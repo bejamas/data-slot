@@ -1339,6 +1339,9 @@ describe("NavigationMenu", () => {
       expect(viewport.style.top).toBe("0px");
       expect(viewport.style.left).toBe("0px");
       expect(viewport.style.transform).toBe("translate3d(-38px, 48px, 0)");
+      expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
+        "138px -8px",
+      );
 
       const viewportPositioner = getViewportPositioner(viewport);
       // Positioner mirrors resolved values for styling, but is not an input source.
@@ -1409,6 +1412,9 @@ describe("NavigationMenu", () => {
       expect(viewport.style.top).toBe("0px");
       expect(viewport.style.left).toBe("0px");
       expect(viewport.style.transform).toBe("translate3d(-153px, -182px, 0)");
+      expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
+        "303px 182px",
+      );
 
       controller.destroy();
     });
@@ -1479,6 +1485,9 @@ describe("NavigationMenu", () => {
       expect(viewport.style.top).toBe("0px");
       expect(viewport.style.left).toBe("0px");
       expect(viewport.style.transform).toBe("translate3d(20px, 48px, 0)");
+      expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
+        "0px -8px",
+      );
 
       controller.open("solutions");
       await waitForPresenceExit();
@@ -1486,6 +1495,9 @@ describe("NavigationMenu", () => {
       expect(viewport.style.top).toBe("0px");
       expect(viewport.style.left).toBe("0px");
       expect(viewport.style.transform).toBe("translate3d(130px, 48px, 0)");
+      expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
+        "100px -8px",
+      );
 
       controller.destroy();
     });
@@ -1557,6 +1569,9 @@ describe("NavigationMenu", () => {
       expect(viewport.style.top).toBe("0px");
       expect(viewport.style.left).toBe("0px");
       expect(viewport.style.transform).toBe("translate3d(57px, 44px, 0)");
+      expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
+        "-7px -4px",
+      );
 
       controller.destroy();
     });

@@ -38,6 +38,27 @@ interface HoverSafeTriangle {
   edgeB: Point;
 }
 
+const getAlignedPointOnRect = (rect: DOMRect, align: Align): Point => {
+  if (align === "start") return { x: rect.left, y: rect.top };
+  if (align === "end") return { x: rect.right, y: rect.bottom };
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+};
+
+const getTransformOriginAnchor = (
+  side: Side,
+  align: Align,
+  triggerRect: DOMRect,
+): Point => {
+  const aligned = getAlignedPointOnRect(triggerRect, align);
+  if (side === "top") return { x: aligned.x, y: triggerRect.top };
+  if (side === "bottom") return { x: aligned.x, y: triggerRect.bottom };
+  if (side === "left") return { x: triggerRect.left, y: aligned.y };
+  return { x: triggerRect.right, y: aligned.y };
+};
+
 export interface NavigationMenuOptions {
   /** Delay before opening on hover (ms) */
   delayOpen?: number;
@@ -872,11 +893,22 @@ export function createNavigationMenu(
       });
       const left = pos.x - rootRect.left;
       const top = pos.y - rootRect.top;
+      const originAnchor = getTransformOriginAnchor(
+        pos.side,
+        pos.align,
+        triggerRect,
+      );
+      const transformOriginX = originAnchor.x - (rootRect.left + left);
+      const transformOriginY = originAnchor.y - (rootRect.top + top);
 
       viewport.style.top = "0px";
       viewport.style.left = "0px";
       viewport.style.transform = `translate3d(${left}px, ${top}px, 0)`;
       viewport.style.willChange = "transform,width,height";
+      viewport.style.setProperty(
+        "--transform-origin",
+        `${transformOriginX}px ${transformOriginY}px`,
+      );
       // Active content is mounted inside viewport.
       content.style.top = "0px";
       content.style.left = "0px";

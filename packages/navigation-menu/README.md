@@ -192,6 +192,7 @@ and restored to its original markup location when inactive/closed.
   top: 0;
   left: 0;
   transform: translate3d(0, 0, 0);
+  transform-origin: var(--transform-origin);
   width: var(--viewport-width);
   height: var(--viewport-height);
   transition: transform 0.3s, width 0.3s, height 0.3s;
@@ -251,6 +252,7 @@ presence lifecycle hooks, so you can style smooth fade/scale transitions before 
 |----------|---------|-------------|
 | `--viewport-width` | viewport | Width of active content |
 | `--viewport-height` | viewport | Height of active content |
+| `--transform-origin` | viewport | Pixel origin anchored to trigger (`side` + `align`) |
 | `--indicator-left` | indicator | Left offset from list |
 | `--indicator-width` | indicator | Width of hovered trigger |
 | `--indicator-top` | indicator | Top offset from list |
