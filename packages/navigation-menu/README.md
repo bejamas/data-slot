@@ -187,11 +187,17 @@ and restored to its original markup location when inactive/closed.
   display: block;
 }
 
-/* Viewport sizing and positioning */
+/* Positioner owns placement in page coordinates */
+[data-slot="navigation-menu-viewport-positioner"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Viewport owns sizing and animation */
 [data-slot="navigation-menu-viewport"] {
   top: 0;
   left: 0;
-  transform: translate3d(0, 0, 0);
   transform-origin: var(--transform-origin);
   width: var(--viewport-width);
   height: var(--viewport-height);

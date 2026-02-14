@@ -776,7 +776,11 @@ describe("NavigationMenu", () => {
     expect(viewport.style.getPropertyValue("--viewport-height")).toBe("180px");
     expect(viewport.style.top).toBe("0px");
     expect(viewport.style.left).toBe("0px");
-    expect(viewport.style.transform).toBe("translate3d(-30px, 40px, 0)");
+    expect(viewport.style.transform).toBe("");
+    const viewportPositioner = getViewportPositioner(viewport);
+    expect(viewportPositioner.style.transform).toBe(
+      "translate3d(70px, 140px, 0)",
+    );
 
     controller.destroy();
   });
@@ -1338,7 +1342,7 @@ describe("NavigationMenu", () => {
       expect(content.getAttribute("data-align")).toBe("center");
       expect(viewport.style.top).toBe("0px");
       expect(viewport.style.left).toBe("0px");
-      expect(viewport.style.transform).toBe("translate3d(-38px, 48px, 0)");
+      expect(viewport.style.transform).toBe("");
       expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
         "138px -8px",
       );
@@ -1350,6 +1354,9 @@ describe("NavigationMenu", () => {
       // Positioner mirrors resolved values for styling, but is not an input source.
       expect(viewportPositioner.getAttribute("data-side")).toBe("bottom");
       expect(viewportPositioner.getAttribute("data-align")).toBe("center");
+      expect(viewportPositioner.style.transform).toBe(
+        "translate3d(62px, 148px, 0)",
+      );
       expect(viewportPositioner.style.getPropertyValue("--transform-origin")).toBe(
         "100px 40px",
       );
@@ -1417,7 +1424,7 @@ describe("NavigationMenu", () => {
       expect(content.getAttribute("data-align")).toBe("end");
       expect(viewport.style.top).toBe("0px");
       expect(viewport.style.left).toBe("0px");
-      expect(viewport.style.transform).toBe("translate3d(-153px, -182px, 0)");
+      expect(viewport.style.transform).toBe("");
       expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
         "303px 182px",
       );
@@ -1425,6 +1432,9 @@ describe("NavigationMenu", () => {
         "303px 182px",
       );
       const viewportPositioner = getViewportPositioner(viewport);
+      expect(viewportPositioner.style.transform).toBe(
+        "translate3d(-53px, -82px, 0)",
+      );
       expect(viewportPositioner.style.getPropertyValue("--transform-origin")).toBe(
         "150px 0px",
       );
@@ -1497,11 +1507,14 @@ describe("NavigationMenu", () => {
       expect(viewport.getAttribute("data-align")).toBe("start");
       expect(viewport.style.top).toBe("0px");
       expect(viewport.style.left).toBe("0px");
-      expect(viewport.style.transform).toBe("translate3d(20px, 48px, 0)");
+      expect(viewport.style.transform).toBe("");
       expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
         "0px -8px",
       );
       let viewportPositioner = getViewportPositioner(viewport);
+      expect(viewportPositioner.style.transform).toBe(
+        "translate3d(120px, 148px, 0)",
+      );
       expect(viewportPositioner.style.getPropertyValue("--transform-origin")).toBe(
         "20px 40px",
       );
@@ -1511,11 +1524,14 @@ describe("NavigationMenu", () => {
       expect(viewport.getAttribute("data-align")).toBe("center");
       expect(viewport.style.top).toBe("0px");
       expect(viewport.style.left).toBe("0px");
-      expect(viewport.style.transform).toBe("translate3d(130px, 48px, 0)");
+      expect(viewport.style.transform).toBe("");
       expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
         "100px -8px",
       );
       viewportPositioner = getViewportPositioner(viewport);
+      expect(viewportPositioner.style.transform).toBe(
+        "translate3d(230px, 148px, 0)",
+      );
       expect(viewportPositioner.style.getPropertyValue("--transform-origin")).toBe(
         "230px 40px",
       );
@@ -1589,9 +1605,13 @@ describe("NavigationMenu", () => {
       expect(content.getAttribute("data-align")).toBe("start");
       expect(viewport.style.top).toBe("0px");
       expect(viewport.style.left).toBe("0px");
-      expect(viewport.style.transform).toBe("translate3d(57px, 44px, 0)");
+      expect(viewport.style.transform).toBe("");
       expect(viewport.style.getPropertyValue("--transform-origin")).toBe(
         "-7px -4px",
+      );
+      const viewportPositioner = getViewportPositioner(viewport);
+      expect(viewportPositioner.style.transform).toBe(
+        "translate3d(157px, 144px, 0)",
       );
 
       controller.destroy();

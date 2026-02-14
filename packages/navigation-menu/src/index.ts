@@ -183,6 +183,8 @@ export function createNavigationMenu(
   let activeSafetyTriangle: HoverSafeTriangle | null = null;
   let hoverSafeTriangleOverlay: HTMLElement | null = null;
   let indicatorInstantRaf: number | null = null;
+  let viewportOffsetLeft = 0;
+  let viewportOffsetTop = 0;
 
   const cleanups: Array<() => void> = [];
   const contentPresence = new Map<
@@ -284,7 +286,7 @@ export function createNavigationMenu(
     positioner.style.position = "absolute";
     positioner.style.top = "0px";
     positioner.style.left = "0px";
-    positioner.style.transform = `translate3d(${rootRect.left + win.scrollX}px, ${rootRect.top + win.scrollY}px, 0)`;
+    positioner.style.transform = `translate3d(${rootRect.left + win.scrollX + viewportOffsetLeft}px, ${rootRect.top + win.scrollY + viewportOffsetTop}px, 0)`;
     positioner.style.width = `${rootRect.width}px`;
     positioner.style.height = `${rootRect.height}px`;
     positioner.style.margin = "0";
@@ -893,6 +895,8 @@ export function createNavigationMenu(
       });
       const left = pos.x - rootRect.left;
       const top = pos.y - rootRect.top;
+      viewportOffsetLeft = left;
+      viewportOffsetTop = top;
       const originAnchor = getTransformOriginAnchor(
         pos.side,
         pos.align,
@@ -907,7 +911,6 @@ export function createNavigationMenu(
 
       viewport.style.top = "0px";
       viewport.style.left = "0px";
-      viewport.style.transform = `translate3d(${left}px, ${top}px, 0)`;
       viewport.style.willChange = "transform,width,height";
       viewport.style.setProperty("--transform-origin", viewportTransformOrigin);
       // Active content is mounted inside viewport.
