@@ -227,11 +227,17 @@ and restored to its original markup location when inactive/closed.
 }
 ```
 
+`data-instant` is automatically removed shortly after initial open. Use it only to skip first-frame
+transitions.
+
 ### Motion Animations
 
 Content panels receive `data-motion` attributes for directional enter/exit animations.
 Both content and viewport also receive `data-starting-style` / `data-ending-style` markers from
 presence lifecycle hooks, so you can style smooth fade/scale transitions before unmount.
+
+For exit animations, avoid CSS that force-hides content immediately by `data-state`
+(for example `display: none` on non-active panels), because that bypasses the presence lifecycle.
 
 ```css
 /* Entering from right */

@@ -183,6 +183,7 @@ export function createNavigationMenu(
   let activeSafetyTriangle: HoverSafeTriangle | null = null;
   let hoverSafeTriangleOverlay: HTMLElement | null = null;
   let indicatorInstantRaf: number | null = null;
+  let viewportInstantRaf: number | null = null;
   let viewportOffsetLeft = 0;
   let viewportOffsetTop = 0;
 
@@ -239,11 +240,36 @@ export function createNavigationMenu(
     positioner.style.removeProperty("--transform-origin");
     positioner.removeAttribute("data-instant");
   };
+  const clearViewportInstantRaf = () => {
+    if (viewportInstantRaf !== null) {
+      cancelAnimationFrame(viewportInstantRaf);
+      viewportInstantRaf = null;
+    }
+  };
+  const removeViewportInstant = () => {
+    viewport?.removeAttribute("data-instant");
+    const positioner = viewportPortal?.container;
+    if (positioner instanceof HTMLElement) {
+      positioner.removeAttribute("data-instant");
+    }
+  };
+  const scheduleViewportInstantClear = () => {
+    if (!viewport) return;
+    clearViewportInstantRaf();
+    viewportInstantRaf = requestAnimationFrame(() => {
+      viewportInstantRaf = requestAnimationFrame(() => {
+        removeViewportInstant();
+        viewportInstantRaf = null;
+      });
+    });
+  };
   const viewportPresence = viewport
     ? createPresenceLifecycle({
         element: viewport,
         onExitComplete: () => {
           if (isDestroyed) return;
+          clearViewportInstantRaf();
+          removeViewportInstant();
           resetViewportPositionerStyles();
           viewportOffsetLeft = 0;
           viewportOffsetTop = 0;
@@ -333,6 +359,8 @@ export function createNavigationMenu(
   };
   cleanups.push(() => activeRO?.disconnect());
   cleanups.push(() => {
+    clearViewportInstantRaf();
+    removeViewportInstant();
     contentPresence.forEach((presence) => presence.cleanup());
     contentPresence.clear();
     contentPlacement.forEach((_state, content) => {
@@ -1230,9 +1258,13 @@ export function createNavigationMenu(
         if (isOpen && !isSwitching) {
           viewport.setAttribute("data-instant", "");
           viewportPositioner?.setAttribute("data-instant", "");
+          scheduleViewportInstantClear();
         } else if (isSwitching) {
-          viewport.removeAttribute("data-instant");
-          viewportPositioner?.removeAttribute("data-instant");
+          clearViewportInstantRaf();
+          removeViewportInstant();
+        } else if (!isOpen) {
+          clearViewportInstantRaf();
+          removeViewportInstant();
         }
 
         if (direction) {

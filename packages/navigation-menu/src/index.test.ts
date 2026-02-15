@@ -158,7 +158,7 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("mirrors data-instant to viewport positioner on initial open", () => {
+  it("sets data-instant on initial open and clears it automatically", async () => {
     const { viewport, controller } = setup();
 
     controller.open("products");
@@ -166,7 +166,9 @@ describe("NavigationMenu", () => {
     expect(viewport.hasAttribute("data-instant")).toBe(true);
     expect(viewportPositioner.hasAttribute("data-instant")).toBe(true);
 
-    controller.open("solutions");
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve(undefined))),
+    );
     expect(viewport.hasAttribute("data-instant")).toBe(false);
     expect(viewportPositioner.hasAttribute("data-instant")).toBe(false);
 
