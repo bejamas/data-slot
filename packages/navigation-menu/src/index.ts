@@ -117,9 +117,9 @@ export function createNavigationMenu(
 ): NavigationMenuController {
   // Resolve options with explicit precedence: JS > data-* > default
   const delayOpen =
-    options.delayOpen ?? getDataNumber(root, "delayOpen") ?? 200;
+    options.delayOpen ?? getDataNumber(root, "delayOpen") ?? 0;
   const delayClose =
-    options.delayClose ?? getDataNumber(root, "delayClose") ?? 150;
+    options.delayClose ?? getDataNumber(root, "delayClose") ?? 0;
   const openOnFocus =
     options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? true;
   const rootSide = options.side ?? getDataEnum(root, "side", SIDES) ?? "bottom";

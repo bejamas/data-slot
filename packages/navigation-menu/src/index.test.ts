@@ -1277,6 +1277,40 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
 
+    it("defaults to zero hover delays when delay options are omitted", async () => {
+      document.body.innerHTML = `
+        <nav data-slot="navigation-menu" id="root">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">Content</div>
+            </li>
+          </ul>
+        </nav>
+      `;
+
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector(
+        '[data-slot="navigation-menu-trigger"]'
+      ) as HTMLElement;
+      const controller = createNavigationMenu(root);
+
+      trigger.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(controller.value).toBe("products");
+
+      root.dispatchEvent(
+        new PointerEvent("pointerleave", {
+          bubbles: true,
+          relatedTarget: document.body,
+        } as PointerEventInit)
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(controller.value).toBe(null);
+
+      controller.destroy();
+    });
+
     it("data-delay-open sets custom open delay", () => {
       document.body.innerHTML = `
         <nav data-slot="navigation-menu" id="root" data-delay-open="0">

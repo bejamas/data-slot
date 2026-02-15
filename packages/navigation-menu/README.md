@@ -59,8 +59,8 @@ Create a controller for a specific element.
 import { createNavigationMenu } from "@data-slot/navigation-menu";
 
 const menu = createNavigationMenu(element, {
-  delayOpen: 200,
-  delayClose: 150,
+  delayOpen: 0,
+  delayClose: 0,
   onValueChange: (value) => console.log(value),
 });
 ```
@@ -69,8 +69,8 @@ const menu = createNavigationMenu(element, {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `delayOpen` | `number` | `200` | Delay before opening on hover (ms) |
-| `delayClose` | `number` | `150` | Delay before closing on mouse leave (ms) |
+| `delayOpen` | `number` | `0` | Delay before opening on hover (ms) |
+| `delayClose` | `number` | `0` | Delay before closing on mouse leave (ms) |
 | `openOnFocus` | `boolean` | `true` | Whether focusing a trigger opens its content |
 | `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Viewport side relative to trigger |
 | `align` | `"start" \| "center" \| "end"` | `"start"` | Viewport alignment on cross-axis |
@@ -86,8 +86,8 @@ Options can also be set via data attributes on the root element. JS options take
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `data-delay-open` | number | `200` | Delay before opening on hover (ms) |
-| `data-delay-close` | number | `150` | Delay before closing on mouse leave (ms) |
+| `data-delay-open` | number | `0` | Delay before opening on hover (ms) |
+| `data-delay-close` | number | `0` | Delay before closing on mouse leave (ms) |
 | `data-open-on-focus` | boolean | `true` | Whether focusing a trigger opens its content |
 | `data-side` | string | `"bottom"` | Side: `"top"`, `"right"`, `"bottom"`, `"left"` |
 | `data-align` | string | `"start"` | Viewport alignment: `"start"`, `"center"`, or `"end"` |
