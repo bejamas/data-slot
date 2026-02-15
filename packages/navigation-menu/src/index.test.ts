@@ -933,17 +933,46 @@ describe("NavigationMenu", () => {
     const viewport = root.querySelector('[data-slot="navigation-menu-viewport"]') as HTMLElement;
     const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
 
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+    trigger.getBoundingClientRect = () => rect(150, 100, 100, 40);
+    content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+
     controller.open("products");
     expect(contentPortal.parentElement).toBe(root.querySelector('[data-slot="navigation-menu-item"]'));
     expect(viewportPortal.parentElement).toBe(document.body);
     expect(content.parentElement).toBe(viewport);
     expect(viewport.parentElement).toBe(viewportPositioner);
+    await waitForPresenceExit();
+    expect(viewportPositioner.style.top).not.toBe("");
+    expect(viewportPositioner.style.left).not.toBe("");
+    expect(viewportPositioner.style.width).not.toBe("");
+    expect(viewportPositioner.style.height).not.toBe("");
 
     controller.close();
     await waitForPresenceExit();
     expect(content.parentElement).toBe(contentPositioner);
     expect(contentPortal.parentElement).toBe(root.querySelector('[data-slot="navigation-menu-item"]'));
     expect(viewportPortal.parentElement).toBe(root);
+    expect(viewportPositioner.style.top).toBe("");
+    expect(viewportPositioner.style.left).toBe("");
+    expect(viewportPositioner.style.width).toBe("");
+    expect(viewportPositioner.style.height).toBe("");
+    expect(viewportPositioner.style.willChange).toBe("");
+    expect(viewportPositioner.style.pointerEvents).toBe("");
 
     controller.destroy();
   });

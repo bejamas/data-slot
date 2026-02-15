@@ -224,11 +224,29 @@ export function createNavigationMenu(
           : undefined,
       })
     : null;
+  const resetViewportPositionerStyles = () => {
+    const positioner = viewportPortal?.container;
+    if (!(positioner instanceof HTMLElement)) return;
+    positioner.style.position = "";
+    positioner.style.top = "";
+    positioner.style.left = "";
+    positioner.style.width = "";
+    positioner.style.height = "";
+    positioner.style.margin = "";
+    positioner.style.willChange = "";
+    positioner.style.pointerEvents = "";
+    positioner.style.transform = "";
+    positioner.style.removeProperty("--transform-origin");
+    positioner.removeAttribute("data-instant");
+  };
   const viewportPresence = viewport
     ? createPresenceLifecycle({
         element: viewport,
         onExitComplete: () => {
           if (isDestroyed) return;
+          resetViewportPositionerStyles();
+          viewportOffsetLeft = 0;
+          viewportOffsetTop = 0;
           viewportPortal?.restore();
           viewport.hidden = true;
           viewport.style.pointerEvents = "none";
@@ -323,6 +341,9 @@ export function createNavigationMenu(
       content.style.pointerEvents = "none";
     });
     contentPlacement.clear();
+    resetViewportPositionerStyles();
+    viewportOffsetLeft = 0;
+    viewportOffsetTop = 0;
     viewportPresence?.cleanup();
     viewportPortal?.cleanup();
   });

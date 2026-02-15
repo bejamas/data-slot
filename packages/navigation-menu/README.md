@@ -172,6 +172,9 @@ Their `data-side` / `data-align` are mirrored output values and are not used as 
 reused. Otherwise, a `navigation-menu-viewport-positioner` wrapper is generated and positioned
 at the navigation root so submenu layers are not clipped by local stacking contexts.
 
+Runtime positioner placement styles are reset on close, so restored authored positioners do not
+leave stale geometry that can affect document overflow.
+
 The active `navigation-menu-content` panel is mounted inside `navigation-menu-viewport` while open
 and restored to its original markup location when inactive/closed.
 
