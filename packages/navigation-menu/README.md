@@ -227,8 +227,8 @@ and restored to its original markup location when inactive/closed.
 }
 ```
 
-`data-instant` is automatically removed shortly after initial open. Use it only to skip first-frame
-transitions.
+`data-instant` is used for the initial open phase and cleared when switching or closing.
+Use it to skip first-open transitions without suppressing exit animations.
 
 ### Motion Animations
 
