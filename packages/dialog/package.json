@@ -1,6 +1,6 @@
 {
   "name": "@data-slot/dialog",
-  "version": "0.2.72",
+  "version": "0.2.73",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
