@@ -282,15 +282,16 @@ export function createNavigationMenu(
     const positioner = viewportPortal.container as HTMLElement;
     const win = root.ownerDocument.defaultView ?? window;
     const rootRect = (root as HTMLElement).getBoundingClientRect();
+    const positionerTop = rootRect.top + win.scrollY + viewportOffsetTop;
+    const positionerLeft = rootRect.left + win.scrollX + viewportOffsetLeft;
 
     positioner.style.position = "absolute";
-    positioner.style.top = "0px";
-    positioner.style.left = "0px";
-    positioner.style.transform = `translate3d(${rootRect.left + win.scrollX + viewportOffsetLeft}px, ${rootRect.top + win.scrollY + viewportOffsetTop}px, 0)`;
+    positioner.style.top = `${positionerTop}px`;
+    positioner.style.left = `${positionerLeft}px`;
     positioner.style.width = `${rootRect.width}px`;
     positioner.style.height = `${rootRect.height}px`;
     positioner.style.margin = "0";
-    positioner.style.willChange = "transform";
+    positioner.style.willChange = "top,left";
     positioner.style.pointerEvents = "none";
   };
 
@@ -1201,12 +1202,16 @@ export function createNavigationMenu(
       if (viewport) {
         viewport.setAttribute("data-state", isOpen ? "open" : "closed");
         viewport.style.pointerEvents = isOpen ? "auto" : "none";
+        const viewportPositioner =
+          viewportPortal?.container as HTMLElement | undefined;
 
         // Set data-instant on initial open to skip size animation
         if (isOpen && !isSwitching) {
           viewport.setAttribute("data-instant", "");
+          viewportPositioner?.setAttribute("data-instant", "");
         } else if (isSwitching) {
           viewport.removeAttribute("data-instant");
+          viewportPositioner?.removeAttribute("data-instant");
         }
 
         if (direction) {

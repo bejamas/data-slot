@@ -682,6 +682,13 @@ html {
   transition: opacity 0.15s ease;
 }
 
+div[data-slot="navigation-menu-viewport-positioner"],
+div[data-slot="navigation-menu-positioner"] {
+  transition:
+    top 0.3s,
+    left 0.3s;
+}
+
 /* Content panels - positioned relative to nav-menu root */
 /* Note: left position is set dynamically by JS based on data-align */
 .nav-menu-content {

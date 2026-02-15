@@ -192,6 +192,12 @@ and restored to its original markup location when inactive/closed.
   position: absolute;
   top: 0;
   left: 0;
+  transition: top 0.3s, left 0.3s;
+}
+
+/* Skip initial position animation */
+[data-slot="navigation-menu-viewport-positioner"][data-instant] {
+  transition: none;
 }
 
 /* Viewport owns sizing and animation */
