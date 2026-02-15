@@ -482,6 +482,7 @@ describe("NavigationMenu", () => {
     expect(bridge.parentElement).toBe(viewportPositioner);
     expect(parseFloat(bridge.style.height)).toBeGreaterThan(0);
     expect(parseFloat(bridge.style.width)).toBeGreaterThan(0);
+    expect(parseFloat(bridge.style.top)).toBeLessThanOrEqual(0);
     expect(bridge.style.clipPath.includes("polygon(")).toBe(true);
     expect(bridge.style.transform).toBe("none");
 

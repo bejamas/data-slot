@@ -791,7 +791,16 @@ export function createNavigationMenu(
       hideHoverBridge();
       return;
     }
-    const hull = buildConvexHull(points);
+    const bridge = getOrCreateHoverBridge();
+    const bridgeHost = bridge.parentElement;
+    const renderedPoints =
+      bridgeHost && bridgeHost === viewportPortal?.container
+        ? points.map((point) => ({
+            x: point.x - viewportOffsetLeft,
+            y: point.y - viewportOffsetTop,
+          }))
+        : points;
+    const hull = buildConvexHull(renderedPoints);
     if (hull.length < 3) {
       hideHoverBridge();
       return;
@@ -805,7 +814,6 @@ export function createNavigationMenu(
     const normalize = (point: Point) =>
       `${((point.x - minX) / width) * 100}% ${((point.y - minY) / height) * 100}%`;
 
-    const bridge = getOrCreateHoverBridge();
     bridge.style.display = "block";
     bridge.style.transform = "none";
     bridge.style.bottom = "auto";
