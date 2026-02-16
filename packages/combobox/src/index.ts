@@ -53,7 +53,7 @@ export interface ComboboxOptions {
   autoHighlight?: boolean;
   /** Custom filter function. Return true to show item. */
   filter?: (inputValue: string, itemValue: string, itemLabel: string) => boolean;
-  /** Custom text resolver for the selected value shown in the input */
+  /** Custom text resolver for committed selected-value text (input in inline mode, combobox-value in popup-input mode) */
   itemToStringValue?: ComboboxItemToStringValue;
 
   // Positioning props
@@ -113,6 +113,7 @@ export function createCombobox(
   const content = getPart<HTMLElement>(root, "combobox-content");
   const list = getPart<HTMLElement>(root, "combobox-list") ?? getPart<HTMLElement>(content ?? root, "combobox-list");
   const trigger = getPart<HTMLElement>(root, "combobox-trigger");
+  const valueSlot = getPart<HTMLElement>(root, "combobox-value");
   const emptySlot = getPart<HTMLElement>(list ?? content ?? root, "combobox-empty");
   const authoredPositionerCandidate = getPart<HTMLElement>(root, "combobox-positioner");
   const authoredPositioner =
@@ -128,6 +129,8 @@ export function createCombobox(
   if (!input || !content) {
     throw new Error("Combobox requires combobox-input and combobox-content slots");
   }
+  const isPopupInputMode = content.contains(input);
+  const valueSlotPlaceholder = valueSlot?.textContent?.trim() ?? "";
 
   // Resolve options: JS > data-* > defaults
   const defaultValue = options.defaultValue ?? getDataString(root, "defaultValue") ?? null;
@@ -298,6 +301,13 @@ export function createCombobox(
   // Placeholder
   if (placeholder) {
     input.placeholder = placeholder;
+  }
+  if (valueSlot) {
+    valueSlot.textContent = valueSlotPlaceholder || placeholder;
+    if (valueSlot.textContent.trim().length > 0) {
+      valueSlot.setAttribute("data-placeholder", "");
+      trigger?.setAttribute("data-placeholder", "");
+    }
   }
 
   // Form integration: strip name from visible input, create hidden input
@@ -532,6 +542,11 @@ export function createCombobox(
       cacheItems();
       keyboardMode = false;
 
+      // In popup-input mode, input text is transient search and should start empty on open.
+      if (isPopupInputMode) {
+        input.value = "";
+      }
+
       // Apply current filter
       applyFilter(input.value);
 
@@ -561,9 +576,13 @@ export function createCombobox(
       positionSync.stop();
       presence.exit();
 
-      // Restore input text to committed value's label
-      const committedLabel = getLabelForValue(currentValue);
-      input.value = committedLabel;
+      if (isPopupInputMode) {
+        input.value = "";
+      } else {
+        // Restore input text to committed value's label
+        const committedLabel = getLabelForValue(currentValue);
+        input.value = committedLabel;
+      }
 
       if (!skipFocusRestore) {
         // Keep focus on input
@@ -607,8 +626,32 @@ export function createCombobox(
       }
     }
 
-    // Sync input text to value's label
-    input.value = getLabelForValue(value);
+    const resolvedLabel = getLabelForValue(value);
+    if (!isPopupInputMode) {
+      input.value = resolvedLabel;
+    }
+    if (valueSlot) {
+      if (value === null) {
+        valueSlot.textContent = valueSlotPlaceholder || placeholder;
+        if ((valueSlot.textContent ?? "").trim().length > 0) {
+          valueSlot.setAttribute("data-placeholder", "");
+          trigger?.setAttribute("data-placeholder", "");
+        } else {
+          valueSlot.removeAttribute("data-placeholder");
+          trigger?.removeAttribute("data-placeholder");
+        }
+      } else {
+        valueSlot.textContent = resolvedLabel;
+        valueSlot.removeAttribute("data-placeholder");
+        trigger?.removeAttribute("data-placeholder");
+      }
+    } else if (trigger) {
+      if (value === null) {
+        trigger.setAttribute("data-placeholder", "");
+      } else {
+        trigger.removeAttribute("data-placeholder");
+      }
+    }
 
     if (!init && oldValue !== value) {
       emit(root, "combobox:change", { value });
@@ -832,7 +875,7 @@ export function createCombobox(
       }
       if (detail?.itemToStringValue !== undefined) {
         itemToStringValue = detail.itemToStringValue;
-        input.value = getLabelForValue(currentValue);
+        updateValue(currentValue, true);
       }
     })
   );
@@ -847,7 +890,7 @@ export function createCombobox(
     close: () => updateOpenState(false),
     setItemToStringValue: (nextItemToStringValue: ComboboxItemToStringValue | null) => {
       itemToStringValue = nextItemToStringValue;
-      input.value = getLabelForValue(currentValue);
+      updateValue(currentValue, true);
     },
     destroy: () => {
       isDestroyed = true;

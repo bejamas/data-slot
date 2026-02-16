@@ -35,6 +35,34 @@ describe("Combobox", () => {
     return { root, input, triggerBtn, content, list, items, emptySlot, controller };
   };
 
+  const setupPopupInput = (options: Parameters<typeof createCombobox>[1] = {}) => {
+    document.body.innerHTML = `
+      <div data-slot="combobox" id="root">
+        <button data-slot="combobox-trigger">
+          <span data-slot="combobox-value">Select country...</span>
+        </button>
+        <div data-slot="combobox-content" hidden>
+          <input data-slot="combobox-input" placeholder="Search countries..." />
+          <div data-slot="combobox-list">
+            <div data-slot="combobox-item" data-value="brazil">Brazil</div>
+            <div data-slot="combobox-item" data-value="canada">Canada</div>
+            <div data-slot="combobox-item" data-value="france">France</div>
+          </div>
+        </div>
+      </div>
+    `;
+    const root = document.getElementById("root")!;
+    const input = root.querySelector('[data-slot="combobox-input"]') as HTMLInputElement;
+    const triggerBtn = root.querySelector('[data-slot="combobox-trigger"]') as HTMLElement;
+    const valueSlot = root.querySelector('[data-slot="combobox-value"]') as HTMLElement;
+    const content = root.querySelector('[data-slot="combobox-content"]') as HTMLElement;
+    const list = root.querySelector('[data-slot="combobox-list"]') as HTMLElement;
+    const items = root.querySelectorAll('[data-slot="combobox-item"]') as NodeListOf<HTMLElement>;
+    const controller = createCombobox(root, options);
+
+    return { root, input, triggerBtn, valueSlot, content, list, items, controller };
+  };
+
   const waitForRaf = () =>
     new Promise<void>((resolve) => {
       requestAnimationFrame(() => resolve());
@@ -453,6 +481,56 @@ describe("Combobox", () => {
 
       controller.close();
       expect(input.value).toBe("");
+      controller.destroy();
+    });
+  });
+
+  describe("popup-input mode", () => {
+    it("updates combobox-value on selection", () => {
+      const { valueSlot, input, items, controller } = setupPopupInput();
+      expect(valueSlot.textContent).toBe("Select country...");
+
+      controller.open();
+      items[1]?.click(); // Canada
+
+      expect(controller.value).toBe("canada");
+      expect(valueSlot.textContent).toBe("Canada");
+      expect(input.value).toBe("");
+      controller.destroy();
+    });
+
+    it("clears input each time popup opens", () => {
+      const { input, items, controller } = setupPopupInput();
+      controller.open();
+      items[1]?.click(); // Canada
+      input.value = "stale filter";
+
+      controller.open();
+      expect(input.value).toBe("");
+      controller.destroy();
+    });
+
+    it("keeps input empty on close while preserving selected value", () => {
+      const { input, controller } = setupPopupInput({ defaultValue: "canada" });
+      controller.open();
+      input.value = "ca";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+
+      controller.close();
+      expect(controller.value).toBe("canada");
+      expect(input.value).toBe("");
+      controller.destroy();
+    });
+
+    it("uses itemToStringValue for combobox-value text", () => {
+      const { valueSlot, controller } = setupPopupInput();
+
+      controller.setItemToStringValue((_item, value) =>
+        value ? `Selected: ${value}` : ""
+      );
+      controller.select("france");
+
+      expect(valueSlot.textContent).toBe("Selected: france");
       controller.destroy();
     });
   });

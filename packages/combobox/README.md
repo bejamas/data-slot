@@ -64,6 +64,7 @@ controller.destroy();
 | `combobox` | Root container |
 | `combobox-input` | Text input for filtering |
 | `combobox-trigger` | Optional button that toggles the popup |
+| `combobox-value` | Optional selected-value text target (typically inside `combobox-trigger`) |
 | `combobox-content` | Popup container |
 | `combobox-list` | Scrollable list wrapper |
 | `combobox-item` | Individual selectable option |
@@ -87,6 +88,27 @@ controller.destroy();
   </div>
 </div>
 ```
+
+### Popup-Input Composition (Optional)
+
+Use this when you want a trigger with committed value text and a separate search input inside the popup.
+
+```html
+<div data-slot="combobox">
+  <button data-slot="combobox-trigger">
+    <span data-slot="combobox-value">Select country...</span>
+  </button>
+  <div data-slot="combobox-content" hidden>
+    <input data-slot="combobox-input" placeholder="Search countries..." />
+    <div data-slot="combobox-list">...</div>
+  </div>
+</div>
+```
+
+In popup-input mode (`combobox-input` inside `combobox-content`):
+- Selection text is synced to `combobox-value`.
+- Search input is cleared each time the popup opens.
+- Closing keeps the popup input empty.
 
 ### Native Label Support
 
@@ -118,7 +140,7 @@ Options can be passed via JavaScript or data attributes (JS takes precedence).
 | `openOnFocus` | `data-open-on-focus` | `boolean` | `true` | Open popup when input is focused |
 | `autoHighlight` | `data-auto-highlight` | `boolean` | `false` | Auto-highlight first visible item after non-whitespace query input |
 | `filter` | - | `function` | substring | Custom filter function |
-| `itemToStringValue` | - | `(item: HTMLElement \| null, value: string \| null) => string` | item label | Custom text resolver for selected value shown in input |
+| `itemToStringValue` | - | `(item: HTMLElement \| null, value: string \| null) => string` | item label | Custom text resolver for committed selected-value text (input in inline mode, `combobox-value` in popup-input mode) |
 | `side` | `data-side` | `"top" \| "bottom"` | `"bottom"` | Popup placement |
 | `align` | `data-align` | `"start" \| "center" \| "end"` | `"start"` | Popup alignment |
 | `sideOffset` | `data-side-offset` | `number` | `4` | Distance from input (px) |
