@@ -27,6 +27,26 @@ describe('Collapsible', () => {
     await waitForRaf()
   }
 
+  const mockScrollSize = (element: HTMLElement, initialHeight: number, initialWidth: number) => {
+    let height = initialHeight
+    let width = initialWidth
+
+    Object.defineProperty(element, 'scrollHeight', {
+      configurable: true,
+      get: () => height,
+    })
+
+    Object.defineProperty(element, 'scrollWidth', {
+      configurable: true,
+      get: () => width,
+    })
+
+    return (nextHeight: number, nextWidth: number) => {
+      height = nextHeight
+      width = nextWidth
+    }
+  }
+
   it('initializes with content hidden by default', () => {
     const { content, controller } = setup()
     expect(content.hidden).toBe(true)
@@ -52,6 +72,110 @@ describe('Collapsible', () => {
     expect(content.getAttribute('hidden')).toBe('until-found')
 
     controller2.destroy()
+  })
+
+  it('initializes panel size variables to 0px when closed', () => {
+    const { content, controller } = setup()
+
+    expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('0px')
+    expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('0px')
+
+    controller.destroy()
+  })
+
+  it('measures panel size variables when initially open', () => {
+    document.body.innerHTML = `
+      <div data-slot="collapsible" id="root">
+        <button data-slot="collapsible-trigger">Toggle</button>
+        <div data-slot="collapsible-content">Content here</div>
+      </div>
+    `
+
+    const root = document.getElementById('root')!
+    const content = root.querySelector('[data-slot="collapsible-content"]') as HTMLElement
+    mockScrollSize(content, 120, 240)
+
+    const controller = createCollapsible(root, { defaultOpen: true })
+
+    expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('120px')
+    expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('240px')
+
+    controller.destroy()
+  })
+
+  it('keeps measured panel vars through close transition then resets after exit', async () => {
+    const { content, controller } = setup()
+    const setSize = mockScrollSize(content, 80, 160)
+
+    controller.open()
+    expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('80px')
+    expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('160px')
+
+    setSize(96, 180)
+    controller.close()
+
+    expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('96px')
+    expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('180px')
+
+    await waitForExit()
+
+    expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('0px')
+    expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('0px')
+
+    controller.destroy()
+  })
+
+  it('updates panel size vars when ResizeObserver fires while open', () => {
+    const OriginalResizeObserver = globalThis.ResizeObserver
+    let resizeCallback: ResizeObserverCallback | null = null
+
+    class MockResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback
+      }
+
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    }
+
+    ;(globalThis as unknown as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver =
+      MockResizeObserver as unknown as typeof ResizeObserver
+
+    try {
+      document.body.innerHTML = `
+        <div data-slot="collapsible" id="root">
+          <button data-slot="collapsible-trigger">Toggle</button>
+          <div data-slot="collapsible-content">Content here</div>
+        </div>
+      `
+
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="collapsible-content"]') as HTMLElement
+      const setSize = mockScrollSize(content, 100, 200)
+
+      const controller = createCollapsible(root, { defaultOpen: true })
+
+      expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('100px')
+      expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('200px')
+
+      setSize(140, 260)
+      if (resizeCallback) {
+        resizeCallback([], {} as ResizeObserver)
+      }
+
+      expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('140px')
+      expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('260px')
+
+      controller.destroy()
+    } finally {
+      if (OriginalResizeObserver) {
+        ;(globalThis as unknown as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver =
+          OriginalResizeObserver
+      } else {
+        delete (globalThis as unknown as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver
+      }
+    }
   })
 
   it('opens and closes on trigger click', async () => {

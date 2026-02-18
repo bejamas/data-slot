@@ -134,6 +134,24 @@ Use `data-state` attributes for CSS styling (available on both root and content)
 }
 ```
 
+## CSS Variables
+
+The content element exposes size variables you can use for dimension animations:
+
+| Variable | Description |
+|----------|-------------|
+| `--collapsible-panel-height` | The measured panel height |
+| `--collapsible-panel-width` | The measured panel width |
+
+Example:
+
+```css
+[data-slot="collapsible-content"] {
+  height: var(--collapsible-panel-height);
+  width: var(--collapsible-panel-width);
+}
+```
+
 ## Find-in-Page Support
 
 Enable `hiddenUntilFound` (or `data-hidden-until-found`) to close panels with

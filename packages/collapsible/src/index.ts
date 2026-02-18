@@ -70,6 +70,7 @@ export function createCollapsible(
 
   let isOpen = defaultOpen;
   const cleanups: Array<() => void> = [];
+  let sizeObserver: ResizeObserver | null = null;
 
   // Setup ARIA
   const contentId = ensureId(content, "collapsible-content");
@@ -83,6 +84,15 @@ export function createCollapsible(
     content.setAttribute("data-state", state);
   };
 
+  const setPanelSizeVars = (height: number, width: number) => {
+    content.style.setProperty("--collapsible-panel-height", `${height}px`);
+    content.style.setProperty("--collapsible-panel-width", `${width}px`);
+  };
+
+  const syncPanelSizeVars = () => {
+    setPanelSizeVars(content.scrollHeight, content.scrollWidth);
+  };
+
   const applyOpenVisibility = () => {
     content.removeAttribute("hidden");
   };
@@ -93,6 +103,7 @@ export function createCollapsible(
     } else {
       content.hidden = true;
     }
+    setPanelSizeVars(0, 0);
   };
 
   const presence = createPresenceLifecycle({
@@ -111,8 +122,10 @@ export function createCollapsible(
 
     if (isOpen) {
       applyOpenVisibility();
+      syncPanelSizeVars();
       presence.enter();
     } else {
+      syncPanelSizeVars();
       presence.exit();
     }
 
@@ -124,10 +137,20 @@ export function createCollapsible(
   setAria(trigger, "expanded", isOpen);
   if (isOpen) {
     applyOpenVisibility();
+    syncPanelSizeVars();
   } else {
     applyClosedVisibility();
   }
   setDataState(isOpen ? "open" : "closed");
+
+  if (typeof ResizeObserver !== "undefined") {
+    sizeObserver = new ResizeObserver(() => {
+      if (isOpen) {
+        syncPanelSizeVars();
+      }
+    });
+    sizeObserver.observe(content);
+  }
 
   // Event handlers - guard against disabled trigger
   cleanups.push(
@@ -179,6 +202,8 @@ export function createCollapsible(
     },
     destroy: () => {
       presence.cleanup();
+      sizeObserver?.disconnect();
+      sizeObserver = null;
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       bound.delete(root);
