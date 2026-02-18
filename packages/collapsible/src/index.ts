@@ -40,6 +40,43 @@ export interface CollapsibleController {
 // WeakSet to track bound elements
 const bound = new WeakSet<Element>();
 
+const parseTimingToMs = (value: string): number => {
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+
+  if (trimmed.endsWith("ms")) {
+    return Number.parseFloat(trimmed.slice(0, -2)) || 0;
+  }
+
+  if (trimmed.endsWith("s")) {
+    return (Number.parseFloat(trimmed.slice(0, -1)) || 0) * 1000;
+  }
+
+  return Number.parseFloat(trimmed) || 0;
+};
+
+const getMaxTimingMs = (durationsValue: string, delaysValue: string): number => {
+  const durations = durationsValue.split(",");
+  const delays = delaysValue.split(",");
+  const len = Math.max(durations.length, delays.length);
+  let max = 0;
+
+  for (let i = 0; i < len; i += 1) {
+    const duration = parseTimingToMs(durations[i] ?? durations[durations.length - 1] ?? "0");
+    const delay = parseTimingToMs(delays[i] ?? delays[delays.length - 1] ?? "0");
+    max = Math.max(max, duration + delay);
+  }
+
+  return max;
+};
+
+const getMaxPresenceDurationMs = (element: HTMLElement): number => {
+  const style = getComputedStyle(element);
+  const transitionMs = getMaxTimingMs(style.transitionDuration, style.transitionDelay);
+  const animationMs = getMaxTimingMs(style.animationDuration, style.animationDelay);
+  return Math.max(transitionMs, animationMs);
+};
+
 /**
  * Create a collapsible controller for a root element
  *
@@ -68,9 +105,14 @@ export function createCollapsible(
     throw new Error("Collapsible requires trigger and content slots");
   }
 
+  const win = root.ownerDocument?.defaultView ?? window;
   let isOpen = defaultOpen;
   const cleanups: Array<() => void> = [];
   let sizeObserver: ResizeObserver | null = null;
+  let openSettleRafId: number | null = null;
+  let openSettleTimeoutId: number | null = null;
+  let closeZeroRafId: number | null = null;
+  let openSettleCleanups: Array<() => void> = [];
 
   // Setup ARIA
   const contentId = ensureId(content, "collapsible-content");
@@ -84,13 +126,58 @@ export function createCollapsible(
     content.setAttribute("data-state", state);
   };
 
-  const setPanelSizeVars = (height: number, width: number) => {
-    content.style.setProperty("--collapsible-panel-height", `${height}px`);
-    content.style.setProperty("--collapsible-panel-width", `${width}px`);
+  const setPanelSizeVars = (height: string, width: string) => {
+    content.style.setProperty("--collapsible-panel-height", height);
+    content.style.setProperty("--collapsible-panel-width", width);
   };
 
-  const syncPanelSizeVars = () => {
-    setPanelSizeVars(content.scrollHeight, content.scrollWidth);
+  const setPanelSizePx = (height: number, width: number) => {
+    setPanelSizeVars(`${height}px`, `${width}px`);
+  };
+
+  const setPanelSizeAuto = () => {
+    setPanelSizeVars("auto", "auto");
+  };
+
+  const setPanelSizeZero = () => {
+    setPanelSizePx(0, 0);
+  };
+
+  const syncPanelSizePx = () => {
+    setPanelSizePx(content.scrollHeight, content.scrollWidth);
+  };
+
+  const hasAutoPanelSize = () => {
+    const height = content.style.getPropertyValue("--collapsible-panel-height").trim();
+    const width = content.style.getPropertyValue("--collapsible-panel-width").trim();
+    return height === "auto" && width === "auto";
+  };
+
+  const clearOpenSettleTracking = () => {
+    if (openSettleRafId !== null) {
+      win.cancelAnimationFrame(openSettleRafId);
+      openSettleRafId = null;
+    }
+
+    if (openSettleTimeoutId !== null) {
+      win.clearTimeout(openSettleTimeoutId);
+      openSettleTimeoutId = null;
+    }
+
+    openSettleCleanups.forEach((cleanup) => cleanup());
+    openSettleCleanups = [];
+  };
+
+  const clearClosePhaseTracking = () => {
+    if (closeZeroRafId !== null) {
+      win.cancelAnimationFrame(closeZeroRafId);
+      closeZeroRafId = null;
+    }
+  };
+
+  const clearSizePhaseTracking = () => {
+    clearOpenSettleTracking();
+    clearClosePhaseTracking();
   };
 
   const applyOpenVisibility = () => {
@@ -103,12 +190,60 @@ export function createCollapsible(
     } else {
       content.hidden = true;
     }
-    setPanelSizeVars(0, 0);
+    setPanelSizeZero();
+  };
+
+  const finishOpenSettle = () => {
+    clearOpenSettleTracking();
+    if (!isOpen || presence.isExiting) return;
+    setPanelSizeAuto();
+  };
+
+  const scheduleOpenSettle = () => {
+    clearOpenSettleTracking();
+
+    const maxDuration = getMaxPresenceDurationMs(content);
+
+    if (maxDuration > 0) {
+      const onEnd = (event: Event) => {
+        if (event.target !== content) return;
+        finishOpenSettle();
+      };
+
+      content.addEventListener("transitionend", onEnd);
+      content.addEventListener("animationend", onEnd);
+      openSettleCleanups.push(() => content.removeEventListener("transitionend", onEnd));
+      openSettleCleanups.push(() => content.removeEventListener("animationend", onEnd));
+
+      openSettleTimeoutId = win.setTimeout(() => {
+        openSettleTimeoutId = null;
+        finishOpenSettle();
+      }, Math.ceil(maxDuration) + 50);
+
+      return;
+    }
+
+    openSettleRafId = win.requestAnimationFrame(() => {
+      openSettleRafId = null;
+      finishOpenSettle();
+    });
+  };
+
+  const scheduleCloseToZero = () => {
+    clearClosePhaseTracking();
+
+    closeZeroRafId = win.requestAnimationFrame(() => {
+      closeZeroRafId = null;
+      if (!isOpen && presence.isExiting) {
+        setPanelSizeZero();
+      }
+    });
   };
 
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {
+      clearClosePhaseTracking();
       applyClosedVisibility();
     },
   });
@@ -121,12 +256,16 @@ export function createCollapsible(
     setDataState(isOpen ? "open" : "closed");
 
     if (isOpen) {
+      clearClosePhaseTracking();
       applyOpenVisibility();
-      syncPanelSizeVars();
+      syncPanelSizePx();
       presence.enter();
+      scheduleOpenSettle();
     } else {
-      syncPanelSizeVars();
+      clearOpenSettleTracking();
+      syncPanelSizePx();
       presence.exit();
+      scheduleCloseToZero();
     }
 
     emit(root, "collapsible:change", { open: isOpen });
@@ -137,7 +276,8 @@ export function createCollapsible(
   setAria(trigger, "expanded", isOpen);
   if (isOpen) {
     applyOpenVisibility();
-    syncPanelSizeVars();
+    syncPanelSizePx();
+    scheduleOpenSettle();
   } else {
     applyClosedVisibility();
   }
@@ -145,9 +285,9 @@ export function createCollapsible(
 
   if (typeof ResizeObserver !== "undefined") {
     sizeObserver = new ResizeObserver(() => {
-      if (isOpen) {
-        syncPanelSizeVars();
-      }
+      if (!isOpen || presence.isExiting) return;
+      if (hasAutoPanelSize()) return;
+      syncPanelSizePx();
     });
     sizeObserver.observe(content);
   }
@@ -202,6 +342,7 @@ export function createCollapsible(
     },
     destroy: () => {
       presence.cleanup();
+      clearSizePhaseTracking();
       sizeObserver?.disconnect();
       sizeObserver = null;
       cleanups.forEach((fn) => fn());

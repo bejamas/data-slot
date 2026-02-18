@@ -140,15 +140,23 @@ The content element exposes size variables you can use for dimension animations:
 
 | Variable | Description |
 |----------|-------------|
-| `--collapsible-panel-height` | The measured panel height |
-| `--collapsible-panel-width` | The measured panel width |
+| `--collapsible-panel-height` | Panel height (`auto` at open rest, measured px during transitions, `0px` when closed) |
+| `--collapsible-panel-width` | Panel width (`auto` at open rest, measured px during transitions, `0px` when closed) |
 
 Example:
 
 ```css
 [data-slot="collapsible-content"] {
+  overflow: hidden;
   height: var(--collapsible-panel-height);
   width: var(--collapsible-panel-width);
+  transition: height 0.25s ease, width 0.25s ease, opacity 0.2s ease;
+}
+
+[data-slot="collapsible-content"][data-starting-style],
+[data-slot="collapsible-content"][data-ending-style] {
+  height: 0;
+  opacity: 0;
 }
 ```
 

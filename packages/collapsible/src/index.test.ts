@@ -103,29 +103,49 @@ describe('Collapsible', () => {
     controller.destroy()
   })
 
-  it('keeps measured panel vars through close transition then resets after exit', async () => {
+  it('switches panel size variables to auto after open settles', async () => {
+    const { content, controller } = setup()
+    mockScrollSize(content, 100, 200)
+
+    controller.open()
+    expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('100px')
+    expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('200px')
+
+    await waitForRaf()
+
+    expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('auto')
+    expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('auto')
+
+    controller.destroy()
+  })
+
+  it('freezes to px and then transitions panel size vars to 0px on close', async () => {
     const { content, controller } = setup()
     const setSize = mockScrollSize(content, 80, 160)
 
     controller.open()
-    expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('80px')
-    expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('160px')
+    await waitForRaf()
+
+    expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('auto')
+    expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('auto')
 
     setSize(96, 180)
     controller.close()
 
+    // First frame of close: freeze from auto to measured px.
     expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('96px')
     expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('180px')
 
-    await waitForExit()
+    await waitForRaf()
 
+    // Closing phase drives vars down to zero for smooth collapse.
     expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('0px')
     expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('0px')
 
     controller.destroy()
   })
 
-  it('updates panel size vars when ResizeObserver fires while open', () => {
+  it('does not override auto panel vars when ResizeObserver fires while open', async () => {
     const OriginalResizeObserver = globalThis.ResizeObserver
     let resizeCallback: ResizeObserverCallback | null = null
 
@@ -156,16 +176,18 @@ describe('Collapsible', () => {
 
       const controller = createCollapsible(root, { defaultOpen: true })
 
-      expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('100px')
-      expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('200px')
+      await waitForRaf()
+      expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('auto')
+      expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('auto')
 
       setSize(140, 260)
       if (resizeCallback) {
         resizeCallback([], {} as ResizeObserver)
       }
 
-      expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('140px')
-      expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('260px')
+      // At rest we keep auto, and let layout size itself naturally.
+      expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('auto')
+      expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('auto')
 
       controller.destroy()
     } finally {
