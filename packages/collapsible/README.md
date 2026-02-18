@@ -46,6 +46,7 @@ import { createCollapsible } from "@data-slot/collapsible";
 
 const collapsible = createCollapsible(element, {
   defaultOpen: false,
+  hiddenUntilFound: false,
   onOpenChange: (open) => console.log(open),
 });
 ```
@@ -55,6 +56,7 @@ const collapsible = createCollapsible(element, {
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `defaultOpen` | `boolean` | `false` | Initial open state |
+| `hiddenUntilFound` | `boolean` | `false` | Use `hidden="until-found"` when closed |
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes (not called on init) |
 
 ### Data Attributes
@@ -64,6 +66,7 @@ Options can also be set via data attributes on the root element. JS options take
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `data-default-open` | boolean | `false` | Initial open state |
+| `data-hidden-until-found` | boolean | `false` | Use `hidden="until-found"` when closed |
 
 Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
 
@@ -120,7 +123,21 @@ Use `data-state` attributes for CSS styling (available on both root and content)
 [data-slot="collapsible-content"][data-state="open"] {
   max-height: 500px;
 }
+
+/* Presence lifecycle markers */
+[data-slot="collapsible-content"][data-starting-style] {
+  opacity: 0;
+}
+
+[data-slot="collapsible-content"][data-ending-style] {
+  opacity: 0;
+}
 ```
+
+## Find-in-Page Support
+
+Enable `hiddenUntilFound` (or `data-hidden-until-found`) to close panels with
+`hidden="until-found"`. This allows browser find-in-page to reveal matching text.
 
 With Tailwind:
 

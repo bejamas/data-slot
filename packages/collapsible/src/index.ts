@@ -1,8 +1,22 @@
-import { getPart, getRoots, getDataBool, setAria, ensureId, on, emit } from "@data-slot/core";
+import {
+  getPart,
+  getRoots,
+  getDataBool,
+  setAria,
+  ensureId,
+  on,
+  emit,
+  createPresenceLifecycle,
+} from "@data-slot/core";
 
 export interface CollapsibleOptions {
   /** Initial open state */
   defaultOpen?: boolean;
+  /**
+   * Use hidden="until-found" when closed so browser find-in-page can reveal content.
+   * @default false
+   */
+  hiddenUntilFound?: boolean;
   /**
    * Callback when open state changes.
    * Note: Not called on initial render, only on subsequent state changes.
@@ -43,6 +57,8 @@ export function createCollapsible(
 ): CollapsibleController {
   // Resolve options with explicit precedence: JS > data-* > default
   const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
+  const hiddenUntilFound =
+    options.hiddenUntilFound ?? getDataBool(root, "hiddenUntilFound") ?? false;
   const onOpenChange = options.onOpenChange;
 
   const trigger = getPart<HTMLElement>(root, "collapsible-trigger");
@@ -67,13 +83,38 @@ export function createCollapsible(
     content.setAttribute("data-state", state);
   };
 
+  const applyOpenVisibility = () => {
+    content.removeAttribute("hidden");
+  };
+
+  const applyClosedVisibility = () => {
+    if (hiddenUntilFound) {
+      content.setAttribute("hidden", "until-found");
+    } else {
+      content.hidden = true;
+    }
+  };
+
+  const presence = createPresenceLifecycle({
+    element: content,
+    onExitComplete: () => {
+      applyClosedVisibility();
+    },
+  });
+
   const updateState = (open: boolean) => {
     if (isOpen === open) return;
 
     isOpen = open;
     setAria(trigger, "expanded", isOpen);
-    content.hidden = !isOpen;
     setDataState(isOpen ? "open" : "closed");
+
+    if (isOpen) {
+      applyOpenVisibility();
+      presence.enter();
+    } else {
+      presence.exit();
+    }
 
     emit(root, "collapsible:change", { open: isOpen });
     onOpenChange?.(isOpen);
@@ -81,7 +122,11 @@ export function createCollapsible(
 
   // Initialize state
   setAria(trigger, "expanded", isOpen);
-  content.hidden = !isOpen;
+  if (isOpen) {
+    applyOpenVisibility();
+  } else {
+    applyClosedVisibility();
+  }
   setDataState(isOpen ? "open" : "closed");
 
   // Event handlers - guard against disabled trigger
@@ -95,6 +140,14 @@ export function createCollapsible(
       updateState(!isOpen);
     })
   );
+
+  if (hiddenUntilFound) {
+    cleanups.push(
+      on(content, "beforematch", () => {
+        if (!isOpen) updateState(true);
+      })
+    );
+  }
 
   // Inbound event - blocked when trigger is disabled (consistent with click behavior)
   cleanups.push(
@@ -125,6 +178,7 @@ export function createCollapsible(
       return isOpen;
     },
     destroy: () => {
+      presence.cleanup();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       bound.delete(root);

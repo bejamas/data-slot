@@ -17,6 +17,16 @@ describe('Collapsible', () => {
     return { root, trigger, content, controller }
   }
 
+  const waitForRaf = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve())
+    })
+
+  const waitForExit = async () => {
+    await waitForRaf()
+    await waitForRaf()
+  }
+
   it('initializes with content hidden by default', () => {
     const { content, controller } = setup()
     expect(content.hidden).toBe(true)
@@ -31,7 +41,20 @@ describe('Collapsible', () => {
     controller.destroy()
   })
 
-  it('opens and closes on trigger click', () => {
+  it('initializes with hidden="until-found" when hiddenUntilFound is enabled', () => {
+    const { content, controller } = setup()
+    controller.destroy()
+
+    const root = document.getElementById('root')!
+    const controller2 = createCollapsible(root, { hiddenUntilFound: true })
+
+    expect(controller2.isOpen).toBe(false)
+    expect(content.getAttribute('hidden')).toBe('until-found')
+
+    controller2.destroy()
+  })
+
+  it('opens and closes on trigger click', async () => {
     const { trigger, content, controller } = setup()
 
     trigger.click()
@@ -39,10 +62,69 @@ describe('Collapsible', () => {
     expect(controller.isOpen).toBe(true)
 
     trigger.click()
-    expect(content.hidden).toBe(true)
     expect(controller.isOpen).toBe(false)
+    await waitForExit()
+    expect(content.hidden).toBe(true)
 
     controller.destroy()
+  })
+
+  it('sets data-starting-style on open and clears it on next frame', async () => {
+    const { content, controller } = setup()
+
+    controller.open()
+    expect(content.hasAttribute('data-starting-style')).toBe(true)
+
+    await waitForRaf()
+    expect(content.hasAttribute('data-starting-style')).toBe(false)
+
+    controller.destroy()
+  })
+
+  it('sets data-ending-style on close and hides after exit completes', async () => {
+    const { content, controller } = setup(true)
+
+    controller.close()
+    expect(content.hasAttribute('data-ending-style')).toBe(true)
+    expect(content.hidden).toBe(false)
+
+    await waitForExit()
+    expect(content.hasAttribute('data-ending-style')).toBe(false)
+    expect(content.hidden).toBe(true)
+
+    controller.destroy()
+  })
+
+  it('opens on beforematch when hiddenUntilFound is enabled', () => {
+    const { root, content, controller } = setup()
+    controller.destroy()
+
+    const controller2 = createCollapsible(root, { hiddenUntilFound: true })
+    expect(controller2.isOpen).toBe(false)
+    expect(content.getAttribute('hidden')).toBe('until-found')
+
+    content.dispatchEvent(new Event('beforematch', { bubbles: true }))
+
+    expect(controller2.isOpen).toBe(true)
+    expect(content.hasAttribute('hidden')).toBe(false)
+
+    controller2.destroy()
+  })
+
+  it('applies hidden="until-found" again after closing', async () => {
+    const { root, content, controller } = setup()
+    controller.destroy()
+
+    const controller2 = createCollapsible(root, { hiddenUntilFound: true })
+
+    controller2.open()
+    expect(content.hasAttribute('hidden')).toBe(false)
+
+    controller2.close()
+    await waitForExit()
+    expect(content.getAttribute('hidden')).toBe('until-found')
+
+    controller2.destroy()
   })
 
   it('sets aria-expanded on trigger', () => {
@@ -284,6 +366,22 @@ describe('Collapsible', () => {
       controller.destroy()
     })
 
+    it('data-hidden-until-found sets hidden="until-found" when closed', () => {
+      document.body.innerHTML = `
+        <div data-slot="collapsible" id="root" data-hidden-until-found>
+          <button data-slot="collapsible-trigger">Toggle</button>
+          <div data-slot="collapsible-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="collapsible-content"]') as HTMLElement
+      const controller = createCollapsible(root)
+
+      expect(content.getAttribute('hidden')).toBe('until-found')
+
+      controller.destroy()
+    })
+
     it("JS option overrides data attribute", () => {
       document.body.innerHTML = `
         <div data-slot="collapsible" id="root" data-default-open>
@@ -296,6 +394,23 @@ describe('Collapsible', () => {
       const controller = createCollapsible(root, { defaultOpen: false })
 
       expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('JS hiddenUntilFound option overrides data-hidden-until-found', () => {
+      document.body.innerHTML = `
+        <div data-slot="collapsible" id="root" data-hidden-until-found>
+          <button data-slot="collapsible-trigger">Toggle</button>
+          <div data-slot="collapsible-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="collapsible-content"]') as HTMLElement
+      const controller = createCollapsible(root, { hiddenUntilFound: false })
+
+      expect(content.getAttribute('hidden')).toBe('')
+      expect(content.getAttribute('hidden')).not.toBe('until-found')
 
       controller.destroy()
     })
