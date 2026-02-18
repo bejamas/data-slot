@@ -215,10 +215,13 @@ describe('Collapsible', () => {
     controller.destroy()
   })
 
-  it('sets data-starting-style on open and clears it on next frame', async () => {
+  it('sets data-starting-style on open and clears it after bootstrap frames', async () => {
     const { content, controller } = setup()
 
     controller.open()
+    expect(content.hasAttribute('data-starting-style')).toBe(true)
+
+    await waitForRaf()
     expect(content.hasAttribute('data-starting-style')).toBe(true)
 
     await waitForRaf()

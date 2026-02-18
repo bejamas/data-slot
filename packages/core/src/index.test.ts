@@ -1291,6 +1291,28 @@ describe('core/popup', () => {
     const originalGetComputedStyle = window.getComputedStyle
     let exited = 0
 
+    const rafCallbacks = new Map<number, FrameRequestCallback>()
+    let rafId = 0
+    const testWin = {
+      ...window,
+      requestAnimationFrame: ((callback: FrameRequestCallback) => {
+        rafId += 1
+        rafCallbacks.set(rafId, callback)
+        return rafId
+      }) as typeof window.requestAnimationFrame,
+      cancelAnimationFrame: ((id: number) => {
+        rafCallbacks.delete(id)
+      }) as typeof window.cancelAnimationFrame,
+      setTimeout: window.setTimeout.bind(window),
+      clearTimeout: window.clearTimeout.bind(window),
+    } as Window
+
+    const flushOneRaf = () => {
+      const pending = [...rafCallbacks.values()]
+      rafCallbacks.clear()
+      pending.forEach((callback) => callback(window.performance.now()))
+    }
+
     Object.defineProperty(window, 'getComputedStyle', {
       configurable: true,
       value: ((el: Element) => {
@@ -1307,6 +1329,7 @@ describe('core/popup', () => {
     try {
       const presence = createPresenceLifecycle({
         element: content,
+        win: testWin,
         onExitComplete: () => {
           exited += 1
         },
@@ -1315,7 +1338,10 @@ describe('core/popup', () => {
       presence.enter()
       expect(content.hasAttribute('data-starting-style')).toBe(true)
 
-      await waitForRaf()
+      flushOneRaf()
+      expect(content.hasAttribute('data-starting-style')).toBe(true)
+
+      flushOneRaf()
       expect(content.hasAttribute('data-starting-style')).toBe(false)
 
       presence.exit()

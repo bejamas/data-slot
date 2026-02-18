@@ -859,6 +859,7 @@ export function createPresenceLifecycle(options: PresenceLifecycleOptions): Pres
   const win = options.win ?? window;
   let exiting = false;
   let enterRafId: number | null = null;
+  let enterRafId2: number | null = null;
   let exitRafId: number | null = null;
   let exitTimeoutId: number | null = null;
   let exitCleanups: Array<() => void> = [];
@@ -887,6 +888,10 @@ export function createPresenceLifecycle(options: PresenceLifecycleOptions): Pres
       win.cancelAnimationFrame(enterRafId);
       enterRafId = null;
     }
+    if (enterRafId2 !== null) {
+      win.cancelAnimationFrame(enterRafId2);
+      enterRafId2 = null;
+    }
     options.element.removeAttribute("data-starting-style");
   };
 
@@ -908,7 +913,10 @@ export function createPresenceLifecycle(options: PresenceLifecycleOptions): Pres
       options.element.setAttribute("data-starting-style", "");
       enterRafId = win.requestAnimationFrame(() => {
         enterRafId = null;
-        options.element.removeAttribute("data-starting-style");
+        enterRafId2 = win.requestAnimationFrame(() => {
+          enterRafId2 = null;
+          options.element.removeAttribute("data-starting-style");
+        });
       });
     },
     exit: () => {
