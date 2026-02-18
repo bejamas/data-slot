@@ -224,6 +224,74 @@ describe('Tabs', () => {
     controller.destroy()
   })
 
+  it('does not set data-activation-direction on init', () => {
+    const { panels, controller } = setup('two')
+
+    panels.forEach((panel) => {
+      expect(panel.hasAttribute('data-activation-direction')).toBe(false)
+    })
+
+    controller.destroy()
+  })
+
+  it('sets horizontal data-activation-direction on panel changes', () => {
+    const { panels, controller } = setup('one')
+
+    controller.select('three')
+    panels.forEach((panel) => {
+      expect(panel.getAttribute('data-activation-direction')).toBe('right')
+    })
+
+    controller.select('one')
+    panels.forEach((panel) => {
+      expect(panel.getAttribute('data-activation-direction')).toBe('left')
+    })
+
+    controller.destroy()
+  })
+
+  it('sets vertical data-activation-direction on panel changes', () => {
+    document.body.innerHTML = `
+      <div data-slot="tabs" id="root" data-orientation="vertical">
+        <div data-slot="tabs-list">
+          <button data-slot="tabs-trigger" data-value="one">One</button>
+          <button data-slot="tabs-trigger" data-value="two">Two</button>
+          <button data-slot="tabs-trigger" data-value="three">Three</button>
+        </div>
+        <div data-slot="tabs-content" data-value="one">Content One</div>
+        <div data-slot="tabs-content" data-value="two">Content Two</div>
+        <div data-slot="tabs-content" data-value="three">Content Three</div>
+      </div>
+    `
+
+    const root = document.getElementById('root')!
+    const panels = [...root.querySelectorAll('[data-slot="tabs-content"]')] as HTMLElement[]
+    const controller = createTabs(root)
+
+    controller.select('three')
+    panels.forEach((panel) => {
+      expect(panel.getAttribute('data-activation-direction')).toBe('down')
+    })
+
+    controller.select('one')
+    panels.forEach((panel) => {
+      expect(panel.getAttribute('data-activation-direction')).toBe('up')
+    })
+
+    controller.destroy()
+  })
+
+  it('does not set data-activation-direction when selecting the same tab', () => {
+    const { panels, controller } = setup('two')
+
+    controller.select('two')
+    panels.forEach((panel) => {
+      expect(panel.hasAttribute('data-activation-direction')).toBe(false)
+    })
+
+    controller.destroy()
+  })
+
   it('emits tabs:change event', () => {
     const { root, controller } = setup()
 

@@ -133,6 +133,25 @@ Options can also be set via data attributes on the root element. JS options take
 }
 ```
 
+### Panel Activation Direction
+
+Panels receive `data-activation-direction` after tab changes (not on initial mount):
+
+- Horizontal: `left`, `right`
+- Vertical: `up`, `down`
+
+Use it for directional content animations:
+
+```css
+[data-slot="tabs-content"][data-activation-direction="right"] {
+  animation: slide-in-from-right 200ms ease;
+}
+
+[data-slot="tabs-content"][data-activation-direction="left"] {
+  animation: slide-in-from-left 200ms ease;
+}
+```
+
 ### Animated Indicator
 
 The indicator receives CSS variables for positioning:

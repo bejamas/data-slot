@@ -201,6 +201,19 @@ export function createTabs(
   };
 
   // Unified state application
+  const getActivationDirection = (
+    previousValue: string,
+    nextValue: string,
+  ): "left" | "right" | "up" | "down" | null => {
+    const previousIndex = items.findIndex((item) => item.value === previousValue);
+    const nextIndex = items.findIndex((item) => item.value === nextValue);
+    if (previousIndex < 0 || nextIndex < 0 || previousIndex === nextIndex) return null;
+    if (orientation === "vertical") {
+      return nextIndex > previousIndex ? "down" : "up";
+    }
+    return nextIndex > previousIndex ? "right" : "left";
+  };
+
   const applyState = (value: string, init = false) => {
     value = value.trim();
     if (currentValue === value && !init) return;
@@ -214,7 +227,12 @@ export function createTabs(
       } else return;
     }
 
-    const changed = currentValue !== value;
+    const previousValue = currentValue;
+    const changed = previousValue !== value;
+    const activationDirection =
+      !init && changed
+        ? getActivationDirection(previousValue, value)
+        : null;
     currentValue = value;
 
     for (const item of items) {
@@ -230,6 +248,11 @@ export function createTabs(
       const isSelected = v === value;
       panel.hidden = !isSelected;
       panel.dataset["state"] = isSelected ? "active" : "inactive";
+      if (activationDirection) {
+        panel.dataset["activationDirection"] = activationDirection;
+      } else {
+        delete panel.dataset["activationDirection"];
+      }
     }
 
     root.setAttribute("data-value", value);
