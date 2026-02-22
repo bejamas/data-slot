@@ -394,6 +394,11 @@ html {
   animation: tooltip-out 100ms ease-in forwards;
 }
 
+.tooltip-content[data-instant] {
+  transition: none;
+  animation: none;
+}
+
 .tooltip-content[data-side="top"] {
   --tooltip-slide-y: 4px;
 }
@@ -655,6 +660,11 @@ html {
 .hover-card-content[data-closed] {
   pointer-events: none;
   animation: hover-card-out 120ms ease-in forwards;
+}
+
+.hover-card-content[data-instant] {
+  transition: none;
+  animation: none;
 }
 
 @keyframes hover-card-in {
@@ -1058,6 +1068,11 @@ html.mode-tailwind .preview-css {
   animation: tooltip-out 100ms ease-in forwards;
 }
 
+.preview-tailwind [data-slot="tooltip-content"][data-instant] {
+  transition: none;
+  animation: none;
+}
+
 /* Popover: fade + zoom using open/closed state */
 .preview-tailwind [data-slot="popover-content"] {
   transform-origin: var(--transform-origin, center);
@@ -1124,6 +1139,11 @@ html.mode-tailwind .preview-css {
 .preview-tailwind [data-slot="hover-card-content"][data-closed] {
   pointer-events: none;
   animation: hover-card-out 120ms ease-in forwards;
+}
+
+.preview-tailwind [data-slot="hover-card-content"][data-instant] {
+  transition: none;
+  animation: none;
 }
 
 /* Collapsible: allow grid height animation */

@@ -52,6 +52,10 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
     visibility: visible;
     animation: tooltip-out 100ms ease-in forwards;
   }
+  .tooltip-content[data-instant] {
+    transition: none;
+    animation: none;
+  }
   @keyframes tooltip-in {
     from {
       opacity: 0;
@@ -101,6 +105,7 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
            bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50
            opacity-0 pointer-events-none transition-opacity duration-150
            data-[open]:opacity-100 data-[open]:pointer-events-auto
+           data-[instant]:transition-none data-[instant]:[animation:none]
            after:content-[''] after:absolute after:top-full after:left-1/2
            after:-translate-x-1/2 after:border-[6px] after:border-transparent
            after:border-t-gray-900"
@@ -148,7 +153,7 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
       <div
         data-slot="tooltip-content"
         data-side="top"
-        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-t-gray-900"
+        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none] after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-t-gray-900"
       >
         Side: top (default)
       </div>
@@ -163,7 +168,7 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
       <div
         data-slot="tooltip-content"
         data-side="bottom"
-        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto after:content-[''] after:absolute after:bottom-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-b-gray-900"
+        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none] after:content-[''] after:absolute after:bottom-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-b-gray-900"
       >
         Side: bottom
       </div>
@@ -178,7 +183,7 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
       <div
         data-slot="tooltip-content"
         data-side="left"
-        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto after:content-[''] after:absolute after:left-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-l-gray-900"
+        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none] after:content-[''] after:absolute after:left-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-l-gray-900"
       >
         Side: left
       </div>
@@ -193,7 +198,7 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
       <div
         data-slot="tooltip-content"
         data-side="right"
-        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto after:content-[''] after:absolute after:right-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-r-gray-900"
+        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none] after:content-[''] after:absolute after:right-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-r-gray-900"
       >
         Side: right
       </div>

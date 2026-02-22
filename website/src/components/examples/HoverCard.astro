@@ -55,6 +55,10 @@ const cssCode = `<div data-slot="hover-card" data-delay="180" data-close-delay="
     pointer-events: none;
     animation: hover-card-out 120ms ease-in forwards;
   }
+  .hover-card-content[data-instant] {
+    transition: none;
+    animation: none;
+  }
   @keyframes hover-card-in {
     from {
       opacity: 0;
@@ -171,7 +175,12 @@ const tailwindCode = `<div data-slot="hover-card" data-delay="180" data-close-de
 [data-slot="hover-card-content"][data-closed] {
   pointer-events: none;
   animation: hover-card-out 120ms ease-in forwards;
-}`;
+}
+[data-slot="hover-card-content"][data-instant] {
+  transition: none;
+  animation: none;
+}
+`;
 ---
 
 <ExampleBlock label="base-ui style delays: data-delay + data-close-delay">

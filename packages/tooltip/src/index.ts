@@ -147,6 +147,7 @@ export function createTooltip(
     8;
 
   let isOpen = false;
+  let isInstantOpen = false;
   let hasFocus = false;
   let isDestroyed = false;
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -181,6 +182,19 @@ export function createTooltip(
       if (positioner !== content) {
         positioner.setAttribute("data-open", "");
       }
+      if (isInstantOpen) {
+        root.setAttribute("data-instant", "");
+        content.setAttribute("data-instant", "");
+        if (positioner !== content) {
+          positioner.setAttribute("data-instant", "");
+        }
+      } else {
+        root.removeAttribute("data-instant");
+        content.removeAttribute("data-instant");
+        if (positioner !== content) {
+          positioner.removeAttribute("data-instant");
+        }
+      }
       root.removeAttribute("data-closed");
       content.removeAttribute("data-closed");
       if (positioner !== content) {
@@ -193,6 +207,11 @@ export function createTooltip(
     content.setAttribute("data-closed", "");
     if (positioner !== content) {
       positioner.setAttribute("data-closed", "");
+    }
+    root.removeAttribute("data-instant");
+    content.removeAttribute("data-instant");
+    if (positioner !== content) {
+      positioner.removeAttribute("data-instant");
     }
     root.removeAttribute("data-open");
     content.removeAttribute("data-open");
@@ -252,26 +271,28 @@ export function createTooltip(
   const isTriggerDisabled = (): boolean =>
     trigger.hasAttribute("disabled") || trigger.getAttribute("aria-disabled") === "true";
 
-  const updateState = (open: boolean, reason: TooltipReason) => {
+  const updateState = (open: boolean, reason: TooltipReason, instant = false) => {
     if (isOpen === open) return;
 
     if (!open && isOpen && skipDelayDuration > 0) {
       globalWarmUntil = Date.now() + skipDelayDuration;
     }
 
+    isInstantOpen = open ? instant : false;
     isOpen = open;
-    setDataState(isOpen ? "open" : "closed");
 
     if (isOpen) {
       trigger.setAttribute("aria-describedby", contentId);
       content.setAttribute("aria-hidden", "false");
       portal.mount();
       content.hidden = false;
+      setDataState("open");
       presence.enter();
       updatePosition();
       positionSync.start();
       positionSync.update();
     } else {
+      setDataState("closed");
       trigger.removeAttribute("aria-describedby");
       content.setAttribute("aria-hidden", "true");
       presence.exit();
@@ -291,7 +312,7 @@ export function createTooltip(
 
     // Skip delay if we're within the "warm" window (recently closed a tooltip)
     if (Date.now() < globalWarmUntil) {
-      updateState(true, reason);
+      updateState(true, reason, true);
       return;
     }
 

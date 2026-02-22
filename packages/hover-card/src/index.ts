@@ -154,6 +154,7 @@ export function createHoverCard(
     8;
 
   let isOpen = options.open ?? defaultOpen;
+  let isInstantOpen = false;
   let isDestroyed = false;
   let pointerOnTrigger = false;
   let pointerOnContent = false;
@@ -250,6 +251,19 @@ export function createHoverCard(
       if (positioner !== content) {
         positioner.setAttribute("data-open", "");
       }
+      if (isInstantOpen) {
+        root.setAttribute("data-instant", "");
+        content.setAttribute("data-instant", "");
+        if (positioner !== content) {
+          positioner.setAttribute("data-instant", "");
+        }
+      } else {
+        root.removeAttribute("data-instant");
+        content.removeAttribute("data-instant");
+        if (positioner !== content) {
+          positioner.removeAttribute("data-instant");
+        }
+      }
       root.removeAttribute("data-closed");
       content.removeAttribute("data-closed");
       if (positioner !== content) {
@@ -262,6 +276,11 @@ export function createHoverCard(
     content.setAttribute("data-closed", "");
     if (positioner !== content) {
       positioner.setAttribute("data-closed", "");
+    }
+    root.removeAttribute("data-instant");
+    content.removeAttribute("data-instant");
+    if (positioner !== content) {
+      positioner.removeAttribute("data-instant");
     }
     root.removeAttribute("data-open");
     content.removeAttribute("data-open");
@@ -286,13 +305,14 @@ export function createHoverCard(
     onUpdate: updatePosition,
   });
 
-  const applyState = (open: boolean, reason: HoverCardReason) => {
+  const applyState = (open: boolean, reason: HoverCardReason, instant = false) => {
     if (isOpen === open) return;
 
     if (!open && isOpen && skipDelayDuration > 0) {
       globalWarmUntil = Date.now() + skipDelayDuration;
     }
 
+    isInstantOpen = open ? instant : false;
     isOpen = open;
     setAria(trigger, "expanded", isOpen);
 
@@ -313,17 +333,17 @@ export function createHoverCard(
     emitChange(isOpen, reason);
   };
 
-  const requestState = (open: boolean, reason: HoverCardReason) => {
+  const requestState = (open: boolean, reason: HoverCardReason, instant = false) => {
     if (isOpen === open) return;
     if (controlled) {
       emitChange(open, reason);
       return;
     }
-    applyState(open, reason);
+    applyState(open, reason, instant);
   };
 
-  const forceState = (open: boolean, reason: HoverCardReason) => {
-    applyState(open, reason);
+  const forceState = (open: boolean, reason: HoverCardReason, instant = false) => {
+    applyState(open, reason, instant);
   };
 
   const scheduleOpen = (reason: HoverCardReason) => {
@@ -331,7 +351,7 @@ export function createHoverCard(
     clearOpenTimeout();
 
     if (skipDelayDuration > 0 && Date.now() < globalWarmUntil) {
-      requestState(true, reason);
+      requestState(true, reason, true);
       return;
     }
 

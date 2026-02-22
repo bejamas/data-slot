@@ -20,6 +20,49 @@ describe('Tooltip', () => {
     return { root, trigger, content, controller }
   }
 
+  const setupTwo = (
+    first: Parameters<typeof createTooltip>[1] = {},
+    second: Parameters<typeof createTooltip>[1] = {},
+    firstAttrs = '',
+    secondAttrs = ''
+  ) => {
+    document.body.innerHTML = `
+      <div data-slot="tooltip" id="root-a" ${firstAttrs}>
+        <button data-slot="tooltip-trigger">A</button>
+        <div data-slot="tooltip-content">A tooltip</div>
+      </div>
+      <div data-slot="tooltip" id="root-b" ${secondAttrs}>
+        <button data-slot="tooltip-trigger">B</button>
+        <div data-slot="tooltip-content">B tooltip</div>
+      </div>
+    `
+
+    const rootA = document.getElementById('root-a')!
+    const rootB = document.getElementById('root-b')!
+    const triggerA = rootA.querySelector('[data-slot="tooltip-trigger"]') as HTMLElement
+    const triggerB = rootB.querySelector('[data-slot="tooltip-trigger"]') as HTMLElement
+    const contentA = rootA.querySelector('[data-slot="tooltip-content"]') as HTMLElement
+    const contentB = rootB.querySelector('[data-slot="tooltip-content"]') as HTMLElement
+    const firstController = createTooltip(rootA, first)
+    const secondController = createTooltip(rootB, second)
+
+    return {
+      rootA,
+      rootB,
+      triggerA,
+      triggerB,
+      contentA,
+      contentB,
+      firstController,
+      secondController,
+    }
+  }
+
+  const wait = (ms: number) =>
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, ms)
+    })
+
   const waitForRaf = () =>
     new Promise<void>((resolve) => {
       requestAnimationFrame(() => resolve())
@@ -46,6 +89,17 @@ describe('Tooltip', () => {
       throw new Error(`Expected translate3d transform, got \"${transform}\"`)
     }
     return { x: Number(match[1]), y: Number(match[2]) }
+  }
+
+  const pointer = (type: string, pointerType: string, relatedTarget?: EventTarget | null) => {
+    const event = new PointerEvent(type, { bubbles: true, pointerType })
+    if (relatedTarget !== undefined) {
+      Object.defineProperty(event, 'relatedTarget', {
+        configurable: true,
+        value: relatedTarget,
+      })
+    }
+    return event
   }
 
   beforeEach(() => {
@@ -150,6 +204,56 @@ describe('Tooltip', () => {
 
     expect(content.getAttribute('data-side')).toBe('right')
     expect(content.getAttribute('data-align')).toBe('end')
+
+    controller.destroy()
+  })
+
+  it('sets data-instant for warm-up opens and clears it on close', async () => {
+    const {
+      rootB,
+      triggerA,
+      triggerB,
+      contentB,
+      firstController,
+      secondController,
+    } = setupTwo(
+      { delay: 30, skipDelayDuration: 120 },
+      { delay: 30, skipDelayDuration: 120 }
+    )
+
+    triggerA.dispatchEvent(pointer('pointerenter', 'mouse'))
+    await wait(35)
+    expect(firstController.isOpen).toBe(true)
+
+    triggerA.dispatchEvent(pointer('pointerleave', 'mouse'))
+    await waitForClose()
+    expect(firstController.isOpen).toBe(false)
+
+    triggerB.dispatchEvent(pointer('pointerenter', 'mouse'))
+    await wait(5)
+    expect(secondController.isOpen).toBe(true)
+    expect(rootB.hasAttribute('data-instant')).toBe(true)
+    expect(contentB.hasAttribute('data-instant')).toBe(true)
+    expect(getPositioner(contentB).hasAttribute('data-instant')).toBe(true)
+
+    triggerB.dispatchEvent(pointer('pointerleave', 'mouse'))
+    await waitForClose()
+    expect(secondController.isOpen).toBe(false)
+    expect(rootB.hasAttribute('data-instant')).toBe(false)
+    expect(contentB.hasAttribute('data-instant')).toBe(false)
+    expect(getPositioner(contentB).hasAttribute('data-instant')).toBe(false)
+
+    firstController.destroy()
+    secondController.destroy()
+  })
+
+  it('does not set data-instant for regular opens', () => {
+    const { root, content, controller } = setup({ delay: 0, skipDelayDuration: 120 })
+
+    controller.show()
+    expect(root.hasAttribute('data-instant')).toBe(false)
+    expect(content.hasAttribute('data-instant')).toBe(false)
+    expect(getPositioner(content).hasAttribute('data-instant')).toBe(false)
 
     controller.destroy()
   })

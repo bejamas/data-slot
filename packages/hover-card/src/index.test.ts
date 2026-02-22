@@ -39,10 +39,12 @@ describe('HoverCard', () => {
     const rootB = document.getElementById('root-b')!
     const triggerA = rootA.querySelector('[data-slot="hover-card-trigger"]') as HTMLElement
     const triggerB = rootB.querySelector('[data-slot="hover-card-trigger"]') as HTMLElement
+    const contentA = rootA.querySelector('[data-slot="hover-card-content"]') as HTMLElement
+    const contentB = rootB.querySelector('[data-slot="hover-card-content"]') as HTMLElement
     const firstController = createHoverCard(rootA, first)
     const secondController = createHoverCard(rootB, second)
 
-    return { triggerA, triggerB, firstController, secondController }
+    return { rootA, rootB, triggerA, triggerB, contentA, contentB, firstController, secondController }
   }
 
   const wait = (ms: number) =>
@@ -210,6 +212,50 @@ describe('HoverCard', () => {
 
     firstController.destroy()
     secondController.destroy()
+  })
+
+  it('sets data-instant for warm-up opens and clears it on close', async () => {
+    const { rootB, triggerA, triggerB, contentB, firstController, secondController } =
+      setupTwo(
+        { delay: 30, closeDelay: 0, skipDelayDuration: 120 },
+        { delay: 30, closeDelay: 0, skipDelayDuration: 120 }
+      )
+
+    hoverEnter(triggerA)
+    await wait(35)
+    expect(firstController.isOpen).toBe(true)
+
+    triggerA.dispatchEvent(pointer('pointerleave', 'mouse'))
+    await waitForClose()
+    expect(firstController.isOpen).toBe(false)
+
+    hoverEnter(triggerB)
+    await wait(5)
+    expect(secondController.isOpen).toBe(true)
+    expect(rootB.hasAttribute('data-instant')).toBe(true)
+    expect(contentB.hasAttribute('data-instant')).toBe(true)
+    expect(getPositioner(contentB).hasAttribute('data-instant')).toBe(true)
+
+    triggerB.dispatchEvent(pointer('pointerleave', 'mouse'))
+    await waitForClose()
+    expect(secondController.isOpen).toBe(false)
+    expect(rootB.hasAttribute('data-instant')).toBe(false)
+    expect(contentB.hasAttribute('data-instant')).toBe(false)
+    expect(getPositioner(contentB).hasAttribute('data-instant')).toBe(false)
+
+    firstController.destroy()
+    secondController.destroy()
+  })
+
+  it('does not set data-instant for regular API opens', () => {
+    const { root, content, controller } = setup({ delay: 0, skipDelayDuration: 120 })
+
+    controller.open()
+    expect(root.hasAttribute('data-instant')).toBe(false)
+    expect(content.hasAttribute('data-instant')).toBe(false)
+    expect(getPositioner(content).hasAttribute('data-instant')).toBe(false)
+
+    controller.destroy()
   })
 
   it('respects skipDelayDuration=0 and keeps normal delay between hover-cards', async () => {

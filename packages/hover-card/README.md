@@ -211,6 +211,11 @@ Use `data-open` / `data-closed`, `data-side`, and `data-align` for animation/sty
   pointer-events: none;
   animation: hover-card-out 120ms ease-in forwards;
 }
+
+[data-slot="hover-card-content"][data-instant] {
+  transition: none;
+  animation: none;
+}
 ```
 
 ## Warm-up Behavior
@@ -220,6 +225,7 @@ When one hover-card closes, another hovered shortly after can open immediately (
 - Controlled by `skipDelayDuration` / `data-skip-delay-duration`
 - Set to `0` to disable warm-up behavior
 - Warm-up applies across hover-card instances
+- Warm-up opens add `data-instant` (root/content/positioner) for that open cycle, so CSS can disable animations
 
 ## Accessibility
 

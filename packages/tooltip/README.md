@@ -158,8 +158,10 @@ The component sets these attributes automatically:
 |---------|-----------|--------|
 | Root | `data-state` | `"open"` \| `"closed"` |
 | Root | `data-open` / `data-closed` | Present when matching state |
+| Root | `data-instant` | Present for warm-up opens (delay skipped) |
 | Content | `data-state` | `"open"` \| `"closed"` |
 | Content | `data-open` / `data-closed` | Present when matching state |
+| Content | `data-instant` | Present for warm-up opens (delay skipped) |
 | Content | `data-side` | `"top"` \| `"right"` \| `"bottom"` \| `"left"` |
 | Content | `data-align` | `"start"` \| `"center"` \| `"end"` |
 | Content | `role` | `"tooltip"` |
@@ -196,6 +198,11 @@ The visibility transition trick keeps the tooltip visible during fade-out, then 
 [data-slot="tooltip-content"][data-closed] {
   pointer-events: none;
 }
+
+[data-slot="tooltip-content"][data-instant] {
+  transition: none;
+  animation: none;
+}
 ```
 
 ### Tailwind Example
@@ -227,7 +234,7 @@ When a user closes one tooltip and quickly hovers another, the second tooltip sh
 
 - Controlled by `skipDelayDuration` option
 - Set to `0` to disable this behavior
-- Warm-up only skips the delay, not CSS transitions
+- Warm-up adds `data-instant` on the open cycle so CSS can disable transitions
 - Warm window is set only when a tooltip actually closes (not when a pending open is cancelled)
 
 ## Accessibility
