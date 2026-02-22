@@ -24,6 +24,7 @@
       "@data-slot/dialog": ["./packages/dialog/src/index.ts"],
       "@data-slot/accordion": ["./packages/accordion/src/index.ts"],
       "@data-slot/popover": ["./packages/popover/src/index.ts"],
+      "@data-slot/hover-card": ["./packages/hover-card/src/index.ts"],
       "@data-slot/tooltip": ["./packages/tooltip/src/index.ts"],
       "@data-slot/collapsible": ["./packages/collapsible/src/index.ts"],
       "data-slot": ["./packages/data-slot/src/index.ts"],

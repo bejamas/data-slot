@@ -14,6 +14,7 @@ import Dialog from "../components/examples/Dialog.astro";
 import Collapsible from "../components/examples/Collapsible.astro";
 import Tooltip from "../components/examples/Tooltip.astro";
 import Popover from "../components/examples/Popover.astro";
+import HoverCard from "../components/examples/HoverCard.astro";
 import NavigationMenu from "../components/examples/NavigationMenu.astro";
 import DropdownMenu from "../components/examples/DropdownMenu.astro";
 import Select from "../components/examples/Select.astro";
@@ -135,6 +136,10 @@ bun add @data-slot/dialog`}
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Popover</h3>
   <Popover />
 
+  <!-- Hover Card -->
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Hover Card</h3>
+  <HoverCard />
+
   <!-- Navigation Menu -->
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Navigation Menu</h3>
   <NavigationMenu />
@@ -209,6 +214,7 @@ bun add @data-slot/dialog`}
   import { createCollapsible } from "../../../packages/collapsible/dist/index.js";
   import { createTooltip } from "../../../packages/tooltip/dist/index.js";
   import { createPopover } from "../../../packages/popover/dist/index.js";
+  import { createHoverCard } from "../../../packages/hover-card/dist/index.js";
   import { createNavigationMenu } from "../../../packages/navigation-menu/dist/index.js";
   import { createDropdownMenu } from "../../../packages/dropdown-menu/dist/index.js";
   import { createSelect } from "../../../packages/select/dist/index.js";
@@ -246,6 +252,9 @@ bun add @data-slot/dialog`}
   );
   document.querySelectorAll('[data-slot="popover"]').forEach((el) =>
     createPopover(el as HTMLElement)
+  );
+  document.querySelectorAll('[data-slot="hover-card"]').forEach((el) =>
+    createHoverCard(el as HTMLElement)
   );
   document.querySelectorAll('[data-slot="navigation-menu"]').forEach((el) =>
     createNavigationMenu(el as HTMLElement)

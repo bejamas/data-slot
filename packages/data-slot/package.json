@@ -1,5 +1,5 @@
 {
-  "name": "data-slot",
+  "name": "@data-slot/ui",
   "version": "0.2.80",
   "type": "module",
   "sideEffects": false,
@@ -66,6 +66,16 @@
       "require": {
         "types": "./dist/popover.d.cts",
         "default": "./dist/popover.cjs"
+      }
+    },
+    "./hover-card": {
+      "import": {
+        "types": "./dist/hover-card.d.ts",
+        "default": "./dist/hover-card.js"
+      },
+      "require": {
+        "types": "./dist/hover-card.d.cts",
+        "default": "./dist/hover-card.cjs"
       }
     },
     "./tooltip": {
@@ -161,6 +171,7 @@
     "@data-slot/dialog": "workspace:*",
     "@data-slot/accordion": "workspace:*",
     "@data-slot/popover": "workspace:*",
+    "@data-slot/hover-card": "workspace:*",
     "@data-slot/tooltip": "workspace:*",
     "@data-slot/collapsible": "workspace:*",
     "@data-slot/navigation-menu": "workspace:*",

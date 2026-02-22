@@ -36,6 +36,12 @@
     "description": "Single/range value sliders"
   },
   {
+    "name": "@data-slot/hover-card",
+    "size": 2061,
+    "sizeFormatted": "2.1 KB",
+    "description": "Hover/focus preview cards"
+  },
+  {
     "name": "@data-slot/popover",
     "size": 1809,
     "sizeFormatted": "1.8 KB",

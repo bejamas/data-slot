@@ -20,6 +20,7 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 | `@data-slot/tabs` | 1.1 KB | Tabbed interfaces with keyboard nav |
 | `@data-slot/accordion` | 938 B | Collapsible content sections |
 | `@data-slot/popover` | 856 B | Anchored floating content |
+| `@data-slot/hover-card` | 2.1 KB | Hover/focus preview cards |
 | `@data-slot/tooltip` | 772 B | Hover/focus tooltips |
 | `@data-slot/collapsible` | 710 B | Simple show/hide toggle |
 | `@data-slot/navigation-menu` | ~1.5 KB | Mega menus with hover/keyboard |
@@ -43,6 +44,7 @@ Available subpaths:
 - `data-slot/dialog`
 - `data-slot/accordion`
 - `data-slot/popover`
+- `data-slot/hover-card`
 - `data-slot/tooltip`
 - `data-slot/collapsible`
 - `data-slot/navigation-menu`
@@ -143,6 +145,7 @@ With Tailwind:
 | `createDialog` | @data-slot/dialog |
 | `createAccordion` | @data-slot/accordion |
 | `createPopover` | @data-slot/popover |
+| `createHoverCard` | @data-slot/hover-card |
 | `createTooltip` | @data-slot/tooltip |
 | `createCollapsible` | @data-slot/collapsible |
 | `createNavigationMenu` | @data-slot/navigation-menu |
@@ -156,6 +159,7 @@ With Tailwind:
 | `DialogOptions`, `DialogController` | @data-slot/dialog |
 | `AccordionOptions`, `AccordionController` | @data-slot/accordion |
 | `PopoverOptions`, `PopoverController` | @data-slot/popover |
+| `HoverCardOptions`, `HoverCardController` | @data-slot/hover-card |
 | `TooltipOptions`, `TooltipController` | @data-slot/tooltip |
 | `CollapsibleOptions`, `CollapsibleController` | @data-slot/collapsible |
 | `NavigationMenuOptions`, `NavigationMenuController` | @data-slot/navigation-menu |
@@ -172,4 +176,3 @@ From `@data-slot/core`:
 ## License
 
 MIT
-

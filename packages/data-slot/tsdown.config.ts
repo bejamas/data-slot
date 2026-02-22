@@ -8,6 +8,7 @@ export default defineConfig({
     "src/dialog.ts",
     "src/accordion.ts",
     "src/popover.ts",
+    "src/hover-card.ts",
     "src/tooltip.ts",
     "src/collapsible.ts",
     "src/navigation-menu.ts",

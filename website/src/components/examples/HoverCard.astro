@@ -1,0 +1,222 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div data-slot="hover-card" data-delay="180" data-close-delay="120" class="hover-card-root">
+  <button data-slot="hover-card-trigger" class="hover-card-trigger-btn">@data-slot</button>
+  <div data-slot="hover-card-content" data-side="bottom" data-align="start" class="hover-card-content" hidden>
+    <div class="hover-card-head">
+      <div class="hover-card-avatar">DS</div>
+      <div>
+        <p class="hover-card-title">data-slot</p>
+        <p class="hover-card-handle">@data-slot</p>
+      </div>
+    </div>
+    <p class="hover-card-text">Headless UI components for vanilla JavaScript.</p>
+    <p class="hover-card-meta">Hover/focus to preview, leave to close.</p>
+  </div>
+</div>
+
+<style>
+  .hover-card-root { display: inline-block; }
+  .hover-card-trigger-btn {
+    padding: 0.5rem 0.875rem;
+    background: none;
+    border: 1px dashed #ccc;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .hover-card-content {
+    position: fixed;
+    width: min(18rem, calc(100vw - 2rem));
+    background: #faf9f7;
+    border: 1px solid #ccc;
+    border-radius: 0.65rem;
+    padding: 0.75rem;
+    z-index: 50;
+    transform-origin: var(--transform-origin, center);
+    --hover-card-slide-x: 0px;
+    --hover-card-slide-y: -4px;
+  }
+  .hover-card-content[data-side="top"] { --hover-card-slide-y: 4px; }
+  .hover-card-content[data-side="bottom"] { --hover-card-slide-y: -4px; }
+  .hover-card-content[data-side="left"] {
+    --hover-card-slide-x: 4px;
+    --hover-card-slide-y: 0px;
+  }
+  .hover-card-content[data-side="right"] {
+    --hover-card-slide-x: -4px;
+    --hover-card-slide-y: 0px;
+  }
+  .hover-card-content[data-open] {
+    animation: hover-card-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .hover-card-content[data-closed] {
+    pointer-events: none;
+    animation: hover-card-out 120ms ease-in forwards;
+  }
+  @keyframes hover-card-in {
+    from {
+      opacity: 0;
+      scale: 0.96;
+      translate: var(--hover-card-slide-x) var(--hover-card-slide-y);
+    }
+    to {
+      opacity: 1;
+      scale: 1;
+      translate: 0 0;
+    }
+  }
+  @keyframes hover-card-out {
+    from {
+      opacity: 1;
+      scale: 1;
+      translate: 0 0;
+    }
+    to {
+      opacity: 0;
+      scale: 0.96;
+      translate: var(--hover-card-slide-x) var(--hover-card-slide-y);
+    }
+  }
+  .hover-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+  .hover-card-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    display: grid;
+    place-items: center;
+    background: #1a1a1a;
+    color: #faf9f7;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .hover-card-title {
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.15;
+  }
+  .hover-card-handle {
+    margin: 0;
+    color: #666;
+    font-size: 0.82rem;
+  }
+  .hover-card-text {
+    margin: 0.7rem 0 0;
+    font-size: 0.9rem;
+  }
+  .hover-card-meta {
+    margin: 0.35rem 0 0;
+    font-size: 0.78rem;
+    color: #666;
+  }
+</style>`;
+
+const tailwindCode = `<div data-slot="hover-card" data-delay="180" data-close-delay="120" class="inline-block">
+  <button
+    data-slot="hover-card-trigger"
+    class="px-3.5 py-2 bg-transparent border border-dashed border-gray-300
+           cursor-pointer font-semibold hover:bg-code-bg transition-colors"
+  >
+    @data-slot
+  </button>
+
+  <div
+    data-slot="hover-card-content"
+    data-side="bottom"
+    data-align="start"
+    class="fixed w-72 max-w-[calc(100vw-2rem)] bg-white border border-gray-300
+           rounded-xl p-3 z-50 shadow-lg"
+    hidden
+  >
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-full grid place-items-center bg-gray-900 text-white text-xs font-bold">DS</div>
+      <div>
+        <p class="font-bold leading-tight">data-slot</p>
+        <p class="text-gray-500 text-xs">@data-slot</p>
+      </div>
+    </div>
+    <p class="mt-3 text-sm">Headless UI components for vanilla JavaScript.</p>
+    <p class="mt-1 text-xs text-gray-500">Hover/focus to preview, leave to close.</p>
+  </div>
+</div>
+
+/* Animation hooks */
+[data-slot="hover-card-content"] {
+  transform-origin: var(--transform-origin, center);
+  --hover-card-slide-x: 0px;
+  --hover-card-slide-y: -4px;
+}
+[data-slot="hover-card-content"][data-side="top"] {
+  --hover-card-slide-y: 4px;
+}
+[data-slot="hover-card-content"][data-side="bottom"] {
+  --hover-card-slide-y: -4px;
+}
+[data-slot="hover-card-content"][data-side="left"] {
+  --hover-card-slide-x: 4px;
+  --hover-card-slide-y: 0px;
+}
+[data-slot="hover-card-content"][data-side="right"] {
+  --hover-card-slide-x: -4px;
+  --hover-card-slide-y: 0px;
+}
+[data-slot="hover-card-content"][data-open] {
+  animation: hover-card-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-slot="hover-card-content"][data-closed] {
+  pointer-events: none;
+  animation: hover-card-out 120ms ease-in forwards;
+}`;
+---
+
+<ExampleBlock label="base-ui style delays: data-delay + data-close-delay">
+  <div slot="preview-css" data-slot="hover-card" data-delay="180" data-close-delay="120" class="hover-card-root" id="hover-card-css">
+    <button data-slot="hover-card-trigger" class="hover-card-trigger-btn">@data-slot</button>
+    <div data-slot="hover-card-content" data-side="bottom" data-align="start" class="hover-card-content" hidden>
+      <div class="hover-card-head">
+        <div class="hover-card-avatar">DS</div>
+        <div>
+          <p class="hover-card-title">data-slot</p>
+          <p class="hover-card-handle">@data-slot</p>
+        </div>
+      </div>
+      <p class="hover-card-text">Headless UI components for vanilla JavaScript.</p>
+      <p class="hover-card-meta">Hover/focus to preview, leave to close.</p>
+    </div>
+  </div>
+
+  <div slot="preview-tailwind" data-slot="hover-card" data-delay="180" data-close-delay="120" class="inline-block" id="hover-card-tw">
+    <button
+      data-slot="hover-card-trigger"
+      class="px-3.5 py-2 bg-transparent border border-dashed border-gray-300 cursor-pointer font-semibold hover:bg-code-bg transition-colors"
+    >
+      @data-slot
+    </button>
+
+    <div
+      data-slot="hover-card-content"
+      data-side="bottom"
+      data-align="start"
+      class="fixed w-72 max-w-[calc(100vw-2rem)] bg-white border border-gray-300 rounded-xl p-3 z-50 shadow-lg"
+      hidden
+    >
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full grid place-items-center bg-gray-900 text-white text-xs font-bold">DS</div>
+        <div>
+          <p class="font-bold leading-tight">data-slot</p>
+          <p class="text-gray-500 text-xs">@data-slot</p>
+        </div>
+      </div>
+      <p class="mt-3 text-sm">Headless UI components for vanilla JavaScript.</p>
+      <p class="mt-1 text-xs text-gray-500">Hover/focus to preview, leave to close.</p>
+    </div>
+  </div>
+
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>

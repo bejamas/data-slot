@@ -115,6 +115,8 @@ jobs:
           publish_pkg packages/toggle-group
           publish_pkg packages/select
           publish_pkg packages/combobox
+          publish_pkg packages/hover-card
+          publish_pkg packages/data-slot
 
       - name: Dry run - show what would be published
         if: ${{ inputs.dry_run }}

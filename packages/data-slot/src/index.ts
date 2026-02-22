@@ -25,6 +25,12 @@ export type {
 export { createPopover } from "@data-slot/popover";
 export type { PopoverOptions, PopoverController } from "@data-slot/popover";
 
+export { createHoverCard } from "@data-slot/hover-card";
+export type {
+  HoverCardOptions,
+  HoverCardController,
+} from "@data-slot/hover-card";
+
 export { createTooltip } from "@data-slot/tooltip";
 export type { TooltipOptions, TooltipController } from "@data-slot/tooltip";
 

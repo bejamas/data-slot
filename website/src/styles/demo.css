@@ -575,6 +575,143 @@ html {
 }
 
 /* ============================================
+   CSS Example: Hover Card
+   ============================================ */
+.hover-card-root {
+  display: inline-block;
+}
+
+.hover-card-trigger-btn {
+  font-family: inherit;
+  font-size: inherit;
+  padding: 0.5rem 0.875rem;
+  background: none;
+  border: 1px dashed var(--border);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.hover-card-trigger-btn:hover {
+  background: var(--code-bg);
+}
+
+.hover-card-content {
+  position: fixed;
+  width: min(18rem, calc(100vw - 2rem));
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  padding: 0.75rem;
+  z-index: 50;
+  transform-origin: var(--transform-origin, center);
+  --hover-card-slide-x: 0px;
+  --hover-card-slide-y: -4px;
+}
+
+.hover-card-content[data-side="top"] {
+  --hover-card-slide-y: 4px;
+}
+
+.hover-card-content[data-side="bottom"] {
+  --hover-card-slide-y: -4px;
+}
+
+.hover-card-content[data-side="left"] {
+  --hover-card-slide-x: 4px;
+  --hover-card-slide-y: 0px;
+}
+
+.hover-card-content[data-side="right"] {
+  --hover-card-slide-x: -4px;
+  --hover-card-slide-y: 0px;
+}
+
+.hover-card-content[data-open] {
+  animation: hover-card-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-card-content[data-closed] {
+  pointer-events: none;
+  animation: hover-card-out 120ms ease-in forwards;
+}
+
+@keyframes hover-card-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+    translate: var(--hover-card-slide-x) var(--hover-card-slide-y);
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes hover-card-out {
+  from {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    scale: 0.96;
+    translate: var(--hover-card-slide-x) var(--hover-card-slide-y);
+  }
+}
+
+.hover-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.hover-card-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.hover-card-title {
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.hover-card-handle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.hover-card-text {
+  margin: 0.7rem 0 0;
+  font-size: 0.9rem;
+}
+
+.hover-card-meta {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-card-content[data-open],
+  .hover-card-content[data-closed],
+  .preview-tailwind [data-slot="hover-card-content"][data-open],
+  .preview-tailwind [data-slot="hover-card-content"][data-closed] {
+    animation-duration: 1ms;
+  }
+}
+
+/* ============================================
    CSS Example: Navigation Menu
    ============================================ */
 .nav-menu {
@@ -897,6 +1034,40 @@ html.mode-tailwind .preview-css {
 .preview-tailwind [data-slot="popover-content"][data-closed] {
   pointer-events: none;
   animation: popover-out 120ms ease-in forwards;
+}
+
+/* Hover Card: fade + zoom using open/closed state */
+.preview-tailwind [data-slot="hover-card-content"] {
+  transform-origin: var(--transform-origin, center);
+  --hover-card-slide-x: 0px;
+  --hover-card-slide-y: -4px;
+}
+
+.preview-tailwind [data-slot="hover-card-content"][data-side="top"] {
+  --hover-card-slide-y: 4px;
+}
+
+.preview-tailwind [data-slot="hover-card-content"][data-side="bottom"] {
+  --hover-card-slide-y: -4px;
+}
+
+.preview-tailwind [data-slot="hover-card-content"][data-side="left"] {
+  --hover-card-slide-x: 4px;
+  --hover-card-slide-y: 0px;
+}
+
+.preview-tailwind [data-slot="hover-card-content"][data-side="right"] {
+  --hover-card-slide-x: -4px;
+  --hover-card-slide-y: 0px;
+}
+
+.preview-tailwind [data-slot="hover-card-content"][data-open] {
+  animation: hover-card-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.preview-tailwind [data-slot="hover-card-content"][data-closed] {
+  pointer-events: none;
+  animation: hover-card-out 120ms ease-in forwards;
 }
 
 /* Collapsible: allow grid height animation */
