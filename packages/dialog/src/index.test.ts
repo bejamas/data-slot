@@ -491,6 +491,50 @@ describe("Dialog", () => {
     dialogController.destroy();
   });
 
+  it("opening dialog does not auto-open nested hover-card from synthetic pointerenter", async () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog" id="dialog-root">
+        <button data-slot="dialog-trigger" id="dialog-trigger">Open dialog</button>
+        <div data-slot="dialog-overlay"></div>
+        <div data-slot="dialog-content">
+          <div data-slot="hover-card" id="hover-card-root">
+            <button data-slot="hover-card-trigger" id="hover-card-trigger">Preview profile</button>
+            <div data-slot="hover-card-content">Inner hover-card content</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const dialogRoot = document.getElementById("dialog-root")!;
+    const dialogTrigger = document.getElementById("dialog-trigger") as HTMLButtonElement;
+    const hoverCardRoot = document.getElementById("hover-card-root")!;
+    const hoverCardTrigger = document.getElementById("hover-card-trigger") as HTMLButtonElement;
+    const dialogController = createDialog(dialogRoot);
+    const hoverCardController = createHoverCard(hoverCardRoot, { delay: 0, closeDelay: 0 });
+
+    dialogTrigger.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, pointerType: "mouse" })
+    );
+    dialogController.open();
+
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    hoverCardTrigger.dispatchEvent(
+      new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" })
+    );
+    expect(hoverCardController.isOpen).toBe(false);
+
+    hoverCardTrigger.dispatchEvent(
+      new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })
+    );
+    expect(hoverCardController.isOpen).toBe(true);
+
+    hoverCardController.destroy();
+    dialogController.destroy();
+  });
+
   it("does not set inline z-index and exposes stack metadata for styling", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="dialog1">

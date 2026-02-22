@@ -23,6 +23,7 @@ export type HoverCardReason = "pointer" | "focus" | "blur" | "dismiss" | "api";
 // Global state for warm-up behavior across hover-card instances
 let globalWarmUntil = 0;
 const FOCUS_OPEN_INTENT_WINDOW_MS = 750;
+const POINTER_HOVER_INTENT_WINDOW_MS = 250;
 
 export interface HoverCardOptions {
   /** Initial open state (uncontrolled mode only) */
@@ -160,6 +161,7 @@ export function createHoverCard(
   let openTimeout: ReturnType<typeof setTimeout> | null = null;
   let closeTimeout: ReturnType<typeof setTimeout> | null = null;
   let lastTabKeydownAt = -Infinity;
+  let lastPointerMoveAt = -Infinity;
 
   const cleanups: Array<() => void> = [];
   const portal = createPortalLifecycle({
@@ -387,11 +389,24 @@ export function createHoverCard(
     }, { capture: true }),
     on(root.ownerDocument, "pointerdown", () => {
       lastTabKeydownAt = -Infinity;
+      lastPointerMoveAt = -Infinity;
+    }, { capture: true }),
+    on(root.ownerDocument, "pointermove", (e) => {
+      if ((e as PointerEvent).pointerType === "touch") return;
+      lastPointerMoveAt = Date.now();
     }, { capture: true }),
     on(trigger, "pointerenter", (e) => {
       if (e.pointerType === "touch") return;
       pointerOnTrigger = true;
       if (isTriggerDisabled()) return;
+      if (Date.now() - lastPointerMoveAt > POINTER_HOVER_INTENT_WINDOW_MS) return;
+      scheduleOpen("pointer");
+    }),
+    on(trigger, "pointermove", (e) => {
+      if (e.pointerType === "touch") return;
+      // Enter may occur before the move event while crossing boundaries.
+      if (!pointerOnTrigger || isTriggerDisabled()) return;
+      if (isOpen || openTimeout) return;
       scheduleOpen("pointer");
     }),
     on(trigger, "pointerleave", (e) => {

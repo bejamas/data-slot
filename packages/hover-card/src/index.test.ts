@@ -89,6 +89,11 @@ describe('HoverCard', () => {
     return event
   }
 
+  const hoverEnter = (el: HTMLElement) => {
+    document.dispatchEvent(pointer('pointermove', 'mouse'))
+    el.dispatchEvent(pointer('pointerenter', 'mouse'))
+  }
+
   beforeEach(() => {
     document.body.innerHTML = ''
   })
@@ -161,7 +166,7 @@ describe('HoverCard', () => {
   it('opens on pointerenter (non-touch) after delay', async () => {
     const { trigger, controller } = setup({ delay: 10, skipDelayDuration: 0 })
 
-    trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+    hoverEnter(trigger)
     expect(controller.isOpen).toBe(false)
 
     await wait(15)
@@ -173,7 +178,7 @@ describe('HoverCard', () => {
   it('closes on pointerleave after closeDelay', async () => {
     const { trigger, controller } = setup({ delay: 0, closeDelay: 10 })
 
-    trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+    hoverEnter(trigger)
     expect(controller.isOpen).toBe(true)
 
     trigger.dispatchEvent(pointer('pointerleave', 'mouse'))
@@ -191,7 +196,7 @@ describe('HoverCard', () => {
       { delay: 30, closeDelay: 0, skipDelayDuration: 120 }
     )
 
-    triggerA.dispatchEvent(pointer('pointerenter', 'mouse'))
+    hoverEnter(triggerA)
     await wait(35)
     expect(firstController.isOpen).toBe(true)
 
@@ -199,7 +204,7 @@ describe('HoverCard', () => {
     await waitForClose()
     expect(firstController.isOpen).toBe(false)
 
-    triggerB.dispatchEvent(pointer('pointerenter', 'mouse'))
+    hoverEnter(triggerB)
     await wait(5)
     expect(secondController.isOpen).toBe(true)
 
@@ -213,7 +218,7 @@ describe('HoverCard', () => {
       { delay: 30, closeDelay: 0, skipDelayDuration: 0 }
     )
 
-    triggerA.dispatchEvent(pointer('pointerenter', 'mouse'))
+    hoverEnter(triggerA)
     await wait(35)
     expect(firstController.isOpen).toBe(true)
 
@@ -221,7 +226,7 @@ describe('HoverCard', () => {
     await waitForClose()
     expect(firstController.isOpen).toBe(false)
 
-    triggerB.dispatchEvent(pointer('pointerenter', 'mouse'))
+    hoverEnter(triggerB)
     await wait(5)
     expect(secondController.isOpen).toBe(false)
 
@@ -236,7 +241,7 @@ describe('HoverCard', () => {
     const attrs = 'data-delay="30" data-close-delay="0" data-skip-delay-duration="120"'
     const { triggerA, triggerB, firstController, secondController } = setupTwo({}, {}, attrs, attrs)
 
-    triggerA.dispatchEvent(pointer('pointerenter', 'mouse'))
+    hoverEnter(triggerA)
     await wait(35)
     expect(firstController.isOpen).toBe(true)
 
@@ -244,7 +249,7 @@ describe('HoverCard', () => {
     await waitForClose()
     expect(firstController.isOpen).toBe(false)
 
-    triggerB.dispatchEvent(pointer('pointerenter', 'mouse'))
+    hoverEnter(triggerB)
     await wait(5)
     expect(secondController.isOpen).toBe(true)
 
@@ -255,7 +260,7 @@ describe('HoverCard', () => {
   it('keeps open while moving from trigger to content', async () => {
     const { trigger, content, controller } = setup({ delay: 0, closeDelay: 20 })
 
-    trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+    hoverEnter(trigger)
     expect(controller.isOpen).toBe(true)
 
     trigger.dispatchEvent(pointer('pointerleave', 'mouse'))
@@ -276,6 +281,16 @@ describe('HoverCard', () => {
     const { trigger, controller } = setup({ delay: 0 })
 
     trigger.dispatchEvent(pointer('pointerenter', 'touch'))
+    expect(controller.isOpen).toBe(false)
+
+    controller.destroy()
+  })
+
+  it('does not open on pointerenter without pointer-move intent', () => {
+    const { trigger, controller } = setup({ delay: 0 })
+
+    document.dispatchEvent(pointer('pointerdown', 'mouse'))
+    trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
     expect(controller.isOpen).toBe(false)
 
     controller.destroy()
@@ -856,7 +871,7 @@ describe('HoverCard', () => {
     const trigger = root.querySelector('[data-slot="hover-card-trigger"]') as HTMLElement
     const controller = createHoverCard(root, { delay: 0 })
 
-    trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+    hoverEnter(trigger)
     expect(controller.isOpen).toBe(false)
 
     controller.open()
@@ -884,7 +899,7 @@ describe('HoverCard', () => {
     expect(controllers).toHaveLength(2)
 
     const trigger = document.querySelector('[data-slot="hover-card-trigger"]') as HTMLElement
-    trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+    hoverEnter(trigger)
 
     expect(controllers[0]?.isOpen).toBe(true)
 

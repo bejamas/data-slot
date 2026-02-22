@@ -159,6 +159,7 @@ root.addEventListener("hover-card:change", (e) => {
 `reason` is one of: `"pointer" | "focus" | "blur" | "dismiss" | "api"`.
 
 Focus opening is keyboard-intent based (`Tab` navigation). Programmatic focus (for example, dialog auto-focus on open) does not auto-open the hover-card.
+Hover opening is pointer-intent based (recent mouse movement). Synthetic `pointerenter` caused by newly shown UI under a static cursor does not auto-open the hover-card.
 
 ### Inbound
 
