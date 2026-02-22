@@ -92,7 +92,7 @@ jobs:
 
             # Publish from extracted folder (cwd publish)
             pushd "$tmp/package" >/dev/null
-            npm publish --access public --provenance
+            bunx npm publish --access public --provenance
             popd >/dev/null
 
             rm -rf "$tmp"
@@ -116,7 +116,7 @@ jobs:
           publish_pkg packages/select
           publish_pkg packages/combobox
           publish_pkg packages/hover-card
-          publish_pkg packages/data-slot
+          publish_pkg packages/ui
 
       - name: Dry run - show what would be published
         if: ${{ inputs.dry_run }}
