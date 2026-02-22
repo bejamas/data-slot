@@ -7,6 +7,7 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   external: ["@data-slot/core"],
+  hash: false,
   minify: true,
 });
 
