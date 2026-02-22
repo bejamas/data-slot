@@ -2,7 +2,7 @@
 
 Headless UI components for vanilla JavaScript. Tiny, accessible, unstyled.
 
-**~3KB gzipped** for the full bundle. Zero dependencies. Tree-shakeable.
+**Subpaths range from 614 B to 6.2 KB gzipped** (ESM `dist/index.js`). Zero dependencies. Tree-shakeable.
 
 ## Installation
 
@@ -16,16 +16,20 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 
 | Package | Size | Description |
 |---------|------|-------------|
-| `@data-slot/dialog` | 1.2 KB | Modal dialogs with focus management |
-| `@data-slot/tabs` | 1.1 KB | Tabbed interfaces with keyboard nav |
-| `@data-slot/accordion` | 938 B | Collapsible content sections |
-| `@data-slot/popover` | 856 B | Anchored floating content |
-| `@data-slot/hover-card` | 2.1 KB | Hover/focus preview cards |
-| `@data-slot/tooltip` | 772 B | Hover/focus tooltips |
-| `@data-slot/collapsible` | 710 B | Simple show/hide toggle |
-| `@data-slot/navigation-menu` | ~1.5 KB | Mega menus with hover/keyboard |
-| `@data-slot/combobox` | ~3 KB | Autocomplete input with filtering |
-| `@data-slot/core` | 452 B | Shared utilities |
+| `@data-slot/navigation-menu` | 6.2 KB | Dropdown navigation menus |
+| `@data-slot/core` | 4.5 KB | Shared utilities |
+| `@data-slot/combobox` | 3.7 KB | Autocomplete input with filtering |
+| `@data-slot/select` | 3.7 KB | Select input with keyboard navigation |
+| `@data-slot/dropdown-menu` | 2.4 KB | Action menus with keyboard navigation |
+| `@data-slot/hover-card` | 2.0 KB | Hover/focus preview cards |
+| `@data-slot/tabs` | 1.8 KB | Tabbed interfaces with keyboard nav |
+| `@data-slot/popover` | 1.8 KB | Anchored floating content |
+| `@data-slot/dialog` | 1.8 KB | Modal dialogs with focus management |
+| `@data-slot/toggle-group` | 1.5 KB | Single/multi toggle groups |
+| `@data-slot/collapsible` | 1.5 KB | Simple show/hide toggle |
+| `@data-slot/accordion` | 1.3 KB | Collapsible content sections |
+| `@data-slot/tooltip` | 1.1 KB | Hover/focus tooltips |
+| `@data-slot/toggle` | 614 B | Pressed-state toggle button |
 
 ## Usage
 
@@ -48,6 +52,10 @@ Available subpaths:
 - `@data-slot/ui/tooltip`
 - `@data-slot/ui/collapsible`
 - `@data-slot/ui/navigation-menu`
+- `@data-slot/ui/dropdown-menu`
+- `@data-slot/ui/toggle`
+- `@data-slot/ui/toggle-group`
+- `@data-slot/ui/select`
 - `@data-slot/ui/combobox`
 
 ### Direct Package Imports
