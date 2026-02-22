@@ -343,7 +343,6 @@ html {
    CSS Example: Tooltip
    ============================================ */
 .tooltip-root {
-  position: relative;
   display: inline-block;
 }
 
@@ -371,55 +370,78 @@ html {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  /* Visibility delays hiding until after opacity/transform fades */
+  transform-origin: var(--transform-origin, center);
+  --tooltip-slide-x: 0px;
+  --tooltip-slide-y: -4px;
+  /* Visibility delays hiding until after opacity fades */
   transition:
     opacity 0.15s ease-out,
-    transform 0.15s ease-out,
     visibility 0s linear 0.15s;
 }
 
-/* Open state - use data-state on root for transitions */
-.tooltip-root[data-state="open"] .tooltip-content {
+/* Open state */
+.tooltip-content[data-open] {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transition-delay: 0s;
+  animation: tooltip-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Tooltip sides - closed state (slight offset for animation) */
+.tooltip-content[data-closed] {
+  pointer-events: none;
+  visibility: visible;
+  animation: tooltip-out 100ms ease-in forwards;
+}
+
 .tooltip-content[data-side="top"] {
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-4px);
+  --tooltip-slide-y: 4px;
 }
 .tooltip-content[data-side="bottom"] {
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
+  --tooltip-slide-y: -4px;
 }
 .tooltip-content[data-side="left"] {
-  right: 100%;
-  top: 50%;
-  transform: translateX(-4px) translateY(-50%);
+  --tooltip-slide-x: 4px;
+  --tooltip-slide-y: 0px;
 }
 .tooltip-content[data-side="right"] {
-  left: 100%;
-  top: 50%;
-  transform: translateX(4px) translateY(-50%);
+  --tooltip-slide-x: -4px;
+  --tooltip-slide-y: 0px;
 }
 
-/* Tooltip sides - open state (full offset) */
-.tooltip-root[data-state="open"] .tooltip-content[data-side="top"] {
-  transform: translateX(-50%) translateY(-8px);
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+    scale: 0.98;
+    translate: var(--tooltip-slide-x) var(--tooltip-slide-y);
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
 }
-.tooltip-root[data-state="open"] .tooltip-content[data-side="bottom"] {
-  transform: translateX(-50%) translateY(8px);
+
+@keyframes tooltip-out {
+  from {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    scale: 0.98;
+    translate: var(--tooltip-slide-x) var(--tooltip-slide-y);
+  }
 }
-.tooltip-root[data-state="open"] .tooltip-content[data-side="left"] {
-  transform: translateX(-8px) translateY(-50%);
-}
-.tooltip-root[data-state="open"] .tooltip-content[data-side="right"] {
-  transform: translateX(8px) translateY(-50%);
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip-content[data-open],
+  .tooltip-content[data-closed],
+  .preview-tailwind [data-slot="tooltip-content"][data-open],
+  .preview-tailwind [data-slot="tooltip-content"][data-closed] {
+    animation-duration: 1ms;
+  }
 }
 
 .tooltip-group {
@@ -1000,6 +1022,40 @@ html.mode-tailwind .preview-css {
   display: block !important;
   opacity: 0;
   pointer-events: none;
+}
+
+.preview-tailwind [data-slot="tooltip-content"] {
+  transform-origin: var(--transform-origin, center);
+  --tooltip-slide-x: 0px;
+  --tooltip-slide-y: -4px;
+}
+
+.preview-tailwind [data-slot="tooltip-content"][data-side="top"] {
+  --tooltip-slide-y: 4px;
+}
+
+.preview-tailwind [data-slot="tooltip-content"][data-side="bottom"] {
+  --tooltip-slide-y: -4px;
+}
+
+.preview-tailwind [data-slot="tooltip-content"][data-side="left"] {
+  --tooltip-slide-x: 4px;
+  --tooltip-slide-y: 0px;
+}
+
+.preview-tailwind [data-slot="tooltip-content"][data-side="right"] {
+  --tooltip-slide-x: -4px;
+  --tooltip-slide-y: 0px;
+}
+
+.preview-tailwind [data-slot="tooltip-content"][data-open] {
+  animation: tooltip-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.preview-tailwind [data-slot="tooltip-content"][data-closed] {
+  pointer-events: none;
+  visibility: visible;
+  animation: tooltip-out 100ms ease-in forwards;
 }
 
 /* Popover: fade + zoom using open/closed state */

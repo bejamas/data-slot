@@ -59,11 +59,16 @@ const tooltip = createTooltip(element, {
 |--------|------|---------|-------------|
 | `delay` | `number` | `300` | Delay before showing tooltip (ms) |
 | `skipDelayDuration` | `number` | `300` | Duration to skip delay after closing (ms). Set to `0` to disable warm-up. |
-| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"top"` | Side of tooltip relative to trigger (bind-time only) |
-| `align` | `"start" \| "center" \| "end"` | `"center"` | Alignment along the side (bind-time only) |
+| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"top"` | Preferred side relative to trigger |
+| `align` | `"start" \| "center" \| "end"` | `"center"` | Preferred alignment |
+| `sideOffset` | `number` | `4` | Distance from trigger in pixels |
+| `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
+| `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
+| `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
+| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when visibility changes |
 
-**Note:** `side` and `align` are resolved once at bind time. To change placement dynamically, destroy and recreate the tooltip with new options.
+**Note:** `side` and `align` are preferred placement inputs resolved at bind time. With collision handling enabled, computed `data-side` can differ at runtime.
 
 ### Data Attributes
 
@@ -75,6 +80,11 @@ Options can also be set via data attributes. JS options take precedence.
 | `data-skip-delay-duration` | number | `300` | Duration to skip delay after closing (ms) |
 | `data-side` | string | `"top"` | Side relative to trigger (checked on content first, then root) |
 | `data-align` | string | `"center"` | Alignment along the side (checked on content first, then root) |
+| `data-side-offset` | number | `4` | Distance from trigger (px) |
+| `data-align-offset` | number | `0` | Alignment edge offset (px) |
+| `data-avoid-collisions` | boolean | `true` | Collision handling |
+| `data-collision-padding` | number | `8` | Viewport edge padding (px) |
+| `data-portal` | boolean | `true` | Portal while open |
 
 ```html
 <!-- Tooltip with faster response -->
@@ -87,8 +97,14 @@ Options can also be set via data attributes. JS options take precedence.
   ...
 </div>
 
-<!-- Side/align on content element -->
-<div data-slot="tooltip-content" data-side="bottom" data-align="start">
+<!-- Side/align and offsets on content element -->
+<div
+  data-slot="tooltip-content"
+  data-side="bottom"
+  data-align="start"
+  data-side-offset="8"
+  data-align-offset="4"
+>
   ...
 </div>
 ```
@@ -111,7 +127,28 @@ Options can also be set via data attributes. JS options take precedence.
 </div>
 ```
 
-Both `tooltip-trigger` and `tooltip-content` are required.
+### Required Slots
+
+- `tooltip-trigger`
+- `tooltip-content`
+
+### Optional Slots
+
+- `tooltip-positioner` - Optional authored positioning wrapper
+- `tooltip-portal` - Optional authored portal wrapper that can contain `tooltip-positioner`
+
+### Composed Portal Markup (Optional)
+
+```html
+<div data-slot="tooltip">
+  <button data-slot="tooltip-trigger">Trigger</button>
+  <div data-slot="tooltip-portal">
+    <div data-slot="tooltip-positioner">
+      <div data-slot="tooltip-content">Content</div>
+    </div>
+  </div>
+</div>
+```
 
 ### Output Attributes
 
@@ -120,7 +157,9 @@ The component sets these attributes automatically:
 | Element | Attribute | Values |
 |---------|-----------|--------|
 | Root | `data-state` | `"open"` \| `"closed"` |
+| Root | `data-open` / `data-closed` | Present when matching state |
 | Content | `data-state` | `"open"` \| `"closed"` |
+| Content | `data-open` / `data-closed` | Present when matching state |
 | Content | `data-side` | `"top"` \| `"right"` \| `"bottom"` \| `"left"` |
 | Content | `data-align` | `"start"` \| `"center"` \| `"end"` |
 | Content | `role` | `"tooltip"` |
@@ -129,98 +168,53 @@ The component sets these attributes automatically:
 
 ## Styling
 
-This tooltip uses simple CSS positioning and is not collision-aware. Visibility is controlled entirely via CSS using the `data-state` attribute.
+Position is computed in JavaScript and applied to the positioner as `position: absolute` + `transform: translate3d(...)`.
+By default, content is portaled to `document.body` while open.
+Use `data-open` / `data-closed`, `data-side`, and `data-align` for styling and animations.
 
 ### Recommended CSS
 
 The visibility transition trick keeps the tooltip visible during fade-out, then becomes non-focusable after the transition completes—no JS timers needed.
 
 ```css
-/* Positioning */
-[data-slot="tooltip"] {
-  position: relative;
-}
-
 [data-slot="tooltip-content"] {
-  position: absolute;
   white-space: nowrap;
-  /* Hidden by default */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  /* Visibility delays hiding until after opacity fades */
-  transition: opacity 0.15s, visibility 0s linear 0.15s;
+  transform-origin: center;
+  transition: opacity 0.15s ease, visibility 0s linear 0.15s;
 }
 
-/* Open state */
-[data-slot="tooltip"][data-state="open"] [data-slot="tooltip-content"] {
+[data-slot="tooltip-content"][data-open] {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transition-delay: 0s;
 }
 
-/* Side positioning */
-[data-slot="tooltip-content"][data-side="top"] {
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 8px;
-}
-
-[data-slot="tooltip-content"][data-side="bottom"] {
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-top: 8px;
-}
-
-[data-slot="tooltip-content"][data-side="left"] {
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-right: 8px;
-}
-
-[data-slot="tooltip-content"][data-side="right"] {
-  left: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-left: 8px;
-}
-
-/* Alignment (example for top/bottom sides) */
-[data-slot="tooltip-content"][data-side="top"][data-align="start"],
-[data-slot="tooltip-content"][data-side="bottom"][data-align="start"] {
-  left: 0;
-  transform: none;
-}
-
-[data-slot="tooltip-content"][data-side="top"][data-align="end"],
-[data-slot="tooltip-content"][data-side="bottom"][data-align="end"] {
-  left: auto;
-  right: 0;
-  transform: none;
+[data-slot="tooltip-content"][data-closed] {
+  pointer-events: none;
 }
 ```
 
 ### Tailwind Example
 
-Use `group` on the root and `group-data-[state=open]:` for open state styles:
+Use root/content data attributes for open-state styling:
 
 ```html
-<div data-slot="tooltip" class="group relative inline-block">
+<div data-slot="tooltip">
   <button data-slot="tooltip-trigger">
     Hover me
   </button>
   <div 
     data-slot="tooltip-content" 
     data-side="top"
-    class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 
+    class="px-2 py-1
            bg-gray-900 text-white text-sm rounded 
            opacity-0 pointer-events-none transition-opacity duration-150
-           group-data-[state=open]:opacity-100 
-           group-data-[state=open]:pointer-events-auto"
+           data-[open]:opacity-100
+           data-[open]:pointer-events-auto"
   >
     Tooltip text
   </div>

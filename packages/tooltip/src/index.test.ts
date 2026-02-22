@@ -2,8 +2,11 @@ import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { createTooltip, create } from './index'
 
 describe('Tooltip', () => {
-  const setup = (options: Parameters<typeof createTooltip>[1] = {}) => {
-    document.body.innerHTML = `
+  const setup = (
+    options: Parameters<typeof createTooltip>[1] = {},
+    html?: string
+  ) => {
+    document.body.innerHTML = html ?? `
       <div data-slot="tooltip" id="root">
         <button data-slot="tooltip-trigger">Hover me</button>
         <div data-slot="tooltip-content">Tooltip text</div>
@@ -15,6 +18,34 @@ describe('Tooltip', () => {
     const controller = createTooltip(root, options)
 
     return { root, trigger, content, controller }
+  }
+
+  const waitForRaf = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve())
+    })
+
+  const waitForClose = async () => {
+    await waitForRaf()
+    await waitForRaf()
+  }
+
+  const getPositioner = (content: HTMLElement): HTMLElement => {
+    const parent = content.parentElement
+    if (parent && parent.getAttribute('data-slot') === 'tooltip-positioner') {
+      return parent
+    }
+    return content
+  }
+
+  const getTranslate3dXY = (transform: string): { x: number; y: number } => {
+    const match = /translate3d\(\s*([-\d.]+)px\s*,\s*([-\d.]+)px\s*,\s*0(?:px)?\s*\)/.exec(
+      transform
+    )
+    if (!match) {
+      throw new Error(`Expected translate3d transform, got \"${transform}\"`)
+    }
+    return { x: Number(match[1]), y: Number(match[2]) }
   }
 
   beforeEach(() => {
@@ -121,6 +152,192 @@ describe('Tooltip', () => {
     expect(content.getAttribute('data-align')).toBe('end')
 
     controller.destroy()
+  })
+
+  describe('content positioning', () => {
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect
+
+    it('applies sideOffset and alignOffset from options', async () => {
+      const { trigger, content, controller } = setup({
+        side: 'left',
+        align: 'start',
+        sideOffset: 8,
+        alignOffset: 6,
+        avoidCollisions: false,
+      })
+
+      trigger.getBoundingClientRect = () => rect(200, 120, 80, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40)
+
+      controller.show()
+      await waitForRaf()
+
+      const { x, y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(x).toBe(92)
+      expect(y).toBe(126)
+
+      controller.destroy()
+    })
+
+    it('uses end alignment edge for alignOffset', async () => {
+      const { trigger, content, controller } = setup({
+        side: 'top',
+        align: 'end',
+        sideOffset: 4,
+        alignOffset: 10,
+        avoidCollisions: false,
+      })
+
+      trigger.getBoundingClientRect = () => rect(100, 200, 100, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 40, 30)
+
+      controller.show()
+      await waitForRaf()
+
+      const { x, y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(x).toBe(150)
+      expect(y).toBe(166)
+
+      controller.destroy()
+    })
+
+    it('resolves sideOffset/alignOffset as options > content attrs > root attrs', async () => {
+      const { root, trigger, content, controller } = setup(
+        {
+          side: 'left',
+          align: 'start',
+          sideOffset: 4,
+          alignOffset: 3,
+          avoidCollisions: false,
+        },
+        `
+          <div
+            data-slot="tooltip"
+            id="root"
+            data-side-offset="40"
+            data-align-offset="30"
+          >
+            <button data-slot="tooltip-trigger">Hover me</button>
+            <div data-slot="tooltip-content" data-side-offset="12" data-align-offset="7">
+              Tooltip text
+            </div>
+          </div>
+        `
+      )
+
+      trigger.getBoundingClientRect = () => rect(200, 120, 80, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40)
+
+      controller.show()
+      await waitForRaf()
+
+      const { x, y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(x).toBe(96)
+      expect(y).toBe(123)
+      expect(root.getAttribute('data-state')).toBe('open')
+
+      controller.destroy()
+    })
+
+    it('flips side on collision when avoidCollisions is true', async () => {
+      const { trigger, content, controller } = setup({
+        side: 'bottom',
+        align: 'start',
+        sideOffset: 4,
+        avoidCollisions: true,
+        collisionPadding: 8,
+      })
+
+      trigger.getBoundingClientRect = () => rect(100, 740, 80, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 120, 100)
+
+      controller.show()
+      await waitForRaf()
+
+      expect(content.getAttribute('data-side')).toBe('top')
+      const { y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(y).toBe(636)
+
+      controller.destroy()
+    })
+
+    it('keeps preferred side when avoidCollisions is false', async () => {
+      const { trigger, content, controller } = setup({
+        side: 'bottom',
+        align: 'start',
+        sideOffset: 4,
+        avoidCollisions: false,
+      })
+
+      trigger.getBoundingClientRect = () => rect(100, 740, 80, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 120, 100)
+
+      controller.show()
+      await waitForRaf()
+
+      expect(content.getAttribute('data-side')).toBe('bottom')
+      const { y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(y).toBe(764)
+
+      controller.destroy()
+    })
+
+    it('portals by default and restores on hide', async () => {
+      const { root, content, controller } = setup({ delay: 0 })
+
+      controller.show()
+      const positioner = getPositioner(content)
+      expect(positioner.getAttribute('data-slot')).toBe('tooltip-positioner')
+      expect(positioner.parentElement).toBe(document.body)
+
+      controller.hide()
+      await waitForClose()
+      expect(content.parentElement).toBe(root)
+
+      controller.destroy()
+    })
+
+    it('uses authored portal and positioner when provided', async () => {
+      document.body.innerHTML = `
+        <div data-slot="tooltip" id="root">
+          <button data-slot="tooltip-trigger">Hover me</button>
+          <div data-slot="tooltip-portal" id="portal">
+            <div data-slot="tooltip-positioner" id="positioner">
+              <div data-slot="tooltip-content">Tooltip text</div>
+            </div>
+          </div>
+        </div>
+      `
+
+      const root = document.getElementById('root')!
+      const portal = document.getElementById('portal') as HTMLElement
+      const positioner = document.getElementById('positioner') as HTMLElement
+      const content = document.querySelector('[data-slot="tooltip-content"]') as HTMLElement
+      const controller = createTooltip(root, { delay: 0 })
+
+      controller.show()
+      expect(portal.parentElement).toBe(document.body)
+      expect(content.parentElement).toBe(positioner)
+      expect(positioner.style.transform).toContain('translate3d(')
+
+      controller.hide()
+      await waitForClose()
+      expect(portal.parentElement).toBe(root)
+      expect(content.parentElement).toBe(positioner)
+
+      controller.destroy()
+    })
   })
 
   it('hides on Escape key only when open', () => {

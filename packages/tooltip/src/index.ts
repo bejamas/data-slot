@@ -1,7 +1,17 @@
-import { getPart, getRoots, getDataNumber, getDataEnum } from "@data-slot/core";
+import {
+  getPart,
+  getRoots,
+  getDataBool,
+  getDataNumber,
+  getDataEnum,
+  createDismissLayer,
+  computeFloatingPosition,
+  createPositionSync,
+  createPortalLifecycle,
+  createPresenceLifecycle,
+} from "@data-slot/core";
 import { ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
-import { createDismissLayer } from "@data-slot/core";
 
 // Global state for "warm-up" behavior across tooltip instances
 let globalWarmUntil = 0;
@@ -19,10 +29,20 @@ export interface TooltipOptions {
   delay?: number;
   /** Duration to skip delay after closing (ms). Set to 0 to disable warm-up. Default: 300 */
   skipDelayDuration?: number;
-  /** Side of tooltip relative to trigger. Default: 'top'. Set at bind time only. */
+  /** Preferred side of tooltip relative to trigger. Default: 'top'. */
   side?: TooltipSide;
-  /** Alignment along the side. Default: 'center'. Set at bind time only. */
+  /** Preferred alignment along the side. Default: 'center'. */
   align?: TooltipAlign;
+  /** Distance from trigger in pixels. Default: 4 */
+  sideOffset?: number;
+  /** Alignment-axis offset in pixels. Default: 0 */
+  alignOffset?: number;
+  /** Enable collision handling. Default: true */
+  avoidCollisions?: boolean;
+  /** Viewport edge padding used by collision handling. Default: 8 */
+  collisionPadding?: number;
+  /** Portal content to body while open. Default: true */
+  portal?: boolean;
   /** Callback when visibility changes */
   onOpenChange?: (open: boolean) => void;
 }
@@ -52,15 +72,15 @@ export interface TooltipController {
  * ```
  *
  * Data attributes (checked on content first, then root):
- * - `data-side`: 'top' | 'right' | 'bottom' | 'left' (bind-time only)
- * - `data-align`: 'start' | 'center' | 'end' (bind-time only)
+ * - `data-side`: 'top' | 'right' | 'bottom' | 'left' (bind-time preferred side)
+ * - `data-align`: 'start' | 'center' | 'end' (bind-time preferred align)
+ * - `data-side-offset`: number (px)
+ * - `data-align-offset`: number (px)
+ * - `data-avoid-collisions`: boolean
+ * - `data-collision-padding`: number (px)
  * - `data-delay`: number (ms)
  * - `data-skip-delay-duration`: number (ms)
  *
- * Note: side and align are resolved once at bind time. To change placement,
- * destroy and recreate the tooltip with new options.
- *
- * This tooltip uses simple CSS positioning (not collision-aware).
  * Opens on hover (non-touch) and focus. Touch devices: focus-only.
  * Content is hoverable: moving pointer from trigger to content keeps it open.
  * Tooltip stays open while trigger has focus, even if pointer leaves.
@@ -71,65 +91,191 @@ export function createTooltip(
 ): TooltipController {
   const trigger = getPart<HTMLElement>(root, "tooltip-trigger");
   const content = getPart<HTMLElement>(root, "tooltip-content");
+  const authoredPositionerCandidate = getPart<HTMLElement>(root, "tooltip-positioner");
+  const authoredPositioner =
+    authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)
+      ? authoredPositionerCandidate
+      : null;
+  const authoredPortalCandidate = getPart<HTMLElement>(root, "tooltip-portal");
+  const authoredPortal =
+    authoredPortalCandidate && authoredPositioner && authoredPortalCandidate.contains(authoredPositioner)
+      ? authoredPortalCandidate
+      : null;
 
   if (!trigger || !content) {
     throw new Error("Tooltip requires trigger and content slots");
   }
 
   // Resolve options with explicit precedence: JS > data-* > default
-  const delay =
-    options.delay ??
-    getDataNumber(root, "delay") ??
-    300;
+  const delay = options.delay ?? getDataNumber(root, "delay") ?? 300;
   const skipDelayDuration =
-    options.skipDelayDuration ??
-    getDataNumber(root, "skipDelayDuration") ??
-    300;
+    options.skipDelayDuration ?? getDataNumber(root, "skipDelayDuration") ?? 300;
   const onOpenChange = options.onOpenChange;
+  const portalOption =
+    options.portal ?? getDataBool(content, "portal") ?? getDataBool(root, "portal") ?? true;
 
-  // Placement options: content-first, then root (bind-time only)
-  const side =
+  // Placement options: content-first, then root (resolved at bind time)
+  const preferredSide =
     options.side ??
     getDataEnum(content, "side", SIDES) ??
     getDataEnum(root, "side", SIDES) ??
     "top";
-  const align =
+  const preferredAlign =
     options.align ??
     getDataEnum(content, "align", ALIGNS) ??
     getDataEnum(root, "align", ALIGNS) ??
     "center";
+  const sideOffset =
+    options.sideOffset ??
+    getDataNumber(content, "sideOffset") ??
+    getDataNumber(root, "sideOffset") ??
+    4;
+  const alignOffset =
+    options.alignOffset ??
+    getDataNumber(content, "alignOffset") ??
+    getDataNumber(root, "alignOffset") ??
+    0;
+  const avoidCollisions =
+    options.avoidCollisions ??
+    getDataBool(content, "avoidCollisions") ??
+    getDataBool(root, "avoidCollisions") ??
+    true;
+  const collisionPadding =
+    options.collisionPadding ??
+    getDataNumber(content, "collisionPadding") ??
+    getDataNumber(root, "collisionPadding") ??
+    8;
 
   let isOpen = false;
   let hasFocus = false;
+  let isDestroyed = false;
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
   const cleanups: Array<() => void> = [];
+
+  const portal = createPortalLifecycle({
+    content,
+    root,
+    enabled: portalOption,
+    wrapperSlot: authoredPositioner ? undefined : "tooltip-positioner",
+    container: authoredPositioner ?? undefined,
+    mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
+  });
 
   // ARIA setup - ensure content has stable id
   const contentId = ensureId(content, "tooltip-content");
   content.setAttribute("role", "tooltip");
-  content.setAttribute("data-side", side);
-  content.setAttribute("data-align", align);
+  content.setAttribute("data-side", preferredSide);
+  content.setAttribute("data-align", preferredAlign);
+
+  const setDataState = (state: "open" | "closed") => {
+    const positioner = portal.container as HTMLElement;
+    root.setAttribute("data-state", state);
+    content.setAttribute("data-state", state);
+    if (positioner !== content) {
+      positioner.setAttribute("data-state", state);
+    }
+
+    if (state === "open") {
+      root.setAttribute("data-open", "");
+      content.setAttribute("data-open", "");
+      if (positioner !== content) {
+        positioner.setAttribute("data-open", "");
+      }
+      root.removeAttribute("data-closed");
+      content.removeAttribute("data-closed");
+      if (positioner !== content) {
+        positioner.removeAttribute("data-closed");
+      }
+      return;
+    }
+
+    root.setAttribute("data-closed", "");
+    content.setAttribute("data-closed", "");
+    if (positioner !== content) {
+      positioner.setAttribute("data-closed", "");
+    }
+    root.removeAttribute("data-open");
+    content.removeAttribute("data-open");
+    if (positioner !== content) {
+      positioner.removeAttribute("data-open");
+    }
+  };
+
+  const updatePosition = () => {
+    const positioner = portal.container as HTMLElement;
+    const win = root.ownerDocument.defaultView ?? window;
+    const tr = trigger.getBoundingClientRect();
+    const cr = content.getBoundingClientRect();
+    const pos = computeFloatingPosition({
+      anchorRect: tr,
+      contentRect: cr,
+      side: preferredSide,
+      align: preferredAlign,
+      sideOffset,
+      alignOffset,
+      avoidCollisions,
+      collisionPadding,
+    });
+
+    positioner.style.position = "absolute";
+    positioner.style.top = "0px";
+    positioner.style.left = "0px";
+    positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+    positioner.style.willChange = "transform";
+    positioner.style.margin = "0";
+
+    content.setAttribute("data-side", pos.side);
+    content.setAttribute("data-align", pos.align);
+    if (positioner !== content) {
+      positioner.setAttribute("data-side", pos.side);
+      positioner.setAttribute("data-align", pos.align);
+    }
+  };
+
+  const presence = createPresenceLifecycle({
+    element: content,
+    onExitComplete: () => {
+      if (isDestroyed) return;
+      portal.restore();
+      content.hidden = true;
+    },
+  });
+
+  const positionSync = createPositionSync({
+    observedElements: [trigger, content],
+    isActive: () => isOpen,
+    ancestorScroll: false,
+    onUpdate: updatePosition,
+  });
 
   // Helper: check if trigger is disabled
   const isTriggerDisabled = (): boolean =>
-    trigger.hasAttribute("disabled") ||
-    trigger.getAttribute("aria-disabled") === "true";
+    trigger.hasAttribute("disabled") || trigger.getAttribute("aria-disabled") === "true";
 
   const updateState = (open: boolean, reason: TooltipReason) => {
     if (isOpen === open) return;
 
-    isOpen = open;
-    const state = isOpen ? "open" : "closed";
-    root.setAttribute("data-state", state);
-    content.setAttribute("data-state", state);
+    if (!open && isOpen && skipDelayDuration > 0) {
+      globalWarmUntil = Date.now() + skipDelayDuration;
+    }
 
-    // ARIA: explicit values for consistency across AT implementations
+    isOpen = open;
+    setDataState(isOpen ? "open" : "closed");
+
     if (isOpen) {
       trigger.setAttribute("aria-describedby", contentId);
       content.setAttribute("aria-hidden", "false");
+      portal.mount();
+      content.hidden = false;
+      presence.enter();
+      updatePosition();
+      positionSync.start();
+      positionSync.update();
     } else {
       trigger.removeAttribute("aria-describedby");
       content.setAttribute("aria-hidden", "true");
+      presence.exit();
+      positionSync.stop();
     }
 
     emit(root, "tooltip:change", { open: isOpen, trigger, content, reason });
@@ -144,7 +290,6 @@ export function createTooltip(
     }
 
     // Skip delay if we're within the "warm" window (recently closed a tooltip)
-    // Note: warm-up only skips delay, not CSS transitions
     if (Date.now() < globalWarmUntil) {
       updateState(true, reason);
       return;
@@ -162,18 +307,13 @@ export function createTooltip(
       showTimeout = null;
     }
 
-    // Set warm window only when tooltip was actually open
-    if (isOpen && skipDelayDuration > 0) {
-      globalWarmUntil = Date.now() + skipDelayDuration;
-    }
-
     updateState(false, reason);
   };
 
-  // Initialize state (CSS handles visibility via data-state)
+  // Initialize state
+  content.hidden = true;
   content.setAttribute("aria-hidden", "true");
-  root.setAttribute("data-state", "closed");
-  content.setAttribute("data-state", "closed");
+  setDataState("closed");
 
   // Pointer events on trigger
   cleanups.push(
@@ -187,7 +327,7 @@ export function createTooltip(
       if (e.pointerType === "touch") return;
       // Keep open while trigger has focus
       if (hasFocus) return;
-      // Check if pointer moved to content (hoverable content)
+      // Keep open while pointer moves from trigger to content
       const related = e.relatedTarget as Node | null;
       if (related && content.contains(related)) return;
       hideImmediately("pointer");
@@ -210,7 +350,7 @@ export function createTooltip(
       if (e.pointerType === "touch") return;
       // Keep open while trigger has focus
       if (hasFocus) return;
-      // Check if pointer moved back to trigger
+      // Keep open while pointer moves back to trigger
       const related = e.relatedTarget as Node | null;
       if (related && trigger.contains(related)) return;
       hideImmediately("pointer");
@@ -270,7 +410,11 @@ export function createTooltip(
       return isOpen;
     },
     destroy: () => {
+      isDestroyed = true;
       if (showTimeout) clearTimeout(showTimeout);
+      positionSync.stop();
+      presence.cleanup();
+      portal.cleanup();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
     },
