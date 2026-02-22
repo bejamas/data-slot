@@ -60,7 +60,7 @@ const hoverCard = createHoverCard(element, {
 |--------|------|---------|-------------|
 | `defaultOpen` | `boolean` | `false` | Initial open state (uncontrolled only) |
 | `open` | `boolean` | - | Controlled open state |
-| `delay` | `number` | `700` | Delay before opening on hover/focus (ms) |
+| `delay` | `number` | `700` | Delay before opening on hover/keyboard focus (ms) |
 | `skipDelayDuration` | `number` | `300` | Duration to skip delay after closing (ms). Set `0` to disable warm-up. |
 | `closeDelay` | `number` | `300` | Delay before closing after leave/blur (ms) |
 | `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred side relative to trigger |
@@ -157,6 +157,8 @@ root.addEventListener("hover-card:change", (e) => {
 ```
 
 `reason` is one of: `"pointer" | "focus" | "blur" | "dismiss" | "api"`.
+
+Focus opening is keyboard-intent based (`Tab` navigation). Programmatic focus (for example, dialog auto-focus on open) does not auto-open the hover-card.
 
 ### Inbound
 

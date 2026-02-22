@@ -60,6 +60,24 @@ describe('HoverCard', () => {
     await waitForRaf()
   }
 
+  const getPositioner = (content: HTMLElement): HTMLElement => {
+    const parent = content.parentElement
+    if (parent && parent.getAttribute('data-slot') === 'hover-card-positioner') {
+      return parent
+    }
+    return content
+  }
+
+  const getTranslate3dXY = (transform: string): { x: number; y: number } => {
+    const match = /translate3d\(\s*([-\d.]+)px\s*,\s*([-\d.]+)px\s*,\s*0(?:px)?\s*\)/.exec(
+      transform
+    )
+    if (!match) {
+      throw new Error(`Expected translate3d transform, got \"${transform}\"`)
+    }
+    return { x: Number(match[1]), y: Number(match[2]) }
+  }
+
   const pointer = (type: string, pointerType: string, relatedTarget?: EventTarget | null) => {
     const event = new PointerEvent(type, { bubbles: true, pointerType })
     if (relatedTarget !== undefined) {
@@ -266,11 +284,21 @@ describe('HoverCard', () => {
   it('opens on focus and closes on blur', async () => {
     const { trigger, controller } = setup({ delay: 0, closeDelay: 0 })
 
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
     trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
     expect(controller.isOpen).toBe(true)
 
     trigger.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
     await waitForClose()
+    expect(controller.isOpen).toBe(false)
+
+    controller.destroy()
+  })
+
+  it('does not open on programmatic focus without keyboard intent', () => {
+    const { trigger, controller } = setup({ delay: 0, closeDelay: 0 })
+
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
     expect(controller.isOpen).toBe(false)
 
     controller.destroy()
@@ -326,78 +354,417 @@ describe('HoverCard', () => {
     controller.destroy()
   })
 
-  it('sets data-side and data-align from options', () => {
-    const { content, controller } = setup({ side: 'right', align: 'end', avoidCollisions: false })
+  describe('content positioning', () => {
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect
 
-    controller.open()
+    it('uses absolute positioning when open', () => {
+      const { content, controller } = setup()
 
-    expect(content.getAttribute('data-side')).toBe('right')
-    expect(content.getAttribute('data-align')).toBe('end')
+      controller.open()
+      const positioner = getPositioner(content)
+      expect(positioner.getAttribute('data-slot')).toBe('hover-card-positioner')
+      expect(positioner.style.position).toBe('absolute')
+      expect(positioner.style.top).toBe('0px')
+      expect(positioner.style.left).toBe('0px')
+      expect(positioner.style.transform).toContain('translate3d(')
+      expect(content.style.transform).toBe('')
+      expect(positioner.getAttribute('data-side')).toBe(content.getAttribute('data-side'))
+      expect(positioner.getAttribute('data-align')).toBe(content.getAttribute('data-align'))
 
-    controller.destroy()
-  })
+      controller.destroy()
+    })
 
-  it('portals by default and restores on close', async () => {
-    const { root, content, controller } = setup({ delay: 0 })
-    const originalParent = content.parentNode
+    it('sets default data-side and data-align attributes when open', () => {
+      const { content, controller } = setup()
 
-    controller.open()
-    const positioner = content.parentElement as HTMLElement
-    expect(positioner.getAttribute('data-slot')).toBe('hover-card-positioner')
-    expect(positioner.parentElement).toBe(document.body)
+      controller.open()
+      expect(content.getAttribute('data-side')).toBe('bottom')
+      expect(content.getAttribute('data-align')).toBe('center')
 
-    controller.close()
-    await waitForClose()
+      controller.destroy()
+    })
 
-    expect(content.parentNode).toBe(originalParent)
-    expect(root.contains(content)).toBe(true)
+    it('respects side option', () => {
+      const { content, controller } = setup({ side: 'top', avoidCollisions: false })
 
-    controller.destroy()
-  })
+      controller.open()
+      expect(content.getAttribute('data-side')).toBe('top')
 
-  it('respects portal=false', () => {
-    const { root, content, controller } = setup({ delay: 0, portal: false })
-    const originalParent = content.parentNode
+      controller.destroy()
+    })
 
-    controller.open()
+    it('respects align option', () => {
+      const { content, controller } = setup({ align: 'end', avoidCollisions: false })
 
-    expect(content.parentNode).toBe(originalParent)
-    expect(root.contains(content)).toBe(true)
+      controller.open()
+      expect(content.getAttribute('data-align')).toBe('end')
 
-    controller.destroy()
-  })
+      controller.destroy()
+    })
 
-  it('uses authored portal and positioner when provided', async () => {
-    document.body.innerHTML = `
-      <div data-slot="hover-card" id="root">
-        <button data-slot="hover-card-trigger">Hover me</button>
-        <div data-slot="hover-card-portal" id="portal">
-          <div data-slot="hover-card-positioner" id="positioner">
-            <div data-slot="hover-card-content">Preview</div>
+    it('applies sideOffset and alignOffset from options', async () => {
+      const { trigger, content, controller } = setup({
+        side: 'left',
+        align: 'start',
+        sideOffset: 8,
+        alignOffset: 6,
+        avoidCollisions: false,
+      })
+
+      trigger.getBoundingClientRect = () => rect(200, 120, 80, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40)
+
+      controller.open()
+      await waitForRaf()
+
+      const { x, y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(x).toBe(92)
+      expect(y).toBe(126)
+
+      controller.destroy()
+    })
+
+    it('uses end alignment edge for alignOffset', async () => {
+      const { trigger, content, controller } = setup({
+        side: 'top',
+        align: 'end',
+        sideOffset: 4,
+        alignOffset: 10,
+        avoidCollisions: false,
+      })
+
+      trigger.getBoundingClientRect = () => rect(100, 200, 100, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 40, 30)
+
+      controller.open()
+      await waitForRaf()
+
+      const { x, y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(x).toBe(150)
+      expect(y).toBe(166)
+
+      controller.destroy()
+    })
+
+    it('resolves sideOffset/alignOffset as options > content attrs > root attrs', async () => {
+      document.body.innerHTML = `
+        <div
+          data-slot="hover-card"
+          id="root"
+          data-side-offset="40"
+          data-align-offset="30"
+        >
+          <button data-slot="hover-card-trigger">Hover me</button>
+          <div data-slot="hover-card-content" data-side-offset="12" data-align-offset="7">
+            Preview content
           </div>
         </div>
-      </div>
-    `
+      `
 
-    const root = document.getElementById('root')!
-    const portal = document.getElementById('portal') as HTMLElement
-    const positioner = document.getElementById('positioner') as HTMLElement
-    const content = root.querySelector('[data-slot="hover-card-content"]') as HTMLElement
-    const controller = createHoverCard(root, { delay: 0 })
+      const root = document.getElementById('root')!
+      const trigger = root.querySelector('[data-slot="hover-card-trigger"]') as HTMLElement
+      const content = root.querySelector('[data-slot="hover-card-content"]') as HTMLElement
+      const controller = createHoverCard(root, {
+        side: 'left',
+        align: 'start',
+        sideOffset: 4,
+        alignOffset: 3,
+        avoidCollisions: false,
+      })
 
-    controller.open()
+      trigger.getBoundingClientRect = () => rect(200, 120, 80, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40)
 
-    expect(portal.parentElement).toBe(document.body)
-    expect(content.parentElement).toBe(positioner)
-    expect(positioner.style.transform).toContain('translate3d(')
+      controller.open()
+      await waitForRaf()
 
-    controller.close()
-    await waitForClose()
+      const { x, y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(x).toBe(96)
+      expect(y).toBe(123)
 
-    expect(portal.parentElement).toBe(root)
-    expect(content.parentElement).toBe(positioner)
+      controller.destroy()
+    })
 
-    controller.destroy()
+    it('reads sideOffset/alignOffset from content first, then root', async () => {
+      document.body.innerHTML = `
+        <div
+          data-slot="hover-card"
+          id="root"
+          data-side="left"
+          data-align="start"
+          data-side-offset="40"
+          data-align-offset="30"
+        >
+          <button data-slot="hover-card-trigger">Hover me</button>
+          <div data-slot="hover-card-content" data-side-offset="12" data-align-offset="7">
+            Preview content
+          </div>
+        </div>
+      `
+
+      const root = document.getElementById('root')!
+      const trigger = root.querySelector('[data-slot="hover-card-trigger"]') as HTMLElement
+      const content = root.querySelector('[data-slot="hover-card-content"]') as HTMLElement
+      const controller = createHoverCard(root, { avoidCollisions: false })
+
+      trigger.getBoundingClientRect = () => rect(200, 120, 80, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40)
+
+      controller.open()
+      await waitForRaf()
+
+      const { x, y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(x).toBe(88)
+      expect(y).toBe(127)
+
+      controller.destroy()
+    })
+
+    it('flips side on collision when avoidCollisions is true', async () => {
+      const { trigger, content, controller } = setup({
+        side: 'bottom',
+        align: 'start',
+        sideOffset: 4,
+        avoidCollisions: true,
+        collisionPadding: 8,
+      })
+
+      trigger.getBoundingClientRect = () => rect(100, 740, 80, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 120, 100)
+
+      controller.open()
+      await waitForRaf()
+
+      expect(content.getAttribute('data-side')).toBe('top')
+      const { y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(y).toBe(636)
+
+      controller.destroy()
+    })
+
+    it('keeps preferred side when avoidCollisions is false', async () => {
+      const { trigger, content, controller } = setup({
+        side: 'bottom',
+        align: 'start',
+        sideOffset: 4,
+        avoidCollisions: false,
+      })
+
+      trigger.getBoundingClientRect = () => rect(100, 740, 80, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 120, 100)
+
+      controller.open()
+      await waitForRaf()
+
+      expect(content.getAttribute('data-side')).toBe('bottom')
+      const { y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(y).toBe(764)
+
+      controller.destroy()
+    })
+
+    it('keeps coordinates stable on window scroll', async () => {
+      const { trigger, content, controller } = setup({ avoidCollisions: false })
+
+      let anchorTop = 120
+      const anchorLeft = 80
+      const anchorWidth = 140
+      const anchorHeight = 32
+
+      trigger.getBoundingClientRect = () =>
+        ({
+          x: anchorLeft,
+          y: anchorTop,
+          top: anchorTop,
+          left: anchorLeft,
+          width: anchorWidth,
+          height: anchorHeight,
+          right: anchorLeft + anchorWidth,
+          bottom: anchorTop + anchorHeight,
+          toJSON: () => ({}),
+        }) as DOMRect
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 180,
+          height: 100,
+          right: 180,
+          bottom: 100,
+          toJSON: () => ({}),
+        }) as DOMRect
+
+      controller.open()
+      await waitForRaf()
+      await waitForRaf()
+
+      const positioner = getPositioner(content)
+      const initialTransform = positioner.style.transform
+
+      anchorTop = 260
+      window.dispatchEvent(new Event('scroll'))
+      await waitForRaf()
+      await waitForRaf()
+
+      expect(positioner.style.transform).toBe(initialTransform)
+      controller.destroy()
+    })
+  })
+
+  describe('content portaling', () => {
+    it('portals by default and restores on close', async () => {
+      const { root, content, controller } = setup({ delay: 0 })
+      const originalParent = content.parentNode
+
+      controller.open()
+      const positioner = getPositioner(content)
+      expect(positioner.getAttribute('data-slot')).toBe('hover-card-positioner')
+      expect(positioner.parentElement).toBe(document.body)
+
+      controller.close()
+      await waitForClose()
+
+      expect(content.parentNode).toBe(originalParent)
+      expect(root.contains(content)).toBe(true)
+
+      controller.destroy()
+    })
+
+    it('respects portal=false and positions content directly', () => {
+      const { root, content, controller } = setup({ delay: 0, portal: false })
+      const originalParent = content.parentNode
+
+      controller.open()
+
+      expect(content.parentNode).toBe(originalParent)
+      expect(root.contains(content)).toBe(true)
+      expect(getPositioner(content)).toBe(content)
+      expect(content.style.position).toBe('absolute')
+      expect(content.style.top).toBe('0px')
+      expect(content.style.left).toBe('0px')
+      expect(content.style.transform).toContain('translate3d(')
+
+      controller.destroy()
+    })
+
+    it('reads data-portal from content first, then root', () => {
+      document.body.innerHTML = `
+        <div data-slot="hover-card" id="root" data-portal="true">
+          <button data-slot="hover-card-trigger">Hover me</button>
+          <div data-slot="hover-card-content" data-portal="false">Preview content</div>
+        </div>
+      `
+
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="hover-card-content"]') as HTMLElement
+      const originalParent = content.parentNode
+      const controller = createHoverCard(root, { delay: 0 })
+
+      controller.open()
+      expect(content.parentNode).toBe(originalParent)
+      expect(root.contains(content)).toBe(true)
+
+      controller.destroy()
+    })
+
+    it("reads data-portal='false' from root", () => {
+      document.body.innerHTML = `
+        <div data-slot="hover-card" id="root" data-portal="false">
+          <button data-slot="hover-card-trigger">Hover me</button>
+          <div data-slot="hover-card-content">Preview content</div>
+        </div>
+      `
+
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="hover-card-content"]') as HTMLElement
+      const originalParent = content.parentNode
+      const controller = createHoverCard(root, { delay: 0 })
+
+      controller.open()
+      expect(content.parentNode).toBe(originalParent)
+      expect(root.contains(content)).toBe(true)
+
+      controller.destroy()
+    })
+
+    it('restores content to root on destroy while open', () => {
+      const { root, content, controller } = setup({ delay: 0 })
+
+      controller.open()
+      const positioner = getPositioner(content)
+      expect(positioner.parentElement).toBe(document.body)
+
+      controller.destroy()
+      expect(root.contains(content)).toBe(true)
+    })
+
+    it('uses authored portal and positioner when provided', async () => {
+      document.body.innerHTML = `
+        <div data-slot="hover-card" id="root">
+          <button data-slot="hover-card-trigger">Hover me</button>
+          <div data-slot="hover-card-portal" id="portal">
+            <div data-slot="hover-card-positioner" id="positioner">
+              <div data-slot="hover-card-content">Preview</div>
+            </div>
+          </div>
+        </div>
+      `
+
+      const root = document.getElementById('root')!
+      const portal = document.getElementById('portal') as HTMLElement
+      const positioner = document.getElementById('positioner') as HTMLElement
+      const content = root.querySelector('[data-slot="hover-card-content"]') as HTMLElement
+      const controller = createHoverCard(root, { delay: 0 })
+
+      controller.open()
+
+      expect(portal.parentElement).toBe(document.body)
+      expect(content.parentElement).toBe(positioner)
+      expect(positioner.style.transform).toContain('translate3d(')
+
+      controller.close()
+      await waitForClose()
+
+      expect(portal.parentElement).toBe(root)
+      expect(content.parentElement).toBe(positioner)
+
+      controller.destroy()
+    })
+  })
+
+  describe('data attributes', () => {
+    it('reads data-side and data-align from content first, then root', () => {
+      document.body.innerHTML = `
+        <div data-slot="hover-card" id="root" data-side="top" data-align="end" data-avoid-collisions="false">
+          <button data-slot="hover-card-trigger">Hover me</button>
+          <div data-slot="hover-card-content" data-side="right" data-align="start">Preview content</div>
+        </div>
+      `
+
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="hover-card-content"]') as HTMLElement
+      const controller = createHoverCard(root, { delay: 0 })
+
+      controller.open()
+      expect(content.getAttribute('data-side')).toBe('right')
+      expect(content.getAttribute('data-align')).toBe('start')
+
+      controller.destroy()
+    })
   })
 
   it('emits hover-card:change and onOpenChange', () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import { createDialog, create } from "./index";
 import { createPopover } from "../../popover/src/index";
+import { createHoverCard } from "../../hover-card/src/index";
 
 describe("Dialog", () => {
   const setup = (options: Parameters<typeof createDialog>[1] = {}) => {
@@ -453,6 +454,40 @@ describe("Dialog", () => {
     expect(dialogController.isOpen).toBe(false);
 
     popoverController.destroy();
+    dialogController.destroy();
+  });
+
+  it("opening dialog does not auto-open nested hover-card from initial focus", async () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog" id="dialog-root">
+        <button data-slot="dialog-trigger">Open dialog</button>
+        <div data-slot="dialog-overlay"></div>
+        <div data-slot="dialog-content">
+          <div data-slot="hover-card" id="hover-card-root">
+            <button data-slot="hover-card-trigger" id="hover-card-trigger">Preview profile</button>
+            <div data-slot="hover-card-content">Inner hover-card content</div>
+          </div>
+          <button id="second-focusable">Second focusable</button>
+        </div>
+      </div>
+    `;
+
+    const dialogRoot = document.getElementById("dialog-root")!;
+    const hoverCardRoot = document.getElementById("hover-card-root")!;
+    const hoverCardTrigger = document.getElementById("hover-card-trigger") as HTMLButtonElement;
+    const dialogController = createDialog(dialogRoot);
+    const hoverCardController = createHoverCard(hoverCardRoot, { delay: 0, closeDelay: 0 });
+
+    dialogController.open();
+
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    expect(document.activeElement).toBe(hoverCardTrigger);
+    expect(hoverCardController.isOpen).toBe(false);
+
+    hoverCardController.destroy();
     dialogController.destroy();
   });
 

@@ -22,13 +22,14 @@ export type HoverCardReason = "pointer" | "focus" | "blur" | "dismiss" | "api";
 
 // Global state for warm-up behavior across hover-card instances
 let globalWarmUntil = 0;
+const FOCUS_OPEN_INTENT_WINDOW_MS = 750;
 
 export interface HoverCardOptions {
   /** Initial open state (uncontrolled mode only) */
   defaultOpen?: boolean;
   /** Controlled open state. Internal interactions do not mutate when set. */
   open?: boolean;
-  /** Delay before opening on hover/focus (ms). @default 700 */
+  /** Delay before opening on hover/keyboard focus (ms). @default 700 */
   delay?: number;
   /** Duration to skip delay after closing (ms). Set to 0 to disable warm-up. @default 300 */
   skipDelayDuration?: number;
@@ -158,6 +159,7 @@ export function createHoverCard(
   let focusWithin = false;
   let openTimeout: ReturnType<typeof setTimeout> | null = null;
   let closeTimeout: ReturnType<typeof setTimeout> | null = null;
+  let lastTabKeydownAt = -Infinity;
 
   const cleanups: Array<() => void> = [];
   const portal = createPortalLifecycle({
@@ -378,6 +380,14 @@ export function createHoverCard(
 
   // Pointer interaction on trigger
   cleanups.push(
+    on(root.ownerDocument, "keydown", (e) => {
+      if ((e as KeyboardEvent).key === "Tab") {
+        lastTabKeydownAt = Date.now();
+      }
+    }, { capture: true }),
+    on(root.ownerDocument, "pointerdown", () => {
+      lastTabKeydownAt = -Infinity;
+    }, { capture: true }),
     on(trigger, "pointerenter", (e) => {
       if (e.pointerType === "touch") return;
       pointerOnTrigger = true;
@@ -414,6 +424,8 @@ export function createHoverCard(
     on(trigger, "focusin", () => {
       focusWithin = true;
       if (isTriggerDisabled()) return;
+      // Ignore pure programmatic focus (e.g. dialog initial autofocus).
+      if (Date.now() - lastTabKeydownAt > FOCUS_OPEN_INTENT_WINDOW_MS) return;
       scheduleOpen("focus");
     }),
     on(trigger, "focusout", (e) => {
