@@ -437,10 +437,10 @@ export function createHoverCard(
   // Focus interaction
   cleanups.push(
     on(trigger, "focusin", () => {
-      focusWithin = true;
       if (isTriggerDisabled()) return;
       // Ignore pure programmatic focus (e.g. dialog initial autofocus).
       if (Date.now() - lastTabKeydownAt > FOCUS_OPEN_INTENT_WINDOW_MS) return;
+      focusWithin = true;
       scheduleOpen("focus");
     }),
     on(trigger, "focusout", (e) => {

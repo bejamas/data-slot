@@ -319,6 +319,20 @@ describe('HoverCard', () => {
     controller.destroy()
   })
 
+  it('closes on pointerleave even when trigger received programmatic focus', async () => {
+    const { trigger, controller } = setup({ delay: 0, closeDelay: 0 })
+
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    hoverEnter(trigger)
+    expect(controller.isOpen).toBe(true)
+
+    trigger.dispatchEvent(pointer('pointerleave', 'mouse'))
+    await waitForClose()
+    expect(controller.isOpen).toBe(false)
+
+    controller.destroy()
+  })
+
   it('closes on Escape by default', async () => {
     const { controller } = setup({ delay: 0 })
 

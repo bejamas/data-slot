@@ -535,6 +535,53 @@ describe("Dialog", () => {
     dialogController.destroy();
   });
 
+  it("nested hover-card still closes on pointerleave after dialog autofocus", async () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog" id="dialog-root">
+        <button data-slot="dialog-trigger">Open dialog</button>
+        <div data-slot="dialog-overlay"></div>
+        <div data-slot="dialog-content">
+          <div data-slot="hover-card" id="hover-card-root">
+            <button data-slot="hover-card-trigger" id="hover-card-trigger">Preview profile</button>
+            <div data-slot="hover-card-content">Inner hover-card content</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const dialogRoot = document.getElementById("dialog-root")!;
+    const hoverCardRoot = document.getElementById("hover-card-root")!;
+    const hoverCardTrigger = document.getElementById("hover-card-trigger") as HTMLButtonElement;
+    const dialogController = createDialog(dialogRoot);
+    const hoverCardController = createHoverCard(hoverCardRoot, { delay: 0, closeDelay: 0 });
+
+    dialogController.open();
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    document.dispatchEvent(
+      new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })
+    );
+    hoverCardTrigger.dispatchEvent(
+      new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" })
+    );
+    expect(hoverCardController.isOpen).toBe(true);
+
+    hoverCardTrigger.dispatchEvent(
+      new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse" })
+    );
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+    expect(hoverCardController.isOpen).toBe(false);
+
+    hoverCardController.destroy();
+    dialogController.destroy();
+  });
+
   it("does not set inline z-index and exposes stack metadata for styling", () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="dialog1">
