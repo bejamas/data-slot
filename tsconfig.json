@@ -27,8 +27,8 @@
       "@data-slot/hover-card": ["./packages/hover-card/src/index.ts"],
       "@data-slot/tooltip": ["./packages/tooltip/src/index.ts"],
       "@data-slot/collapsible": ["./packages/collapsible/src/index.ts"],
-      "data-slot": ["./packages/data-slot/src/index.ts"],
-      "data-slot/*": ["./packages/data-slot/src/*.ts"]
+      "@data-slot/ui": ["./packages/ui/src/index.ts"],
+      "@data-slot/ui/*": ["./packages/ui/src/*.ts"]
     }
   },
   "include": ["packages/**/*.ts"]

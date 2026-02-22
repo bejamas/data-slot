@@ -449,18 +449,18 @@ bun run version             # Updates version across all packages
 
 All packages share the same version number, managed from the root.
 
-## data-slot Package Updates
+## @data-slot/ui Package Updates
 
-The `data-slot` package re-exports all components for convenience imports. When adding a new component:
+The `@data-slot/ui` package re-exports all components for convenience imports. When adding a new component:
 
 ### 1. Create Re-export File
-Create `packages/data-slot/src/{component}.ts`:
+Create `packages/ui/src/{component}.ts`:
 ```typescript
 export * from "@data-slot/component";
 ```
 
 ### 2. Update Build Config
-Edit `packages/data-slot/tsdown.config.ts`:
+Edit `packages/ui/tsdown.config.ts`:
 ```typescript
 export default defineConfig({
   entry: [
@@ -473,7 +473,7 @@ export default defineConfig({
 ```
 
 ### 3. Update Package Exports
-Edit `packages/data-slot/package.json`:
+Edit `packages/ui/package.json`:
 ```json
 {
   "exports": {

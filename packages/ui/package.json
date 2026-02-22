@@ -193,6 +193,6 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bejamas/data-slot.git",
-    "directory": "packages/data-slot"
+    "directory": "packages/ui"
   }
 }

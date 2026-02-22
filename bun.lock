@@ -14,32 +14,109 @@
     },
     "packages/accordion": {
       "name": "@data-slot/accordion",
-      "version": "0.2.32",
+      "version": "0.2.80",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/collapsible": {
       "name": "@data-slot/collapsible",
-      "version": "0.2.32",
+      "version": "0.2.80",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/combobox": {
       "name": "@data-slot/combobox",
-      "version": "0.2.32",
+      "version": "0.2.80",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/core": {
       "name": "@data-slot/core",
-      "version": "0.2.32",
+      "version": "0.2.80",
     },
-    "packages/data-slot": {
-      "name": "data-slot",
-      "version": "0.2.32",
+    "packages/dialog": {
+      "name": "@data-slot/dialog",
+      "version": "0.2.80",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/dropdown-menu": {
+      "name": "@data-slot/dropdown-menu",
+      "version": "0.2.80",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/hover-card": {
+      "name": "@data-slot/hover-card",
+      "version": "0.2.80",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/navigation-menu": {
+      "name": "@data-slot/navigation-menu",
+      "version": "0.2.80",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/popover": {
+      "name": "@data-slot/popover",
+      "version": "0.2.80",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/select": {
+      "name": "@data-slot/select",
+      "version": "0.2.80",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/slider": {
+      "name": "@data-slot/slider",
+      "version": "0.2.80",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/tabs": {
+      "name": "@data-slot/tabs",
+      "version": "0.2.80",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/toggle": {
+      "name": "@data-slot/toggle",
+      "version": "0.2.80",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/toggle-group": {
+      "name": "@data-slot/toggle-group",
+      "version": "0.2.80",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/tooltip": {
+      "name": "@data-slot/tooltip",
+      "version": "0.2.80",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/ui": {
+      "name": "@data-slot/ui",
+      "version": "0.2.80",
       "devDependencies": {
         "@data-slot/accordion": "workspace:*",
         "@data-slot/collapsible": "workspace:*",
@@ -47,6 +124,7 @@
         "@data-slot/core": "workspace:*",
         "@data-slot/dialog": "workspace:*",
         "@data-slot/dropdown-menu": "workspace:*",
+        "@data-slot/hover-card": "workspace:*",
         "@data-slot/navigation-menu": "workspace:*",
         "@data-slot/popover": "workspace:*",
         "@data-slot/select": "workspace:*",
@@ -54,76 +132,6 @@
         "@data-slot/toggle": "workspace:*",
         "@data-slot/toggle-group": "workspace:*",
         "@data-slot/tooltip": "workspace:*",
-      },
-    },
-    "packages/dialog": {
-      "name": "@data-slot/dialog",
-      "version": "0.2.32",
-      "dependencies": {
-        "@data-slot/core": "workspace:*",
-      },
-    },
-    "packages/dropdown-menu": {
-      "name": "@data-slot/dropdown-menu",
-      "version": "0.2.32",
-      "dependencies": {
-        "@data-slot/core": "workspace:*",
-      },
-    },
-    "packages/navigation-menu": {
-      "name": "@data-slot/navigation-menu",
-      "version": "0.2.32",
-      "dependencies": {
-        "@data-slot/core": "workspace:*",
-      },
-    },
-    "packages/popover": {
-      "name": "@data-slot/popover",
-      "version": "0.2.32",
-      "dependencies": {
-        "@data-slot/core": "workspace:*",
-      },
-    },
-    "packages/select": {
-      "name": "@data-slot/select",
-      "version": "0.2.32",
-      "dependencies": {
-        "@data-slot/core": "workspace:*",
-      },
-    },
-    "packages/slider": {
-      "name": "@data-slot/slider",
-      "version": "0.2.32",
-      "dependencies": {
-        "@data-slot/core": "workspace:*",
-      },
-    },
-    "packages/tabs": {
-      "name": "@data-slot/tabs",
-      "version": "0.2.32",
-      "dependencies": {
-        "@data-slot/core": "workspace:*",
-      },
-    },
-    "packages/toggle": {
-      "name": "@data-slot/toggle",
-      "version": "0.2.32",
-      "dependencies": {
-        "@data-slot/core": "workspace:*",
-      },
-    },
-    "packages/toggle-group": {
-      "name": "@data-slot/toggle-group",
-      "version": "0.2.32",
-      "dependencies": {
-        "@data-slot/core": "workspace:*",
-      },
-    },
-    "packages/tooltip": {
-      "name": "@data-slot/tooltip",
-      "version": "0.2.32",
-      "dependencies": {
-        "@data-slot/core": "workspace:*",
       },
     },
     "website": {
@@ -192,6 +200,8 @@
 
     "@data-slot/dropdown-menu": ["@data-slot/dropdown-menu@workspace:packages/dropdown-menu"],
 
+    "@data-slot/hover-card": ["@data-slot/hover-card@workspace:packages/hover-card"],
+
     "@data-slot/navigation-menu": ["@data-slot/navigation-menu@workspace:packages/navigation-menu"],
 
     "@data-slot/popover": ["@data-slot/popover@workspace:packages/popover"],
@@ -207,6 +217,8 @@
     "@data-slot/toggle-group": ["@data-slot/toggle-group@workspace:packages/toggle-group"],
 
     "@data-slot/tooltip": ["@data-slot/tooltip@workspace:packages/tooltip"],
+
+    "@data-slot/ui": ["@data-slot/ui@workspace:packages/ui"],
 
     "@emnapi/core": ["@emnapi/core@1.8.1", "", { "dependencies": { "@emnapi/wasi-threads": "1.1.0", "tslib": "^2.4.0" } }, "sha512-AvT9QFpxK0Zd8J0jopedNm+w/2fIzvtPKPjqyw9jwvBaReTTqPBk9Hixaz7KbjimP+QNz605/XnjFcDAL2pqBg=="],
 
@@ -569,8 +581,6 @@
     "cssesc": ["cssesc@3.0.0", "", { "bin": { "cssesc": "bin/cssesc" } }, "sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg=="],
 
     "csso": ["csso@5.0.5", "", { "dependencies": { "css-tree": "~2.2.0" } }, "sha512-0LrrStPOdJj+SPCCrGhzryycLjwcgUSHBtxNA8aIDxf0GLsRh1cKYhB00Gd1lDOS4yGH69+SNn13+TWbVHETFQ=="],
-
-    "data-slot": ["data-slot@workspace:packages/data-slot"],
 
     "data-slot-docs": ["data-slot-docs@workspace:website"],
 

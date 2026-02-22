@@ -1,4 +1,4 @@
-# data-slot
+# @data-slot/ui
 
 Headless UI components for vanilla JavaScript. Tiny, accessible, unstyled.
 
@@ -7,7 +7,7 @@ Headless UI components for vanilla JavaScript. Tiny, accessible, unstyled.
 ## Installation
 
 ```bash
-npm install data-slot
+npm install @data-slot/ui
 ```
 
 ## Packages
@@ -34,21 +34,21 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 For tree-shaking, use subpath imports:
 
 ```typescript
-import { create } from "data-slot/tabs";
-import { createDialog } from "data-slot/dialog";
+import { create } from "@data-slot/ui/tabs";
+import { createDialog } from "@data-slot/ui/dialog";
 ```
 
 Available subpaths:
-- `data-slot/core`
-- `data-slot/tabs`
-- `data-slot/dialog`
-- `data-slot/accordion`
-- `data-slot/popover`
-- `data-slot/hover-card`
-- `data-slot/tooltip`
-- `data-slot/collapsible`
-- `data-slot/navigation-menu`
-- `data-slot/combobox`
+- `@data-slot/ui/core`
+- `@data-slot/ui/tabs`
+- `@data-slot/ui/dialog`
+- `@data-slot/ui/accordion`
+- `@data-slot/ui/popover`
+- `@data-slot/ui/hover-card`
+- `@data-slot/ui/tooltip`
+- `@data-slot/ui/collapsible`
+- `@data-slot/ui/navigation-menu`
+- `@data-slot/ui/combobox`
 
 ### Direct Package Imports
 
@@ -68,7 +68,7 @@ import { createDialog } from "@data-slot/dialog";
 Import everything (larger bundle):
 
 ```typescript
-import { createTabs, createDialog, createAccordion } from "data-slot";
+import { createTabs, createDialog, createAccordion } from "@data-slot/ui";
 ```
 
 ## Quick Start
@@ -84,7 +84,7 @@ import { createTabs, createDialog, createAccordion } from "data-slot";
 </div>
 
 <script type="module">
-  import { create } from "data-slot/tabs";
+  import { create } from "@data-slot/ui/tabs";
   
   const controllers = create();
   controllers[0]?.select("two");
@@ -97,11 +97,11 @@ All components follow the same pattern:
 
 ```typescript
 // Auto-discover and bind all instances in the DOM
-import { create } from "data-slot/tabs";
+import { create } from "@data-slot/ui/tabs";
 const controllers = create(); // Returns Controller[]
 
 // Or create for a specific element
-import { createTabs } from "data-slot/tabs";
+import { createTabs } from "@data-slot/ui/tabs";
 const tabs = createTabs(document.querySelector('[data-slot="tabs"]'));
 
 tabs.select("news");  // Programmatic control

@@ -3,7 +3,7 @@
 //   import { create } from "@data-slot/tabs"
 //
 // Or use subpath imports:
-//   import { create } from "data-slot/tabs"
+//   import { create } from "@data-slot/ui/tabs"
 
 export * from "@data-slot/core";
 
