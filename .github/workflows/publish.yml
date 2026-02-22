@@ -53,15 +53,62 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Resolve @data-slot/core version: from tag (e.g. v0.2.10 -> 0.2.10) or from core's package.json
+          # Resolve release version: from tag (e.g. v0.2.10 -> 0.2.10) or from core's package.json
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            CORE_VERSION="${GITHUB_REF#refs/tags/v}"
+            RELEASE_VERSION="${GITHUB_REF#refs/tags/v}"
           else
-            CORE_VERSION=$(jq -r .version packages/core/package.json)
+            RELEASE_VERSION=$(jq -r .version packages/core/package.json)
           fi
-          echo "Using @data-slot/core version: $CORE_VERSION"
+          echo "Using release version: $RELEASE_VERSION"
 
-          # Helper function: pack with bun, validate packed manifest, then publish extracted contents.
+          rewrite_workspace_data_slot_deps() {
+            local manifest="$1"
+            local tmp_manifest
+            tmp_manifest="${manifest}.tmp"
+
+            jq --arg v "$RELEASE_VERSION" '
+              def rewrite_deps:
+                if type == "object" then
+                  with_entries(
+                    if (.key | startswith("@data-slot/")) and (.value == "workspace:*")
+                    then .value = $v
+                    else .
+                    end
+                  )
+                else .
+                end;
+              if has("dependencies") then .dependencies |= rewrite_deps else . end
+              | if has("devDependencies") then .devDependencies |= rewrite_deps else . end
+              | if has("peerDependencies") then .peerDependencies |= rewrite_deps else . end
+              | if has("optionalDependencies") then .optionalDependencies |= rewrite_deps else . end
+            ' "$manifest" > "$tmp_manifest"
+            mv "$tmp_manifest" "$manifest"
+          }
+
+          wait_for_npm_package_version() {
+            local pkg="$1"
+            local version="$2"
+            local attempts=10
+            local sleep_seconds=6
+            local i
+
+            for ((i = 1; i <= attempts; i++)); do
+              if npm view "${pkg}@${version}" version >/dev/null 2>&1; then
+                echo "  [OK] ${pkg}@${version} is available"
+                return 0
+              fi
+
+              if ((i < attempts)); then
+                echo "  ... ${pkg}@${version} not visible yet (attempt ${i}/${attempts}); retrying in ${sleep_seconds}s"
+                sleep "$sleep_seconds"
+              fi
+            done
+
+            echo "ERROR: ${pkg}@${version} not available on npm after ${attempts} attempts"
+            return 1
+          }
+
+          # Helper function: pack with bun, rewrite workspace deps, validate packed manifest, then publish extracted contents.
           publish_pkg() {
             local dir="$1"
             pushd "$dir" >/dev/null
@@ -81,11 +128,8 @@ jobs:
             tmp="$(mktemp -d)"
             tar -xzf "$tgz_path" -C "$tmp"
 
-            # Replace workspace @data-slot/core with published version (skip for core package)
-            if jq -e '.dependencies["@data-slot/core"]' "$tmp/package/package.json" >/dev/null 2>&1; then
-              jq --arg v "$CORE_VERSION" '.dependencies["@data-slot/core"] = $v' "$tmp/package/package.json" > "$tmp/package/package.json.tmp"
-              mv "$tmp/package/package.json.tmp" "$tmp/package/package.json"
-            fi
+            # Replace internal workspace:* deps with the release version.
+            rewrite_workspace_data_slot_deps "$tmp/package/package.json"
 
             echo "=== Packed manifest for $dir ($tgz) ==="
             cat "$tmp/package/package.json"
@@ -116,6 +160,20 @@ jobs:
           publish_pkg packages/select
           publish_pkg packages/combobox
           publish_pkg packages/hover-card
+
+          echo "Waiting for @data-slot/ui dependencies to be available on npm..."
+          mapfile -t ui_internal_deps < <(
+            jq -r '
+              (.dependencies // {})
+              | keys[]
+              | select(startswith("@data-slot/"))
+              | select(. != "@data-slot/ui")
+            ' packages/ui/package.json
+          )
+          for dep in "${ui_internal_deps[@]}"; do
+            wait_for_npm_package_version "$dep" "$RELEASE_VERSION"
+          done
+
           publish_pkg packages/ui
 
       - name: Dry run - show what would be published
