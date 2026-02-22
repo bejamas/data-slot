@@ -67,10 +67,11 @@ jobs:
             tmp_manifest="${manifest}.tmp"
 
             jq --arg v "$RELEASE_VERSION" '
+              . as $manifest
               def rewrite_deps:
                 if type == "object" then
                   with_entries(
-                    if (.key | startswith("@data-slot/")) and (.value == "workspace:*")
+                    if (.key | startswith("@data-slot/")) and (.key != ($manifest.name // ""))
                     then .value = $v
                     else .
                     end
