@@ -73,12 +73,16 @@ describe("Combobox", () => {
     await waitForRaf();
   };
 
-  const getTranslate3dY = (transform: string): number => {
-    const match = /translate3d\([^,]+,\s*([-\d.]+)px,\s*0(?:px)?\)/.exec(transform);
+  const getTranslate3dXY = (transform: string): [number, number] => {
+    const match = /translate3d\(\s*([-\d.]+)px,\s*([-\d.]+)px,\s*0(?:px)?\)/.exec(transform);
     if (!match) {
       throw new Error(`Expected translate3d transform, got "${transform}"`);
     }
-    return Number(match[1]);
+    return [Number(match[1]), Number(match[2])];
+  };
+
+  const getTranslate3dY = (transform: string): number => {
+    return getTranslate3dXY(transform)[1];
   };
 
   const getPositioner = (content: HTMLElement): HTMLElement => {
@@ -1726,6 +1730,136 @@ describe("Combobox", () => {
 
       input.dispatchEvent(new Event("focus", { bubbles: true }));
       expect(controller.isOpen).toBe(false);
+      controller.destroy();
+    });
+
+    it("data-side falls back to positioner before root", () => {
+      document.body.innerHTML = `
+        <div data-slot="combobox" id="root" data-side="top" data-avoid-collisions="false">
+          <input data-slot="combobox-input" />
+          <div data-slot="combobox-portal">
+            <div data-slot="combobox-positioner" data-side="bottom">
+              <div data-slot="combobox-content" hidden>
+                <div data-slot="combobox-list">
+                  <div data-slot="combobox-item" data-value="apple">Apple</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="combobox-content"]') as HTMLElement;
+      const controller = createCombobox(root);
+
+      controller.open();
+      expect(content.getAttribute("data-side")).toBe("bottom");
+
+      controller.destroy();
+    });
+
+    it("data-side on content takes precedence over positioner and root", () => {
+      document.body.innerHTML = `
+        <div data-slot="combobox" id="root" data-side="top" data-avoid-collisions="false">
+          <input data-slot="combobox-input" />
+          <div data-slot="combobox-portal">
+            <div data-slot="combobox-positioner" data-side="top">
+              <div data-slot="combobox-content" data-side="bottom" hidden>
+                <div data-slot="combobox-list">
+                  <div data-slot="combobox-item" data-value="apple">Apple</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="combobox-content"]') as HTMLElement;
+      const controller = createCombobox(root);
+
+      controller.open();
+      expect(content.getAttribute("data-side")).toBe("bottom");
+
+      controller.destroy();
+    });
+
+    it("data-side-offset falls back to positioner before root", () => {
+      document.body.innerHTML = `
+        <div data-slot="combobox" id="root" data-side="top" data-side-offset="2" data-avoid-collisions="false">
+          <input data-slot="combobox-input" />
+          <div data-slot="combobox-portal">
+            <div data-slot="combobox-positioner" data-side-offset="12">
+              <div data-slot="combobox-content" hidden>
+                <div data-slot="combobox-list">
+                  <div data-slot="combobox-item" data-value="apple">Apple</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="combobox-content"]') as HTMLElement;
+      const controller = createCombobox(root);
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      (root as HTMLElement).getBoundingClientRect = () => rect(100, 100, 80, 20);
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40);
+
+      controller.open();
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(48);
+
+      controller.destroy();
+    });
+
+    it("data-avoid-collisions/collision-padding fall back to positioner before root", () => {
+      document.body.innerHTML = `
+        <div data-slot="combobox" id="root" data-side="bottom" data-align="start" data-avoid-collisions="false" data-collision-padding="8">
+          <input data-slot="combobox-input" />
+          <div data-slot="combobox-portal">
+            <div data-slot="combobox-positioner" data-avoid-collisions="true" data-collision-padding="24">
+              <div data-slot="combobox-content" hidden>
+                <div data-slot="combobox-list">
+                  <div data-slot="combobox-item" data-value="apple">Apple</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="combobox-content"]') as HTMLElement;
+      const controller = createCombobox(root);
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      (root as HTMLElement).getBoundingClientRect = () => rect(100, 0, 80, 20);
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40);
+
+      controller.open();
+      expect(getTranslate3dXY(getPositioner(content).style.transform)[0]).toBe(24);
+
       controller.destroy();
     });
 

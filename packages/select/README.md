@@ -108,6 +108,12 @@ Use a standard HTML `<label for="...">` element to label the select. The `for` a
 ## Options
 
 Options can be passed via JavaScript or data attributes (JS takes precedence).
+Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, `avoidCollisions`, `collisionPadding`) resolve in this order:
+
+1. JavaScript option
+2. `select-content`
+3. `select-positioner`
+4. `select` root (fallback)
 
 | Option | Data Attribute | Type | Default | Description |
 |--------|---------------|------|---------|-------------|

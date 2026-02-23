@@ -124,7 +124,14 @@ Use controller `setOpen(open)` or the `hover-card:set` event to apply state.
 
 ## Data Attributes
 
-Options can be set via data attributes on root/content. JS options take precedence.
+Options can be set via data attributes. JS options take precedence.
+
+Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align-offset`, `data-avoid-collisions`, `data-collision-padding`) resolve in this order:
+
+1. JavaScript option
+2. `hover-card-content`
+3. `hover-card-positioner`
+4. `hover-card` root (fallback)
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -132,8 +139,8 @@ Options can be set via data attributes on root/content. JS options take preceden
 | `data-delay` | number | `700` | Open delay (ms) |
 | `data-skip-delay-duration` | number | `300` | Warm-up window to skip open delay (ms) |
 | `data-close-delay` | number | `300` | Close delay (ms) |
-| `data-side` | string | `"bottom"` | Preferred side (content first, then root) |
-| `data-align` | string | `"center"` | Preferred align (content first, then root) |
+| `data-side` | string | `"bottom"` | Preferred side |
+| `data-align` | string | `"center"` | Preferred align |
 | `data-side-offset` | number | `4` | Distance from trigger (px) |
 | `data-align-offset` | number | `0` | Align offset (px) |
 | `data-avoid-collisions` | boolean | `true` | Collision handling |

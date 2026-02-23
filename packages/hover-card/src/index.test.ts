@@ -845,11 +845,34 @@ describe('HoverCard', () => {
   })
 
   describe('data attributes', () => {
-    it('reads data-side and data-align from content first, then root', () => {
+    it('reads data-side and data-align from content first, then positioner, then root', () => {
       document.body.innerHTML = `
         <div data-slot="hover-card" id="root" data-side="top" data-align="end" data-avoid-collisions="false">
           <button data-slot="hover-card-trigger">Hover me</button>
-          <div data-slot="hover-card-content" data-side="right" data-align="start">Preview content</div>
+          <div data-slot="hover-card-positioner" data-side="left" data-align="center">
+            <div data-slot="hover-card-content" data-side="right" data-align="start">Preview content</div>
+          </div>
+        </div>
+      `
+
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="hover-card-content"]') as HTMLElement
+      const controller = createHoverCard(root, { delay: 0 })
+
+      controller.open()
+      expect(content.getAttribute('data-side')).toBe('right')
+      expect(content.getAttribute('data-align')).toBe('start')
+
+      controller.destroy()
+    })
+
+    it('falls back to data-side and data-align from positioner before root', () => {
+      document.body.innerHTML = `
+        <div data-slot="hover-card" id="root" data-side="top" data-align="end" data-avoid-collisions="false">
+          <button data-slot="hover-card-trigger">Hover me</button>
+          <div data-slot="hover-card-positioner" data-side="right" data-align="start">
+            <div data-slot="hover-card-content">Preview content</div>
+          </div>
         </div>
       `
 

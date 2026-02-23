@@ -121,44 +121,51 @@ export function createPopover(
     getDataBool(root, "portal") ??
     true;
 
+  // Placement precedence: JS option > content > authored positioner > root
+  const getPlacementEnum = <T extends string>(key: string, allowed: readonly T[]): T | undefined =>
+    getDataEnum(content, key, allowed) ??
+    (authoredPositioner ? getDataEnum(authoredPositioner, key, allowed) : undefined) ??
+    getDataEnum(root, key, allowed);
+  const getPlacementNumber = (key: string): number | undefined =>
+    getDataNumber(content, key) ??
+    (authoredPositioner ? getDataNumber(authoredPositioner, key) : undefined) ??
+    getDataNumber(root, key);
+  const getPlacementBool = (key: string): boolean | undefined =>
+    getDataBool(content, key) ??
+    (authoredPositioner ? getDataBool(authoredPositioner, key) : undefined) ??
+    getDataBool(root, key);
+
   // TODO(next-major): remove deprecated `position` option + `data-position` fallback.
   // Canonical placement API is `side`/`align`.
   const deprecatedPosition =
     options.position ??
-    getDataEnum(content, "position", SIDES) ??
-    getDataEnum(root, "position", SIDES);
+    getPlacementEnum("position", SIDES);
 
-  // Placement options: content-first, then root
+  // Placement options
   const preferredSide =
     options.side ??
-    getDataEnum(content, "side", SIDES) ??
-    getDataEnum(root, "side", SIDES) ??
+    getPlacementEnum("side", SIDES) ??
     deprecatedPosition ??
     "bottom";
   const preferredAlign =
     options.align ??
-    getDataEnum(content, "align", ALIGNS) ??
-    getDataEnum(root, "align", ALIGNS) ??
+    getPlacementEnum("align", ALIGNS) ??
     "center";
   const sideOffset =
     options.sideOffset ??
-    getDataNumber(content, "sideOffset") ??
-    getDataNumber(root, "sideOffset") ??
+    getPlacementNumber("sideOffset") ??
     4;
   const alignOffset =
     options.alignOffset ??
-    getDataNumber(content, "alignOffset") ??
-    getDataNumber(root, "alignOffset") ??
+    getPlacementNumber("alignOffset") ??
     0;
   const avoidCollisions =
     options.avoidCollisions ??
-    getDataBool(content, "avoidCollisions") ??
-    getDataBool(root, "avoidCollisions") ??
+    getPlacementBool("avoidCollisions") ??
     true;
   const collisionPadding =
     options.collisionPadding ??
-    getDataNumber(content, "collisionPadding") ??
-    getDataNumber(root, "collisionPadding") ??
+    getPlacementNumber("collisionPadding") ??
     8;
 
   let isOpen = defaultOpen;

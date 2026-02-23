@@ -180,7 +180,14 @@ interface DropdownMenuOptions {
 
 ### Data Attribute Options
 
-Options can also be set via data attributes on the root element. JS options take precedence.
+Options can also be set via data attributes. JS options take precedence.
+
+Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align-offset`, `data-avoid-collisions`, `data-collision-padding`) resolve in this order:
+
+1. JavaScript option
+2. `dropdown-menu-content`
+3. `dropdown-menu-positioner`
+4. `dropdown-menu` root (fallback)
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|

@@ -726,11 +726,13 @@ describe('Tooltip', () => {
       controller.destroy()
     })
 
-    it("data-side is read from content first, then root", () => {
+    it("data-side is read from content first, then positioner, then root", () => {
       document.body.innerHTML = `
         <div data-slot="tooltip" id="root" data-side="left">
           <button data-slot="tooltip-trigger">Hover</button>
-          <div data-slot="tooltip-content" data-side="bottom">Tip</div>
+          <div data-slot="tooltip-positioner" data-side="right">
+            <div data-slot="tooltip-content" data-side="bottom">Tip</div>
+          </div>
         </div>
       `
       const root = document.getElementById('root')!
@@ -738,6 +740,24 @@ describe('Tooltip', () => {
       const controller = createTooltip(root)
 
       // Content's data-side takes precedence
+      expect(content.getAttribute('data-side')).toBe('bottom')
+
+      controller.destroy()
+    })
+
+    it("data-side falls back to positioner if not on content", () => {
+      document.body.innerHTML = `
+        <div data-slot="tooltip" id="root" data-side="right">
+          <button data-slot="tooltip-trigger">Hover</button>
+          <div data-slot="tooltip-positioner" data-side="bottom">
+            <div data-slot="tooltip-content">Tip</div>
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = document.querySelector('[data-slot="tooltip-content"]') as HTMLElement
+      const controller = createTooltip(root)
+
       expect(content.getAttribute('data-side')).toBe('bottom')
 
       controller.destroy()
@@ -759,11 +779,13 @@ describe('Tooltip', () => {
       controller.destroy()
     })
 
-    it("data-align is read from content first, then root", () => {
+    it("data-align is read from content first, then positioner, then root", () => {
       document.body.innerHTML = `
         <div data-slot="tooltip" id="root" data-align="start">
           <button data-slot="tooltip-trigger">Hover</button>
-          <div data-slot="tooltip-content" data-align="end">Tip</div>
+          <div data-slot="tooltip-positioner" data-align="center">
+            <div data-slot="tooltip-content" data-align="end">Tip</div>
+          </div>
         </div>
       `
       const root = document.getElementById('root')!
@@ -771,6 +793,24 @@ describe('Tooltip', () => {
       const controller = createTooltip(root)
 
       // Content's data-align takes precedence
+      expect(content.getAttribute('data-align')).toBe('end')
+
+      controller.destroy()
+    })
+
+    it("data-align falls back to positioner if not on content", () => {
+      document.body.innerHTML = `
+        <div data-slot="tooltip" id="root" data-align="start">
+          <button data-slot="tooltip-trigger">Hover</button>
+          <div data-slot="tooltip-positioner" data-align="end">
+            <div data-slot="tooltip-content">Tip</div>
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = document.querySelector('[data-slot="tooltip-content"]') as HTMLElement
+      const controller = createTooltip(root)
+
       expect(content.getAttribute('data-align')).toBe('end')
 
       controller.destroy()

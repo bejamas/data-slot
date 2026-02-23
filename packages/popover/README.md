@@ -125,7 +125,14 @@ const popover = createPopover(element, {
 
 ### Data Attributes
 
-Options can also be set via data attributes on the root element. JS options take precedence over data attributes.
+Options can also be set via data attributes. JS options take precedence over data attributes.
+
+Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align-offset`, `data-avoid-collisions`, `data-collision-padding`) resolve in this order:
+
+1. JavaScript option
+2. `popover-content`
+3. `popover-positioner`
+4. `popover` root (fallback)
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -142,7 +149,7 @@ Options can also be set via data attributes on the root element. JS options take
 
 Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
 
-Placement can be set on root or content (content takes precedence):
+Placement can be set on root, content, or authored positioner (content takes precedence):
 
 ```html
 <div data-slot="popover-content" data-side="top" data-align="end">

@@ -74,12 +74,19 @@ const tooltip = createTooltip(element, {
 
 Options can also be set via data attributes. JS options take precedence.
 
+Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align-offset`, `data-avoid-collisions`, `data-collision-padding`) resolve in this order:
+
+1. JavaScript option
+2. `tooltip-content`
+3. `tooltip-positioner`
+4. `tooltip` root (fallback)
+
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `data-delay` | number | `300` | Delay before showing tooltip (ms) |
 | `data-skip-delay-duration` | number | `300` | Duration to skip delay after closing (ms) |
-| `data-side` | string | `"top"` | Side relative to trigger (checked on content first, then root) |
-| `data-align` | string | `"center"` | Alignment along the side (checked on content first, then root) |
+| `data-side` | string | `"top"` | Side relative to trigger |
+| `data-align` | string | `"center"` | Alignment along the side |
 | `data-side-offset` | number | `4` | Distance from trigger (px) |
 | `data-align-offset` | number | `0` | Alignment edge offset (px) |
 | `data-avoid-collisions` | boolean | `true` | Collision handling |

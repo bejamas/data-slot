@@ -41,12 +41,16 @@ describe("Select", () => {
     await waitForRaf();
   };
 
-  const getTranslate3dY = (transform: string): number => {
-    const match = /translate3d\([^,]+,\s*([-\d.]+)px,\s*0(?:px)?\)/.exec(transform);
+  const getTranslate3dXY = (transform: string): [number, number] => {
+    const match = /translate3d\(\s*([-\d.]+)px,\s*([-\d.]+)px,\s*0(?:px)?\)/.exec(transform);
     if (!match) {
       throw new Error(`Expected translate3d transform, got "${transform}"`);
     }
-    return Number(match[1]);
+    return [Number(match[1]), Number(match[2])];
+  };
+
+  const getTranslate3dY = (transform: string): number => {
+    return getTranslate3dXY(transform)[1];
   };
 
   const getPositioner = (content: HTMLElement): HTMLElement => {
@@ -1672,6 +1676,54 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("reads data-position from content", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="root">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content" data-position="popper" data-side="top" data-avoid-collisions="false">
+            <div data-slot="select-item" data-value="apple">Apple</div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
+      const controller = createSelect(root);
+
+      controller.open();
+      expect(content.getAttribute("data-side")).toBe("top");
+      expect(content.getAttribute("data-align")).toBe("start");
+
+      controller.destroy();
+    });
+
+    it("reads data-position from positioner when content does not specify it", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="root">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-portal">
+            <div data-slot="select-positioner" data-position="popper" data-side="top" data-avoid-collisions="false">
+              <div data-slot="select-content">
+                <div data-slot="select-item" data-value="apple">Apple</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
+      const controller = createSelect(root);
+
+      controller.open();
+      expect(content.getAttribute("data-side")).toBe("top");
+      expect(content.getAttribute("data-align")).toBe("start");
+
+      controller.destroy();
+    });
+
     it("reads data-side from content in popper mode", () => {
       document.body.innerHTML = `
         <div data-slot="select" id="root" data-position="popper">
@@ -1680,6 +1732,56 @@ describe("Select", () => {
           </button>
           <div data-slot="select-content" data-side="top" data-avoid-collisions="false">
             <div data-slot="select-item" data-value="apple">Apple</div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
+      const controller = createSelect(root);
+
+      controller.open();
+      expect(content.getAttribute("data-side")).toBe("top");
+
+      controller.destroy();
+    });
+
+    it("falls back to data-side from positioner before root", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="root" data-position="popper" data-side="bottom">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-portal">
+            <div data-slot="select-positioner" data-side="top" data-avoid-collisions="false">
+              <div data-slot="select-content">
+                <div data-slot="select-item" data-value="apple">Apple</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
+      const controller = createSelect(root);
+
+      controller.open();
+      expect(content.getAttribute("data-side")).toBe("top");
+
+      controller.destroy();
+    });
+
+    it("prefers data-side on content over positioner and root", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="root" data-position="popper" data-side="bottom">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-portal">
+            <div data-slot="select-positioner" data-side="bottom" data-avoid-collisions="false">
+              <div data-slot="select-content" data-side="top">
+                <div data-slot="select-item" data-value="apple">Apple</div>
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -1712,6 +1814,91 @@ describe("Select", () => {
       // In popper mode, default is bottom/start
       expect(content.getAttribute("data-side")).toBe("bottom");
       expect(content.getAttribute("data-align")).toBe("start");
+
+      controller.destroy();
+    });
+
+    it("falls back to data-side-offset from positioner before root", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="root" data-position="popper" data-side="top" data-side-offset="2">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-portal">
+            <div data-slot="select-positioner" data-side-offset="12" data-avoid-collisions="false">
+              <div data-slot="select-content">
+                <div data-slot="select-item" data-value="apple">Apple</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector('[data-slot="select-trigger"]') as HTMLElement;
+      const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
+      const controller = createSelect(root);
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(100, 100, 80, 20);
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40);
+
+      controller.open();
+
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(48);
+
+      controller.destroy();
+    });
+
+    it("falls back to avoidCollisions/collisionPadding from positioner before root", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="root" data-position="popper" data-side="bottom" data-align="start" data-avoid-collisions="false" data-collision-padding="8">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-portal">
+            <div data-slot="select-positioner" data-avoid-collisions="true" data-collision-padding="24">
+              <div data-slot="select-content">
+                <div data-slot="select-item" data-value="apple">Apple</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector('[data-slot="select-trigger"]') as HTMLElement;
+      const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
+      const controller = createSelect(root);
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(100, 0, 80, 20);
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40);
+
+      controller.open();
+
+      const [x] = getTranslate3dXY(getPositioner(content).style.transform);
+      expect(x).toBe(24);
 
       controller.destroy();
     });

@@ -148,6 +148,13 @@ Options can be passed via JavaScript or data attributes (JS takes precedence).
 | `avoidCollisions` | `data-avoid-collisions` | `boolean` | `true` | Adjust to stay in viewport |
 | `collisionPadding` | `data-collision-padding` | `number` | `8` | Viewport edge padding (px) |
 
+Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align-offset`, `data-avoid-collisions`, `data-collision-padding`) resolve in this order:
+
+1. JavaScript option
+2. `combobox-content`
+3. `combobox-positioner`
+4. `combobox` root (fallback)
+
 ### Callbacks
 
 | Callback | Type | Description |

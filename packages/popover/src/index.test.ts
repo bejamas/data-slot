@@ -759,11 +759,33 @@ describe('Popover', () => {
       controller.destroy()
     })
 
-    it('reads data-side and data-align from content first, then root', () => {
+    it('reads data-side and data-align from content first, then positioner, then root', () => {
       document.body.innerHTML = `
         <div data-slot="popover" id="root" data-side="top" data-align="end" data-avoid-collisions="false">
           <button data-slot="popover-trigger">Open</button>
-          <div data-slot="popover-content" data-side="right" data-align="start">Content</div>
+          <div data-slot="popover-positioner" data-side="left" data-align="center">
+            <div data-slot="popover-content" data-side="right" data-align="start">Content</div>
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="popover-content"]') as HTMLElement
+      const controller = createPopover(root)
+
+      controller.open()
+      expect(content.getAttribute('data-side')).toBe('right')
+      expect(content.getAttribute('data-align')).toBe('start')
+
+      controller.destroy()
+    })
+
+    it('falls back to data-side and data-align from positioner before root', () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root" data-side="top" data-align="end" data-avoid-collisions="false">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-positioner" data-side="right" data-align="start">
+            <div data-slot="popover-content">Content</div>
+          </div>
         </div>
       `
       const root = document.getElementById('root')!
@@ -782,6 +804,26 @@ describe('Popover', () => {
         <div data-slot="popover" id="root" data-position="left" data-avoid-collisions="false">
           <button data-slot="popover-trigger">Open</button>
           <div data-slot="popover-content">Content</div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const content = root.querySelector('[data-slot="popover-content"]') as HTMLElement
+      const controller = createPopover(root)
+
+      controller.open()
+      expect(content.getAttribute('data-side')).toBe('left')
+      expect(content.getAttribute('data-position')).toBe('left')
+
+      controller.destroy()
+    })
+
+    it('falls back to deprecated data-position from positioner when data-side is absent', () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root" data-position="top" data-avoid-collisions="false">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-positioner" data-position="left">
+            <div data-slot="popover-content">Content</div>
+          </div>
         </div>
       `
       const root = document.getElementById('root')!

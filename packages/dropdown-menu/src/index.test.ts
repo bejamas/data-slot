@@ -54,6 +54,14 @@ describe("DropdownMenu", () => {
     return { x: Number(match[1]), y: Number(match[2]) };
   };
 
+  const getPositioner = (content: HTMLElement): HTMLElement => {
+    const parent = content.parentElement;
+    if (parent instanceof HTMLElement && parent.getAttribute("data-slot") === "dropdown-menu-positioner") {
+      return parent;
+    }
+    return content;
+  };
+
   beforeEach(() => {
     document.body.innerHTML = "";
     resetScrollLock();
@@ -1089,6 +1097,52 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
 
+    it("data-side falls back to positioner before root", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root" data-side="top" data-avoid-collisions="false">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-portal">
+            <div data-slot="dropdown-menu-positioner" data-side="right">
+              <div data-slot="dropdown-menu-content">
+                <button data-slot="dropdown-menu-item">Item</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="dropdown-menu-content"]') as HTMLElement;
+      const controller = createDropdownMenu(root);
+
+      controller.open();
+      expect(content.getAttribute("data-side")).toBe("right");
+
+      controller.destroy();
+    });
+
+    it("data-side on content takes precedence over positioner and root", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root" data-side="top" data-avoid-collisions="false">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-portal">
+            <div data-slot="dropdown-menu-positioner" data-side="right">
+              <div data-slot="dropdown-menu-content" data-side="left">
+                <button data-slot="dropdown-menu-item">Item</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="dropdown-menu-content"]') as HTMLElement;
+      const controller = createDropdownMenu(root);
+
+      controller.open();
+      expect(content.getAttribute("data-side")).toBe("left");
+
+      controller.destroy();
+    });
+
     it("data-side-offset sets distance from trigger", () => {
       document.body.innerHTML = `
         <div data-slot="dropdown-menu" id="root" data-side-offset="20">
@@ -1104,6 +1158,88 @@ describe("DropdownMenu", () => {
       controller.open();
       // Just verify it opens without error - position testing is complex
       expect(controller.isOpen).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("data-side-offset falls back to positioner before root", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root" data-side="top" data-side-offset="2" data-avoid-collisions="false">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-portal">
+            <div data-slot="dropdown-menu-positioner" data-side-offset="12">
+              <div data-slot="dropdown-menu-content">
+                <button data-slot="dropdown-menu-item">Item</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLElement;
+      const content = root.querySelector('[data-slot="dropdown-menu-content"]') as HTMLElement;
+      const controller = createDropdownMenu(root);
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(100, 100, 80, 20);
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40);
+
+      controller.open();
+
+      const { y } = getTranslate3dXY(getPositioner(content).style.transform);
+      expect(y).toBe(48);
+
+      controller.destroy();
+    });
+
+    it("data-avoid-collisions/collision-padding fall back to positioner before root", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root" data-side="bottom" data-align="start" data-avoid-collisions="false" data-collision-padding="8">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-portal">
+            <div data-slot="dropdown-menu-positioner" data-avoid-collisions="true" data-collision-padding="24">
+              <div data-slot="dropdown-menu-content">
+                <button data-slot="dropdown-menu-item">Item</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLElement;
+      const content = root.querySelector('[data-slot="dropdown-menu-content"]') as HTMLElement;
+      const controller = createDropdownMenu(root);
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(100, 0, 80, 20);
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40);
+
+      controller.open();
+
+      const { x } = getTranslate3dXY(getPositioner(content).style.transform);
+      expect(x).toBe(24);
 
       controller.destroy();
     });
