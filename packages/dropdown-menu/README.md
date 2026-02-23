@@ -236,6 +236,7 @@ When `avoidCollisions` is enabled (default), the menu will:
 - Shift/clamp to stay within the viewport with the specified padding
 
 The content element receives `data-side` (computed, may flip) and `data-align` (requested, position may shift) attributes, useful for animations.
+The positioned element (`dropdown-menu-positioner`, or `dropdown-menu-content` when no positioner is used) also receives `--transform-origin` for scale/zoom animation origins.
 
 ## License
 

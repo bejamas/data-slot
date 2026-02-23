@@ -4,6 +4,7 @@ import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
 import {
   computeFloatingPosition,
+  computeFloatingTransformOrigin,
   measurePopupContentRect,
   ensureItemVisibleInContainer,
   focusElement,
@@ -459,6 +460,15 @@ export function createSelect(
       side = floating.side as Side;
     }
 
+    const resolvedAlign: Align = position === "item-aligned" ? "center" : preferredAlign;
+    const transformOrigin = computeFloatingTransformOrigin({
+      side,
+      align: resolvedAlign,
+      anchorRect: tr,
+      popupX: pos.x,
+      popupY: pos.y,
+    });
+
     if (lockScrollOption) {
       positioner.style.position = "fixed";
       positioner.style.top = "0px";
@@ -470,13 +480,14 @@ export function createSelect(
       positioner.style.left = "0px";
       positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
     }
+    positioner.style.setProperty("--transform-origin", transformOrigin);
     positioner.style.willChange = "transform";
     positioner.style.margin = "0";
     content.setAttribute("data-side", side);
-    content.setAttribute("data-align", position === "item-aligned" ? "center" : preferredAlign);
+    content.setAttribute("data-align", resolvedAlign);
     if (positioner !== content) {
       positioner.setAttribute("data-side", side);
-      positioner.setAttribute("data-align", position === "item-aligned" ? "center" : preferredAlign);
+      positioner.setAttribute("data-align", resolvedAlign);
     }
   };
 

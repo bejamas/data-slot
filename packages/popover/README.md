@@ -169,6 +169,7 @@ Placement can be set on root, content, or authored positioner (content takes pre
 Popover position is computed in JavaScript and applied as `position: absolute` + inline `transform: translate3d(...)`.
 By default, content is portaled to `document.body` while open (document coordinates). If you provide authored `popover-positioner` / `popover-portal` slots, those are reused. Otherwise a transient `popover-positioner` wrapper is generated.
 If `portal` is disabled, positioning is applied directly to `popover-content`.
+The positioned element (`popover-positioner`, or `popover-content` when `portal` is disabled) also receives `--transform-origin` so popup animations can originate from the trigger anchor.
 Use `data-open`/`data-closed` and `data-side` for styling/animation.
 This keeps `popover-content` free for transform animations.
 Placement uses layout dimensions, so `scale`/`zoom` animations on `popover-content` do not require an extra inner wrapper for stable positioning.

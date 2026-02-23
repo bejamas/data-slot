@@ -6,6 +6,8 @@ import { lockScroll, unlockScroll } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
 import {
   computeFloatingPosition,
+  computeFloatingTransformOrigin,
+  getFloatingTransformOriginAnchor,
   measurePopupContentRect,
   ensureItemVisibleInContainer,
   focusElement,
@@ -864,6 +866,27 @@ describe('core/popup', () => {
         Reflect.deleteProperty(window as Window & Record<string, unknown>, 'visualViewport')
       }
     }
+  })
+
+  it('getFloatingTransformOriginAnchor resolves trigger anchor point for side/align', () => {
+    const anchor = rect(100, 200, 80, 20)
+
+    expect(getFloatingTransformOriginAnchor('top', 'start', anchor)).toEqual({ x: 100, y: 200 })
+    expect(getFloatingTransformOriginAnchor('bottom', 'center', anchor)).toEqual({ x: 140, y: 220 })
+    expect(getFloatingTransformOriginAnchor('left', 'end', anchor)).toEqual({ x: 100, y: 220 })
+    expect(getFloatingTransformOriginAnchor('right', 'center', anchor)).toEqual({ x: 180, y: 210 })
+  })
+
+  it('computeFloatingTransformOrigin returns popup-local anchor coordinates', () => {
+    const origin = computeFloatingTransformOrigin({
+      side: 'top',
+      align: 'start',
+      anchorRect: rect(100, 100, 80, 20),
+      popupX: 100,
+      popupY: 16,
+    })
+
+    expect(origin).toBe('0px 84px')
   })
 
   it('measurePopupContentRect prefers layout size from offset dimensions', () => {

@@ -5,6 +5,8 @@ export { on, emit, composeHandlers } from "./events.ts";
 export { lockScroll, unlockScroll } from "./scroll.ts";
 export {
   computeFloatingPosition,
+  computeFloatingTransformOrigin,
+  getFloatingTransformOriginAnchor,
   measurePopupContentRect,
   ensureItemVisibleInContainer,
   focusElement,
@@ -18,7 +20,9 @@ export type {
   PopupAlign,
   PopupPlacementOptions,
   ComputeFloatingPositionInput,
+  ComputeFloatingTransformOriginInput,
   FloatingPosition,
+  FloatingTransformOriginAnchor,
   PositionSyncOptions,
   PositionSyncController,
   DismissLayerOptions,

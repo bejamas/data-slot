@@ -139,6 +139,8 @@ Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, 
 | `sideOffset` | `data-side-offset` | `number` | `4` | Distance from trigger (px) |
 | `alignOffset` | `data-align-offset` | `number` | `0` | Offset from alignment edge (px) |
 
+Both positioning modes set `--transform-origin` on the positioned element (`select-positioner`, or `select-content` when no positioner is used), so content animations can use `transform-origin: var(--transform-origin, center)`.
+
 ### Callbacks
 
 | Callback | Type | Description |

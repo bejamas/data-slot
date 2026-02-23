@@ -6,6 +6,7 @@ import {
   getDataNumber,
   createDismissLayer,
   computeFloatingPosition,
+  computeFloatingTransformOrigin,
   measurePopupContentRect,
   focusElement,
   createPositionSync,
@@ -231,11 +232,19 @@ export function createPopover(
       avoidCollisions,
       collisionPadding,
     });
+    const transformOrigin = computeFloatingTransformOrigin({
+      side: pos.side,
+      align: pos.align,
+      anchorRect: tr,
+      popupX: pos.x,
+      popupY: pos.y,
+    });
 
     positioner.style.position = "absolute";
     positioner.style.top = "0px";
     positioner.style.left = "0px";
     positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+    positioner.style.setProperty("--transform-origin", transformOrigin);
     positioner.style.willChange = "transform";
     positioner.style.margin = "0";
     content.setAttribute("data-side", pos.side);

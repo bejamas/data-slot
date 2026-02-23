@@ -940,7 +940,9 @@ describe("Select", () => {
       const { trigger, content, controller } = setup();
 
       trigger.click();
-      expect(getPositioner(content).style.position).toBe("fixed");
+      const positioner = getPositioner(content);
+      expect(positioner.style.position).toBe("fixed");
+      expect(positioner.style.getPropertyValue("--transform-origin")).not.toBe("");
 
       controller.destroy();
     });
@@ -1025,7 +1027,9 @@ describe("Select", () => {
 
       controller.open();
 
-      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(16);
+      const positioner = getPositioner(content);
+      expect(getTranslate3dY(positioner.style.transform)).toBe(16);
+      expect(positioner.style.getPropertyValue("--transform-origin")).toBe("0px 84px");
 
       controller.destroy();
     });

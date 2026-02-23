@@ -38,6 +38,19 @@ export interface FloatingPosition {
   align: PopupAlign;
 }
 
+export interface FloatingTransformOriginAnchor {
+  x: number;
+  y: number;
+}
+
+export interface ComputeFloatingTransformOriginInput {
+  side: PopupSide;
+  align: PopupAlign;
+  anchorRect: RectLike;
+  popupX: number;
+  popupY: number;
+}
+
 const ALL_SIDES: readonly PopupSide[] = ["top", "right", "bottom", "left"];
 
 interface ViewportBounds {
@@ -99,6 +112,37 @@ const computeBasePosition = (
   }
 
   return { x, y };
+};
+
+const getAlignedPointOnRect = (
+  rect: RectLike,
+  align: PopupAlign
+): FloatingTransformOriginAnchor => {
+  if (align === "start") return { x: rect.left, y: rect.top };
+  if (align === "end") return { x: rect.right, y: rect.bottom };
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+};
+
+export const getFloatingTransformOriginAnchor = (
+  side: PopupSide,
+  align: PopupAlign,
+  anchorRect: RectLike
+): FloatingTransformOriginAnchor => {
+  const aligned = getAlignedPointOnRect(anchorRect, align);
+  if (side === "top") return { x: aligned.x, y: anchorRect.top };
+  if (side === "bottom") return { x: aligned.x, y: anchorRect.bottom };
+  if (side === "left") return { x: anchorRect.left, y: aligned.y };
+  return { x: anchorRect.right, y: aligned.y };
+};
+
+export const computeFloatingTransformOrigin = (
+  input: ComputeFloatingTransformOriginInput
+): string => {
+  const anchor = getFloatingTransformOriginAnchor(input.side, input.align, input.anchorRect);
+  return `${anchor.x - input.popupX}px ${anchor.y - input.popupY}px`;
 };
 
 /**

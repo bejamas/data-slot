@@ -155,6 +155,8 @@ Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align
 3. `combobox-positioner`
 4. `combobox` root (fallback)
 
+The positioned element (`combobox-positioner`, or `combobox-content` when no positioner is used) receives `--transform-origin`, so animations can use `transform-origin: var(--transform-origin, center)`.
+
 ### Callbacks
 
 | Callback | Type | Description |

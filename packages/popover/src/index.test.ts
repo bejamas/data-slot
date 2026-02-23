@@ -369,8 +369,10 @@ describe('Popover', () => {
       controller.open()
       await waitForRaf()
 
-      const { y } = getTranslate3dXY(getPositioner(content).style.transform)
+      const positioner = getPositioner(content)
+      const { y } = getTranslate3dXY(positioner.style.transform)
       expect(y).toBe(16)
+      expect(positioner.style.getPropertyValue('--transform-origin')).toBe('0px 84px')
 
       controller.destroy()
     })

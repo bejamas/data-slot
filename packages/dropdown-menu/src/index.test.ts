@@ -931,6 +931,7 @@ describe("DropdownMenu", () => {
       const positioner = content.parentElement as HTMLElement;
       const { y } = getTranslate3dXY(positioner.style.transform);
       expect(y).toBe(16);
+      expect(positioner.style.getPropertyValue("--transform-origin")).toBe("0px 84px");
 
       controller.destroy();
     });

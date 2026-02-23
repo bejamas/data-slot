@@ -1472,7 +1472,9 @@ describe("Combobox", () => {
       Object.defineProperty(content, "offsetHeight", { configurable: true, value: 80 });
 
       controller.open();
-      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(16);
+      const positioner = getPositioner(content);
+      expect(getTranslate3dY(positioner.style.transform)).toBe(16);
+      expect(positioner.style.getPropertyValue("--transform-origin")).toBe("0px 84px");
 
       controller.destroy();
     });

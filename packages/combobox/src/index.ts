@@ -11,6 +11,7 @@ import {
   on,
   emit,
   computeFloatingPosition,
+  computeFloatingTransformOrigin,
   measurePopupContentRect,
   ensureItemVisibleInContainer,
   createPositionSync,
@@ -455,11 +456,19 @@ export function createCombobox(
       collisionPadding,
       allowedSides: SIDES,
     });
+    const transformOrigin = computeFloatingTransformOrigin({
+      side: pos.side,
+      align: pos.align,
+      anchorRect,
+      popupX: pos.x,
+      popupY: pos.y,
+    });
 
     positioner.style.position = "absolute";
     positioner.style.top = "0px";
     positioner.style.left = "0px";
     positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+    positioner.style.setProperty("--transform-origin", transformOrigin);
     positioner.style.willChange = "transform";
     positioner.style.margin = "0";
     content.setAttribute("data-side", pos.side);

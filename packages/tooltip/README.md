@@ -179,6 +179,7 @@ The component sets these attributes automatically:
 
 Position is computed in JavaScript and applied to the positioner as `position: absolute` + `transform: translate3d(...)`.
 By default, content is portaled to `document.body` while open.
+The positioned element (`tooltip-positioner`, or `tooltip-content` when `portal` is disabled) gets `--transform-origin`, which `tooltip-content` can use for transform animations via CSS inheritance.
 Use `data-open` / `data-closed`, `data-side`, and `data-align` for styling and animations.
 Placement uses layout dimensions, so `scale`/`zoom` animations on `tooltip-content` remain stable without adding an extra wrapper.
 
@@ -192,7 +193,7 @@ The visibility transition trick keeps the tooltip visible during fade-out, then 
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform-origin: center;
+  transform-origin: var(--transform-origin, center);
   transition: opacity 0.15s ease, visibility 0s linear 0.15s;
 }
 
