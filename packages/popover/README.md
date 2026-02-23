@@ -164,6 +164,7 @@ By default, content is portaled to `document.body` while open (document coordina
 If `portal` is disabled, positioning is applied directly to `popover-content`.
 Use `data-open`/`data-closed` and `data-side` for styling/animation.
 This keeps `popover-content` free for transform animations.
+Placement uses layout dimensions, so `scale`/`zoom` animations on `popover-content` do not require an extra inner wrapper for stable positioning.
 
 ```css
 [data-slot="popover-content"] {

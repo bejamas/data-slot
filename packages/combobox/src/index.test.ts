@@ -73,6 +73,14 @@ describe("Combobox", () => {
     await waitForRaf();
   };
 
+  const getTranslate3dY = (transform: string): number => {
+    const match = /translate3d\([^,]+,\s*([-\d.]+)px,\s*0(?:px)?\)/.exec(transform);
+    if (!match) {
+      throw new Error(`Expected translate3d transform, got "${transform}"`);
+    }
+    return Number(match[1]);
+  };
+
   const getPositioner = (content: HTMLElement): HTMLElement => {
     const parent = content.parentElement;
     if (parent instanceof HTMLElement && parent.getAttribute("data-slot") === "combobox-positioner") {
@@ -1419,6 +1427,49 @@ describe("Combobox", () => {
       const { content, controller } = setup({ align: "end", avoidCollisions: false });
       controller.open();
       expect(content.getAttribute("data-align")).toBe("end");
+      controller.destroy();
+    });
+
+    it("uses layout dimensions for positioning when content is transform-scaled", () => {
+      const { root, content, controller } = setup({
+        side: "top",
+        align: "start",
+        sideOffset: 4,
+        avoidCollisions: false,
+      });
+
+      (root as HTMLElement).getBoundingClientRect = () =>
+        ({
+          x: 100,
+          y: 100,
+          top: 100,
+          left: 100,
+          width: 80,
+          height: 20,
+          right: 180,
+          bottom: 120,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 100,
+          height: 40,
+          right: 100,
+          bottom: 40,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      Object.defineProperty(content, "offsetWidth", { configurable: true, value: 100 });
+      Object.defineProperty(content, "offsetHeight", { configurable: true, value: 80 });
+
+      controller.open();
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(16);
+
       controller.destroy();
     });
 

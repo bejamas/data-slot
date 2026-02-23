@@ -6,6 +6,7 @@ import {
   getDataNumber,
   createDismissLayer,
   computeFloatingPosition,
+  measurePopupContentRect,
   focusElement,
   createPositionSync,
   createPortalLifecycle,
@@ -212,7 +213,7 @@ export function createPopover(
     const positioner = portal.container as HTMLElement;
     const win = root.ownerDocument.defaultView ?? window;
     const tr = trigger.getBoundingClientRect();
-    const cr = content.getBoundingClientRect();
+    const cr = measurePopupContentRect(content);
     const pos = computeFloatingPosition({
       anchorRect: tr,
       contentRect: cr,

@@ -4,6 +4,7 @@ import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
 import {
   computeFloatingPosition,
+  measurePopupContentRect,
   ensureItemVisibleInContainer,
   focusElement,
   createPositionSync,
@@ -317,19 +318,21 @@ export function createSelect(
   const getScrollContainer = () =>
     getPart<HTMLElement>(content, "select-viewport") ?? content;
 
-  const getItemTopInContent = (item: HTMLElement, cr: DOMRect, scrollContainer: HTMLElement) => {
+  type ContentRect = Pick<DOMRectReadOnly, "top" | "width" | "height">;
+
+  const getItemTopInContent = (item: HTMLElement, cr: ContentRect, scrollContainer: HTMLElement) => {
     // Prefer offset-parent traversal when content is in the chain, and
     // fall back to rect math otherwise (e.g. before final layout settles).
     let top = 0;
     let node: HTMLElement | null = item;
     while (node && node !== content) {
       top += node.offsetTop;
-      const parent = node.offsetParent;
-      if (!(parent instanceof HTMLElement)) {
+      const offsetParent: Element | null = node.offsetParent;
+      if (!(offsetParent instanceof HTMLElement)) {
         top = Number.NaN;
         break;
       }
-      node = parent;
+      node = offsetParent;
     }
     if (node === content && Number.isFinite(top)) {
       return top;
@@ -340,7 +343,7 @@ export function createSelect(
   };
 
   // Compute base position data for item-aligned mode
-  const computeItemAlignedPos = (tr: DOMRect, cr: DOMRect, scrollContainer: HTMLElement) => {
+  const computeItemAlignedPos = (tr: DOMRect, cr: ContentRect, scrollContainer: HTMLElement) => {
     // Prefer selected item for stable anchoring, then highlighted, then first enabled item.
     const highlightedItem = highlightedIndex >= 0 ? enabledItems[highlightedIndex] : undefined;
     const selectedItem = items.find((item) => item.dataset["value"] === currentValue);
@@ -379,7 +382,7 @@ export function createSelect(
     content.style.minWidth = `${tr.width}px`;
 
     // Get content rect after setting min-width
-    const cr = content.getBoundingClientRect();
+    const cr = measurePopupContentRect(content);
 
     let pos: { x: number; y: number };
     let side: Side = "bottom";

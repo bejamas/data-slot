@@ -101,6 +101,30 @@ const computeBasePosition = (
   return { x, y };
 };
 
+/**
+ * Measure popup content size in a transform-stable way.
+ *
+ * `getBoundingClientRect()` reflects active CSS transforms (for example scale/zoom),
+ * which can shift placement during open/close animations. `offsetWidth/offsetHeight`
+ * stay in layout coordinates, so we prefer them when available.
+ */
+export function measurePopupContentRect(
+  element: HTMLElement
+): Pick<DOMRectReadOnly, "top" | "right" | "bottom" | "left" | "width" | "height"> {
+  const visualRect = element.getBoundingClientRect();
+  const width = element.offsetWidth > 0 ? element.offsetWidth : visualRect.width;
+  const height = element.offsetHeight > 0 ? element.offsetHeight : visualRect.height;
+
+  return {
+    top: visualRect.top,
+    left: visualRect.left,
+    right: visualRect.left + width,
+    bottom: visualRect.top + height,
+    width,
+    height,
+  };
+}
+
 export const focusElement = (el: HTMLElement | null | undefined): void => {
   if (!el) return;
   try {

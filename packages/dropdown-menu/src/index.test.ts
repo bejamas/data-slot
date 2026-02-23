@@ -44,6 +44,16 @@ describe("DropdownMenu", () => {
     await waitForRaf();
   };
 
+  const getTranslate3dXY = (transform: string): { x: number; y: number } => {
+    const match = /translate3d\(\s*([-\d.]+)px\s*,\s*([-\d.]+)px\s*,\s*0(?:px)?\s*\)/.exec(
+      transform
+    );
+    if (!match) {
+      throw new Error(`Expected translate3d transform, got "${transform}"`);
+    }
+    return { x: Number(match[1]), y: Number(match[2]) };
+  };
+
   beforeEach(() => {
     document.body.innerHTML = "";
     resetScrollLock();
@@ -866,6 +876,53 @@ describe("DropdownMenu", () => {
 
       trigger.click();
       expect(content.getAttribute("data-align")).toBe("end");
+
+      controller.destroy();
+    });
+
+    it("uses layout dimensions for positioning when content is transform-scaled", async () => {
+      const { trigger, content, controller } = setup({
+        side: "top",
+        align: "start",
+        sideOffset: 4,
+        avoidCollisions: false,
+      });
+
+      trigger.getBoundingClientRect = () =>
+        ({
+          x: 100,
+          y: 100,
+          top: 100,
+          left: 100,
+          width: 80,
+          height: 20,
+          right: 180,
+          bottom: 120,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 100,
+          height: 40,
+          right: 100,
+          bottom: 40,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      Object.defineProperty(content, "offsetWidth", { configurable: true, value: 100 });
+      Object.defineProperty(content, "offsetHeight", { configurable: true, value: 80 });
+
+      trigger.click();
+      await waitForRaf();
+
+      const positioner = content.parentElement as HTMLElement;
+      const { y } = getTranslate3dXY(positioner.style.transform);
+      expect(y).toBe(16);
 
       controller.destroy();
     });

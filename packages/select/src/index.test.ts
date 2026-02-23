@@ -990,6 +990,42 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("uses layout dimensions for positioning when content is transform-scaled in popper mode", () => {
+      const { trigger, content, controller } = setup({
+        position: "popper",
+        side: "top",
+        align: "start",
+        sideOffset: 4,
+        avoidCollisions: false,
+        lockScroll: false,
+      });
+
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(100, 100, 80, 20);
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40);
+
+      Object.defineProperty(content, "offsetWidth", { configurable: true, value: 100 });
+      Object.defineProperty(content, "offsetHeight", { configurable: true, value: 80 });
+
+      controller.open();
+
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(16);
+
+      controller.destroy();
+    });
+
     it("matches trigger width in item-aligned mode", () => {
       const { trigger, content, controller } = setup();
 

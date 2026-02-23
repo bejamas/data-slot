@@ -33,6 +33,24 @@ describe('Popover', () => {
     await waitForRaf()
   }
 
+  const getPositioner = (content: HTMLElement): HTMLElement => {
+    const parent = content.parentElement
+    if (parent && parent.getAttribute('data-slot') === 'popover-positioner') {
+      return parent
+    }
+    return content
+  }
+
+  const getTranslate3dXY = (transform: string): { x: number; y: number } => {
+    const match = /translate3d\(\s*([-\d.]+)px\s*,\s*([-\d.]+)px\s*,\s*0(?:px)?\s*\)/.exec(
+      transform
+    )
+    if (!match) {
+      throw new Error(`Expected translate3d transform, got "${transform}"`)
+    }
+    return { x: Number(match[1]), y: Number(match[2]) }
+  }
+
   it('initializes with content hidden', () => {
     const { content, controller } = setup()
 
@@ -307,6 +325,52 @@ describe('Popover', () => {
       controller.open()
       expect(content.getAttribute('data-side')).toBe('left')
       expect(content.getAttribute('data-position')).toBe('left')
+
+      controller.destroy()
+    })
+
+    it('uses layout dimensions for positioning when content is transform-scaled', async () => {
+      const { trigger, content, controller } = setup({
+        side: 'top',
+        align: 'start',
+        sideOffset: 4,
+        avoidCollisions: false,
+      })
+
+      trigger.getBoundingClientRect = () =>
+        ({
+          x: 100,
+          y: 100,
+          top: 100,
+          left: 100,
+          width: 80,
+          height: 20,
+          right: 180,
+          bottom: 120,
+          toJSON: () => ({}),
+        }) as DOMRect
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 100,
+          height: 40,
+          right: 100,
+          bottom: 40,
+          toJSON: () => ({}),
+        }) as DOMRect
+
+      Object.defineProperty(content, 'offsetWidth', { configurable: true, value: 100 })
+      Object.defineProperty(content, 'offsetHeight', { configurable: true, value: 80 })
+
+      controller.open()
+      await waitForRaf()
+
+      const { y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(y).toBe(16)
 
       controller.destroy()
     })

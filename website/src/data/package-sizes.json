@@ -1,27 +1,27 @@
 [
   {
+    "name": "@data-slot/navigation-menu",
+    "size": 6378,
+    "sizeFormatted": "6.2 KB",
+    "description": "Dropdown navigation menus"
+  },
+  {
     "name": "@data-slot/core",
-    "size": 4571,
+    "size": 4589,
     "sizeFormatted": "4.5 KB",
     "description": "Shared utilities"
   },
   {
-    "name": "@data-slot/navigation-menu",
-    "size": 4306,
-    "sizeFormatted": "4.2 KB",
-    "description": "Dropdown navigation menus"
+    "name": "@data-slot/combobox",
+    "size": 3784,
+    "sizeFormatted": "3.7 KB",
+    "description": "Autocomplete input"
   },
   {
     "name": "@data-slot/select",
     "size": 3738,
     "sizeFormatted": "3.7 KB",
     "description": "Dropdown select, form-ready"
-  },
-  {
-    "name": "@data-slot/combobox",
-    "size": 3647,
-    "sizeFormatted": "3.6 KB",
-    "description": "Autocomplete input"
   },
   {
     "name": "@data-slot/dropdown-menu",
@@ -36,10 +36,16 @@
     "description": "Single/range value sliders"
   },
   {
-    "name": "@data-slot/hover-card",
-    "size": 2061,
-    "sizeFormatted": "2.1 KB",
-    "description": "Hover/focus preview cards"
+    "name": "@data-slot/tabs",
+    "size": 1887,
+    "sizeFormatted": "1.8 KB",
+    "description": "Tabbed interfaces, kbd nav"
+  },
+  {
+    "name": "@data-slot/tooltip",
+    "size": 1828,
+    "sizeFormatted": "1.8 KB",
+    "description": "Hover/focus tooltips"
   },
   {
     "name": "@data-slot/popover",
@@ -54,27 +60,15 @@
     "description": "Modal dialogs, focus trap"
   },
   {
-    "name": "@data-slot/tabs",
-    "size": 1776,
-    "sizeFormatted": "1.7 KB",
-    "description": "Tabbed interfaces, kbd nav"
+    "name": "@data-slot/collapsible",
+    "size": 1552,
+    "sizeFormatted": "1.5 KB",
+    "description": "Simple show/hide toggle"
   },
   {
     "name": "@data-slot/accordion",
     "size": 1287,
     "sizeFormatted": "1.3 KB",
     "description": "Collapsible sections"
-  },
-  {
-    "name": "@data-slot/tooltip",
-    "size": 1118,
-    "sizeFormatted": "1.1 KB",
-    "description": "Hover/focus tooltips"
-  },
-  {
-    "name": "@data-slot/collapsible",
-    "size": 683,
-    "sizeFormatted": "683 B",
-    "description": "Simple show/hide toggle"
   }
 ]

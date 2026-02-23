@@ -532,6 +532,29 @@ describe('HoverCard', () => {
       controller.destroy()
     })
 
+    it('uses layout dimensions for positioning when content is transform-scaled', async () => {
+      const { trigger, content, controller } = setup({
+        side: 'top',
+        align: 'start',
+        sideOffset: 4,
+        avoidCollisions: false,
+      })
+
+      trigger.getBoundingClientRect = () => rect(100, 100, 80, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 100, 40)
+
+      Object.defineProperty(content, 'offsetWidth', { configurable: true, value: 100 })
+      Object.defineProperty(content, 'offsetHeight', { configurable: true, value: 80 })
+
+      controller.open()
+      await waitForRaf()
+
+      const { y } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(y).toBe(16)
+
+      controller.destroy()
+    })
+
     it('resolves sideOffset/alignOffset as options > content attrs > root attrs', async () => {
       document.body.innerHTML = `
         <div

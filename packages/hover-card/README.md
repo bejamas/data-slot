@@ -180,6 +180,7 @@ root.dispatchEvent(new CustomEvent("hover-card:set", { detail: { value: true } }
 Position is computed in JavaScript and applied as `position: absolute` + `transform: translate3d(...)`.
 By default, content is portaled to `document.body` while open.
 Use `data-open` / `data-closed`, `data-side`, and `data-align` for animation/styling.
+Placement uses layout dimensions, so `scale`/`zoom` animations on `hover-card-content` stay aligned without requiring an extra inner wrapper.
 
 ```css
 [data-slot="hover-card-content"] {

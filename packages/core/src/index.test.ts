@@ -4,7 +4,16 @@ import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
-import { computeFloatingPosition, ensureItemVisibleInContainer, focusElement, createDismissLayer, createPortalLifecycle, createPresenceLifecycle, createPositionSync } from './index'
+import {
+  computeFloatingPosition,
+  measurePopupContentRect,
+  ensureItemVisibleInContainer,
+  focusElement,
+  createDismissLayer,
+  createPortalLifecycle,
+  createPresenceLifecycle,
+  createPositionSync,
+} from './index'
 import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
 
@@ -855,6 +864,62 @@ describe('core/popup', () => {
         Reflect.deleteProperty(window as Window & Record<string, unknown>, 'visualViewport')
       }
     }
+  })
+
+  it('measurePopupContentRect prefers layout size from offset dimensions', () => {
+    const el = document.createElement('div')
+    document.body.appendChild(el)
+
+    el.getBoundingClientRect = () =>
+      ({
+        x: 20,
+        y: 40,
+        left: 20,
+        top: 40,
+        width: 60,
+        height: 30,
+        right: 80,
+        bottom: 70,
+        toJSON: () => ({}),
+      }) as DOMRect
+
+    Object.defineProperty(el, 'offsetWidth', { configurable: true, value: 100 })
+    Object.defineProperty(el, 'offsetHeight', { configurable: true, value: 80 })
+
+    const measured = measurePopupContentRect(el)
+    expect(measured.top).toBe(40)
+    expect(measured.left).toBe(20)
+    expect(measured.width).toBe(100)
+    expect(measured.height).toBe(80)
+    expect(measured.right).toBe(120)
+    expect(measured.bottom).toBe(120)
+  })
+
+  it('measurePopupContentRect falls back to visual rect size when offset dimensions are zero', () => {
+    const el = document.createElement('div')
+    document.body.appendChild(el)
+
+    el.getBoundingClientRect = () =>
+      ({
+        x: 10,
+        y: 15,
+        left: 10,
+        top: 15,
+        width: 55,
+        height: 35,
+        right: 65,
+        bottom: 50,
+        toJSON: () => ({}),
+      }) as DOMRect
+
+    Object.defineProperty(el, 'offsetWidth', { configurable: true, value: 0 })
+    Object.defineProperty(el, 'offsetHeight', { configurable: true, value: 0 })
+
+    const measured = measurePopupContentRect(el)
+    expect(measured.width).toBe(55)
+    expect(measured.height).toBe(35)
+    expect(measured.right).toBe(65)
+    expect(measured.bottom).toBe(50)
   })
 
   it('ensureItemVisibleInContainer does not scroll when item is already visible', () => {

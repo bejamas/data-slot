@@ -11,6 +11,7 @@ import {
   on,
   emit,
   computeFloatingPosition,
+  measurePopupContentRect,
   ensureItemVisibleInContainer,
   createPositionSync,
   createPortalLifecycle,
@@ -434,7 +435,7 @@ export function createCombobox(
     // Anchor to root element (contains both input and trigger)
     const anchorRect = (root as HTMLElement).getBoundingClientRect();
     content.style.minWidth = `${anchorRect.width}px`;
-    const cr = content.getBoundingClientRect();
+    const cr = measurePopupContentRect(content);
     const pos = computeFloatingPosition({
       anchorRect,
       contentRect: cr,
