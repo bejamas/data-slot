@@ -247,6 +247,37 @@ describe('Tooltip', () => {
     secondController.destroy()
   })
 
+  it('marks stale close as instant during warm handoff between tooltips', async () => {
+    const {
+      rootA,
+      triggerA,
+      triggerB,
+      contentA,
+      firstController,
+      secondController,
+    } = setupTwo(
+      { delay: 30, skipDelayDuration: 120 },
+      { delay: 30, skipDelayDuration: 120 }
+    )
+
+    triggerA.dispatchEvent(pointer('pointerenter', 'mouse'))
+    await wait(35)
+    expect(firstController.isOpen).toBe(true)
+
+    triggerA.dispatchEvent(pointer('pointerleave', 'mouse', triggerB))
+    expect(firstController.isOpen).toBe(false)
+    expect(rootA.hasAttribute('data-instant')).toBe(true)
+    expect(contentA.hasAttribute('data-instant')).toBe(true)
+    expect(getPositioner(contentA).hasAttribute('data-instant')).toBe(true)
+
+    triggerB.dispatchEvent(pointer('pointerenter', 'mouse'))
+    await wait(5)
+    expect(secondController.isOpen).toBe(true)
+
+    firstController.destroy()
+    secondController.destroy()
+  })
+
   it('does not set data-instant for regular opens', () => {
     const { root, content, controller } = setup({ delay: 0, skipDelayDuration: 120 })
 

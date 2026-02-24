@@ -165,10 +165,10 @@ The component sets these attributes automatically:
 |---------|-----------|--------|
 | Root | `data-state` | `"open"` \| `"closed"` |
 | Root | `data-open` / `data-closed` | Present when matching state |
-| Root | `data-instant` | Present for warm-up opens (delay skipped) |
+| Root | `data-instant` | Present for warm-up opens and warm-handoff instant closes |
 | Content | `data-state` | `"open"` \| `"closed"` |
 | Content | `data-open` / `data-closed` | Present when matching state |
-| Content | `data-instant` | Present for warm-up opens (delay skipped) |
+| Content | `data-instant` | Present for warm-up opens and warm-handoff instant closes |
 | Content | `data-side` | `"top"` \| `"right"` \| `"bottom"` \| `"left"` |
 | Content | `data-align` | `"start"` \| `"center"` \| `"end"` |
 | Content | `role` | `"tooltip"` |
@@ -243,7 +243,8 @@ When a user closes one tooltip and quickly hovers another, the second tooltip sh
 
 - Controlled by `skipDelayDuration` option
 - Set to `0` to disable this behavior
-- Warm-up adds `data-instant` on the open cycle so CSS can disable transitions
+- Warm-up adds `data-instant` on instant open/close cycles so CSS can disable transitions
+- During warm handoff to another tooltip trigger, the stale tooltip closes with `data-instant` so exit animation can be skipped
 - Warm window is set only when a tooltip actually closes (not when a pending open is cancelled)
 
 ## Accessibility

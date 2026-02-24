@@ -26,6 +26,23 @@ export type HoverCardReason = "pointer" | "focus" | "blur" | "dismiss" | "api";
 let globalWarmUntil = 0;
 const FOCUS_OPEN_INTENT_WINDOW_MS = 750;
 const POINTER_HOVER_INTENT_WINDOW_MS = 250;
+const registeredWarmHandoffTriggers = new Set<HTMLElement>();
+const warmHandoffListeners = new Set<(sourceTrigger: HTMLElement, reason: HoverCardReason) => void>();
+
+const isWarmHandoffTarget = (target: Node | null, sourceTrigger: HTMLElement): boolean => {
+  if (!target) return false;
+  for (const trigger of registeredWarmHandoffTriggers) {
+    if (trigger === sourceTrigger) continue;
+    if (trigger.contains(target)) return true;
+  }
+  return false;
+};
+
+const notifyWarmHandoff = (sourceTrigger: HTMLElement, reason: HoverCardReason): void => {
+  for (const listener of warmHandoffListeners) {
+    listener(sourceTrigger, reason);
+  }
+};
 
 export interface HoverCardOptions {
   /** Initial open state (uncontrolled mode only) */
@@ -164,7 +181,7 @@ export function createHoverCard(
     8;
 
   let isOpen = options.open ?? defaultOpen;
-  let isInstantOpen = false;
+  let isInstantTransition = false;
   let isDestroyed = false;
   let pointerOnTrigger = false;
   let pointerOnContent = false;
@@ -269,7 +286,7 @@ export function createHoverCard(
       if (positioner !== content) {
         positioner.setAttribute("data-open", "");
       }
-      if (isInstantOpen) {
+      if (isInstantTransition) {
         root.setAttribute("data-instant", "");
         content.setAttribute("data-instant", "");
         if (positioner !== content) {
@@ -295,10 +312,18 @@ export function createHoverCard(
     if (positioner !== content) {
       positioner.setAttribute("data-closed", "");
     }
-    root.removeAttribute("data-instant");
-    content.removeAttribute("data-instant");
-    if (positioner !== content) {
-      positioner.removeAttribute("data-instant");
+    if (isInstantTransition) {
+      root.setAttribute("data-instant", "");
+      content.setAttribute("data-instant", "");
+      if (positioner !== content) {
+        positioner.setAttribute("data-instant", "");
+      }
+    } else {
+      root.removeAttribute("data-instant");
+      content.removeAttribute("data-instant");
+      if (positioner !== content) {
+        positioner.removeAttribute("data-instant");
+      }
     }
     root.removeAttribute("data-open");
     content.removeAttribute("data-open");
@@ -330,7 +355,7 @@ export function createHoverCard(
       globalWarmUntil = Date.now() + skipDelayDuration;
     }
 
-    isInstantOpen = open ? instant : false;
+    isInstantTransition = instant;
     isOpen = open;
     setAria(trigger, "expanded", isOpen);
 
@@ -363,6 +388,22 @@ export function createHoverCard(
   const forceState = (open: boolean, reason: HoverCardReason, instant = false) => {
     applyState(open, reason, instant);
   };
+
+  const closeForWarmHandoff = (sourceTrigger: HTMLElement, reason: HoverCardReason) => {
+    if (sourceTrigger === trigger || !isOpen) return;
+    clearTimers();
+    pointerOnTrigger = false;
+    pointerOnContent = false;
+    focusWithin = false;
+    requestState(false, reason, true);
+  };
+
+  registeredWarmHandoffTriggers.add(trigger);
+  warmHandoffListeners.add(closeForWarmHandoff);
+  cleanups.push(() => {
+    warmHandoffListeners.delete(closeForWarmHandoff);
+    registeredWarmHandoffTriggers.delete(trigger);
+  });
 
   const scheduleOpen = (reason: HoverCardReason) => {
     clearCloseTimeout();
@@ -438,6 +479,7 @@ export function createHoverCard(
       pointerOnTrigger = true;
       if (isTriggerDisabled()) return;
       if (Date.now() - lastPointerMoveAt > POINTER_HOVER_INTENT_WINDOW_MS) return;
+      notifyWarmHandoff(trigger, "pointer");
       scheduleOpen("pointer");
     }),
     on(trigger, "pointermove", (e) => {
@@ -445,6 +487,7 @@ export function createHoverCard(
       // Enter may occur before the move event while crossing boundaries.
       if (!pointerOnTrigger || isTriggerDisabled()) return;
       if (isOpen || openTimeout) return;
+      notifyWarmHandoff(trigger, "pointer");
       scheduleOpen("pointer");
     }),
     on(trigger, "pointerleave", (e) => {
@@ -452,6 +495,10 @@ export function createHoverCard(
       pointerOnTrigger = false;
       const related = e.relatedTarget as Node | null;
       if (related && content.contains(related)) return;
+      if (isWarmHandoffTarget(related, trigger)) {
+        requestState(false, "pointer", true);
+        return;
+      }
       maybeScheduleClose("pointer");
     })
   );
@@ -468,6 +515,10 @@ export function createHoverCard(
       pointerOnContent = false;
       const related = e.relatedTarget as Node | null;
       if (related && trigger.contains(related)) return;
+      if (isWarmHandoffTarget(related, trigger)) {
+        requestState(false, "pointer", true);
+        return;
+      }
       maybeScheduleClose("pointer");
     })
   );
@@ -479,12 +530,17 @@ export function createHoverCard(
       // Ignore pure programmatic focus (e.g. dialog initial autofocus).
       if (Date.now() - lastTabKeydownAt > FOCUS_OPEN_INTENT_WINDOW_MS) return;
       focusWithin = true;
+      notifyWarmHandoff(trigger, "focus");
       scheduleOpen("focus");
     }),
     on(trigger, "focusout", (e) => {
       const related = e.relatedTarget as Node | null;
       if (related && (trigger.contains(related) || content.contains(related))) return;
       focusWithin = false;
+      if (isWarmHandoffTarget(related, trigger)) {
+        requestState(false, "blur", true);
+        return;
+      }
       maybeScheduleClose("blur");
     }),
     on(content, "focusin", () => {
@@ -495,6 +551,10 @@ export function createHoverCard(
       const related = e.relatedTarget as Node | null;
       if (related && (trigger.contains(related) || content.contains(related))) return;
       focusWithin = false;
+      if (isWarmHandoffTarget(related, trigger)) {
+        requestState(false, "blur", true);
+        return;
+      }
       maybeScheduleClose("blur");
     })
   );

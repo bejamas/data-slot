@@ -235,6 +235,7 @@ When one hover-card closes, another hovered shortly after can open immediately (
 - Set to `0` to disable warm-up behavior
 - Warm-up applies across hover-card instances
 - Warm-up opens add `data-instant` (root/content/positioner) for that open cycle, so CSS can disable animations
+- During warm handoff to another hover-card trigger, the stale popup closes immediately (bypasses `closeDelay`) and that close cycle is marked with `data-instant`
 
 ## Accessibility
 

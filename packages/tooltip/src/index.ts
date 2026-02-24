@@ -17,6 +17,23 @@ import { on, emit } from "@data-slot/core";
 
 // Global state for "warm-up" behavior across tooltip instances
 let globalWarmUntil = 0;
+const registeredWarmHandoffTriggers = new Set<HTMLElement>();
+const warmHandoffListeners = new Set<(sourceTrigger: HTMLElement, reason: TooltipReason) => void>();
+
+const isWarmHandoffTarget = (target: Node | null, sourceTrigger: HTMLElement): boolean => {
+  if (!target) return false;
+  for (const trigger of registeredWarmHandoffTriggers) {
+    if (trigger === sourceTrigger) continue;
+    if (trigger.contains(target)) return true;
+  }
+  return false;
+};
+
+const notifyWarmHandoff = (sourceTrigger: HTMLElement, reason: TooltipReason): void => {
+  for (const listener of warmHandoffListeners) {
+    listener(sourceTrigger, reason);
+  }
+};
 
 // Types aligned with Radix/Base UI naming
 export type TooltipSide = "top" | "right" | "bottom" | "left";
@@ -157,7 +174,7 @@ export function createTooltip(
     8;
 
   let isOpen = false;
-  let isInstantOpen = false;
+  let isInstantTransition = false;
   let hasFocus = false;
   let isDestroyed = false;
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -192,7 +209,7 @@ export function createTooltip(
       if (positioner !== content) {
         positioner.setAttribute("data-open", "");
       }
-      if (isInstantOpen) {
+      if (isInstantTransition) {
         root.setAttribute("data-instant", "");
         content.setAttribute("data-instant", "");
         if (positioner !== content) {
@@ -218,10 +235,18 @@ export function createTooltip(
     if (positioner !== content) {
       positioner.setAttribute("data-closed", "");
     }
-    root.removeAttribute("data-instant");
-    content.removeAttribute("data-instant");
-    if (positioner !== content) {
-      positioner.removeAttribute("data-instant");
+    if (isInstantTransition) {
+      root.setAttribute("data-instant", "");
+      content.setAttribute("data-instant", "");
+      if (positioner !== content) {
+        positioner.setAttribute("data-instant", "");
+      }
+    } else {
+      root.removeAttribute("data-instant");
+      content.removeAttribute("data-instant");
+      if (positioner !== content) {
+        positioner.removeAttribute("data-instant");
+      }
     }
     root.removeAttribute("data-open");
     content.removeAttribute("data-open");
@@ -296,7 +321,7 @@ export function createTooltip(
       globalWarmUntil = Date.now() + skipDelayDuration;
     }
 
-    isInstantOpen = open ? instant : false;
+    isInstantTransition = instant;
     isOpen = open;
 
     if (isOpen) {
@@ -340,14 +365,27 @@ export function createTooltip(
     }, delay);
   };
 
-  const hideImmediately = (reason: TooltipReason) => {
+  const hideImmediately = (reason: TooltipReason, instant = false) => {
     if (showTimeout) {
       clearTimeout(showTimeout);
       showTimeout = null;
     }
 
-    updateState(false, reason);
+    updateState(false, reason, instant);
   };
+
+  const closeForWarmHandoff = (sourceTrigger: HTMLElement, reason: TooltipReason) => {
+    if (sourceTrigger === trigger || !isOpen) return;
+    hasFocus = false;
+    hideImmediately(reason, true);
+  };
+
+  registeredWarmHandoffTriggers.add(trigger);
+  warmHandoffListeners.add(closeForWarmHandoff);
+  cleanups.push(() => {
+    warmHandoffListeners.delete(closeForWarmHandoff);
+    registeredWarmHandoffTriggers.delete(trigger);
+  });
 
   // Initialize state
   content.hidden = true;
@@ -360,6 +398,7 @@ export function createTooltip(
       // Touch: focus-only, don't open on hover
       if (e.pointerType === "touch") return;
       if (isTriggerDisabled()) return;
+      notifyWarmHandoff(trigger, "pointer");
       showWithDelay("pointer");
     }),
     on(trigger, "pointerleave", (e) => {
@@ -369,16 +408,26 @@ export function createTooltip(
       // Keep open while pointer moves from trigger to content
       const related = e.relatedTarget as Node | null;
       if (related && content.contains(related)) return;
+      if (isWarmHandoffTarget(related, trigger)) {
+        hideImmediately("pointer", true);
+        return;
+      }
       hideImmediately("pointer");
     }),
     // Focus events
     on(trigger, "focus", () => {
       hasFocus = true;
       if (isTriggerDisabled()) return;
+      notifyWarmHandoff(trigger, "focus");
       showWithDelay("focus");
     }),
-    on(trigger, "blur", () => {
+    on(trigger, "blur", (e) => {
       hasFocus = false;
+      const related = (e as FocusEvent).relatedTarget as Node | null;
+      if (isWarmHandoffTarget(related, trigger)) {
+        hideImmediately("blur", true);
+        return;
+      }
       hideImmediately("blur");
     })
   );
@@ -392,6 +441,10 @@ export function createTooltip(
       // Keep open while pointer moves back to trigger
       const related = e.relatedTarget as Node | null;
       if (related && trigger.contains(related)) return;
+      if (isWarmHandoffTarget(related, trigger)) {
+        hideImmediately("pointer", true);
+        return;
+      }
       hideImmediately("pointer");
     })
   );

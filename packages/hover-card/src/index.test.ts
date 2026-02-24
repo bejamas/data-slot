@@ -192,6 +192,36 @@ describe('HoverCard', () => {
     controller.destroy()
   })
 
+  it('closes stale popup instantly on warm handoff and bypasses closeDelay', async () => {
+    const {
+      rootA,
+      triggerA,
+      triggerB,
+      contentA,
+      firstController,
+      secondController,
+    } = setupTwo(
+      { delay: 0, closeDelay: 80, skipDelayDuration: 120 },
+      { delay: 30, closeDelay: 0, skipDelayDuration: 120 }
+    )
+
+    hoverEnter(triggerA)
+    expect(firstController.isOpen).toBe(true)
+
+    triggerA.dispatchEvent(pointer('pointerleave', 'mouse', triggerB))
+    hoverEnter(triggerB)
+    await wait(5)
+
+    expect(firstController.isOpen).toBe(false)
+    expect(rootA.hasAttribute('data-instant')).toBe(true)
+    expect(contentA.hasAttribute('data-instant')).toBe(true)
+    expect(getPositioner(contentA).hasAttribute('data-instant')).toBe(true)
+    expect(secondController.isOpen).toBe(true)
+
+    firstController.destroy()
+    secondController.destroy()
+  })
+
   it('skips delay during warm-up window across hover-cards', async () => {
     const { triggerA, triggerB, firstController, secondController } = setupTwo(
       { delay: 30, closeDelay: 0, skipDelayDuration: 120 },
