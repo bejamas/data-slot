@@ -157,6 +157,13 @@ Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align
 
 The positioned element (`combobox-positioner`, or `combobox-content` when no positioner is used) receives `--transform-origin`, so animations can use `transform-origin: var(--transform-origin, center)`.
 
+### Mobile Behavior
+
+- On touch/coarse-pointer environments, outside `pointerdown` (for example during scroll gestures) does not dismiss the popup.
+- Outside tap/click still dismisses the popup.
+- While open, popup position tracks scroll so the popup stays anchored.
+- On open, combobox may nudge the viewport to keep the trigger inside a safer visible band.
+
 ### Callbacks
 
 | Callback | Type | Description |

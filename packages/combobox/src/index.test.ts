@@ -68,6 +68,11 @@ describe("Combobox", () => {
       requestAnimationFrame(() => resolve());
     });
 
+  const waitForMs = (ms: number) =>
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    });
+
   const waitForClose = async () => {
     await waitForRaf();
     await waitForRaf();
@@ -91,6 +96,75 @@ describe("Combobox", () => {
       return parent;
     }
     return content;
+  };
+
+  const mockMobileEnvironment = () => {
+    const maxTouchPointsDescriptor = Object.getOwnPropertyDescriptor(window.navigator, "maxTouchPoints");
+    Object.defineProperty(window.navigator, "maxTouchPoints", {
+      configurable: true,
+      value: 5,
+    });
+
+    const matchMediaDescriptor = Object.getOwnPropertyDescriptor(window, "matchMedia");
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: ((query: string): MediaQueryList => {
+        const matches =
+          query.includes("pointer: coarse") ||
+          query.includes("hover: none");
+
+        return {
+          matches,
+          media: query,
+          onchange: null,
+          addListener: () => {},
+          removeListener: () => {},
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          dispatchEvent: () => false,
+        };
+      }) as Window["matchMedia"],
+    });
+
+    return () => {
+      if (maxTouchPointsDescriptor) {
+        Object.defineProperty(window.navigator, "maxTouchPoints", maxTouchPointsDescriptor);
+      } else {
+        Reflect.deleteProperty(window.navigator as Navigator & Record<string, unknown>, "maxTouchPoints");
+      }
+
+      if (matchMediaDescriptor) {
+        Object.defineProperty(window, "matchMedia", matchMediaDescriptor);
+      } else {
+        Reflect.deleteProperty(window as unknown as Record<string, unknown>, "matchMedia");
+      }
+    };
+  };
+
+  const mockWindowScrollBy = () => {
+    const calls: ScrollToOptions[] = [];
+    const scrollByDescriptor = Object.getOwnPropertyDescriptor(window, "scrollBy");
+    Object.defineProperty(window, "scrollBy", {
+      configurable: true,
+      value: ((arg1?: number | ScrollToOptions, arg2?: number) => {
+        if (typeof arg1 === "object" && arg1 !== null) {
+          calls.push(arg1);
+          return;
+        }
+        calls.push({ left: typeof arg1 === "number" ? arg1 : 0, top: typeof arg2 === "number" ? arg2 : 0 });
+      }) as Window["scrollBy"],
+    });
+
+    return {
+      calls,
+      restore: () => {
+        if (scrollByDescriptor) {
+          Object.defineProperty(window, "scrollBy", scrollByDescriptor);
+        } else {
+          Reflect.deleteProperty(window as unknown as Record<string, unknown>, "scrollBy");
+        }
+      },
+    };
   };
 
   beforeEach(() => {
@@ -927,7 +1001,7 @@ describe("Combobox", () => {
       controller.destroy();
     });
 
-    it("closes on outside click", () => {
+    it("closes on outside pointerdown", () => {
       const { controller } = setup();
       controller.open();
       expect(controller.isOpen).toBe(true);
@@ -937,6 +1011,28 @@ describe("Combobox", () => {
       );
       expect(controller.isOpen).toBe(false);
       controller.destroy();
+    });
+
+    it("on touch environments, outside pointerdown does not close but outside click closes", () => {
+      const restoreMobile = mockMobileEnvironment();
+      try {
+        const { controller } = setup();
+        controller.open();
+        expect(controller.isOpen).toBe(true);
+
+        document.body.dispatchEvent(
+          new PointerEvent("pointerdown", { bubbles: true })
+        );
+        expect(controller.isOpen).toBe(true);
+
+        document.body.dispatchEvent(
+          new MouseEvent("click", { bubbles: true })
+        );
+        expect(controller.isOpen).toBe(false);
+        controller.destroy();
+      } finally {
+        restoreMobile();
+      }
     });
 
     it("does not open when disabled", () => {
@@ -1479,7 +1575,7 @@ describe("Combobox", () => {
       controller.destroy();
     });
 
-    it("keeps coordinates stable on window scroll", async () => {
+    it("updates coordinates on window scroll when anchor moves", async () => {
       const { root, content, controller } = setup({ avoidCollisions: false });
 
       let anchorTop = 100;
@@ -1526,8 +1622,100 @@ describe("Combobox", () => {
       await waitForRaf();
       await waitForRaf();
 
-      expect(getPositioner(content).style.transform).toBe(initialTransform);
+      expect(getPositioner(content).style.transform).not.toBe(initialTransform);
       controller.destroy();
+    });
+
+    it("on touch environments, opening nudges viewport when trigger is near viewport edge", async () => {
+      const restoreMobile = mockMobileEnvironment();
+      const { calls, restore: restoreScrollBy } = mockWindowScrollBy();
+      try {
+        const { root, controller } = setup();
+
+        (root as HTMLElement).getBoundingClientRect = () =>
+          ({
+            x: 0,
+            y: 740,
+            top: 740,
+            left: 0,
+            width: 200,
+            height: 32,
+            right: 200,
+            bottom: 772,
+            toJSON: () => ({}),
+          }) as DOMRect;
+
+        controller.open();
+        await waitForRaf();
+        await waitForMs(180);
+
+        expect(calls.length).toBeGreaterThan(0);
+        expect((calls[0]?.top ?? 0) > 0).toBe(true);
+        controller.destroy();
+      } finally {
+        restoreScrollBy();
+        restoreMobile();
+      }
+    });
+
+    it("on touch environments, opening does not nudge viewport when trigger is already in a safe band", async () => {
+      const restoreMobile = mockMobileEnvironment();
+      const { calls, restore: restoreScrollBy } = mockWindowScrollBy();
+      try {
+        const { root, controller } = setup();
+
+        (root as HTMLElement).getBoundingClientRect = () =>
+          ({
+            x: 0,
+            y: 320,
+            top: 320,
+            left: 0,
+            width: 200,
+            height: 32,
+            right: 200,
+            bottom: 352,
+            toJSON: () => ({}),
+          }) as DOMRect;
+
+        controller.open();
+        await waitForRaf();
+        await waitForMs(180);
+
+        expect(calls.length).toBe(0);
+        controller.destroy();
+      } finally {
+        restoreScrollBy();
+        restoreMobile();
+      }
+    });
+
+    it("on desktop environments, opening does not nudge viewport", async () => {
+      const { calls, restore: restoreScrollBy } = mockWindowScrollBy();
+      try {
+        const { root, controller } = setup();
+
+        (root as HTMLElement).getBoundingClientRect = () =>
+          ({
+            x: 0,
+            y: 740,
+            top: 740,
+            left: 0,
+            width: 200,
+            height: 32,
+            right: 200,
+            bottom: 772,
+            toJSON: () => ({}),
+          }) as DOMRect;
+
+        controller.open();
+        await waitForRaf();
+        await waitForMs(180);
+
+        expect(calls.length).toBe(0);
+        controller.destroy();
+      } finally {
+        restoreScrollBy();
+      }
     });
   });
 

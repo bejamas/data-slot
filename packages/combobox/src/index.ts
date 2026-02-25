@@ -2,6 +2,7 @@ import {
   getPart,
   getParts,
   getRoots,
+  containsWithPortals,
   getDataBool,
   getDataNumber,
   getDataString,
@@ -196,9 +197,13 @@ export function createCombobox(
   let keyboardMode = false;
   const cleanups: Array<() => void> = [];
   const doc = root.ownerDocument ?? document;
+  const win = doc.defaultView ?? window;
+  const rootElement = root as HTMLElement;
   const FOCUS_OPEN_INTENT_WINDOW_MS = 750;
   let lastTabKeydownAt = -Infinity;
   let openOnNextFocusFromPointer = false;
+  let openViewportAdjustRaf: number | null = null;
+  let openViewportAdjustTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Cached on open
   let allItems: HTMLElement[] = [];
@@ -218,6 +223,78 @@ export function createCombobox(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   let isDestroyed = false;
+
+  const matchesMediaQuery = (query: string): boolean => {
+    if (typeof win.matchMedia !== "function") return false;
+    return win.matchMedia(query).matches;
+  };
+
+  const isLikelyMobileTouchEnvironment = (): boolean => {
+    const touchPoints = typeof win.navigator.maxTouchPoints === "number" ? win.navigator.maxTouchPoints : 0;
+    const coarsePointer = matchesMediaQuery("(pointer: coarse)");
+    const noHover = matchesMediaQuery("(hover: none)");
+    return coarsePointer || (touchPoints > 0 && noHover);
+  };
+
+  const prefersReducedMotion = (): boolean => {
+    return matchesMediaQuery("(prefers-reduced-motion: reduce)");
+  };
+
+  const isMobileTouchEnvironment = isLikelyMobileTouchEnvironment();
+
+  const clearOpenViewportAdjust = () => {
+    if (openViewportAdjustRaf !== null) {
+      win.cancelAnimationFrame(openViewportAdjustRaf);
+      openViewportAdjustRaf = null;
+    }
+    if (openViewportAdjustTimeout !== null) {
+      clearTimeout(openViewportAdjustTimeout);
+      openViewportAdjustTimeout = null;
+    }
+  };
+
+  const maybeAdjustViewportOnOpen = () => {
+    if (!isOpen || !isMobileTouchEnvironment) return;
+
+    const anchorRect = rootElement.getBoundingClientRect();
+    const viewportHeight = win.visualViewport?.height ?? win.innerHeight;
+    if (viewportHeight <= 0 || anchorRect.height <= 0) return;
+
+    // Keep the trigger roughly centered on mobile to avoid keyboard-edge clipping.
+    const safeInset = Math.max(24, Math.round(viewportHeight * 0.2));
+    const safeTop = safeInset;
+    const safeBottom = viewportHeight - safeInset;
+    const anchorCenterY = anchorRect.top + anchorRect.height / 2;
+    let delta = 0;
+
+    if (anchorCenterY < safeTop) {
+      delta = anchorCenterY - safeTop;
+    } else if (anchorCenterY > safeBottom) {
+      delta = anchorCenterY - safeBottom;
+    }
+
+    if (Math.abs(delta) < 1) return;
+
+    win.scrollBy({
+      top: delta,
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+  };
+
+  const scheduleOpenViewportAdjust = () => {
+    if (!isMobileTouchEnvironment) return;
+    clearOpenViewportAdjust();
+
+    openViewportAdjustRaf = win.requestAnimationFrame(() => {
+      openViewportAdjustRaf = null;
+      maybeAdjustViewportOnOpen();
+    });
+
+    openViewportAdjustTimeout = setTimeout(() => {
+      openViewportAdjustTimeout = null;
+      maybeAdjustViewportOnOpen();
+    }, 140);
+  };
 
   const isItemDisabled = (el: HTMLElement) =>
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
@@ -440,9 +517,8 @@ export function createCombobox(
   // Positioning
   const updatePosition = () => {
     const positioner = portal.container as HTMLElement;
-    const win = root.ownerDocument.defaultView ?? window;
     // Anchor to root element (contains both input and trigger)
-    const anchorRect = (root as HTMLElement).getBoundingClientRect();
+    const anchorRect = rootElement.getBoundingClientRect();
     content.style.minWidth = `${anchorRect.width}px`;
     const cr = measurePopupContentRect(content);
     const pos = computeFloatingPosition({
@@ -482,7 +558,7 @@ export function createCombobox(
   const positionSync = createPositionSync({
     observedElements: [root as HTMLElement, content],
     isActive: () => isOpen,
-    ancestorScroll: false,
+    ancestorScroll: true,
     onUpdate: updatePosition,
     ignoreScrollTarget: (target) => target instanceof Node && content.contains(target),
   });
@@ -579,12 +655,14 @@ export function createCombobox(
       positionSync.start();
       updatePosition();
       positionSync.update();
+      scheduleOpenViewportAdjust();
 
       requestAnimationFrame(() => {
         if (!isOpen) return;
         positionSync.update();
       });
     } else {
+      clearOpenViewportAdjust();
       isOpen = false;
       setAria(input, "expanded", false);
       setDataState("closed");
@@ -872,10 +950,21 @@ export function createCombobox(
       root,
       isOpen: () => isOpen,
       onDismiss: () => updateOpenState(false),
-      closeOnClickOutside: true,
+      closeOnClickOutside: !isMobileTouchEnvironment,
       closeOnEscape: false,
     })
   );
+
+  if (isMobileTouchEnvironment) {
+    cleanups.push(
+      on(doc, "click", (event) => {
+        if (!isOpen) return;
+        const target = event.target as Node | null;
+        if (containsWithPortals(root, target)) return;
+        updateOpenState(false);
+      }, { capture: true })
+    );
+  }
 
   // Inbound event
   cleanups.push(
@@ -912,6 +1001,7 @@ export function createCombobox(
     },
     destroy: () => {
       isDestroyed = true;
+      clearOpenViewportAdjust();
       positionSync.stop();
       presence.cleanup();
       portal.cleanup();
