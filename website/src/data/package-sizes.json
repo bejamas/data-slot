@@ -7,26 +7,26 @@
   },
   {
     "name": "@data-slot/core",
-    "size": 4589,
-    "sizeFormatted": "4.5 KB",
+    "size": 4809,
+    "sizeFormatted": "4.7 KB",
     "description": "Shared utilities"
   },
   {
     "name": "@data-slot/combobox",
-    "size": 3784,
-    "sizeFormatted": "3.7 KB",
+    "size": 3898,
+    "sizeFormatted": "3.8 KB",
     "description": "Autocomplete input"
   },
   {
     "name": "@data-slot/select",
-    "size": 3738,
-    "sizeFormatted": "3.7 KB",
+    "size": 3847,
+    "sizeFormatted": "3.8 KB",
     "description": "Dropdown select, form-ready"
   },
   {
     "name": "@data-slot/dropdown-menu",
-    "size": 2480,
-    "sizeFormatted": "2.4 KB",
+    "size": 2588,
+    "sizeFormatted": "2.5 KB",
     "description": "Action menus, kbd nav"
   },
   {
@@ -36,22 +36,22 @@
     "description": "Single/range value sliders"
   },
   {
-    "name": "@data-slot/tabs",
-    "size": 1887,
-    "sizeFormatted": "1.8 KB",
-    "description": "Tabbed interfaces, kbd nav"
-  },
-  {
     "name": "@data-slot/tooltip",
-    "size": 1828,
-    "sizeFormatted": "1.8 KB",
+    "size": 2130,
+    "sizeFormatted": "2.1 KB",
     "description": "Hover/focus tooltips"
   },
   {
     "name": "@data-slot/popover",
-    "size": 1809,
-    "sizeFormatted": "1.8 KB",
+    "size": 1928,
+    "sizeFormatted": "1.9 KB",
     "description": "Anchored floating content"
+  },
+  {
+    "name": "@data-slot/tabs",
+    "size": 1887,
+    "sizeFormatted": "1.8 KB",
+    "description": "Tabbed interfaces, kbd nav"
   },
   {
     "name": "@data-slot/dialog",

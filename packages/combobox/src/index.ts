@@ -514,16 +514,18 @@ export function createCombobox(
 
   // Highlighting
   const updateHighlight = (index: number) => {
-    for (let i = 0; i < enabledVisibleItems.length; i++) {
-      const el = enabledVisibleItems[i]!;
-      if (i === index) {
-        el.setAttribute("data-highlighted", "");
-        input.setAttribute("aria-activedescendant", el.id);
-        ensureItemVisibleInContainer(el, getHighlightScrollContainer(el));
-      } else {
-        el.removeAttribute("data-highlighted");
-      }
+    for (const el of allItems) el.removeAttribute("data-highlighted");
+
+    const highlightedItem = enabledVisibleItems[index];
+    if (!highlightedItem) {
+      highlightedIndex = -1;
+      input.removeAttribute("aria-activedescendant");
+      return;
     }
+
+    highlightedItem.setAttribute("data-highlighted", "");
+    input.setAttribute("aria-activedescendant", highlightedItem.id);
+    ensureItemVisibleInContainer(highlightedItem, getHighlightScrollContainer(highlightedItem));
     highlightedIndex = index;
   };
 
@@ -713,6 +715,9 @@ export function createCombobox(
         e.preventDefault();
         if (!isOpen) {
           updateOpenState(true);
+          if (autoHighlight && enabledVisibleItems.length > 0) {
+            updateHighlight(0);
+          }
           return;
         }
         keyboardMode = true;
@@ -725,6 +730,9 @@ export function createCombobox(
         e.preventDefault();
         if (!isOpen) {
           updateOpenState(true);
+          if (autoHighlight && enabledVisibleItems.length > 0) {
+            updateHighlight(enabledVisibleItems.length - 1);
+          }
           return;
         }
         keyboardMode = true;
@@ -805,8 +813,12 @@ export function createCombobox(
   // Focus handling
   const handleFocus = () => {
     if (disabled) return;
-    // Select all text for easy re-type
-    input.select();
+    // On touch/coarse-pointer devices, avoid forcing text selection on focus.
+    // This can interfere with native viewport scrolling behavior on mobile Safari.
+    if (!isMobileTouchEnvironment) {
+      // Select all text for easy re-type
+      input.select();
+    }
     const now = Date.now();
     const hasIntent = openOnNextFocusFromPointer || now - lastTabKeydownAt <= FOCUS_OPEN_INTENT_WINDOW_MS;
     openOnNextFocusFromPointer = false;

@@ -75,9 +75,76 @@
       ],
       "scenarios": [
         {
-          "id": "combobox-tab-close-after-enter-then-retype",
+          "id": "tab-close-after-enter-then-retype",
           "status": "implemented",
-          "localTest": "packages/combobox/src/index.test.ts::closes on Tab after selecting with Enter and typing again (Base UI parity)"
+          "sourceCase": "closes popup on Tab after selecting with Enter and typing again",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:tab-close-after-enter-then-retype"
+        },
+        {
+          "id": "auto-highlight-on-typing",
+          "status": "implemented",
+          "sourceCase": "highlights the first item when typing and keeps it during filtering",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:auto-highlight-on-typing"
+        },
+        {
+          "id": "activedescendant-follows-filtering",
+          "status": "implemented",
+          "sourceCase": "links aria-activedescendant to the highlighted item after filtering",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:activedescendant-follows-filtering"
+        },
+        {
+          "id": "no-initial-highlight-without-auto-highlight",
+          "status": "implemented",
+          "sourceCase": "does not highlight first/last item when pressing ArrowDown/ArrowUp initially",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:no-initial-highlight-without-auto-highlight"
+        },
+        {
+          "id": "highlight-first-on-arrowdown-with-auto-highlight",
+          "status": "implemented",
+          "sourceCase": "highlights the first item when opening via ArrowDown",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:highlight-first-on-arrowdown-with-auto-highlight"
+        },
+        {
+          "id": "escape-closes-open-popup",
+          "status": "implemented",
+          "sourceCase": "does not highlight on open via click or when pressing arrow keys initially",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:escape-closes-open-popup"
+        },
+        {
+          "id": "tab-closes-and-restores-committed-label",
+          "status": "implemented",
+          "sourceCase": "closes popup on Tab after selecting with Enter and typing again",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:tab-closes-and-restores-committed-label"
+        },
+        {
+          "id": "disabled-prevents-open",
+          "status": "implemented",
+          "sourceCase": "behavioral equivalent: disabled interaction contract",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:disabled-prevents-open"
+        },
+        {
+          "id": "outside-pointerdown-dismisses",
+          "status": "implemented",
+          "sourceCase": "keeps the latest pointer highlight on outside blur when behavior is \"always\"",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:outside-pointerdown-dismisses"
+        },
+        {
+          "id": "filtering-empty-state-toggle",
+          "status": "implemented",
+          "sourceCase": "highlights the first item when typing and keeps it during filtering",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:filtering-empty-state-toggle"
+        },
+        {
+          "id": "enter-selects-highlighted-item",
+          "status": "implemented",
+          "sourceCase": "closes popup on Tab after selecting with Enter and typing again",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:enter-selects-highlighted-item"
+        },
+        {
+          "id": "required-validation-empty-vs-selected",
+          "status": "implemented",
+          "sourceCase": "triggers native validation when required and empty",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:required-validation-empty-vs-selected"
         }
       ]
     }

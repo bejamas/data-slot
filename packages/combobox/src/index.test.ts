@@ -1,6 +1,8 @@
 import { describe, expect, it, beforeEach } from "bun:test";
 import { createCombobox, create } from "./index";
 import { createDialog } from "../../dialog/src/index";
+import { runComboboxParityScenario } from "./parity/runner";
+import { comboboxParityScenarios } from "./parity/scenarios";
 
 describe("Combobox", () => {
   const setup = (options: Parameters<typeof createCombobox>[1] = {}, html?: string) => {
@@ -476,6 +478,26 @@ describe("Combobox", () => {
       controller.destroy();
     });
 
+    it("does not force text selection on focus in touch environments", () => {
+      const restoreMobileEnvironment = mockMobileEnvironment();
+      const { input, controller } = setup({ defaultValue: "apple" });
+      let selectCallCount = 0;
+      const originalSelect = input.select.bind(input);
+      input.select = (() => {
+        selectCallCount += 1;
+        originalSelect();
+      }) as HTMLInputElement["select"];
+
+      try {
+        input.focus();
+        input.dispatchEvent(new Event("focus", { bubbles: true }));
+        expect(selectCallCount).toBe(0);
+      } finally {
+        restoreMobileEnvironment();
+        controller.destroy();
+      }
+    });
+
     it("controller.select() updates value and input", () => {
       const { input, controller } = setup();
       controller.select("banana");
@@ -525,36 +547,6 @@ describe("Combobox", () => {
       );
       expect(controller.isOpen).toBe(false);
       expect(input.value).toBe("Banana");
-      controller.destroy();
-    });
-
-    it("closes on Tab after selecting with Enter and typing again (Base UI parity)", () => {
-      const { input, controller } = setup({ autoHighlight: true });
-
-      input.value = "ap";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      expect(controller.isOpen).toBe(true);
-
-      // autoHighlight should mark the first visible item; Enter commits and closes
-      input.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
-      );
-      expect(controller.value).toBe("apple");
-      expect(input.value).toBe("Apple");
-      expect(controller.isOpen).toBe(false);
-
-      // User types again; popup reopens with filtered options
-      input.value = "a";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      expect(controller.isOpen).toBe(true);
-
-      // Tab should close popup and restore committed label
-      input.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Tab", bubbles: true })
-      );
-      expect(controller.isOpen).toBe(false);
-      expect(input.value).toBe("Apple");
-
       controller.destroy();
     });
 
@@ -2270,5 +2262,17 @@ describe("Combobox", () => {
 
       controller.destroy();
     });
+  });
+
+  describe("parity adapter", () => {
+    it("tracks 12 targeted combobox scenarios", () => {
+      expect(comboboxParityScenarios).toHaveLength(12);
+    });
+
+    for (const scenario of comboboxParityScenarios) {
+      it(`parity:combobox:${scenario.id}`, async () => {
+        await runComboboxParityScenario(scenario);
+      });
+    }
   });
 });
