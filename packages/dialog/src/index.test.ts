@@ -127,7 +127,25 @@ describe("Dialog", () => {
     expect(controller.isOpen).toBe(true);
 
     // Click on overlay closes the dialog
-    overlay.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    overlay.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
+    expect(controller.isOpen).toBe(false);
+
+    controller.destroy();
+  });
+
+  it("does not close on non-primary overlay click (Base UI parity)", () => {
+    const { controller } = setup();
+    const overlay = document.querySelector(
+      '[data-slot="dialog-overlay"]'
+    ) as HTMLElement;
+
+    controller.open();
+    expect(controller.isOpen).toBe(true);
+
+    overlay.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 1 }));
+    expect(controller.isOpen).toBe(true);
+
+    overlay.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
     expect(controller.isOpen).toBe(false);
 
     controller.destroy();
@@ -838,7 +856,7 @@ describe("Dialog", () => {
       controller.open();
       expect(controller.isOpen).toBe(true);
 
-      overlay.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      overlay.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
       expect(controller.isOpen).toBe(true);
 
       controller.destroy();

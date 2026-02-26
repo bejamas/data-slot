@@ -247,6 +247,20 @@ describe("Select", () => {
 
       controller.destroy();
     });
+
+    it("uses native disabled button behavior for disabled trigger (Base UI parity)", () => {
+      const { trigger, controller } = setup({ disabled: true });
+
+      const button = trigger as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+
+      button.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
+      expect(controller.isOpen).toBe(false);
+
+      controller.destroy();
+    });
   });
 
   describe("selection", () => {
@@ -1653,6 +1667,7 @@ describe("Select", () => {
 
       expect(trigger.getAttribute("aria-disabled")).toBe("true");
       expect(trigger.hasAttribute("data-disabled")).toBe(true);
+      expect((trigger as HTMLButtonElement).disabled).toBe(true);
 
       trigger.click();
       expect(controller.isOpen).toBe(false);

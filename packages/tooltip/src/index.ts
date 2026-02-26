@@ -414,6 +414,21 @@ export function createTooltip(
       }
       hideImmediately("pointer");
     }),
+    on(trigger, "click", () => {
+      if (isTriggerDisabled()) return;
+
+      // If a delayed open is pending and user clicks first, cancel opening.
+      if (showTimeout) {
+        clearTimeout(showTimeout);
+        showTimeout = null;
+        return;
+      }
+
+      // Clicking an already-open tooltip trigger dismisses it.
+      if (isOpen) {
+        hideImmediately("pointer", true);
+      }
+    }),
     // Focus events
     on(trigger, "focus", () => {
       hasFocus = true;

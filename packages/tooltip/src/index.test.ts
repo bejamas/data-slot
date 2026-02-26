@@ -610,6 +610,31 @@ describe('Tooltip', () => {
     controller.destroy()
   })
 
+  it('does not open when trigger is clicked before delay duration (Base UI parity)', async () => {
+    const { trigger, controller } = setup({ delay: 40 })
+
+    trigger.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true, pointerType: 'mouse' }))
+    trigger.click()
+
+    await wait(60)
+    expect(controller.isOpen).toBe(false)
+
+    controller.destroy()
+  })
+
+  it('closes when trigger is clicked after opening (Base UI parity)', async () => {
+    const { trigger, controller } = setup({ delay: 10 })
+
+    trigger.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true, pointerType: 'mouse' }))
+    await wait(20)
+    expect(controller.isOpen).toBe(true)
+
+    trigger.click()
+    expect(controller.isOpen).toBe(false)
+
+    controller.destroy()
+  })
+
   it('does not open on pointer events when trigger is disabled', () => {
     document.body.innerHTML = `
       <div data-slot="tooltip" id="root">

@@ -271,6 +271,9 @@ export function createSelect(
   if (disabled) {
     trigger.setAttribute("aria-disabled", "true");
     trigger.setAttribute("data-disabled", "");
+    if (trigger instanceof HTMLButtonElement) {
+      trigger.disabled = true;
+    }
   }
   if (required) {
     trigger.setAttribute("aria-required", "true");

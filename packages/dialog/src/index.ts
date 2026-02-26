@@ -379,7 +379,8 @@ export function createDialog(
   // Click on overlay to close
   if (closeOnClickOutside) {
     cleanups.push(
-      on(overlay, "pointerdown", (e) => {
+      on(overlay, "click", (e) => {
+        if ((e as MouseEvent).button !== 0) return;
         if (e.target === overlay && isOpen) {
           updateState(false);
         }

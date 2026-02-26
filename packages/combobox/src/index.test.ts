@@ -68,11 +68,6 @@ describe("Combobox", () => {
       requestAnimationFrame(() => resolve());
     });
 
-  const waitForMs = (ms: number) =>
-    new Promise<void>((resolve) => {
-      setTimeout(resolve, ms);
-    });
-
   const waitForClose = async () => {
     await waitForRaf();
     await waitForRaf();
@@ -138,32 +133,6 @@ describe("Combobox", () => {
       } else {
         Reflect.deleteProperty(window as unknown as Record<string, unknown>, "matchMedia");
       }
-    };
-  };
-
-  const mockWindowScrollBy = () => {
-    const calls: ScrollToOptions[] = [];
-    const scrollByDescriptor = Object.getOwnPropertyDescriptor(window, "scrollBy");
-    Object.defineProperty(window, "scrollBy", {
-      configurable: true,
-      value: ((arg1?: number | ScrollToOptions, arg2?: number) => {
-        if (typeof arg1 === "object" && arg1 !== null) {
-          calls.push(arg1);
-          return;
-        }
-        calls.push({ left: typeof arg1 === "number" ? arg1 : 0, top: typeof arg2 === "number" ? arg2 : 0 });
-      }) as Window["scrollBy"],
-    });
-
-    return {
-      calls,
-      restore: () => {
-        if (scrollByDescriptor) {
-          Object.defineProperty(window, "scrollBy", scrollByDescriptor);
-        } else {
-          Reflect.deleteProperty(window as unknown as Record<string, unknown>, "scrollBy");
-        }
-      },
     };
   };
 
@@ -556,6 +525,36 @@ describe("Combobox", () => {
       );
       expect(controller.isOpen).toBe(false);
       expect(input.value).toBe("Banana");
+      controller.destroy();
+    });
+
+    it("closes on Tab after selecting with Enter and typing again (Base UI parity)", () => {
+      const { input, controller } = setup({ autoHighlight: true });
+
+      input.value = "ap";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(controller.isOpen).toBe(true);
+
+      // autoHighlight should mark the first visible item; Enter commits and closes
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+      );
+      expect(controller.value).toBe("apple");
+      expect(input.value).toBe("Apple");
+      expect(controller.isOpen).toBe(false);
+
+      // User types again; popup reopens with filtered options
+      input.value = "a";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(controller.isOpen).toBe(true);
+
+      // Tab should close popup and restore committed label
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", bubbles: true })
+      );
+      expect(controller.isOpen).toBe(false);
+      expect(input.value).toBe("Apple");
+
       controller.destroy();
     });
 
@@ -1626,11 +1625,56 @@ describe("Combobox", () => {
       controller.destroy();
     });
 
-    it("on touch environments, opening nudges viewport when trigger is near viewport edge", async () => {
+    it("on touch environments, side option is hard-overridden to bottom", () => {
       const restoreMobile = mockMobileEnvironment();
-      const { calls, restore: restoreScrollBy } = mockWindowScrollBy();
       try {
-        const { root, controller } = setup();
+        const { content, controller } = setup({ side: "top", avoidCollisions: false });
+        controller.open();
+        expect(content.getAttribute("data-side")).toBe("bottom");
+        controller.destroy();
+      } finally {
+        restoreMobile();
+      }
+    });
+
+    it("on desktop environments, constrained viewport can flip side with collisions", () => {
+      const { root, content, controller } = setup({ side: "bottom", avoidCollisions: true });
+
+      (root as HTMLElement).getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 740,
+          top: 740,
+          left: 0,
+          width: 200,
+          height: 32,
+          right: 200,
+          bottom: 772,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 220,
+          height: 140,
+          right: 220,
+          bottom: 140,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      controller.open();
+      expect(content.getAttribute("data-side")).toBe("top");
+      controller.destroy();
+    });
+
+    it("on touch environments, constrained viewport still stays bottom", () => {
+      const restoreMobile = mockMobileEnvironment();
+      try {
+        const { root, content, controller } = setup({ side: "top", avoidCollisions: true });
 
         (root as HTMLElement).getBoundingClientRect = () =>
           ({
@@ -1645,76 +1689,24 @@ describe("Combobox", () => {
             toJSON: () => ({}),
           }) as DOMRect;
 
-        controller.open();
-        await waitForRaf();
-        await waitForMs(180);
-
-        expect(calls.length).toBeGreaterThan(0);
-        expect((calls[0]?.top ?? 0) > 0).toBe(true);
-        controller.destroy();
-      } finally {
-        restoreScrollBy();
-        restoreMobile();
-      }
-    });
-
-    it("on touch environments, opening does not nudge viewport when trigger is already in a safe band", async () => {
-      const restoreMobile = mockMobileEnvironment();
-      const { calls, restore: restoreScrollBy } = mockWindowScrollBy();
-      try {
-        const { root, controller } = setup();
-
-        (root as HTMLElement).getBoundingClientRect = () =>
+        content.getBoundingClientRect = () =>
           ({
             x: 0,
-            y: 320,
-            top: 320,
+            y: 0,
+            top: 0,
             left: 0,
-            width: 200,
-            height: 32,
-            right: 200,
-            bottom: 352,
+            width: 220,
+            height: 140,
+            right: 220,
+            bottom: 140,
             toJSON: () => ({}),
           }) as DOMRect;
 
         controller.open();
-        await waitForRaf();
-        await waitForMs(180);
-
-        expect(calls.length).toBe(0);
+        expect(content.getAttribute("data-side")).toBe("bottom");
         controller.destroy();
       } finally {
-        restoreScrollBy();
         restoreMobile();
-      }
-    });
-
-    it("on desktop environments, opening does not nudge viewport", async () => {
-      const { calls, restore: restoreScrollBy } = mockWindowScrollBy();
-      try {
-        const { root, controller } = setup();
-
-        (root as HTMLElement).getBoundingClientRect = () =>
-          ({
-            x: 0,
-            y: 740,
-            top: 740,
-            left: 0,
-            width: 200,
-            height: 32,
-            right: 200,
-            bottom: 772,
-            toJSON: () => ({}),
-          }) as DOMRect;
-
-        controller.open();
-        await waitForRaf();
-        await waitForMs(180);
-
-        expect(calls.length).toBe(0);
-        controller.destroy();
-      } finally {
-        restoreScrollBy();
       }
     });
   });

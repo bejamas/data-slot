@@ -1,0 +1,85 @@
+{
+  "sourceRepo": "https://github.com/mui/base-ui",
+  "sourceCheckout": {
+    "path": "/tmp/base-ui",
+    "checkoutDate": "2026-02-25"
+  },
+  "strategy": "parity-smoke",
+  "components": [
+    {
+      "name": "dialog",
+      "baseUiSources": [
+        "packages/react/src/dialog/root/DialogRoot.test.tsx"
+      ],
+      "scenarios": [
+        {
+          "id": "dialog-outside-primary-click",
+          "status": "implemented",
+          "localTest": "packages/dialog/src/index.test.ts::closes on click outside content"
+        },
+        {
+          "id": "dialog-ignore-non-primary-click",
+          "status": "implemented",
+          "localTest": "packages/dialog/src/index.test.ts::does not close on non-primary overlay click (Base UI parity)"
+        }
+      ]
+    },
+    {
+      "name": "select",
+      "baseUiSources": [
+        "packages/react/src/select/trigger/SelectTrigger.test.tsx"
+      ],
+      "scenarios": [
+        {
+          "id": "select-disabled-trigger-native-focus-behavior",
+          "status": "implemented",
+          "localTest": "packages/select/src/index.test.ts::uses native disabled button behavior for disabled trigger (Base UI parity)"
+        }
+      ]
+    },
+    {
+      "name": "tooltip",
+      "baseUiSources": [
+        "packages/react/src/tooltip/root/TooltipRoot.test.tsx"
+      ],
+      "scenarios": [
+        {
+          "id": "tooltip-click-before-delay-does-not-open",
+          "status": "implemented",
+          "localTest": "packages/tooltip/src/index.test.ts::does not open when trigger is clicked before delay duration (Base UI parity)"
+        },
+        {
+          "id": "tooltip-click-after-open-closes",
+          "status": "implemented",
+          "localTest": "packages/tooltip/src/index.test.ts::closes when trigger is clicked after opening (Base UI parity)"
+        }
+      ]
+    },
+    {
+      "name": "hover-card",
+      "baseUiSources": [
+        "packages/react/src/preview-card/root/PreviewCardRoot.test.tsx"
+      ],
+      "scenarios": [
+        {
+          "id": "hover-card-open-close-delays",
+          "status": "already-covered",
+          "localTest": "packages/hover-card/src/index.test.ts::opens on pointerenter (non-touch) after delay"
+        }
+      ]
+    },
+    {
+      "name": "combobox",
+      "baseUiSources": [
+        "packages/react/src/autocomplete/root/AutocompleteRoot.test.tsx"
+      ],
+      "scenarios": [
+        {
+          "id": "combobox-tab-close-after-enter-then-retype",
+          "status": "implemented",
+          "localTest": "packages/combobox/src/index.test.ts::closes on Tab after selecting with Enter and typing again (Base UI parity)"
+        }
+      ]
+    }
+  ]
+}
