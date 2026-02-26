@@ -405,16 +405,46 @@ export function createCombobox(
     itemToEnabledIndex = new Map(enabledVisibleItems.map((el, i) => [el, i]));
   };
 
-  // Check if a separator has a visible non-separator sibling in a direction
-  const hasVisibleSibling = (el: HTMLElement, dir: "previous" | "next"): boolean => {
-    let sib = dir === "previous" ? el.previousElementSibling : el.nextElementSibling;
-    while (sib) {
-      if (sib instanceof HTMLElement && !sib.hidden && sib.dataset["slot"] !== "combobox-separator") {
-        return true;
-      }
-      sib = dir === "previous" ? sib.previousElementSibling : sib.nextElementSibling;
+  // Normalize separators after filtering:
+  // - no leading/trailing visible separator
+  // - no adjacent visible separators
+  // - at most one visible separator between adjacent visible non-separator blocks
+  const normalizeVisibleSeparators = (container: HTMLElement) => {
+    const separators = getParts<HTMLElement>(container, "combobox-separator");
+    for (const sep of separators) {
+      sep.hidden = true;
     }
-    return false;
+
+    const children = Array.from(container.children).filter(
+      (child): child is HTMLElement => child instanceof HTMLElement
+    );
+
+    for (let i = 0; i < children.length; i++) {
+      const current = children[i]!;
+      const currentIsSeparator = current.dataset["slot"] === "combobox-separator";
+      if (currentIsSeparator || current.hidden) continue;
+
+      let j = i + 1;
+      let firstVisibleSeparator: HTMLElement | null = null;
+      while (j < children.length) {
+        const next = children[j]!;
+        if (next.dataset["slot"] === "combobox-separator") {
+          firstVisibleSeparator ??= next;
+          j += 1;
+          continue;
+        }
+
+        if (next.hidden) {
+          j += 1;
+          continue;
+        }
+
+        if (firstVisibleSeparator) {
+          firstVisibleSeparator.hidden = false;
+        }
+        break;
+      }
+    }
   };
 
   // Filtering
@@ -439,11 +469,7 @@ export function createCombobox(
       group.hidden = !hasVisible;
     }
 
-    // Hide separators that are first/last visible child
-    const separators = getParts<HTMLElement>(container, "combobox-separator");
-    for (const sep of separators) {
-      sep.hidden = !hasVisibleSibling(sep, "previous") || !hasVisibleSibling(sep, "next");
-    }
+    normalizeVisibleSeparators(container);
 
     // Show/hide empty message
     if (emptySlot) {

@@ -2113,6 +2113,90 @@ describe("Combobox", () => {
       expect(sep.hidden).toBe(false);
       controller.destroy();
     });
+
+    it("normalizes to one visible separator when middle groups are filtered out", () => {
+      const { input, list, controller } = setup({
+        filter: (query, itemValue) =>
+          query === "keep-ad" ? itemValue === "a" || itemValue === "d" : true,
+      }, `
+        <div data-slot="combobox" id="root">
+          <input data-slot="combobox-input" />
+          <div data-slot="combobox-content" hidden>
+            <div data-slot="combobox-list">
+              <div data-slot="combobox-group">
+                <div data-slot="combobox-item" data-value="a">Group A</div>
+              </div>
+              <div data-slot="combobox-separator"></div>
+              <div data-slot="combobox-group">
+                <div data-slot="combobox-item" data-value="b">Group B</div>
+              </div>
+              <div data-slot="combobox-separator"></div>
+              <div data-slot="combobox-group">
+                <div data-slot="combobox-item" data-value="c">Group C</div>
+              </div>
+              <div data-slot="combobox-separator"></div>
+              <div data-slot="combobox-group">
+                <div data-slot="combobox-item" data-value="d">Group D</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+      controller.open();
+      input.value = "keep-ad";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+
+      const visibleChildren = Array.from(list.children).filter(
+        (el): el is HTMLElement => el instanceof HTMLElement && !el.hidden
+      );
+      expect(visibleChildren.map((el) => el.getAttribute("data-slot"))).toEqual([
+        "combobox-group",
+        "combobox-separator",
+        "combobox-group",
+      ]);
+
+      const visibleSeparators = Array.from(
+        list.querySelectorAll('[data-slot="combobox-separator"]')
+      ).filter((el) => !(el as HTMLElement).hidden);
+      expect(visibleSeparators).toHaveLength(1);
+      controller.destroy();
+    });
+
+    it("collapses adjacent authored separators to one visible separator", () => {
+      const { list, controller } = setup(undefined, `
+        <div data-slot="combobox" id="root">
+          <input data-slot="combobox-input" />
+          <div data-slot="combobox-content" hidden>
+            <div data-slot="combobox-list">
+              <div data-slot="combobox-group">
+                <div data-slot="combobox-item" data-value="a">A</div>
+              </div>
+              <div data-slot="combobox-separator"></div>
+              <div data-slot="combobox-separator"></div>
+              <div data-slot="combobox-group">
+                <div data-slot="combobox-item" data-value="b">B</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+      controller.open();
+
+      const visibleChildren = Array.from(list.children).filter(
+        (el): el is HTMLElement => el instanceof HTMLElement && !el.hidden
+      );
+      expect(visibleChildren.map((el) => el.getAttribute("data-slot"))).toEqual([
+        "combobox-group",
+        "combobox-separator",
+        "combobox-group",
+      ]);
+
+      const visibleSeparators = Array.from(
+        list.querySelectorAll('[data-slot="combobox-separator"]')
+      ).filter((el) => !(el as HTMLElement).hidden);
+      expect(visibleSeparators).toHaveLength(1);
+      controller.destroy();
+    });
   });
 
   describe("getItemLabel", () => {
