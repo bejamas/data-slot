@@ -187,6 +187,31 @@ describe("Combobox", () => {
       expect(input.placeholder).toBe("Pick a fruit");
       controller.destroy();
     });
+
+    it("sets trigger out of tab order by default", () => {
+      const { triggerBtn, controller } = setup();
+      expect(triggerBtn.tabIndex).toBe(-1);
+      controller.destroy();
+    });
+
+    it("respects authored trigger tabindex", () => {
+      document.body.innerHTML = `
+        <div data-slot="combobox" id="root">
+          <input data-slot="combobox-input" />
+          <button data-slot="combobox-trigger" tabindex="0">Toggle</button>
+          <div data-slot="combobox-content" hidden>
+            <div data-slot="combobox-list">
+              <div data-slot="combobox-item" data-value="apple">Apple</div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector('[data-slot="combobox-trigger"]') as HTMLButtonElement;
+      const controller = createCombobox(root);
+      expect(trigger.tabIndex).toBe(0);
+      controller.destroy();
+    });
   });
 
   describe("ARIA", () => {
@@ -2377,6 +2402,30 @@ describe("Combobox", () => {
       expect(input.value).toBe("");
       expect(controller.isOpen).toBe(false);
       expect(document.activeElement).toBe(input);
+      controller.destroy();
+    });
+
+    it("sets clear button out of tab order by default", () => {
+      const { root, controller } = setup({ defaultValue: "apple" }, clearButtonHtml);
+      const clearButton = root.querySelector('[data-slot="combobox-clear"]') as HTMLButtonElement;
+      expect(clearButton.tabIndex).toBe(-1);
+      controller.destroy();
+    });
+
+    it("respects authored clear button tabindex", () => {
+      const { root, controller } = setup({ defaultValue: "apple" }, `
+        <div data-slot="combobox" id="root">
+          <input data-slot="combobox-input" />
+          <button data-slot="combobox-clear" tabindex="0">Clear</button>
+          <div data-slot="combobox-content" hidden>
+            <div data-slot="combobox-list">
+              <div data-slot="combobox-item" data-value="apple">Apple</div>
+            </div>
+          </div>
+        </div>
+      `);
+      const clearButton = root.querySelector('[data-slot="combobox-clear"]') as HTMLButtonElement;
+      expect(clearButton.tabIndex).toBe(0);
       controller.destroy();
     });
 

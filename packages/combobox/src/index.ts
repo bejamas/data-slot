@@ -295,12 +295,17 @@ export function createCombobox(
     if (!trigger.hasAttribute("type")) {
       trigger.setAttribute("type", "button");
     }
-    trigger.tabIndex = -1;
+    if (!trigger.hasAttribute("tabindex")) {
+      trigger.tabIndex = -1;
+    }
     trigger.setAttribute("aria-label", "Toggle");
   }
 
   if (clearButton instanceof HTMLButtonElement && !clearButton.hasAttribute("type")) {
     clearButton.setAttribute("type", "button");
+  }
+  if (clearButton && !clearButton.hasAttribute("tabindex")) {
+    clearButton.tabIndex = -1;
   }
 
   // Native <label for="..."> support

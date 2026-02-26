@@ -126,6 +126,13 @@ When `combobox-clear` is clicked:
 - Input is focused.
 - If popup is closed, it remains closed.
 - If popup is open, it remains open.
+- By default it is out of keyboard tab order (`tabindex="-1"` behavior). Set `tabindex="0"` to make it tabbable.
+
+### Keyboard Tab Stops
+
+- `combobox-input` is the primary keyboard tab stop.
+- `combobox-trigger` and `combobox-clear` are out of tab order by default.
+- To opt into keyboard tabbing for either control, author `tabindex="0"` on that element.
 
 ### Native Label Support
 
