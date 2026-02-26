@@ -9,154 +9,94 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
     },
     "./core": {
-      "import": {
-        "types": "./dist/core.d.ts",
-        "default": "./dist/core.js"
-      },
-      "require": {
-        "types": "./dist/core.d.cts",
-        "default": "./dist/core.cjs"
-      }
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "require": "./dist/core.cjs",
+      "default": "./dist/core.js"
     },
     "./tabs": {
-      "import": {
-        "types": "./dist/tabs.d.ts",
-        "default": "./dist/tabs.js"
-      },
-      "require": {
-        "types": "./dist/tabs.d.cts",
-        "default": "./dist/tabs.cjs"
-      }
+      "types": "./dist/tabs.d.ts",
+      "import": "./dist/tabs.js",
+      "require": "./dist/tabs.cjs",
+      "default": "./dist/tabs.js"
     },
     "./dialog": {
-      "import": {
-        "types": "./dist/dialog.d.ts",
-        "default": "./dist/dialog.js"
-      },
-      "require": {
-        "types": "./dist/dialog.d.cts",
-        "default": "./dist/dialog.cjs"
-      }
+      "types": "./dist/dialog.d.ts",
+      "import": "./dist/dialog.js",
+      "require": "./dist/dialog.cjs",
+      "default": "./dist/dialog.js"
     },
     "./accordion": {
-      "import": {
-        "types": "./dist/accordion.d.ts",
-        "default": "./dist/accordion.js"
-      },
-      "require": {
-        "types": "./dist/accordion.d.cts",
-        "default": "./dist/accordion.cjs"
-      }
+      "types": "./dist/accordion.d.ts",
+      "import": "./dist/accordion.js",
+      "require": "./dist/accordion.cjs",
+      "default": "./dist/accordion.js"
     },
     "./popover": {
-      "import": {
-        "types": "./dist/popover.d.ts",
-        "default": "./dist/popover.js"
-      },
-      "require": {
-        "types": "./dist/popover.d.cts",
-        "default": "./dist/popover.cjs"
-      }
+      "types": "./dist/popover.d.ts",
+      "import": "./dist/popover.js",
+      "require": "./dist/popover.cjs",
+      "default": "./dist/popover.js"
     },
     "./hover-card": {
-      "import": {
-        "types": "./dist/hover-card.d.ts",
-        "default": "./dist/hover-card.js"
-      },
-      "require": {
-        "types": "./dist/hover-card.d.cts",
-        "default": "./dist/hover-card.cjs"
-      }
+      "types": "./dist/hover-card.d.ts",
+      "import": "./dist/hover-card.js",
+      "require": "./dist/hover-card.cjs",
+      "default": "./dist/hover-card.js"
     },
     "./tooltip": {
-      "import": {
-        "types": "./dist/tooltip.d.ts",
-        "default": "./dist/tooltip.js"
-      },
-      "require": {
-        "types": "./dist/tooltip.d.cts",
-        "default": "./dist/tooltip.cjs"
-      }
+      "types": "./dist/tooltip.d.ts",
+      "import": "./dist/tooltip.js",
+      "require": "./dist/tooltip.cjs",
+      "default": "./dist/tooltip.js"
     },
     "./collapsible": {
-      "import": {
-        "types": "./dist/collapsible.d.ts",
-        "default": "./dist/collapsible.js"
-      },
-      "require": {
-        "types": "./dist/collapsible.d.cts",
-        "default": "./dist/collapsible.cjs"
-      }
+      "types": "./dist/collapsible.d.ts",
+      "import": "./dist/collapsible.js",
+      "require": "./dist/collapsible.cjs",
+      "default": "./dist/collapsible.js"
     },
     "./navigation-menu": {
-      "import": {
-        "types": "./dist/navigation-menu.d.ts",
-        "default": "./dist/navigation-menu.js"
-      },
-      "require": {
-        "types": "./dist/navigation-menu.d.cts",
-        "default": "./dist/navigation-menu.cjs"
-      }
+      "types": "./dist/navigation-menu.d.ts",
+      "import": "./dist/navigation-menu.js",
+      "require": "./dist/navigation-menu.cjs",
+      "default": "./dist/navigation-menu.js"
     },
     "./dropdown-menu": {
-      "import": {
-        "types": "./dist/dropdown-menu.d.ts",
-        "default": "./dist/dropdown-menu.js"
-      },
-      "require": {
-        "types": "./dist/dropdown-menu.d.cts",
-        "default": "./dist/dropdown-menu.cjs"
-      }
+      "types": "./dist/dropdown-menu.d.ts",
+      "import": "./dist/dropdown-menu.js",
+      "require": "./dist/dropdown-menu.cjs",
+      "default": "./dist/dropdown-menu.js"
     },
     "./toggle": {
-      "import": {
-        "types": "./dist/toggle.d.ts",
-        "default": "./dist/toggle.js"
-      },
-      "require": {
-        "types": "./dist/toggle.d.cts",
-        "default": "./dist/toggle.cjs"
-      }
+      "types": "./dist/toggle.d.ts",
+      "import": "./dist/toggle.js",
+      "require": "./dist/toggle.cjs",
+      "default": "./dist/toggle.js"
     },
     "./toggle-group": {
-      "import": {
-        "types": "./dist/toggle-group.d.ts",
-        "default": "./dist/toggle-group.js"
-      },
-      "require": {
-        "types": "./dist/toggle-group.d.cts",
-        "default": "./dist/toggle-group.cjs"
-      }
+      "types": "./dist/toggle-group.d.ts",
+      "import": "./dist/toggle-group.js",
+      "require": "./dist/toggle-group.cjs",
+      "default": "./dist/toggle-group.js"
     },
     "./select": {
-      "import": {
-        "types": "./dist/select.d.ts",
-        "default": "./dist/select.js"
-      },
-      "require": {
-        "types": "./dist/select.d.cts",
-        "default": "./dist/select.cjs"
-      }
+      "types": "./dist/select.d.ts",
+      "import": "./dist/select.js",
+      "require": "./dist/select.cjs",
+      "default": "./dist/select.js"
     },
     "./combobox": {
-      "import": {
-        "types": "./dist/combobox.d.ts",
-        "default": "./dist/combobox.js"
-      },
-      "require": {
-        "types": "./dist/combobox.d.cts",
-        "default": "./dist/combobox.cjs"
-      }
+      "types": "./dist/combobox.d.ts",
+      "import": "./dist/combobox.js",
+      "require": "./dist/combobox.cjs",
+      "default": "./dist/combobox.js"
     }
   },
   "files": [
