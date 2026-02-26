@@ -1,6 +1,7 @@
 import type { ComboboxParityScenario } from "./scenario-types";
 
 const SOURCE_FILE = "packages/react/src/autocomplete/root/AutocompleteRoot.test.tsx";
+const CLEAR_SOURCE_FILE = "packages/react/src/combobox/clear/ComboboxClear.test.tsx";
 
 export const comboboxParityScenarios: ComboboxParityScenario[] = [
   {
@@ -142,6 +143,33 @@ export const comboboxParityScenarios: ComboboxParityScenario[] = [
       assertions.expectOpen(false);
       assertions.expectValue("banana");
       assertions.expectInputValue("Banana");
+    },
+  },
+  {
+    id: "clear-focuses-input-without-opening",
+    description: "Clear button focuses input, clears value, and does not auto-open from closed state",
+    source: {
+      file: CLEAR_SOURCE_FILE,
+      caseTitle: "click clears selected value and focuses input",
+    },
+    fixtureOptions: { defaultValue: "apple" },
+    run: ({ actions, assertions, fixture }) => {
+      assertions.expectOpen(false);
+      assertions.expectValue("apple");
+
+      actions.clickClear();
+      assertions.expectValue(null);
+      assertions.expectInputValue("");
+      assertions.expectInputFocused(true);
+      assertions.expectOpen(false);
+
+      fixture.controller.select("banana");
+      actions.open();
+      assertions.expectOpen(true);
+      actions.clickClear();
+      assertions.expectValue(null);
+      assertions.expectOpen(true);
+      assertions.expectInputFocused(true);
     },
   },
   {

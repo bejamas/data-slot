@@ -116,6 +116,7 @@ export function createCombobox(
   const content = getPart<HTMLElement>(root, "combobox-content");
   const list = getPart<HTMLElement>(root, "combobox-list") ?? getPart<HTMLElement>(content ?? root, "combobox-list");
   const trigger = getPart<HTMLElement>(root, "combobox-trigger");
+  const clearButton = getPart<HTMLElement>(root, "combobox-clear");
   const valueSlot = getPart<HTMLElement>(root, "combobox-value");
   const emptySlot = getPart<HTMLElement>(list ?? content ?? root, "combobox-empty");
   const authoredPositionerCandidate = getPart<HTMLElement>(root, "combobox-positioner");
@@ -202,6 +203,7 @@ export function createCombobox(
   const FOCUS_OPEN_INTENT_WINDOW_MS = 750;
   let lastTabKeydownAt = -Infinity;
   let openOnNextFocusFromPointer = false;
+  let suppressOpenOnNextFocus = false;
 
   // Cached on open
   let allItems: HTMLElement[] = [];
@@ -295,6 +297,10 @@ export function createCombobox(
     }
     trigger.tabIndex = -1;
     trigger.setAttribute("aria-label", "Toggle");
+  }
+
+  if (clearButton instanceof HTMLButtonElement && !clearButton.hasAttribute("type")) {
+    clearButton.setAttribute("type", "button");
   }
 
   // Native <label for="..."> support
@@ -706,6 +712,29 @@ export function createCombobox(
     updateOpenState(false);
   };
 
+  const clearFromButton = () => {
+    if (disabled || input.readOnly) return;
+    if (clearButton && (clearButton.hasAttribute("disabled") || clearButton.getAttribute("aria-disabled") === "true")) {
+      return;
+    }
+
+    updateValue(null);
+    input.value = "";
+    clearHighlight();
+
+    if (isOpen) {
+      applyFilter(input.value);
+      positionSync.update();
+    }
+
+    const shouldSuppressFocusOpen = doc.activeElement !== input;
+    suppressOpenOnNextFocus = shouldSuppressFocusOpen;
+    input.focus();
+    if (!shouldSuppressFocusOpen) {
+      suppressOpenOnNextFocus = false;
+    }
+  };
+
   // Keyboard navigation
   const handleKeydown = (e: KeyboardEvent) => {
     if (disabled) return;
@@ -813,6 +842,11 @@ export function createCombobox(
   // Focus handling
   const handleFocus = () => {
     if (disabled) return;
+    if (suppressOpenOnNextFocus) {
+      suppressOpenOnNextFocus = false;
+      openOnNextFocusFromPointer = false;
+      return;
+    }
     // On touch/coarse-pointer devices, avoid forcing text selection on focus.
     // This can interfere with native viewport scrolling behavior on mobile Safari.
     if (!isMobileTouchEnvironment) {
@@ -861,6 +895,17 @@ export function createCombobox(
           updateOpenState(true);
           input.focus();
         }
+      })
+    );
+  }
+
+  if (clearButton) {
+    cleanups.push(
+      on(clearButton, "mousedown", (e) => {
+        e.preventDefault();
+      }),
+      on(clearButton, "click", () => {
+        clearFromButton();
       })
     );
   }

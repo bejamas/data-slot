@@ -71,7 +71,8 @@
     {
       "name": "combobox",
       "baseUiSources": [
-        "packages/react/src/autocomplete/root/AutocompleteRoot.test.tsx"
+        "packages/react/src/autocomplete/root/AutocompleteRoot.test.tsx",
+        "packages/react/src/combobox/clear/ComboboxClear.test.tsx"
       ],
       "scenarios": [
         {
@@ -115,6 +116,12 @@
           "status": "implemented",
           "sourceCase": "closes popup on Tab after selecting with Enter and typing again",
           "localTest": "packages/combobox/src/index.test.ts::parity:combobox:tab-closes-and-restores-committed-label"
+        },
+        {
+          "id": "clear-focuses-input-without-opening",
+          "status": "implemented",
+          "sourceCase": "click clears selected value and focuses input",
+          "localTest": "packages/combobox/src/index.test.ts::parity:combobox:clear-focuses-input-without-opening"
         },
         {
           "id": "disabled-prevents-open",

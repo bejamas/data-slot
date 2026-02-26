@@ -5,6 +5,7 @@ const DEFAULT_FIXTURE_HTML = `
   <div data-slot="combobox" id="root">
     <input data-slot="combobox-input" />
     <button data-slot="combobox-trigger">▼</button>
+    <button data-slot="combobox-clear">Clear</button>
     <div data-slot="combobox-content" hidden>
       <div data-slot="combobox-list">
         <div data-slot="combobox-empty" hidden>No results found</div>
@@ -40,6 +41,7 @@ export function mountComboboxFixture(
   const list = requiredElement<HTMLElement>(root, '[data-slot="combobox-list"]');
   const emptySlot = root.querySelector<HTMLElement>('[data-slot="combobox-empty"]');
   const triggerBtn = root.querySelector<HTMLElement>('[data-slot="combobox-trigger"]');
+  const clearBtn = root.querySelector<HTMLElement>('[data-slot="combobox-clear"]');
 
   const controller = createCombobox(root, options.options ?? {});
 
@@ -53,6 +55,7 @@ export function mountComboboxFixture(
     root,
     input,
     triggerBtn,
+    clearBtn,
     content,
     list,
     emptySlot,

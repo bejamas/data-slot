@@ -60,5 +60,8 @@ export function createComboboxAssertions(
     expectInputValid(expectedValid) {
       expect(fixture.input.validity.valid).toBe(expectedValid);
     },
+    expectInputFocused(expectedFocused) {
+      expect(document.activeElement === fixture.input).toBe(expectedFocused);
+    },
   };
 }

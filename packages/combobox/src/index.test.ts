@@ -2264,9 +2264,135 @@ describe("Combobox", () => {
     });
   });
 
+  describe("clear button", () => {
+    const clearButtonHtml = `
+      <div data-slot="combobox" id="root">
+        <input data-slot="combobox-input" />
+        <button data-slot="combobox-clear">Clear</button>
+        <div data-slot="combobox-content" hidden>
+          <div data-slot="combobox-list">
+            <div data-slot="combobox-item" data-value="apple">Apple</div>
+            <div data-slot="combobox-item" data-value="banana">Banana</div>
+            <div data-slot="combobox-item" data-value="other">Other</div>
+            <div data-slot="combobox-item" data-value="disabled" data-disabled>Disabled</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    it("clears value, focuses input, and keeps popup closed", () => {
+      const { root, input, controller } = setup({ defaultValue: "apple" }, clearButtonHtml);
+      const clearButton = root.querySelector('[data-slot="combobox-clear"]') as HTMLButtonElement;
+      expect(clearButton.type).toBe("button");
+      expect(controller.value).toBe("apple");
+      expect(controller.isOpen).toBe(false);
+
+      clearButton.click();
+
+      expect(controller.value).toBe(null);
+      expect(input.value).toBe("");
+      expect(controller.isOpen).toBe(false);
+      expect(document.activeElement).toBe(input);
+      controller.destroy();
+    });
+
+    it("does not auto-open after clear focus even if pointer intent was previously set", () => {
+      const { root, input, controller } = setup({ defaultValue: "apple" }, clearButtonHtml);
+      const clearButton = root.querySelector('[data-slot="combobox-clear"]') as HTMLButtonElement;
+      const outside = document.createElement("button");
+      outside.type = "button";
+      document.body.appendChild(outside);
+
+      input.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      outside.focus();
+      expect(document.activeElement).toBe(outside);
+
+      clearButton.click();
+
+      expect(controller.isOpen).toBe(false);
+      expect(document.activeElement).toBe(input);
+      controller.destroy();
+    });
+
+    it("preserves open state when clearing while popup is open", () => {
+      const { root, input, items, controller } = setup({ defaultValue: "apple" }, clearButtonHtml);
+      const clearButton = root.querySelector('[data-slot="combobox-clear"]') as HTMLButtonElement;
+
+      controller.open();
+      input.value = "ban";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(Array.from(items).filter((item) => !item.hidden).map((item) => item.getAttribute("data-value"))).toEqual([
+        "banana",
+      ]);
+
+      clearButton.click();
+
+      expect(controller.value).toBe(null);
+      expect(input.value).toBe("");
+      expect(controller.isOpen).toBe(true);
+      expect(Array.from(items).filter((item) => !item.hidden).map((item) => item.getAttribute("data-value"))).toEqual([
+        "apple",
+        "banana",
+        "other",
+        "disabled",
+      ]);
+      controller.destroy();
+    });
+
+    it("does nothing when combobox is disabled", () => {
+      const { root, input, controller } = setup({ defaultValue: "apple", disabled: true }, clearButtonHtml);
+      const clearButton = root.querySelector('[data-slot="combobox-clear"]') as HTMLButtonElement;
+
+      clearButton.click();
+
+      expect(controller.value).toBe("apple");
+      expect(input.value).toBe("Apple");
+      expect(controller.isOpen).toBe(false);
+      controller.destroy();
+    });
+
+    it("does nothing when input is readonly", () => {
+      const { root, input, controller } = setup({ defaultValue: "apple" }, `
+        <div data-slot="combobox" id="root">
+          <input data-slot="combobox-input" readonly />
+          <button data-slot="combobox-clear">Clear</button>
+          <div data-slot="combobox-content" hidden>
+            <div data-slot="combobox-list">
+              <div data-slot="combobox-item" data-value="apple">Apple</div>
+              <div data-slot="combobox-item" data-value="banana">Banana</div>
+            </div>
+          </div>
+        </div>
+      `);
+      const clearButton = root.querySelector('[data-slot="combobox-clear"]') as HTMLButtonElement;
+      expect(input.readOnly).toBe(true);
+
+      clearButton.click();
+
+      expect(controller.value).toBe("apple");
+      expect(input.value).toBe("Apple");
+      controller.destroy();
+    });
+
+    it("prevents mousedown from stealing input focus", () => {
+      const { root, input, controller } = setup({ defaultValue: "apple" }, clearButtonHtml);
+      const clearButton = root.querySelector('[data-slot="combobox-clear"]') as HTMLButtonElement;
+      input.focus();
+      expect(document.activeElement).toBe(input);
+
+      const event = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      const dispatchResult = clearButton.dispatchEvent(event);
+
+      expect(dispatchResult).toBe(false);
+      expect(event.defaultPrevented).toBe(true);
+      expect(document.activeElement).toBe(input);
+      controller.destroy();
+    });
+  });
+
   describe("parity adapter", () => {
-    it("tracks 12 targeted combobox scenarios", () => {
-      expect(comboboxParityScenarios).toHaveLength(12);
+    it("tracks 13 targeted combobox scenarios", () => {
+      expect(comboboxParityScenarios).toHaveLength(13);
     });
 
     for (const scenario of comboboxParityScenarios) {

@@ -64,6 +64,7 @@ controller.destroy();
 | `combobox` | Root container |
 | `combobox-input` | Text input for filtering |
 | `combobox-trigger` | Optional button that toggles the popup |
+| `combobox-clear` | Optional button that clears the current value and focuses input |
 | `combobox-value` | Optional selected-value text target (typically inside `combobox-trigger`) |
 | `combobox-content` | Popup container |
 | `combobox-list` | Scrollable list wrapper |
@@ -109,6 +110,22 @@ In popup-input mode (`combobox-input` inside `combobox-content`):
 - Selection text is synced to `combobox-value`.
 - Search input is cleared each time the popup opens.
 - Closing keeps the popup input empty.
+
+### Clear Button (Optional)
+
+```html
+<div data-slot="combobox">
+  <input data-slot="combobox-input" />
+  <button data-slot="combobox-clear">Clear</button>
+  <div data-slot="combobox-content" hidden>...</div>
+</div>
+```
+
+When `combobox-clear` is clicked:
+- Current value is cleared.
+- Input is focused.
+- If popup is closed, it remains closed.
+- If popup is open, it remains open.
 
 ### Native Label Support
 

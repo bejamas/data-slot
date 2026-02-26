@@ -8,6 +8,7 @@ export type ComboboxParityScenarioId =
   | "highlight-first-on-arrowdown-with-auto-highlight"
   | "escape-closes-open-popup"
   | "tab-closes-and-restores-committed-label"
+  | "clear-focuses-input-without-opening"
   | "disabled-prevents-open"
   | "outside-pointerdown-dismisses"
   | "filtering-empty-state-toggle"
@@ -28,6 +29,7 @@ export interface ComboboxParityFixture {
   root: HTMLElement;
   input: HTMLInputElement;
   triggerBtn: HTMLElement | null;
+  clearBtn: HTMLElement | null;
   content: HTMLElement;
   list: HTMLElement;
   emptySlot: HTMLElement | null;
@@ -43,6 +45,7 @@ export interface ComboboxParityActions {
   focusInput(): void;
   pressKey(key: string): KeyboardEvent;
   clickTrigger(): void;
+  clickClear(): void;
   clickItem(value: string): void;
   pointerDownOutside(): void;
   clickOutside(): void;
@@ -63,6 +66,7 @@ export interface ComboboxParityAssertions {
   expectInputDisabled(expectedDisabled: boolean): void;
   expectInputRequired(expectedRequired: boolean): void;
   expectInputValid(expectedValid: boolean): void;
+  expectInputFocused(expectedFocused: boolean): void;
 }
 
 export interface ComboboxParityContext {

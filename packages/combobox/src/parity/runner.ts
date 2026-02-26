@@ -49,6 +49,12 @@ export async function runComboboxParityScenario(
       }
       fixture.triggerBtn.click();
     },
+    clickClear() {
+      if (!fixture.clearBtn) {
+        throw new Error("Fixture has no combobox clear button");
+      }
+      fixture.clearBtn.click();
+    },
     clickItem(value) {
       const item = fixture.getItemByValue(value);
       if (!item) {
