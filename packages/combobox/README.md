@@ -162,7 +162,8 @@ The positioned element (`combobox-positioner`, or `combobox-content` when no pos
 - On touch/coarse-pointer environments, outside `pointerdown` (for example during scroll gestures) does not dismiss the popup.
 - Outside tap/click still dismisses the popup.
 - While open, popup position tracks scroll so the popup stays anchored.
-- On open, combobox may nudge the viewport to keep the trigger inside a safer visible band.
+- On touch/coarse-pointer environments, combobox always positions on the `bottom` side.
+- On touch/coarse-pointer environments, collision side-flipping is disabled to avoid jumpy repositioning.
 
 ### Callbacks
 
