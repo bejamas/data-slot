@@ -441,6 +441,40 @@ export function createNavigationMenu(
   const valueByTrigger = new Map<HTMLElement, string>();
   for (const [value, data] of itemMap) valueByTrigger.set(data.trigger, value);
 
+  const getManagedItemByElement = (
+    el: Element | null,
+  ):
+    | {
+        item: HTMLElement;
+        trigger: HTMLElement;
+        content: HTMLElement;
+        index: number;
+      }
+    | null => {
+    const item = el?.closest(
+      '[data-slot="navigation-menu-item"]',
+    ) as HTMLElement | null;
+    if (!item) return null;
+    const value = item.dataset["value"];
+    if (!value) return null;
+    const data = itemMap.get(value);
+    if (!data || data.item !== item) return null;
+    return data;
+  };
+
+  const isNonSubmenuListTarget = (target: EventTarget | null): boolean => {
+    if (!(target instanceof Node) || !list.contains(target)) return false;
+    const el = target instanceof HTMLElement ? target : target.parentElement;
+    if (!el) return false;
+    if (el.closest('[data-slot="navigation-menu-indicator"]')) return false;
+    if (getManagedItemByElement(el)) return false;
+    const item = el.closest(
+      '[data-slot="navigation-menu-item"]',
+    ) as HTMLElement | null;
+    if (item) return true;
+    return !!el.closest("a[href], button, [role='link'], [role='button']");
+  };
+
   // Focusable elements selector for content navigation
   const focusableSelector =
     'a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -1404,6 +1438,22 @@ export function createNavigationMenu(
       }),
     );
   });
+
+  // Close open submenu when interacting with non-submenu list targets (plain links/items).
+  cleanups.push(
+    on(list, "pointerover", (e) => {
+      if (currentValue === null) return;
+      const event = e as PointerEvent;
+      if (event.pointerType === "touch") return;
+      if (!isNonSubmenuListTarget(event.target)) return;
+      closeMenuAndUnlock();
+    }),
+    on(list, "pointerdown", (e) => {
+      if (currentValue === null) return;
+      if (!isNonSubmenuListTarget((e as PointerEvent).target)) return;
+      closeMenuAndUnlock();
+    }),
+  );
 
   // Track pointer enter/leave on root for scoping document handlers
   // Cancel hover timers on any pointerdown inside root

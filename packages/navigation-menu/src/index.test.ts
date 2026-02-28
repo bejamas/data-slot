@@ -446,6 +446,108 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("closes when hovering a non-submenu list item", () => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+          <li data-slot="navigation-menu-item">
+            <a href="#" class="plain-link">Pricing</a>
+          </li>
+        </ul>
+        <div data-slot="navigation-menu-viewport"></div>
+      </nav>
+    `;
+    const root = document.getElementById("root")!;
+    const plainLink = root.querySelector(".plain-link") as HTMLElement;
+    const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+    controller.open("products");
+    expect(controller.value).toBe("products");
+
+    plainLink.dispatchEvent(
+      new PointerEvent("pointerover", {
+        bubbles: true,
+        pointerType: "mouse",
+      } as PointerEventInit),
+    );
+
+    expect(controller.value).toBe(null);
+    expect(root.getAttribute("data-state")).toBe("closed");
+
+    controller.destroy();
+  });
+
+  it("closes locked menu when tapping a non-submenu list item", () => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+          <li data-slot="navigation-menu-item">
+            <a href="#" class="plain-link">Pricing</a>
+          </li>
+        </ul>
+        <div data-slot="navigation-menu-viewport"></div>
+      </nav>
+    `;
+    const root = document.getElementById("root")!;
+    const trigger = root.querySelector(
+      '[data-slot="navigation-menu-trigger"]',
+    ) as HTMLElement;
+    const plainLink = root.querySelector(".plain-link") as HTMLElement;
+    const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+    trigger.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerType: "touch",
+      } as PointerEventInit),
+    );
+    trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(controller.value).toBe("products");
+
+    plainLink.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerType: "touch",
+      } as PointerEventInit),
+    );
+    expect(controller.value).toBe(null);
+    expect(root.getAttribute("data-state")).toBe("closed");
+
+    controller.destroy();
+  });
+
+  it("switches between submenu triggers on touch taps", () => {
+    const { triggers, controller } = setup();
+
+    triggers[0]?.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerType: "touch",
+      } as PointerEventInit),
+    );
+    triggers[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(controller.value).toBe("products");
+
+    triggers[1]?.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerType: "touch",
+      } as PointerEventInit),
+    );
+    triggers[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(controller.value).toBe("solutions");
+
+    controller.destroy();
+  });
+
   it("bridges side-offset gap between root and viewport", async () => {
     const { root, triggers, contents, viewport, controller } = setup({ delayClose: 30 });
     const trigger = triggers[0]!;
