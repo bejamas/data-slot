@@ -177,7 +177,7 @@ export function createNavigationMenu(
   let closeTimeout: ReturnType<typeof setTimeout> | null = null;
   let hoveredTrigger: HTMLElement | null = null;
   let clickLocked: boolean = false; // When true, menu stays open until click outside or toggle
-  let isPointerDown: boolean = false; // Track if we're in a click sequence (pointerdown fired)
+  let suppressFocusOpenForTrigger: HTMLElement | null = null;
   let isRootHovered: boolean = false; // Track if pointer is over root
   let isDestroyed = false;
   let activeSafetyTriangle: HoverSafeTriangle | null = null;
@@ -1395,26 +1395,29 @@ export function createNavigationMenu(
       }),
     );
 
-    // Focus on trigger - update state unless focus is from a pointer click
+    // Focus on trigger - skip one focus-open after pointerdown so click owns tap behavior.
     cleanups.push(
       on(trigger, "focus", () => {
-        if (!isPointerDown) {
-          if (openOnFocus) updateState(value, true);
-          updateIndicator(trigger);
+        if (suppressFocusOpenForTrigger === trigger) {
+          suppressFocusOpenForTrigger = null;
+          return;
         }
+        if (openOnFocus) updateState(value, true);
+        updateIndicator(trigger);
       }),
     );
 
-    // Track pointer down to coordinate with focus events
+    // Pointer taps can move focus before click on some touch browsers.
     cleanups.push(
       on(trigger, "pointerdown", () => {
-        isPointerDown = true;
+        suppressFocusOpenForTrigger = trigger;
       }),
     );
 
     // Click on trigger - toggles and locks open state
     cleanups.push(
       on(trigger, "click", () => {
+        suppressFocusOpenForTrigger = null;
         clearTimers(); // Cancel any pending open/close timers
 
         // Check against the ACTUAL current value, not what focus might have changed
@@ -1433,8 +1436,6 @@ export function createNavigationMenu(
           updateState(value, true);
           updateIndicator(trigger);
         }
-
-        isPointerDown = false;
       }),
     );
   });
@@ -1637,26 +1638,6 @@ export function createNavigationMenu(
     updateIndicator(null);
     updateDebugSafeTrianglePreview();
   };
-
-  // Reset isPointerDown on document pointerup/pointercancel (capture phase)
-  cleanups.push(
-    on(
-      document,
-      "pointerup",
-      () => {
-        isPointerDown = false;
-      },
-      { capture: true },
-    ),
-    on(
-      document,
-      "pointercancel",
-      () => {
-        isPointerDown = false;
-      },
-      { capture: true },
-    ),
-  );
 
   // Close when focus leaves root (and unlock clickLocked)
   cleanups.push(

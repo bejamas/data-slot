@@ -548,6 +548,81 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("switches on first tap when touch focus fires before click", () => {
+    const { triggers, controller } = setup();
+    const first = triggers[0]!;
+    const second = triggers[1]!;
+
+    const touchTapWithFocus = (trigger: HTMLElement) => {
+      trigger.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          pointerType: "touch",
+        } as PointerEventInit),
+      );
+      trigger.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          pointerType: "touch",
+        } as PointerEventInit),
+      );
+      trigger.focus();
+      trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    };
+
+    touchTapWithFocus(first);
+    expect(controller.value).toBe("products");
+
+    second.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerType: "touch",
+      } as PointerEventInit),
+    );
+    second.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerType: "touch",
+      } as PointerEventInit),
+    );
+    second.focus();
+    expect(controller.value).toBe("products");
+    second.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(controller.value).toBe("solutions");
+
+    controller.destroy();
+  });
+
+  it("still toggles closed when tapping the active trigger", () => {
+    const { triggers, controller } = setup();
+    const first = triggers[0]!;
+
+    const touchTapWithFocus = (trigger: HTMLElement) => {
+      trigger.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          pointerType: "touch",
+        } as PointerEventInit),
+      );
+      trigger.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          pointerType: "touch",
+        } as PointerEventInit),
+      );
+      trigger.focus();
+      trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    };
+
+    touchTapWithFocus(first);
+    expect(controller.value).toBe("products");
+
+    touchTapWithFocus(first);
+    expect(controller.value).toBe(null);
+
+    controller.destroy();
+  });
+
   it("bridges side-offset gap between root and viewport", async () => {
     const { root, triggers, contents, viewport, controller } = setup({ delayClose: 30 });
     const trigger = triggers[0]!;
