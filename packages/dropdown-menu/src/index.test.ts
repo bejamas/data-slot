@@ -227,6 +227,26 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
 
+    it("does not close on outside touch pointerdown, but closes on outside click", () => {
+      const { trigger, controller } = setup();
+
+      trigger.click();
+      expect(controller.isOpen).toBe(true);
+
+      document.body.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          pointerType: "touch",
+        } as PointerEventInit)
+      );
+      expect(controller.isOpen).toBe(true);
+
+      document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      expect(controller.isOpen).toBe(false);
+
+      controller.destroy();
+    });
+
     it("respects closeOnClickOutside option", () => {
       const { trigger, controller } = setup({ closeOnClickOutside: false });
 

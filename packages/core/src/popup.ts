@@ -621,6 +621,7 @@ interface DismissLayerEntry {
 interface DismissLayerStore {
   layers: DismissLayerEntry[];
   openSequence: number;
+  pendingTouchOutside: boolean;
   cleanup: () => void;
 }
 
@@ -656,15 +657,40 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
   const store: DismissLayerStore = {
     layers: [],
     openSequence: 0,
+    pendingTouchOutside: false,
     cleanup: () => {},
   };
 
   const pointerCleanup = on(doc, "pointerdown", (event) => {
     const target = event.target as Node | null;
     const topmost = getTopmostOpenLayer(store);
+    if (!topmost || !topmost.closeOnClickOutside || topmost.isInside(target)) {
+      store.pendingTouchOutside = false;
+      return;
+    }
+    if ((event as PointerEvent).pointerType === "touch") {
+      // On touch devices, pointerdown may indicate scroll start.
+      // Defer outside dismissal until click activation.
+      store.pendingTouchOutside = true;
+      return;
+    }
+    store.pendingTouchOutside = false;
+    topmost.onDismiss();
+  });
+
+  const clickCleanup = on(doc, "click", (event) => {
+    if (!store.pendingTouchOutside) return;
+    store.pendingTouchOutside = false;
+
+    const target = event.target as Node | null;
+    const topmost = getTopmostOpenLayer(store);
     if (!topmost || !topmost.closeOnClickOutside) return;
     if (topmost.isInside(target)) return;
     topmost.onDismiss();
+  });
+
+  const pointerCancelCleanup = on(doc, "pointercancel", () => {
+    store.pendingTouchOutside = false;
   });
 
   const keydownCleanup = on(doc, "keydown", (event) => {
@@ -689,7 +715,10 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
 
   store.cleanup = () => {
     pointerCleanup();
+    clickCleanup();
+    pointerCancelCleanup();
     keydownCleanup();
+    store.pendingTouchOutside = false;
     store.layers.length = 0;
   };
 

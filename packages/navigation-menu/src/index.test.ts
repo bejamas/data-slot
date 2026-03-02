@@ -377,6 +377,33 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("does not close on outside touch pointerdown, but closes on outside click", () => {
+    const { triggers, controller } = setup();
+    const trigger = triggers[0]!;
+
+    trigger.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerType: "touch",
+      } as PointerEventInit),
+    );
+    trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(controller.value).toBe("products");
+
+    document.body.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerType: "touch",
+      } as PointerEventInit),
+    );
+    expect(controller.value).toBe("products");
+
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(controller.value).toBe(null);
+
+    controller.destroy();
+  });
+
   it("does not close on click outside when menu is open but inactive", () => {
     const { controller } = setup();
 

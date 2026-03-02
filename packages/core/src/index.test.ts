@@ -1118,6 +1118,69 @@ describe('core/popup', () => {
     lifecycle.cleanup()
   })
 
+  it('createDismissLayer defers outside touch dismissal until click', () => {
+    document.body.innerHTML = `
+      <div id="root"></div>
+      <div id="outside"></div>
+    `
+    const root = document.getElementById('root')!
+    const outside = document.getElementById('outside')!
+
+    let open = true
+    let dismissed = 0
+    const cleanup = createDismissLayer({
+      root,
+      isOpen: () => open,
+      onDismiss: () => {
+        dismissed += 1
+        open = false
+      },
+      closeOnEscape: false,
+    })
+
+    outside.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })
+    )
+    expect(dismissed).toBe(0)
+
+    outside.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(dismissed).toBe(1)
+
+    cleanup()
+  })
+
+  it('createDismissLayer clears pending touch dismissal on pointercancel', () => {
+    document.body.innerHTML = `
+      <div id="root"></div>
+      <div id="outside"></div>
+    `
+    const root = document.getElementById('root')!
+    const outside = document.getElementById('outside')!
+
+    let open = true
+    let dismissed = 0
+    const cleanup = createDismissLayer({
+      root,
+      isOpen: () => open,
+      onDismiss: () => {
+        dismissed += 1
+        open = false
+      },
+      closeOnEscape: false,
+    })
+
+    outside.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })
+    )
+    outside.dispatchEvent(
+      new PointerEvent('pointercancel', { bubbles: true, pointerType: 'touch' })
+    )
+    outside.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(dismissed).toBe(0)
+
+    cleanup()
+  })
+
   it('createDismissLayer dismisses only the topmost open layer on Escape', () => {
     document.body.innerHTML = `
       <div id="outer">
@@ -1235,6 +1298,58 @@ describe('core/popup', () => {
     })
 
     outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    expect(innerDismissed).toBe(1)
+    expect(outerDismissed).toBe(0)
+
+    cleanupInner()
+    cleanupOuter()
+  })
+
+  it('createDismissLayer dismisses only topmost layer on outside touch tap', () => {
+    document.body.innerHTML = `
+      <div id="outer">
+        <div id="inner"></div>
+      </div>
+      <div id="outside"></div>
+    `
+    const outer = document.getElementById('outer')!
+    const inner = document.getElementById('inner')!
+    const outside = document.getElementById('outside')!
+
+    let outerOpen = true
+    let innerOpen = true
+    let outerDismissed = 0
+    let innerDismissed = 0
+
+    const cleanupOuter = createDismissLayer({
+      root: outer,
+      isOpen: () => outerOpen,
+      onDismiss: () => {
+        outerDismissed += 1
+        outerOpen = false
+      },
+      closeOnClickOutside: true,
+      closeOnEscape: false,
+    })
+
+    const cleanupInner = createDismissLayer({
+      root: inner,
+      isOpen: () => innerOpen,
+      onDismiss: () => {
+        innerDismissed += 1
+        innerOpen = false
+      },
+      closeOnClickOutside: true,
+      closeOnEscape: false,
+    })
+
+    outside.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })
+    )
+    expect(innerDismissed).toBe(0)
+    expect(outerDismissed).toBe(0)
+
+    outside.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(innerDismissed).toBe(1)
     expect(outerDismissed).toBe(0)
 
