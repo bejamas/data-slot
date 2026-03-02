@@ -14,11 +14,11 @@
     "release": "bun run version"
   },
   "devDependencies": {
-    "@ai-sdk/openai": "^1",
+    "@ai-sdk/openai": "^1.3.24",
     "@types/bun": "latest",
-    "ai": "^4",
-    "@happy-dom/global-registrator": "^16.0.0",
-    "tsdown": "^0.12.3",
-    "typescript": "^5"
+    "ai": "^4.3.19",
+    "@happy-dom/global-registrator": "^16.8.1",
+    "tsdown": "^0.12.9",
+    "typescript": "^5.9.3"
   }
 }
