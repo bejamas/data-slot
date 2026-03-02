@@ -1449,9 +1449,9 @@ export function createNavigationMenu(
       if (!isNonSubmenuListTarget(event.target)) return;
       closeMenuAndUnlock();
     }),
-    on(list, "pointerdown", (e) => {
+    on(list, "click", (e) => {
       if (currentValue === null) return;
-      if (!isNonSubmenuListTarget((e as PointerEvent).target)) return;
+      if (!isNonSubmenuListTarget(e.target)) return;
       closeMenuAndUnlock();
     }),
   );

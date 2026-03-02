@@ -481,7 +481,7 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("closes locked menu when tapping a non-submenu list item", () => {
+  it("does not close on non-submenu pointerdown, but closes on click", () => {
     document.body.innerHTML = `
       <nav data-slot="navigation-menu" id="root">
         <ul data-slot="navigation-menu-list">
@@ -518,6 +518,9 @@ describe("NavigationMenu", () => {
         pointerType: "touch",
       } as PointerEventInit),
     );
+    expect(controller.value).toBe("products");
+
+    plainLink.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(controller.value).toBe(null);
     expect(root.getAttribute("data-state")).toBe("closed");
 
