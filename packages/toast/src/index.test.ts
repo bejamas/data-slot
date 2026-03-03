@@ -115,7 +115,8 @@ describe("Toast", () => {
     controller.show({ title: "Two" });
 
     expect(root.getAttribute("data-position")).toBe("bottom-center");
-    expect(controller.count).toBe(1);
+    expect(controller.count).toBe(2);
+    expect(root.querySelectorAll('[data-slot="toast-item"][data-visible="true"]')).toHaveLength(1);
 
     await waitForClose();
     controller.destroy();
@@ -206,6 +207,35 @@ describe("Toast", () => {
     expect(after.querySelector('[data-slot="toast-description"]')?.textContent).toBe("Done");
     expect(after.querySelector('[data-slot="toast-action"]')?.textContent).toBe("Undo");
     expect(after.querySelector('[data-slot="toast-close"]')?.getAttribute("aria-label")).toBe("Dismiss");
+
+    controller.destroy();
+  });
+
+  it("update clears close button aria-label override and restores template label", () => {
+    const { root, controller } = setup(
+      { duration: 0 },
+      `
+        <div data-slot="toast" id="root">
+          <template data-slot="toast-template">
+            <li data-slot="toast-item" role="status" aria-atomic="true">
+              <span data-slot="toast-title"></span>
+              <button data-slot="toast-close" type="button" aria-label="Dismiss notification">×</button>
+            </li>
+          </template>
+          <ol data-slot="toast-viewport"></ol>
+        </div>
+      `,
+    );
+
+    const id = controller.show({
+      title: "Close label",
+      closeButtonAriaLabel: "Custom close label",
+    });
+    const close = root.querySelector(`[data-id="${id}"] [data-slot="toast-close"]`) as HTMLElement;
+    expect(close.getAttribute("aria-label")).toBe("Custom close label");
+
+    controller.update(id, { closeButtonAriaLabel: undefined });
+    expect(close.getAttribute("aria-label")).toBe("Dismiss notification");
 
     controller.destroy();
   });
@@ -328,32 +358,77 @@ describe("Toast", () => {
     controller.destroy();
   });
 
-  it("queues overflow toasts and shows next when a visible toast closes", async () => {
+  it("hides overflow toasts and reveals next hidden toast when front closes", async () => {
     const { root, controller } = setup({ limit: 1, duration: 0 });
 
     const first = controller.show({ title: "One" });
     const second = controller.show({ title: "Two" });
 
-    expect(controller.count).toBe(1);
+    expect(controller.count).toBe(2);
 
     const firstItem = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
     const secondItem = root.querySelector(`[data-slot="toast-item"][data-id="${second}"]`) as HTMLElement;
 
-    expect(firstItem.getAttribute("data-state")).toBe("closed");
+    expect(firstItem.getAttribute("data-state")).toBe("open");
+    expect(firstItem.getAttribute("data-visible")).toBe("false");
     expect(secondItem.getAttribute("data-state")).toBe("open");
+    expect(secondItem.getAttribute("data-visible")).toBe("true");
 
     controller.dismiss(second);
     await waitForClose();
 
     const promoted = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
     expect(promoted.getAttribute("data-state")).toBe("open");
+    expect(promoted.getAttribute("data-visible")).toBe("true");
     expect(controller.count).toBe(1);
 
     await waitForClose();
     controller.destroy();
   });
 
-  it("update patches queued toast before it is promoted", async () => {
+  it("makes overflow-hidden toasts non-interactive and restores focusability when visible again", async () => {
+    const { root, viewport, controller } = setup({ limit: 1, duration: 0, pauseOnFocus: true });
+
+    const first = controller.show({
+      title: "One",
+      action: { label: "Action" },
+    });
+    const firstItem = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
+    const firstAction = root.querySelector(
+      `[data-slot="toast-item"][data-id="${first}"] [data-slot="toast-action"]`,
+    ) as HTMLElement;
+
+    firstAction.setAttribute("tabindex", "2");
+    firstAction.focus();
+    const tracksFocus = document.activeElement === firstAction;
+    firstAction.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    expect(viewport.hasAttribute("data-expanded")).toBe(true);
+
+    const second = controller.show({ title: "Two" });
+    const secondItem = root.querySelector(`[data-slot="toast-item"][data-id="${second}"]`) as HTMLElement;
+
+    expect(firstItem.getAttribute("data-visible")).toBe("false");
+    expect(firstItem.getAttribute("aria-hidden")).toBe("true");
+    expect(firstItem.hasAttribute("inert")).toBe(true);
+    expect(firstAction.getAttribute("tabindex")).toBe("-1");
+    expect(secondItem.getAttribute("data-visible")).toBe("true");
+    expect(viewport.hasAttribute("data-expanded")).toBe(false);
+    if (tracksFocus) {
+      expect(document.activeElement).not.toBe(firstAction);
+    }
+
+    controller.dismiss(second);
+    await waitForClose();
+
+    expect(firstItem.getAttribute("data-visible")).toBe("true");
+    expect(firstItem.hasAttribute("aria-hidden")).toBe(false);
+    expect(firstItem.hasAttribute("inert")).toBe(false);
+    expect(firstAction.getAttribute("tabindex")).toBe("2");
+
+    controller.destroy();
+  });
+
+  it("update patches hidden overflow toast before it is revealed", async () => {
     const { root, controller } = setup({ limit: 1, duration: 0 });
 
     const first = controller.show({ title: "One" });
@@ -370,6 +445,7 @@ describe("Toast", () => {
 
     const promoted = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
     expect(promoted.getAttribute("data-state")).toBe("open");
+    expect(promoted.getAttribute("data-visible")).toBe("true");
     expect(promoted.getAttribute("data-type")).toBe("info");
     expect(promoted.querySelector('[data-slot="toast-title"]')?.textContent).toBe("One updated");
     expect(promoted.querySelector('[data-slot="toast-description"]')?.textContent).toBe(
@@ -379,11 +455,14 @@ describe("Toast", () => {
     controller.destroy();
   });
 
-  it("expires queued auto-dismiss toasts while hidden without mounting them", async () => {
+  it("expires hidden overflow auto-dismiss toasts while they are not visible", async () => {
     const { root, controller } = setup({ limit: 1, duration: 0 });
 
     const first = controller.show({ title: "First", duration: 25 });
     const second = controller.show({ title: "Second", duration: 0 });
+    const hidden = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
+
+    expect(hidden.getAttribute("data-visible")).toBe("false");
 
     await wait(40);
     controller.dismiss(second);
@@ -395,7 +474,7 @@ describe("Toast", () => {
     controller.destroy();
   });
 
-  it("shows only recent visible toasts up to limit and keeps overflow queued", async () => {
+  it("shows only recent visible toasts up to limit and keeps older ones hidden", async () => {
     const { root, controller } = setup({ limit: 3, duration: 0 });
 
     const ids = [
@@ -406,25 +485,59 @@ describe("Toast", () => {
       controller.show({ title: "Five" }),
     ];
 
-    expect(controller.count).toBe(3);
+    expect(controller.count).toBe(5);
 
     const visibleIds = [
-      ...root.querySelectorAll<HTMLElement>('[data-slot="toast-item"][data-state="open"]'),
+      ...root.querySelectorAll<HTMLElement>('[data-slot="toast-item"][data-state="open"][data-visible="true"]'),
     ].map((item) => item.getAttribute("data-id"));
 
     expect(visibleIds).toEqual(ids.slice(2, 5));
-    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[0]}"][data-state="open"]`)).toBeNull();
-    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[1]}"][data-state="open"]`)).toBeNull();
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[0]}"]`)?.getAttribute("data-visible")).toBe(
+      "false",
+    );
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[1]}"]`)?.getAttribute("data-visible")).toBe(
+      "false",
+    );
 
     await waitForClose();
     await waitForClose();
-    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[0]}"]`)).toBeNull();
-    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[1]}"]`)).toBeNull();
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[0]}"]`)).toBeTruthy();
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[1]}"]`)).toBeTruthy();
 
     controller.destroy();
   });
 
-  it("promotes queued toasts in order when visible toasts are dismissed", async () => {
+  it("does not emit dismiss events when toast becomes overflow-hidden", () => {
+    const dismissCalls: string[] = [];
+    const dismissEvents: string[] = [];
+    const { root, controller } = setup({
+      limit: 3,
+      duration: 0,
+      onDismiss: (id) => dismissCalls.push(id),
+    });
+
+    root.addEventListener("toast:change", (event) => {
+      const detail = (event as CustomEvent<{ id: string; action: "show" | "dismiss" }>).detail;
+      if (detail.action === "dismiss") {
+        dismissEvents.push(detail.id);
+      }
+    });
+
+    const first = controller.show({ title: "One" });
+    controller.show({ title: "Two" });
+    controller.show({ title: "Three" });
+    controller.show({ title: "Four" });
+
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`)?.getAttribute("data-visible")).toBe(
+      "false",
+    );
+    expect(dismissCalls).toHaveLength(0);
+    expect(dismissEvents).toHaveLength(0);
+
+    controller.destroy();
+  });
+
+  it("reveals hidden overflow toasts in order when visible toasts are dismissed", async () => {
     const { root, controller } = setup({ limit: 2, duration: 0 });
 
     const first = controller.show({ title: "One" });
@@ -436,17 +549,19 @@ describe("Toast", () => {
     await waitForClose();
     const secondItem = root.querySelector(`[data-slot="toast-item"][data-id="${second}"]`) as HTMLElement;
     expect(secondItem.getAttribute("data-state")).toBe("open");
+    expect(secondItem.getAttribute("data-visible")).toBe("true");
 
     controller.dismiss(third);
     await waitForClose();
     const firstItem = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
     expect(firstItem.getAttribute("data-state")).toBe("open");
+    expect(firstItem.getAttribute("data-visible")).toBe("true");
 
     await waitForClose();
     controller.destroy();
   });
 
-  it("uses stable exit direction even when toast was promoted from queue", async () => {
+  it("keeps stable enter/exit directions when hidden overflow toast becomes visible", async () => {
     const { root, controller } = setup({ limit: 1, duration: 0, position: "bottom-right" });
 
     const first = controller.show({ title: "First" });
@@ -460,8 +575,9 @@ describe("Toast", () => {
     await waitForClose();
 
     const promoted = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
-    expect(promoted.style.getPropertyValue("--toast-enter-direction")).toBe("1");
+    expect(promoted.style.getPropertyValue("--toast-enter-direction")).toBe("-1");
     expect(promoted.style.getPropertyValue("--toast-exit-direction")).toBe("-1");
+    expect(promoted.getAttribute("data-visible")).toBe("true");
 
     controller.destroy();
   });
@@ -484,7 +600,7 @@ describe("Toast", () => {
     controller.destroy();
   });
 
-  it("can dismiss a queued toast before it is shown", async () => {
+  it("can dismiss a hidden overflow toast before it becomes visible", async () => {
     const { root, controller } = setup({ limit: 1, duration: 0 });
 
     const firstId = controller.show({ title: "First" });
@@ -673,6 +789,42 @@ describe("Toast", () => {
 
     const updated = root.querySelector(`[data-slot="toast-item"][data-id="${handled.id}"]`) as HTMLElement;
     expect(updated.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Promise rejected");
+
+    controller.destroy();
+  });
+
+  it("promise() normalizes sync factory throws into rejection and error update", async () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    let handled: ReturnType<typeof controller.promise<never>> | null = null;
+    expect(() => {
+      handled = controller.promise(
+        () => {
+          throw new Error("Sync exploded");
+        },
+        {
+          loading: { title: "Loading...", duration: 0 },
+          error: (error) => ({
+            title: error instanceof Error ? error.message : "Error",
+            duration: 0,
+          }),
+        },
+      );
+    }).not.toThrow();
+
+    if (!handled) {
+      throw new Error("Expected promise handle");
+    }
+
+    const loadingToast = root.querySelector(`[data-slot="toast-item"][data-id="${handled.id}"]`) as HTMLElement;
+    expect(loadingToast.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Loading...");
+
+    await expect(handled.unwrap()).rejects.toThrow("Sync exploded");
+    await waitForClose();
+
+    const updated = root.querySelector(`[data-slot="toast-item"][data-id="${handled.id}"]`) as HTMLElement;
+    expect(updated).toBe(loadingToast);
+    expect(updated.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Sync exploded");
 
     controller.destroy();
   });
@@ -917,6 +1069,32 @@ describe("Toast", () => {
     controller.destroy();
   });
 
+  it("reusing an id while old toast is overflow-hidden emits dismiss once", () => {
+    const dismissCalls: string[] = [];
+    const dismissEvents: string[] = [];
+    const { root, controller } = setup({
+      duration: 0,
+      limit: 1,
+      onDismiss: (id) => dismissCalls.push(id),
+    });
+
+    root.addEventListener("toast:change", (event) => {
+      const detail = (event as CustomEvent<{ id: string; action: "show" | "dismiss" }>).detail;
+      if (detail.action === "dismiss") {
+        dismissEvents.push(detail.id);
+      }
+    });
+
+    controller.show({ id: "job", title: "Queued first" });
+    controller.show({ id: "next", title: "Second" });
+    controller.show({ id: "job", title: "Reused" });
+
+    expect(dismissCalls.filter((id) => id === "job")).toHaveLength(1);
+    expect(dismissEvents.filter((id) => id === "job")).toHaveLength(1);
+
+    controller.destroy();
+  });
+
   it("supports optional viewport portal and restores on destroy", () => {
     const { root, viewport, controller } = setup({ portal: true, duration: 0 });
 
@@ -1008,6 +1186,81 @@ describe("Toast", () => {
       expect(first.style.getPropertyValue("--toast-offset-y")).toBe("88px");
       expect(second.style.getPropertyValue("--toast-offset-y")).toBe("0px");
       expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("148px");
+
+      controller.destroy();
+    } finally {
+      (
+        globalThis as unknown as {
+          ResizeObserver?: typeof ResizeObserver;
+        }
+      ).ResizeObserver = OriginalResizeObserver;
+    }
+  });
+
+  it("uses only visible overflow toasts when writing --toast-stack-size", () => {
+    const OriginalResizeObserver = globalThis.ResizeObserver;
+    let resizeCb: ResizeObserverCallback | null = null;
+
+    class MockResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        resizeCb = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+
+    (
+      globalThis as unknown as {
+        ResizeObserver?: typeof ResizeObserver;
+      }
+    ).ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+    try {
+      const { root, controller } = setup({ duration: 0, limit: 1 });
+
+      const firstId = controller.show({ title: "One" });
+      const secondId = controller.show({ title: "Two" });
+
+      const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
+      const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
+
+      first.getBoundingClientRect =
+        (() =>
+          ({
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            width: 200,
+            height: 60,
+            right: 200,
+            bottom: 60,
+            toJSON: () => ({}),
+          }) as DOMRect);
+      second.getBoundingClientRect =
+        (() =>
+          ({
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            width: 200,
+            height: 80,
+            right: 200,
+            bottom: 80,
+            toJSON: () => ({}),
+          }) as DOMRect);
+
+      if (resizeCb) {
+        (resizeCb as ResizeObserverCallback)([], {} as ResizeObserver);
+      }
+
+      expect(first.getAttribute("data-visible")).toBe("false");
+      expect(second.getAttribute("data-visible")).toBe("true");
+      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe(
+        "80px",
+      );
 
       controller.destroy();
     } finally {
