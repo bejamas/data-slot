@@ -1,27 +1,33 @@
 [
   {
     "name": "@data-slot/navigation-menu",
-    "size": 6378,
-    "sizeFormatted": "6.2 KB",
+    "size": 6538,
+    "sizeFormatted": "6.4 KB",
     "description": "Dropdown navigation menus"
   },
   {
     "name": "@data-slot/core",
-    "size": 4809,
-    "sizeFormatted": "4.7 KB",
+    "size": 4904,
+    "sizeFormatted": "4.8 KB",
     "description": "Shared utilities"
   },
   {
     "name": "@data-slot/combobox",
-    "size": 3898,
-    "sizeFormatted": "3.8 KB",
+    "size": 4241,
+    "sizeFormatted": "4.1 KB",
     "description": "Autocomplete input"
   },
   {
     "name": "@data-slot/select",
-    "size": 3847,
+    "size": 3861,
     "sizeFormatted": "3.8 KB",
     "description": "Dropdown select, form-ready"
+  },
+  {
+    "name": "@data-slot/toast",
+    "size": 3008,
+    "sizeFormatted": "2.9 KB",
+    "description": "Imperative notifications"
   },
   {
     "name": "@data-slot/dropdown-menu",
@@ -37,7 +43,7 @@
   },
   {
     "name": "@data-slot/tooltip",
-    "size": 2130,
+    "size": 2154,
     "sizeFormatted": "2.1 KB",
     "description": "Hover/focus tooltips"
   },
@@ -52,6 +58,12 @@
     "size": 1887,
     "sizeFormatted": "1.8 KB",
     "description": "Tabbed interfaces, kbd nav"
+  },
+  {
+    "name": "@data-slot/carousel",
+    "size": 1871,
+    "sizeFormatted": "1.8 KB",
+    "description": "Scroll-snap carousels"
   },
   {
     "name": "@data-slot/dialog",

@@ -20,6 +20,8 @@ import DropdownMenu from "../components/examples/DropdownMenu.astro";
 import Select from "../components/examples/Select.astro";
 import Combobox from "../components/examples/Combobox.astro";
 import Slider from "../components/examples/Slider.astro";
+import Carousel from "../components/examples/Carousel.astro";
+import Toast from "../components/examples/Toast.astro";
 import Toggle from "../components/examples/Toggle.astro";
 import ToggleGroup from "../components/examples/ToggleGroup.astro";
 
@@ -160,6 +162,14 @@ bun add @data-slot/dialog`}
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Slider</h3>
   <Slider />
 
+  <!-- Carousel -->
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Carousel</h3>
+  <Carousel />
+
+  <!-- Toast -->
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Toast</h3>
+  <Toast />
+
   <!-- Toggle -->
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Toggle</h3>
   <Toggle />
@@ -220,6 +230,8 @@ bun add @data-slot/dialog`}
   import { createSelect } from "../../../packages/select/dist/index.js";
   import { createCombobox } from "../../../packages/combobox/dist/index.js";
   import { createSlider } from "../../../packages/slider/dist/index.js";
+  import { createCarousel } from "../../../packages/carousel/dist/index.js";
+  import { createToast } from "../../../packages/toast/dist/index.js";
   import { createToggle } from "../../../packages/toggle/dist/index.js";
   import { createToggleGroup } from "../../../packages/toggle-group/dist/index.js";
 
@@ -271,10 +283,89 @@ bun add @data-slot/dialog`}
   document.querySelectorAll('[data-slot="slider"]').forEach((el) =>
     createSlider(el as HTMLElement)
   );
+  document.querySelectorAll('[data-slot="carousel"]').forEach((el) =>
+    createCarousel(el as HTMLElement)
+  );
+  document.querySelectorAll('[data-slot="toast"]').forEach((el) =>
+    createToast(el as HTMLElement)
+  );
   document.querySelectorAll('[data-slot="toggle"]').forEach((el) =>
     createToggle(el as HTMLElement)
   );
   document.querySelectorAll('[data-slot="toggle-group"]').forEach((el) =>
     createToggleGroup(el as HTMLElement)
   );
+
+  const toastMessageByKind = {
+    success: {
+      title: "Changes saved",
+      description: "Everything is synced.",
+      type: "success",
+      duration: 3500,
+      action: { label: "Undo", value: "undo" },
+    },
+    error: {
+      title: "Upload failed",
+      description: "Try again in a few seconds.",
+      type: "error",
+      duration: 5000,
+      action: { label: "Retry", value: "retry" },
+    },
+    loading: {
+      title: "Uploading assets…",
+      description: "Please keep this tab open.",
+      type: "loading",
+      duration: 0,
+    },
+  } as const;
+
+  document.querySelectorAll<HTMLElement>("[data-toast-demo-btn]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const targetId = button.dataset["toastDemoTarget"];
+      if (!targetId) return;
+
+      const root = document.getElementById(targetId);
+      if (!root) return;
+
+      const kind = button.dataset["toastDemoKind"] as keyof typeof toastMessageByKind | undefined;
+      const selected = (kind && toastMessageByKind[kind]) || {
+        title: "Heads up",
+        description: "This is a toast message.",
+        type: "default",
+        duration: 4000,
+      };
+
+      if (kind === "loading") {
+        const id = `load-${Date.now()}`;
+        root.dispatchEvent(new CustomEvent("toast:show", { detail: { ...selected, id } }));
+        setTimeout(() => {
+          root.dispatchEvent(
+            new CustomEvent("toast:show", {
+              detail: {
+                id,
+                title: "Upload complete",
+                description: "All files synced successfully.",
+                type: "success",
+                duration: 3200,
+                action: { label: "View", value: "view" },
+              },
+            }),
+          );
+        }, 1200);
+        return;
+      }
+
+      root.dispatchEvent(new CustomEvent("toast:show", { detail: selected }));
+    });
+  });
+
+  document.querySelectorAll<HTMLElement>("[data-toast-demo-clear]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const targetId = button.dataset["toastDemoTarget"];
+      if (!targetId) return;
+      const root = document.getElementById(targetId);
+      if (!root) return;
+      root.dispatchEvent(new CustomEvent("toast:clear"));
+    });
+  });
 </script>

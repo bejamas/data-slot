@@ -1,0 +1,743 @@
+import { beforeEach, describe, expect, it } from "bun:test";
+import { create, createToast } from "./index";
+
+describe("Toast", () => {
+  const setup = (
+    options: Parameters<typeof createToast>[1] = {},
+    html?: string,
+  ) => {
+    document.body.innerHTML =
+      html ??
+      `
+      <div data-slot="toast" id="root">
+        <template data-slot="toast-template">
+          <li data-slot="toast-item" role="status" aria-atomic="true">
+            <span data-slot="toast-title"></span>
+            <span data-slot="toast-description"></span>
+            <button data-slot="toast-action" type="button"></button>
+            <button data-slot="toast-close" type="button" aria-label="Close">×</button>
+          </li>
+        </template>
+        <ol data-slot="toast-viewport"></ol>
+      </div>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const viewport = root.querySelector('[data-slot="toast-viewport"]') as HTMLElement;
+    const controller = createToast(root, options);
+
+    return { root, viewport, controller };
+  };
+
+  const wait = (ms: number) =>
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    });
+
+  const waitForRaf = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+  const waitForClose = async () => {
+    await waitForRaf();
+    await waitForRaf();
+  };
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("creates a fallback template when toast-template is missing", () => {
+    const { root, controller } = setup(
+      {},
+      `
+        <div data-slot="toast" id="root">
+          <ol data-slot="toast-viewport"></ol>
+        </div>
+      `,
+    );
+
+    controller.show({ title: "Hello" });
+
+    const item = root.querySelector('[data-slot="toast-item"]') as HTMLElement;
+    const title = item.querySelector('[data-slot="toast-title"]') as HTMLElement;
+    const action = item.querySelector('[data-slot="toast-action"]') as HTMLElement;
+    const close = item.querySelector('[data-slot="toast-close"]') as HTMLElement;
+
+    expect(item).toBeTruthy();
+    expect(title.textContent).toBe("Hello");
+    expect(action).toBeTruthy();
+    expect(close).toBeTruthy();
+
+    controller.destroy();
+  });
+
+  it("falls back when authored template has no toast-item slot", () => {
+    const { root, controller } = setup(
+      {},
+      `
+        <div data-slot="toast" id="root">
+          <template data-slot="toast-template">
+            <div>Invalid template</div>
+          </template>
+          <ol data-slot="toast-viewport"></ol>
+        </div>
+      `,
+    );
+
+    controller.show({ title: "Fallback" });
+
+    const item = root.querySelector('[data-slot="toast-item"]') as HTMLElement;
+    expect(item).toBeTruthy();
+    expect(item.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Fallback");
+
+    controller.destroy();
+  });
+
+  it("prefers JS options over data-* attributes", async () => {
+    const { root, controller } = setup(
+      { limit: 1, duration: 0, position: "bottom-center" },
+      `
+        <div data-slot="toast" id="root" data-limit="5" data-duration="9999" data-position="top-left">
+          <template data-slot="toast-template">
+            <li data-slot="toast-item">
+              <span data-slot="toast-title"></span>
+              <button data-slot="toast-close" type="button">x</button>
+            </li>
+          </template>
+          <ol data-slot="toast-viewport"></ol>
+        </div>
+      `,
+    );
+
+    controller.show({ title: "One" });
+    controller.show({ title: "Two" });
+
+    expect(root.getAttribute("data-position")).toBe("bottom-center");
+    expect(controller.count).toBe(1);
+
+    await waitForClose();
+    controller.destroy();
+  });
+
+  it("show clones and populates template parts", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    controller.show({ title: "Saved" });
+
+    const item = root.querySelector('[data-slot="toast-item"]') as HTMLElement;
+    const title = item.querySelector('[data-slot="toast-title"]') as HTMLElement;
+    const description = item.querySelector('[data-slot="toast-description"]') as HTMLElement;
+    const action = item.querySelector('[data-slot="toast-action"]') as HTMLElement;
+
+    expect(title.textContent).toBe("Saved");
+    expect(description.hidden).toBe(true);
+    expect(action.hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("show throws when title is empty", () => {
+    const { controller } = setup();
+
+    expect(() => controller.show({ title: "" })).toThrow("Toast show requires a non-empty title");
+
+    controller.destroy();
+  });
+
+  it("returns id and sets item runtime attributes", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const id = controller.show({ title: "Saved", type: "success" });
+
+    const item = root.querySelector('[data-slot="toast-item"]') as HTMLElement;
+    expect(id).toBeTruthy();
+    expect(item.getAttribute("data-id")).toBe(id);
+    expect(item.getAttribute("data-type")).toBe("success");
+    expect(item.getAttribute("data-state")).toBe("open");
+    expect(item.hasAttribute("data-open")).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("auto-dismisses after duration", async () => {
+    const { controller } = setup();
+
+    controller.show({ title: "Bye", duration: 20 });
+
+    await wait(35);
+    await waitForClose();
+
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("does not auto-dismiss when duration is 0", async () => {
+    const { controller } = setup();
+
+    controller.show({ title: "Persistent", duration: 0 });
+
+    await wait(60);
+    expect(controller.count).toBe(1);
+
+    controller.destroy();
+  });
+
+  it("pauses timers on hover and resumes on leave", async () => {
+    const { viewport, controller } = setup();
+
+    controller.show({ title: "Hover me", duration: 40 });
+    await wait(20);
+
+    viewport.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
+    await wait(40);
+
+    expect(controller.count).toBe(1);
+    expect(viewport.hasAttribute("data-expanded")).toBe(true);
+
+    viewport.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true }));
+    await wait(35);
+    await waitForClose();
+
+    expect(viewport.hasAttribute("data-expanded")).toBe(false);
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("pauses timers on focus when pauseOnFocus is true", async () => {
+    const { viewport, controller } = setup({ pauseOnFocus: true });
+
+    controller.show({ title: "Focusable", duration: 35 });
+
+    viewport.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    await wait(40);
+
+    expect(controller.count).toBe(1);
+    expect(viewport.hasAttribute("data-expanded")).toBe(true);
+
+    viewport.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    await wait(40);
+    await waitForClose();
+
+    expect(controller.count).toBe(0);
+    expect(viewport.hasAttribute("data-expanded")).toBe(false);
+
+    controller.destroy();
+  });
+
+  it("keeps focus pause active while focus moves within viewport", async () => {
+    const { root, viewport, controller } = setup({ pauseOnFocus: true });
+
+    const id = controller.show({
+      title: "Focusable controls",
+      duration: 35,
+      action: { label: "Action", value: "a" },
+    });
+
+    const actionButton = root.querySelector(
+      `[data-id="${id}"] [data-slot="toast-action"]`,
+    ) as HTMLElement;
+    const closeButton = root.querySelector(
+      `[data-id="${id}"] [data-slot="toast-close"]`,
+    ) as HTMLElement;
+
+    actionButton.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    await wait(20);
+
+    actionButton.dispatchEvent(
+      new FocusEvent("focusout", { bubbles: true, relatedTarget: closeButton }),
+    );
+    closeButton.dispatchEvent(new FocusEvent("focusin", { bubbles: true, relatedTarget: actionButton }));
+    await wait(30);
+
+    expect(viewport.hasAttribute("data-expanded")).toBe(true);
+    expect(controller.count).toBe(1);
+
+    closeButton.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    await wait(40);
+    await waitForClose();
+
+    expect(viewport.hasAttribute("data-expanded")).toBe(false);
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("queues overflow toasts and shows next when a visible toast closes", async () => {
+    const { root, controller } = setup({ limit: 1, duration: 0 });
+
+    const first = controller.show({ title: "One" });
+    const second = controller.show({ title: "Two" });
+
+    expect(controller.count).toBe(1);
+
+    const firstItem = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
+    const secondItem = root.querySelector(`[data-slot="toast-item"][data-id="${second}"]`) as HTMLElement;
+
+    expect(firstItem.getAttribute("data-state")).toBe("closed");
+    expect(secondItem.getAttribute("data-state")).toBe("open");
+
+    controller.dismiss(second);
+    await waitForClose();
+
+    const promoted = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
+    expect(promoted.getAttribute("data-state")).toBe("open");
+    expect(controller.count).toBe(1);
+
+    await waitForClose();
+    controller.destroy();
+  });
+
+  it("expires queued auto-dismiss toasts while hidden without mounting them", async () => {
+    const { root, controller } = setup({ limit: 1, duration: 0 });
+
+    const first = controller.show({ title: "First", duration: 25 });
+    const second = controller.show({ title: "Second", duration: 0 });
+
+    await wait(40);
+    controller.dismiss(second);
+    await waitForClose();
+
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`)).toBeNull();
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("shows only recent visible toasts up to limit and keeps overflow queued", async () => {
+    const { root, controller } = setup({ limit: 3, duration: 0 });
+
+    const ids = [
+      controller.show({ title: "One" }),
+      controller.show({ title: "Two" }),
+      controller.show({ title: "Three" }),
+      controller.show({ title: "Four" }),
+      controller.show({ title: "Five" }),
+    ];
+
+    expect(controller.count).toBe(3);
+
+    const visibleIds = [
+      ...root.querySelectorAll<HTMLElement>('[data-slot="toast-item"][data-state="open"]'),
+    ].map((item) => item.getAttribute("data-id"));
+
+    expect(visibleIds).toEqual(ids.slice(2, 5));
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[0]}"][data-state="open"]`)).toBeNull();
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[1]}"][data-state="open"]`)).toBeNull();
+
+    await waitForClose();
+    await waitForClose();
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[0]}"]`)).toBeNull();
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${ids[1]}"]`)).toBeNull();
+
+    controller.destroy();
+  });
+
+  it("promotes queued toasts in order when visible toasts are dismissed", async () => {
+    const { root, controller } = setup({ limit: 2, duration: 0 });
+
+    const first = controller.show({ title: "One" });
+    const second = controller.show({ title: "Two" });
+    const third = controller.show({ title: "Three" });
+    const fourth = controller.show({ title: "Four" });
+
+    controller.dismiss(fourth);
+    await waitForClose();
+    const secondItem = root.querySelector(`[data-slot="toast-item"][data-id="${second}"]`) as HTMLElement;
+    expect(secondItem.getAttribute("data-state")).toBe("open");
+
+    controller.dismiss(third);
+    await waitForClose();
+    const firstItem = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
+    expect(firstItem.getAttribute("data-state")).toBe("open");
+
+    await waitForClose();
+    controller.destroy();
+  });
+
+  it("uses stable exit direction even when toast was promoted from queue", async () => {
+    const { root, controller } = setup({ limit: 1, duration: 0, position: "bottom-right" });
+
+    const first = controller.show({ title: "First" });
+    const second = controller.show({ title: "Second" });
+
+    const secondItem = root.querySelector(`[data-slot="toast-item"][data-id="${second}"]`) as HTMLElement;
+    expect(secondItem.style.getPropertyValue("--toast-enter-direction")).toBe("-1");
+    expect(secondItem.style.getPropertyValue("--toast-exit-direction")).toBe("-1");
+
+    controller.dismiss(second);
+    await waitForClose();
+
+    const promoted = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
+    expect(promoted.style.getPropertyValue("--toast-enter-direction")).toBe("1");
+    expect(promoted.style.getPropertyValue("--toast-exit-direction")).toBe("-1");
+
+    controller.destroy();
+  });
+
+  it("promotes next toast to front while dismissed front exits", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const firstId = controller.show({ title: "First" });
+    const secondId = controller.show({ title: "Second" });
+
+    const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
+    const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
+
+    expect(second.getAttribute("data-front")).toBe("");
+    controller.dismiss(secondId);
+
+    expect(first.getAttribute("data-front")).toBe("");
+    expect(second.style.pointerEvents).toBe("none");
+
+    controller.destroy();
+  });
+
+  it("can dismiss a queued toast before it is shown", async () => {
+    const { root, controller } = setup({ limit: 1, duration: 0 });
+
+    const firstId = controller.show({ title: "First" });
+    const secondId = controller.show({ title: "Second" });
+
+    controller.dismiss(firstId);
+    controller.dismiss(secondId);
+
+    const firstItem = root.querySelector(`[data-slot="toast-item"][data-id="${firstId}"]`);
+    const secondItem = root.querySelector(`[data-slot="toast-item"][data-id="${secondId}"]`);
+    expect((firstItem as HTMLElement | null)?.getAttribute("data-state")).toBe("closed");
+    expect((secondItem as HTMLElement | null)?.getAttribute("data-state")).toBe("closed");
+    expect(controller.count).toBe(0);
+
+    await waitForClose();
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${firstId}"]`)).toBeNull();
+
+    controller.destroy();
+  });
+
+  it("dismiss on unknown id is a no-op", () => {
+    const { controller } = setup({ duration: 0 });
+
+    expect(() => controller.dismiss("missing-id")).not.toThrow();
+
+    controller.destroy();
+  });
+
+  it("dismiss(id) triggers exit and removes item", async () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const id = controller.show({ title: "Dismiss me" });
+    controller.dismiss(id);
+
+    const item = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+    expect(item.getAttribute("data-state")).toBe("closed");
+
+    await waitForClose();
+    expect(root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`)).toBeNull();
+
+    controller.destroy();
+  });
+
+  it("dismissAll clears visible toasts", async () => {
+    const { controller } = setup({ duration: 0 });
+
+    controller.show({ title: "A" });
+    controller.show({ title: "B" });
+
+    controller.dismissAll();
+    await waitForClose();
+
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("close button dismisses its toast", async () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const id = controller.show({ title: "Close" });
+    const close = root.querySelector(`[data-id="${id}"] [data-slot="toast-close"]`) as HTMLElement;
+    close.click();
+
+    await waitForClose();
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("action click fires callback + event and dismisses", async () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    let callbackCalled = false;
+    let actionEvent: unknown = undefined;
+
+    root.addEventListener("toast:action", (event) => {
+      actionEvent = (event as CustomEvent<{ id: string; value: string | undefined }>).detail;
+    });
+
+    const id = controller.show({
+      title: "Action",
+      action: {
+        label: "Undo",
+        value: "undo",
+        onClick: () => {
+          callbackCalled = true;
+        },
+      },
+      duration: 0,
+    });
+
+    const actionButton = root.querySelector(`[data-id="${id}"] [data-slot="toast-action"]`) as HTMLElement;
+    actionButton.click();
+
+    expect(callbackCalled).toBe(true);
+    const detail = actionEvent as { id: string; value: string | undefined } | undefined;
+    expect(detail?.id).toBe(id);
+    expect(detail?.value).toBe("undo");
+
+    await waitForClose();
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("supports inbound toast:show, toast:dismiss and toast:clear events", async () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    root.dispatchEvent(new CustomEvent("toast:show", { detail: { title: "From event", duration: 0 } }));
+    expect(controller.count).toBe(1);
+
+    const item = root.querySelector('[data-slot="toast-item"]') as HTMLElement;
+    const id = item.getAttribute("data-id")!;
+
+    root.dispatchEvent(new CustomEvent("toast:dismiss", { detail: { id } }));
+    await waitForClose();
+    expect(controller.count).toBe(0);
+
+    root.dispatchEvent(new CustomEvent("toast:show", { detail: { title: "A", duration: 0 } }));
+    root.dispatchEvent(new CustomEvent("toast:show", { detail: { title: "B", duration: 0 } }));
+    expect(controller.count).toBe(2);
+
+    root.dispatchEvent(new CustomEvent("toast:clear"));
+    await waitForClose();
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("normalizes invalid inbound type to default", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    root.dispatchEvent(
+      new CustomEvent("toast:show", {
+        detail: {
+          title: "Unexpected",
+          type: "unexpected",
+          duration: 0,
+        },
+      }),
+    );
+
+    const item = root.querySelector('[data-slot="toast-item"]') as HTMLElement;
+    expect(item.getAttribute("data-type")).toBe("default");
+
+    controller.destroy();
+  });
+
+  it("emits toast:change on show and dismiss", async () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const changes: Array<{ id: string; action: "show" | "dismiss" }> = [];
+    root.addEventListener("toast:change", (event) => {
+      changes.push((event as CustomEvent<{ id: string; action: "show" | "dismiss" }>).detail);
+    });
+
+    const id = controller.show({ title: "Observe" });
+    controller.dismiss(id);
+
+    expect(changes).toEqual([
+      { id, action: "show" },
+      { id, action: "dismiss" },
+    ]);
+
+    await waitForClose();
+    controller.destroy();
+  });
+
+  it("applies ARIA roles by toast type", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const errorId = controller.show({ title: "Error", type: "error" });
+    const infoId = controller.show({ title: "Info", type: "info" });
+
+    const errorItem = root.querySelector(`[data-id="${errorId}"]`) as HTMLElement;
+    const infoItem = root.querySelector(`[data-id="${infoId}"]`) as HTMLElement;
+
+    expect(errorItem.getAttribute("role")).toBe("alert");
+    expect(errorItem.getAttribute("aria-live")).toBe("assertive");
+    expect(infoItem.getAttribute("role")).toBe("status");
+    expect(infoItem.getAttribute("aria-live")).toBe("polite");
+
+    controller.destroy();
+  });
+
+  it("skips missing optional template parts without throwing", () => {
+    const { controller } = setup(
+      { duration: 0 },
+      `
+        <div data-slot="toast" id="root">
+          <template data-slot="toast-template">
+            <li data-slot="toast-item"><span data-slot="toast-title"></span></li>
+          </template>
+          <ol data-slot="toast-viewport"></ol>
+        </div>
+      `,
+    );
+
+    expect(() => controller.show({ title: "Minimal" })).not.toThrow();
+    expect(controller.count).toBe(1);
+
+    controller.destroy();
+  });
+
+  it("reusing an existing id force-replaces previous instance", async () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    controller.show({ id: "job", title: "Loading" });
+    controller.dismiss("job");
+
+    controller.show({ id: "job", title: "Done" });
+
+    const matching = root.querySelectorAll('[data-slot="toast-item"][data-id="job"]');
+    expect(matching.length).toBe(1);
+    expect(matching[0]?.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Done");
+
+    await waitForClose();
+    controller.destroy();
+  });
+
+  it("supports optional viewport portal and restores on destroy", () => {
+    const { root, viewport, controller } = setup({ portal: true, duration: 0 });
+
+    expect(viewport.parentElement).toBe(document.body);
+
+    controller.destroy();
+
+    expect(root.contains(viewport)).toBe(true);
+  });
+
+  it("writes stack animation variables and updates data-front", () => {
+    const { root, viewport, controller } = setup({ duration: 0 });
+
+    const firstId = controller.show({ title: "First" });
+    const secondId = controller.show({ title: "Second" });
+
+    const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
+    const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
+
+    expect(second.getAttribute("data-front")).toBe("");
+    expect(first.hasAttribute("data-front")).toBe(false);
+    expect(second.style.getPropertyValue("--toast-index")).toBe("0");
+    expect(first.style.getPropertyValue("--toast-index")).toBe("1");
+    expect(viewport.style.getPropertyValue("--toast-count")).toBe("2");
+    expect(viewport.style.getPropertyValue("--toast-stack-size")).toContain("px");
+
+    controller.destroy();
+  });
+
+  it("reindexes on ResizeObserver callback", () => {
+    const OriginalResizeObserver = globalThis.ResizeObserver;
+    let resizeCb: ResizeObserverCallback | null = null;
+
+    class MockResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        resizeCb = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+
+    (
+      globalThis as unknown as {
+        ResizeObserver?: typeof ResizeObserver;
+      }
+    ).ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+    try {
+      const { root, controller } = setup({ duration: 0 });
+
+      const firstId = controller.show({ title: "One" });
+      const secondId = controller.show({ title: "Two" });
+
+      const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
+      const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
+
+      first.getBoundingClientRect =
+        (() =>
+          ({
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            width: 200,
+            height: 60,
+            right: 200,
+            bottom: 60,
+            toJSON: () => ({}),
+          }) as DOMRect);
+      second.getBoundingClientRect =
+        (() =>
+          ({
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            width: 200,
+            height: 80,
+            right: 200,
+            bottom: 80,
+            toJSON: () => ({}),
+          }) as DOMRect);
+
+      if (resizeCb) {
+        (resizeCb as ResizeObserverCallback)([], {} as ResizeObserver);
+      }
+
+      expect(first.style.getPropertyValue("--toast-offset-y")).toBe("88px");
+      expect(second.style.getPropertyValue("--toast-offset-y")).toBe("0px");
+      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("148px");
+
+      controller.destroy();
+    } finally {
+      (
+        globalThis as unknown as {
+          ResizeObserver?: typeof ResizeObserver;
+        }
+      ).ResizeObserver = OriginalResizeObserver;
+    }
+  });
+
+  it("create() auto-binds and allows rebind after destroy", () => {
+    document.body.innerHTML = `
+      <div data-slot="toast" id="a"><ol data-slot="toast-viewport"></ol></div>
+      <div data-slot="toast" id="b"><ol data-slot="toast-viewport"></ol></div>
+    `;
+
+    const first = create();
+    expect(first).toHaveLength(2);
+
+    const second = create();
+    expect(second).toHaveLength(0);
+
+    first[0]?.destroy();
+
+    const third = create();
+    expect(third).toHaveLength(1);
+
+    first[1]?.destroy();
+    third[0]?.destroy();
+  });
+});

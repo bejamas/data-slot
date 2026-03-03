@@ -30,6 +30,8 @@ const descriptions: Record<string, string> = {
   select: "Dropdown select, form-ready",
   combobox: "Autocomplete input",
   slider: "Single/range value sliders",
+  carousel: "Scroll-snap carousels",
+  toast: "Imperative notifications",
 };
 
 // Packages to check (order doesn't matter, we sort by size)
@@ -44,6 +46,8 @@ const packageNames = [
   "select",
   "combobox",
   "slider",
+  "carousel",
+  "toast",
   "tabs",
   "tooltip",
 ];
