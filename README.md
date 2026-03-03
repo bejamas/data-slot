@@ -71,8 +71,10 @@ All packages are independently installable. Each package includes its own README
 | `@data-slot/dialog`          | 1.4 KB | Modal dialogs, focus trap  | [README](packages/dialog/README.md)          |
 | `@data-slot/accordion`       | 1.2 KB | Collapsible sections       | [README](packages/accordion/README.md)       |
 | `@data-slot/tooltip`         | 821 B  | Hover/focus tooltips       | [README](packages/tooltip/README.md)         |
+| `@data-slot/toast`           | 2.9 KB | Imperative notifications   | [README](packages/toast/README.md)           |
 | `@data-slot/popover`         | 806 B  | Anchored floating content  | [README](packages/popover/README.md)         |
 | `@data-slot/hover-card`      | 2.1 KB | Hover/focus preview cards | [README](packages/hover-card/README.md)      |
+| `@data-slot/carousel`        | 1.8 KB | Scroll-snap carousel       | [README](packages/carousel/README.md)        |
 | `@data-slot/collapsible`     | 629 B  | Simple show/hide toggle    | [README](packages/collapsible/README.md)     |
 | `@data-slot/core`            | 409 B  | Shared utilities           | [README](packages/core/README.md)            |
 

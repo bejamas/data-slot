@@ -22,6 +22,8 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 | `@data-slot/select` | 3.7 KB | Select input with keyboard navigation |
 | `@data-slot/dropdown-menu` | 2.4 KB | Action menus with keyboard navigation |
 | `@data-slot/hover-card` | 2.0 KB | Hover/focus preview cards |
+| `@data-slot/carousel` | 1.8 KB | Scroll-snap carousels |
+| `@data-slot/toast` | 2.9 KB | Imperative notifications |
 | `@data-slot/tabs` | 1.8 KB | Tabbed interfaces with keyboard nav |
 | `@data-slot/popover` | 1.8 KB | Anchored floating content |
 | `@data-slot/dialog` | 1.8 KB | Modal dialogs with focus management |
@@ -57,6 +59,8 @@ Available subpaths:
 - `@data-slot/ui/toggle-group`
 - `@data-slot/ui/select`
 - `@data-slot/ui/combobox`
+- `@data-slot/ui/carousel`
+- `@data-slot/ui/toast`
 
 ### Direct Package Imports
 
@@ -158,6 +162,8 @@ With Tailwind:
 | `createCollapsible` | @data-slot/collapsible |
 | `createNavigationMenu` | @data-slot/navigation-menu |
 | `createCombobox` | @data-slot/combobox |
+| `createCarousel` | @data-slot/carousel |
+| `createToast` | @data-slot/toast |
 
 ### Types
 
@@ -172,6 +178,8 @@ With Tailwind:
 | `CollapsibleOptions`, `CollapsibleController` | @data-slot/collapsible |
 | `NavigationMenuOptions`, `NavigationMenuController` | @data-slot/navigation-menu |
 | `ComboboxOptions`, `ComboboxController` | @data-slot/combobox |
+| `CarouselOptions`, `CarouselController` | @data-slot/carousel |
+| `ToastPosition`, `ToastAction`, `ToastShowOptions`, `ToastOptions`, `ToastController` | @data-slot/toast |
 
 ### Core Utilities
 

@@ -97,6 +97,18 @@
       "import": "./dist/combobox.js",
       "require": "./dist/combobox.cjs",
       "default": "./dist/combobox.js"
+    },
+    "./carousel": {
+      "types": "./dist/carousel.d.ts",
+      "import": "./dist/carousel.js",
+      "require": "./dist/carousel.cjs",
+      "default": "./dist/carousel.js"
+    },
+    "./toast": {
+      "types": "./dist/toast.d.ts",
+      "import": "./dist/toast.js",
+      "require": "./dist/toast.cjs",
+      "default": "./dist/toast.js"
     }
   },
   "files": [
@@ -119,7 +131,9 @@
     "@data-slot/toggle": "workspace:*",
     "@data-slot/toggle-group": "workspace:*",
     "@data-slot/select": "workspace:*",
-    "@data-slot/combobox": "workspace:*"
+    "@data-slot/combobox": "workspace:*",
+    "@data-slot/carousel": "workspace:*",
+    "@data-slot/toast": "workspace:*"
   },
   "keywords": [
     "headless",

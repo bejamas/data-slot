@@ -17,6 +17,8 @@ export default defineConfig({
     "src/toggle-group.ts",
     "src/select.ts",
     "src/combobox.ts",
+    "src/carousel.ts",
+    "src/toast.ts",
   ],
   format: ["esm", "cjs"],
   dts: true,
