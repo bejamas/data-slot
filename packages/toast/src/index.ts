@@ -33,13 +33,19 @@ const DEFAULT_LIMIT = 3;
 const DEFAULT_DURATION = 5000;
 const DEFAULT_POSITION: ToastPosition = "bottom-right";
 const DEFAULT_GAP = 8;
+const DEFAULT_SWIPE_THRESHOLD = 80;
 
 export type ToastPosition = (typeof POSITIONS)[number];
 type ToastType = (typeof TOAST_TYPES)[number];
 
+export interface ToastActionEvent {
+  readonly defaultPrevented: boolean;
+  preventDefault(): void;
+}
+
 export interface ToastAction {
   label: string;
-  onClick?: () => void;
+  onClick?: (() => void) | ((event: ToastActionEvent) => void);
   value?: string;
 }
 
@@ -50,6 +56,51 @@ export interface ToastShowOptions {
   type?: ToastType;
   duration?: number;
   action?: ToastAction;
+  dismissible?: boolean;
+  closeButtonAriaLabel?: string;
+  testId?: string;
+}
+
+export interface ToastUpdateOptions {
+  title?: string;
+  description?: string;
+  type?: ToastType;
+  duration?: number;
+  action?: ToastAction;
+  dismissible?: boolean;
+  closeButtonAriaLabel?: string;
+  testId?: string;
+}
+
+export interface ToastPromiseState
+  extends Omit<
+    ToastUpdateOptions,
+    "title"
+  > {
+  title?: string;
+  message?: string;
+}
+
+export type ToastPromiseStateValue<T> =
+  | string
+  | ToastPromiseState
+  | ((value: T) => string | ToastPromiseState);
+
+export type ToastPromiseErrorValue =
+  | string
+  | ToastPromiseState
+  | ((error: unknown) => string | ToastPromiseState);
+
+export interface ToastPromiseOptions<T> {
+  loading: string | ToastPromiseState;
+  success?: ToastPromiseStateValue<T>;
+  error?: ToastPromiseErrorValue;
+  description?: string;
+}
+
+export interface ToastPromiseHandle<T> {
+  id: string;
+  unwrap(): Promise<T>;
 }
 
 export interface ToastOptions {
@@ -66,6 +117,11 @@ export interface ToastOptions {
 
 export interface ToastController {
   show(options: ToastShowOptions): string;
+  update(id: string, patch: ToastUpdateOptions): void;
+  promise<T>(
+    input: Promise<T> | (() => Promise<T>),
+    options: ToastPromiseOptions<T>,
+  ): ToastPromiseHandle<T>;
   dismiss(id: string): void;
   dismissAll(): void;
   readonly count: number;
@@ -93,6 +149,9 @@ interface ResolvedToast {
   type: ToastType;
   duration: number;
   action?: ToastAction;
+  dismissible: boolean;
+  closeButtonAriaLabel?: string;
+  testId?: string;
 }
 
 interface QueuedToast extends ResolvedToast {
@@ -107,6 +166,13 @@ interface ToastChangeDetail {
 interface ToastActionDetail {
   id: string;
   value: string | undefined;
+}
+
+interface SwipeState {
+  id: string;
+  pointerId: number;
+  startY: number;
+  currentY: number;
 }
 
 const isFiniteNumber = (value: unknown): value is number =>
@@ -185,22 +251,7 @@ const parseShowDetail = (detail: unknown): ToastShowOptions | null => {
     return null;
   }
 
-  const actionRecord =
-    record["action"] && typeof record["action"] === "object"
-      ? (record["action"] as Record<string, unknown>)
-      : null;
-
-  const action =
-    actionRecord && typeof actionRecord["label"] === "string" && actionRecord["label"].trim() !== ""
-      ? {
-          label: actionRecord["label"],
-          onClick:
-            typeof actionRecord["onClick"] === "function"
-              ? (actionRecord["onClick"] as () => void)
-              : undefined,
-          value: typeof actionRecord["value"] === "string" ? actionRecord["value"] : undefined,
-        }
-      : undefined;
+  const action = parseActionDetail(record["action"]);
 
   return {
     id: typeof record["id"] === "string" ? record["id"] : undefined,
@@ -209,6 +260,10 @@ const parseShowDetail = (detail: unknown): ToastShowOptions | null => {
     type: isToastType(record["type"]) ? record["type"] : undefined,
     duration: isFiniteNumber(record["duration"]) ? record["duration"] : undefined,
     action,
+    dismissible: typeof record["dismissible"] === "boolean" ? record["dismissible"] : undefined,
+    closeButtonAriaLabel:
+      typeof record["closeButtonAriaLabel"] === "string" ? record["closeButtonAriaLabel"] : undefined,
+    testId: typeof record["testId"] === "string" ? record["testId"] : undefined,
   };
 };
 
@@ -223,6 +278,123 @@ const parseDismissDetail = (detail: unknown): string | null => {
     }
   }
   return null;
+};
+
+const parseActionDetail = (detail: unknown): ToastAction | undefined => {
+  if (!detail || typeof detail !== "object") return undefined;
+
+  const actionRecord = detail as Record<string, unknown>;
+  if (typeof actionRecord["label"] !== "string" || actionRecord["label"].trim() === "") {
+    return undefined;
+  }
+
+  return {
+    label: actionRecord["label"],
+    onClick:
+      typeof actionRecord["onClick"] === "function"
+        ? (actionRecord["onClick"] as ToastAction["onClick"])
+        : undefined,
+    value: typeof actionRecord["value"] === "string" ? actionRecord["value"] : undefined,
+  };
+};
+
+const parseUpdateDetail = (
+  detail: unknown,
+): { id: string; patch: ToastUpdateOptions } | null => {
+  if (!detail || typeof detail !== "object") return null;
+
+  const record = detail as Record<string, unknown>;
+  const id = typeof record["id"] === "string" && record["id"].trim() !== "" ? record["id"] : null;
+  if (!id) return null;
+
+  const hasOwn = <K extends keyof ToastUpdateOptions>(key: K): boolean =>
+    Object.prototype.hasOwnProperty.call(record, key);
+  const patch: ToastUpdateOptions = {};
+  let hasPatch = false;
+  const setPatch = <K extends keyof ToastUpdateOptions>(key: K, value: ToastUpdateOptions[K]) => {
+    patch[key] = value;
+    hasPatch = true;
+  };
+
+  if (hasOwn("title")) {
+    if (typeof record["title"] !== "string" || record["title"].trim() === "") {
+      return null;
+    }
+    setPatch("title", record["title"]);
+  }
+
+  if (hasOwn("description")) {
+    const description = record["description"];
+    if (description === null || typeof description === "undefined") {
+      setPatch("description", undefined);
+    } else if (typeof description === "string") {
+      setPatch("description", description);
+    }
+  }
+
+  if (hasOwn("type") && isToastType(record["type"])) {
+    setPatch("type", record["type"]);
+  }
+
+  if (hasOwn("duration") && isFiniteNumber(record["duration"])) {
+    setPatch("duration", record["duration"]);
+  }
+
+  if (hasOwn("action")) {
+    if (record["action"] === null || typeof record["action"] === "undefined") {
+      setPatch("action", undefined);
+    } else {
+      const action = parseActionDetail(record["action"]);
+      if (action) {
+        setPatch("action", action);
+      }
+    }
+  }
+
+  if (hasOwn("dismissible") && typeof record["dismissible"] === "boolean") {
+    setPatch("dismissible", record["dismissible"]);
+  }
+
+  if (hasOwn("closeButtonAriaLabel")) {
+    const closeButtonAriaLabel = record["closeButtonAriaLabel"];
+    if (closeButtonAriaLabel === null || typeof closeButtonAriaLabel === "undefined") {
+      setPatch("closeButtonAriaLabel", undefined);
+    } else if (typeof closeButtonAriaLabel === "string") {
+      setPatch("closeButtonAriaLabel", closeButtonAriaLabel);
+    }
+  }
+
+  if (hasOwn("testId")) {
+    const testId = record["testId"];
+    if (testId === null || typeof testId === "undefined") {
+      setPatch("testId", undefined);
+    } else if (typeof testId === "string") {
+      setPatch("testId", testId);
+    }
+  }
+
+  if (!hasPatch) return null;
+  return { id, patch };
+};
+
+const resolvePromiseStateObject = (
+  value: string | ToastPromiseState | undefined,
+): ToastPromiseState => {
+  if (typeof value === "string") {
+    return { title: value };
+  }
+  return value ?? {};
+};
+
+const resolvePromiseStateValue = <T,>(
+  value: ToastPromiseStateValue<T> | ToastPromiseErrorValue | undefined,
+  payload: T | unknown,
+): ToastPromiseState => {
+  if (typeof value === "function") {
+    const result = (value as (input: T | unknown) => string | ToastPromiseState)(payload);
+    return resolvePromiseStateObject(result);
+  }
+  return resolvePromiseStateObject(value as string | ToastPromiseState | undefined);
 };
 
 /**
@@ -241,6 +413,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   if (!viewport) {
     throw new Error("Toast requires a toast-viewport slot");
   }
+  const doc = root.ownerDocument ?? document;
 
   const authoredTemplate = getPart(root, "toast-template");
   const fallbackTemplate = createFallbackTemplate(root.ownerDocument ?? document);
@@ -292,6 +465,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   let pauseHover = false;
   let pauseFocus = false;
   let timersPaused = false;
+  let swipeState: SwipeState | null = null;
 
   const resizeObserver =
     typeof ResizeObserver !== "undefined"
@@ -528,6 +702,60 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     return { fragment, item };
   };
 
+  const applyToastContentToItem = (item: HTMLElement, toast: ResolvedToast) => {
+    const titleSlot = item.querySelector<HTMLElement>('[data-slot="toast-title"]');
+    const descriptionSlot = item.querySelector<HTMLElement>('[data-slot="toast-description"]');
+    const actionSlot = item.querySelector<HTMLElement>('[data-slot="toast-action"]');
+    const closeSlot = item.querySelector<HTMLElement>('[data-slot="toast-close"]');
+
+    if (titleSlot) {
+      titleSlot.textContent = toast.title;
+      titleSlot.hidden = false;
+    }
+
+    if (descriptionSlot) {
+      if (toast.description && toast.description.trim() !== "") {
+        descriptionSlot.textContent = toast.description;
+        descriptionSlot.hidden = false;
+      } else {
+        descriptionSlot.textContent = "";
+        descriptionSlot.hidden = true;
+      }
+    }
+
+    if (actionSlot) {
+      if (toast.action?.label && toast.action.label.trim() !== "") {
+        actionSlot.textContent = toast.action.label;
+        actionSlot.hidden = false;
+      } else {
+        actionSlot.textContent = "";
+        actionSlot.hidden = true;
+      }
+    }
+
+    item.setAttribute("data-type", toast.type);
+    if (toast.dismissible) {
+      item.removeAttribute("data-dismissible");
+    } else {
+      item.setAttribute("data-dismissible", "false");
+    }
+    if (toast.testId && toast.testId.trim() !== "") {
+      item.setAttribute("data-testid", toast.testId);
+    } else {
+      item.removeAttribute("data-testid");
+    }
+
+    if (closeSlot) {
+      if (toast.closeButtonAriaLabel && toast.closeButtonAriaLabel.trim() !== "") {
+        closeSlot.setAttribute("aria-label", toast.closeButtonAriaLabel);
+      } else if (!closeSlot.getAttribute("aria-label")) {
+        closeSlot.setAttribute("aria-label", "Close");
+      }
+    }
+
+    setItemA11y(item, toast.type);
+  };
+
   const createId = () => {
     let candidate = "";
     do {
@@ -580,6 +808,9 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
         type: nextQueued.type,
         duration: remaining,
         action: nextQueued.action,
+        dismissible: nextQueued.dismissible,
+        closeButtonAriaLabel: nextQueued.closeButtonAriaLabel,
+        testId: nextQueued.testId,
       };
 
       mountToast(next, "oldest");
@@ -602,43 +833,14 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const mountToast = (toast: ResolvedToast, placement: "newest" | "oldest" = "newest") => {
     const { fragment, item } = resolveTemplateFragment();
 
-    const titleSlot = item.querySelector<HTMLElement>('[data-slot="toast-title"]');
-    const descriptionSlot = item.querySelector<HTMLElement>('[data-slot="toast-description"]');
-    const actionSlot = item.querySelector<HTMLElement>('[data-slot="toast-action"]');
-
-    if (titleSlot) {
-      titleSlot.textContent = toast.title;
-      titleSlot.hidden = false;
-    }
-
-    if (descriptionSlot) {
-      if (toast.description && toast.description.trim() !== "") {
-        descriptionSlot.textContent = toast.description;
-        descriptionSlot.hidden = false;
-      } else {
-        descriptionSlot.textContent = "";
-        descriptionSlot.hidden = true;
-      }
-    }
-
-    if (actionSlot) {
-      if (toast.action?.label && toast.action.label.trim() !== "") {
-        actionSlot.textContent = toast.action.label;
-        actionSlot.hidden = false;
-      } else {
-        actionSlot.textContent = "";
-        actionSlot.hidden = true;
-      }
-    }
-
     item.setAttribute("data-id", toast.id);
-    item.setAttribute("data-type", toast.type);
+    applyToastContentToItem(item, toast);
     item.style.setProperty(
       "--toast-enter-direction",
       String(placement === "newest" ? stackDirection : -stackDirection),
     );
     item.style.setProperty("--toast-exit-direction", String(stackDirection));
-    setItemA11y(item, toast.type);
+    item.style.setProperty("--toast-swipe-movement-y", "0px");
     setOpenState(item, "open");
 
     const entry: ToastEntry = {
@@ -705,6 +907,9 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       type: isToastType(showOptions.type) ? showOptions.type : "default",
       duration: normalizeDuration(showOptions.duration, defaultDuration),
       action: showOptions.action,
+      dismissible: showOptions.dismissible ?? true,
+      closeButtonAriaLabel: showOptions.closeButtonAriaLabel,
+      testId: showOptions.testId,
     };
 
     if (activeOrder.length >= resolvedLimit) {
@@ -713,6 +918,176 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
     mountToast(toast);
     return id;
+  };
+
+  const resolveUpdatedToast = (
+    current: ResolvedToast,
+    patch: ToastUpdateOptions,
+  ): { next: ResolvedToast; durationChanged: boolean } => {
+    const hasOwn = <K extends keyof ToastUpdateOptions>(key: K): boolean =>
+      Object.prototype.hasOwnProperty.call(patch, key);
+
+    const nextTitle = hasOwn("title") ? patch.title : current.title;
+    if (!nextTitle || nextTitle.trim() === "") {
+      throw new Error("Toast update requires title to remain non-empty");
+    }
+
+    const durationChanged = hasOwn("duration");
+    const nextDuration = durationChanged
+      ? normalizeDuration(patch.duration, current.duration)
+      : current.duration;
+
+    const next: ResolvedToast = {
+      id: current.id,
+      title: nextTitle,
+      description: hasOwn("description") ? patch.description : current.description,
+      type: hasOwn("type") && isToastType(patch.type) ? patch.type : current.type,
+      duration: nextDuration,
+      action: hasOwn("action") ? patch.action : current.action,
+      dismissible: hasOwn("dismissible") ? (patch.dismissible ?? true) : current.dismissible,
+      closeButtonAriaLabel: hasOwn("closeButtonAriaLabel")
+        ? patch.closeButtonAriaLabel
+        : current.closeButtonAriaLabel,
+      testId: hasOwn("testId") ? patch.testId : current.testId,
+    };
+
+    return { next, durationChanged };
+  };
+
+  const updateInternal = (id: string, patch: ToastUpdateOptions): boolean => {
+    if (!id || id.trim() === "") return false;
+
+    const queuedToast = queued.get(id);
+    if (queuedToast) {
+      const { next, durationChanged } = resolveUpdatedToast(queuedToast, patch);
+      queued.set(id, {
+        ...next,
+        queuedAt: durationChanged ? Date.now() : queuedToast.queuedAt,
+      });
+      return true;
+    }
+
+    const entry = entries.get(id);
+    if (!entry || entry.exiting) return false;
+
+    const { next, durationChanged } = resolveUpdatedToast(entry.toast, patch);
+    entry.toast = next;
+    entry.action = next.action;
+
+    applyToastContentToItem(entry.element, next);
+
+    if (!next.dismissible && swipeState?.id === id) {
+      swipeState = null;
+      clearSwipeStyles(entry);
+    }
+
+    if (durationChanged) {
+      clearTimer(entry);
+      entry.duration = next.duration;
+      entry.remainingMs = next.duration;
+      if (next.duration > 0 && !timersPaused) {
+        entry.startedAt = Date.now();
+        entry.timerId = setTimeout(() => {
+          dismiss(entry.id);
+        }, entry.remainingMs);
+      }
+    }
+
+    reindex();
+    return true;
+  };
+
+  const update = (id: string, patch: ToastUpdateOptions) => {
+    updateInternal(id, patch);
+  };
+
+  const resolvePromiseTitle = (
+    state: ToastPromiseState,
+    fallbackTitle: string,
+  ): string => {
+    if (typeof state.title === "string" && state.title.trim() !== "") {
+      return state.title;
+    }
+    if (typeof state.message === "string" && state.message.trim() !== "") {
+      return state.message;
+    }
+    return fallbackTitle;
+  };
+
+  const resolvePromiseShowOptions = (
+    state: ToastPromiseState,
+    fallback: {
+      title: string;
+      type: ToastType;
+      duration: number;
+      description?: string;
+    },
+  ): ToastShowOptions => ({
+    title: resolvePromiseTitle(state, fallback.title),
+    description: state.description ?? fallback.description,
+    type: isToastType(state.type) ? state.type : fallback.type,
+    duration: normalizeDuration(state.duration, fallback.duration),
+    action: state.action,
+    dismissible: state.dismissible,
+    closeButtonAriaLabel: state.closeButtonAriaLabel,
+    testId: state.testId,
+  });
+
+  const resolveErrorTitle = (error: unknown): string => {
+    if (typeof error === "string" && error.trim() !== "") return error;
+    if (error instanceof Error && error.message.trim() !== "") return error.message;
+    return "Error";
+  };
+
+  const promise = <T,>(
+    input: Promise<T> | (() => Promise<T>),
+    promiseOptions: ToastPromiseOptions<T>,
+  ): ToastPromiseHandle<T> => {
+    const loadingState = resolvePromiseStateObject(promiseOptions.loading);
+    const loadingOptions = resolvePromiseShowOptions(loadingState, {
+      title: "Loading...",
+      type: "loading",
+      duration: 0,
+      description: promiseOptions.description,
+    });
+    const id = show(loadingOptions);
+
+    const task =
+      typeof input === "function"
+        ? (input as () => Promise<T>)()
+        : input;
+
+    const tracked = task
+      .then((value) => {
+        const successState = resolvePromiseStateValue<T>(promiseOptions.success, value);
+        const successOptions = resolvePromiseShowOptions(successState, {
+          title: "Success",
+          type: "success",
+          duration: defaultDuration,
+          description: promiseOptions.description,
+        });
+        updateInternal(id, successOptions);
+        return value;
+      })
+      .catch((error: unknown) => {
+        const errorState = resolvePromiseStateValue<unknown>(promiseOptions.error, error);
+        const errorOptions = resolvePromiseShowOptions(errorState, {
+          title: resolveErrorTitle(error),
+          type: "error",
+          duration: defaultDuration,
+          description: promiseOptions.description,
+        });
+        updateInternal(id, errorOptions);
+        throw error;
+      });
+
+    // Avoid unhandled rejection noise when caller doesn't consume unwrap().
+    void tracked.catch(() => {});
+
+    return {
+      id,
+      unwrap: () => tracked,
+    };
   };
 
   const dismissAll = () => {
@@ -725,15 +1100,30 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }
   };
 
+  const createActionEvent = (): ToastActionEvent => {
+    let defaultPrevented = false;
+    return {
+      get defaultPrevented() {
+        return defaultPrevented;
+      },
+      preventDefault: () => {
+        defaultPrevented = true;
+      },
+    };
+  };
+
   const handleActionClick = (id: string) => {
     const entry = entries.get(id);
     if (!entry || entry.exiting) return;
 
     const value = entry.action?.value;
-    entry.action?.onClick?.();
+    const actionEvent = createActionEvent();
+    (entry.action?.onClick as ((event: ToastActionEvent) => void) | undefined)?.(actionEvent);
     emit<ToastActionDetail>(root, "toast:action", { id, value });
     onAction?.(id, value);
-    dismiss(id);
+    if (!actionEvent.defaultPrevented) {
+      dismiss(id);
+    }
   };
 
   const getItemIdFromEventTarget = (target: EventTarget | null): string | null => {
@@ -742,6 +1132,90 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     if (!item || !viewport.contains(item)) return null;
     const id = item.getAttribute("data-id");
     return id && id.trim() !== "" ? id : null;
+  };
+
+  const clearSwipeStyles = (entry: ToastEntry) => {
+    entry.element.removeAttribute("data-swiping");
+    entry.element.removeAttribute("data-swipe-out");
+    entry.element.style.removeProperty("--toast-swipe-movement-y");
+  };
+
+  const beginSwipe = (event: PointerEvent) => {
+    if (event.button !== 0) return;
+    const target = event.target as Element | null;
+    if (!target) return;
+
+    if (target.closest('[data-slot="toast-action"]') || target.closest('[data-slot="toast-close"]')) {
+      return;
+    }
+
+    const id = getItemIdFromEventTarget(target);
+    if (!id) return;
+
+    const entry = entries.get(id);
+    if (!entry || entry.exiting || !entry.toast.dismissible) return;
+
+    swipeState = {
+      id,
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      currentY: event.clientY,
+    };
+
+    entry.element.setAttribute("data-swiping", "");
+    entry.element.style.setProperty("--toast-swipe-movement-y", "0px");
+    if ("setPointerCapture" in entry.element) {
+      try {
+        entry.element.setPointerCapture(event.pointerId);
+      } catch {
+        // Ignore if pointer capture is unsupported for this event target.
+      }
+    }
+  };
+
+  const updateSwipe = (event: PointerEvent) => {
+    if (!swipeState || event.pointerId !== swipeState.pointerId) return;
+    const entry = entries.get(swipeState.id);
+    if (!entry || entry.exiting) {
+      swipeState = null;
+      return;
+    }
+
+    swipeState.currentY = event.clientY;
+    const rawDeltaY = swipeState.currentY - swipeState.startY;
+    const directedDelta = rawDeltaY * -stackDirection;
+    const adjustedDeltaY = directedDelta < 0 ? rawDeltaY * 0.2 : rawDeltaY;
+    entry.element.style.setProperty("--toast-swipe-movement-y", `${adjustedDeltaY}px`);
+    entry.element.setAttribute("data-swiping", "");
+  };
+
+  const endSwipe = (event: PointerEvent | null, cancelled = false) => {
+    if (!swipeState) return;
+    if (event && event.pointerId !== swipeState.pointerId) return;
+
+    const current = swipeState;
+    swipeState = null;
+    const entry = entries.get(current.id);
+    if (!entry || entry.exiting) return;
+
+    if (event && "releasePointerCapture" in entry.element) {
+      try {
+        entry.element.releasePointerCapture(current.pointerId);
+      } catch {
+        // Ignore if pointer capture was not active.
+      }
+    }
+
+    const rawDeltaY = current.currentY - current.startY;
+    const directedDelta = rawDeltaY * -stackDirection;
+    const threshold = Math.max(DEFAULT_SWIPE_THRESHOLD, entry.element.offsetHeight * 0.45);
+    const shouldDismiss = !cancelled && directedDelta >= threshold;
+
+    clearSwipeStyles(entry);
+    if (shouldDismiss) {
+      entry.element.setAttribute("data-swipe-out", "");
+      dismiss(entry.id);
+    }
   };
 
   cleanups.push(
@@ -761,6 +1235,21 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
         const id = getItemIdFromEventTarget(actionTrigger);
         if (id) handleActionClick(id);
       }
+    }),
+  );
+
+  cleanups.push(
+    on(viewport, "pointerdown", (e) => {
+      beginSwipe(e as PointerEvent);
+    }),
+    on(doc, "pointermove", (e) => {
+      updateSwipe(e as PointerEvent);
+    }),
+    on(doc, "pointerup", (e) => {
+      endSwipe(e as PointerEvent);
+    }),
+    on(doc, "pointercancel", (e) => {
+      endSwipe(e as PointerEvent, true);
     }),
   );
 
@@ -798,6 +1287,11 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       if (!parsed) return;
       show(parsed);
     }),
+    on(root, "toast:update", (e) => {
+      const parsed = parseUpdateDetail((e as CustomEvent).detail);
+      if (!parsed) return;
+      update(parsed.id, parsed.patch);
+    }),
     on(root, "toast:dismiss", (e) => {
       const id = parseDismissDetail((e as CustomEvent).detail);
       if (!id) return;
@@ -812,6 +1306,8 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
   return {
     show,
+    update,
+    promise,
     dismiss,
     dismissAll,
     get count() {

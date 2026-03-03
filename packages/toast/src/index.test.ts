@@ -138,6 +138,28 @@ describe("Toast", () => {
     controller.destroy();
   });
 
+  it("show applies custom close button aria label when provided", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    controller.show({ title: "Custom close", closeButtonAriaLabel: "Yeet the notice" });
+
+    const close = root.querySelector('[data-slot="toast-close"]') as HTMLElement;
+    expect(close.getAttribute("aria-label")).toBe("Yeet the notice");
+
+    controller.destroy();
+  });
+
+  it("show applies data-testid when provided", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    controller.show({ title: "With test id", testId: "my-test-toast" });
+
+    const item = root.querySelector('[data-slot="toast-item"]') as HTMLElement;
+    expect(item.getAttribute("data-testid")).toBe("my-test-toast");
+
+    controller.destroy();
+  });
+
   it("show throws when title is empty", () => {
     const { controller } = setup();
 
@@ -157,6 +179,46 @@ describe("Toast", () => {
     expect(item.getAttribute("data-type")).toBe("success");
     expect(item.getAttribute("data-state")).toBe("open");
     expect(item.hasAttribute("data-open")).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("update mutates an active toast in place", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const id = controller.show({ title: "Initial", type: "loading", description: "Pending" });
+    const before = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+
+    controller.update(id, {
+      title: "Updated",
+      description: "Done",
+      type: "success",
+      action: { label: "Undo", value: "undo" },
+      closeButtonAriaLabel: "Dismiss",
+      testId: "updated-toast",
+    });
+
+    const after = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+    expect(after).toBe(before);
+    expect(after.getAttribute("data-type")).toBe("success");
+    expect(after.getAttribute("data-testid")).toBe("updated-toast");
+    expect(after.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Updated");
+    expect(after.querySelector('[data-slot="toast-description"]')?.textContent).toBe("Done");
+    expect(after.querySelector('[data-slot="toast-action"]')?.textContent).toBe("Undo");
+    expect(after.querySelector('[data-slot="toast-close"]')?.getAttribute("aria-label")).toBe("Dismiss");
+
+    controller.destroy();
+  });
+
+  it("update can restart auto-dismiss timing", async () => {
+    const { controller } = setup({ duration: 0 });
+
+    const id = controller.show({ title: "Persistent", duration: 0 });
+    controller.update(id, { duration: 20 });
+
+    await wait(35);
+    await waitForClose();
+    expect(controller.count).toBe(0);
 
     controller.destroy();
   });
@@ -288,6 +350,32 @@ describe("Toast", () => {
     expect(controller.count).toBe(1);
 
     await waitForClose();
+    controller.destroy();
+  });
+
+  it("update patches queued toast before it is promoted", async () => {
+    const { root, controller } = setup({ limit: 1, duration: 0 });
+
+    const first = controller.show({ title: "One" });
+    const second = controller.show({ title: "Two" });
+
+    controller.update(first, {
+      title: "One updated",
+      type: "info",
+      description: "Promoted from queue",
+    });
+
+    controller.dismiss(second);
+    await waitForClose();
+
+    const promoted = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
+    expect(promoted.getAttribute("data-state")).toBe("open");
+    expect(promoted.getAttribute("data-type")).toBe("info");
+    expect(promoted.querySelector('[data-slot="toast-title"]')?.textContent).toBe("One updated");
+    expect(promoted.querySelector('[data-slot="toast-description"]')?.textContent).toBe(
+      "Promoted from queue",
+    );
+
     controller.destroy();
   });
 
@@ -425,6 +513,14 @@ describe("Toast", () => {
     controller.destroy();
   });
 
+  it("update on unknown id is a no-op", () => {
+    const { controller } = setup({ duration: 0 });
+
+    expect(() => controller.update("missing-id", { title: "Ignored" })).not.toThrow();
+
+    controller.destroy();
+  });
+
   it("dismiss(id) triggers exit and removes item", async () => {
     const { root, controller } = setup({ duration: 0 });
 
@@ -503,7 +599,194 @@ describe("Toast", () => {
     controller.destroy();
   });
 
-  it("supports inbound toast:show, toast:dismiss and toast:clear events", async () => {
+  it("action click can prevent default dismissal", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const id = controller.show({
+      title: "Keep me open",
+      action: {
+        label: "Action",
+        onClick: (event) => {
+          event.preventDefault();
+        },
+      },
+      duration: 0,
+    });
+
+    const actionButton = root.querySelector(`[data-id="${id}"] [data-slot="toast-action"]`) as HTMLElement;
+    actionButton.click();
+
+    expect(controller.count).toBe(1);
+    const item = root.querySelector(`[data-id="${id}"]`) as HTMLElement;
+    expect(item.getAttribute("data-state")).toBe("open");
+
+    controller.destroy();
+  });
+
+  it("promise() shows loading then success using the same id", async () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const handled = controller.promise(
+      new Promise<string>((resolve) => {
+        setTimeout(() => resolve("Loaded"), 15);
+      }),
+      {
+        loading: { title: "Loading...", duration: 0 },
+        success: (value) => ({ title: value, duration: 0 }),
+      },
+    );
+
+    expect(root.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Loading...");
+    const loadingToast = root.querySelector('[data-slot="toast-item"]') as HTMLElement;
+    const loadingId = loadingToast.getAttribute("data-id");
+    expect(loadingId).toBe(handled.id);
+
+    await handled.unwrap();
+    await waitForClose();
+
+    const updated = root.querySelector(`[data-slot="toast-item"][data-id="${handled.id}"]`) as HTMLElement;
+    expect(updated).toBe(loadingToast);
+    expect(updated.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Loaded");
+    expect(controller.count).toBe(1);
+
+    controller.destroy();
+  });
+
+  it("promise() updates to error state and unwrap rejects", async () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const handled = controller.promise(
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Promise rejected")), 10);
+      }),
+      {
+        loading: { title: "Loading...", duration: 0 },
+        error: (error) => ({
+          title: error instanceof Error ? error.message : "Error",
+          duration: 0,
+        }),
+      },
+    );
+
+    await expect(handled.unwrap()).rejects.toThrow("Promise rejected");
+    await waitForClose();
+
+    const updated = root.querySelector(`[data-slot="toast-item"][data-id="${handled.id}"]`) as HTMLElement;
+    expect(updated.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Promise rejected");
+
+    controller.destroy();
+  });
+
+  it("swipe dismisses toast in bottom stacks", async () => {
+    const { root, controller } = setup({ duration: 0, position: "bottom-right" });
+
+    const id = controller.show({ title: "Swipe me" });
+    const item = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+
+    item.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 1,
+        button: 0,
+        clientY: 120,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", { bubbles: true, pointerId: 1, clientY: 260 }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", { bubbles: true, pointerId: 1, clientY: 260 }),
+    );
+
+    await waitForClose();
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("swipe dismisses toast in top stacks", async () => {
+    const { root, controller } = setup({ duration: 0, position: "top-left" });
+
+    const id = controller.show({ title: "Swipe up" });
+    const item = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+
+    item.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 2,
+        button: 0,
+        clientY: 240,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", { bubbles: true, pointerId: 2, clientY: 40 }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", { bubbles: true, pointerId: 2, clientY: 40 }),
+    );
+
+    await waitForClose();
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("swipe does not dismiss when movement is below threshold", () => {
+    const { root, controller } = setup({ duration: 0, position: "bottom-right" });
+
+    const id = controller.show({ title: "Small drag" });
+    const item = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+
+    item.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 3,
+        button: 0,
+        clientY: 150,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", { bubbles: true, pointerId: 3, clientY: 175 }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", { bubbles: true, pointerId: 3, clientY: 175 }),
+    );
+
+    expect(controller.count).toBe(1);
+    expect(item.hasAttribute("data-swiping")).toBe(false);
+    expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("");
+
+    controller.destroy();
+  });
+
+  it("non-dismissible toast ignores swipe gestures", () => {
+    const { root, controller } = setup({ duration: 0, position: "bottom-right" });
+
+    const id = controller.show({ title: "Locked", dismissible: false });
+    const item = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+
+    item.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 4,
+        button: 0,
+        clientY: 120,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", { bubbles: true, pointerId: 4, clientY: 400 }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", { bubbles: true, pointerId: 4, clientY: 400 }),
+    );
+
+    expect(controller.count).toBe(1);
+    expect(item.hasAttribute("data-dismissible")).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("supports inbound toast:show, toast:update, toast:dismiss and toast:clear events", async () => {
     const { root, controller } = setup({ duration: 0 });
 
     root.dispatchEvent(new CustomEvent("toast:show", { detail: { title: "From event", duration: 0 } }));
@@ -511,6 +794,22 @@ describe("Toast", () => {
 
     const item = root.querySelector('[data-slot="toast-item"]') as HTMLElement;
     const id = item.getAttribute("data-id")!;
+
+    root.dispatchEvent(
+      new CustomEvent("toast:update", {
+        detail: {
+          id,
+          title: "Updated from event",
+          description: "Description updated from event",
+          type: "success",
+        },
+      }),
+    );
+    expect(item.getAttribute("data-type")).toBe("success");
+    expect(item.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Updated from event");
+    expect(item.querySelector('[data-slot="toast-description"]')?.textContent).toBe(
+      "Description updated from event",
+    );
 
     root.dispatchEvent(new CustomEvent("toast:dismiss", { detail: { id } }));
     await waitForClose();

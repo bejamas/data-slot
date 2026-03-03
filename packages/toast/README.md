@@ -92,6 +92,9 @@ const id = toaster.show({
   description: "Your profile was updated",
   type: "success",
   duration: 4000,
+  dismissible: true,
+  closeButtonAriaLabel: "Close notification",
+  testId: "save-toast",
   action: {
     label: "Undo",
     value: "undo-save",
@@ -101,12 +104,31 @@ const id = toaster.show({
 ```
 
 `title` is required. If `id` is reused, the previous toast is force-replaced.
+`action.onClick` may call `event.preventDefault()` to keep the toast open.
+
+### `promise(input, options)`
+
+```ts
+const handled = toaster.promise(fetch("/api/save"), {
+  loading: "Saving...",
+  success: "Saved",
+  error: (error) => ({
+    title: error instanceof Error ? error.message : "Save failed",
+  }),
+});
+
+await handled.unwrap();
+```
+
+`promise()` keeps a stable toast id across loading/success/error states and returns `{ id, unwrap() }`.
 
 ### Controller
 
 | Method / Property | Description |
 |-------------------|-------------|
 | `show(options)` | Create and show a toast, returns its id |
+| `update(id, patch)` | Patch an existing active/queued toast in place |
+| `promise(input, options)` | Drive loading/success/error toast states from a promise, returns `{ id, unwrap() }` |
 | `dismiss(id)` | Dismiss one toast |
 | `dismissAll()` | Dismiss all active toasts |
 | `count` | Active (non-exiting) toast count |
@@ -145,6 +167,7 @@ JS options take precedence over data attributes.
 Runtime attributes:
 
 - `toast-item`: `data-id`, `data-type`, `data-state`, `data-open`, `data-closed`, `data-front`, `data-starting-style`, `data-ending-style`
+- `toast-item`: `data-swiping`, `data-swipe-out`, `data-dismissible="false"` (when swiping is disabled)
 - `toast-viewport`: `data-expanded` (hover/focus fan-out state)
 
 ## Animation Tokens
@@ -160,6 +183,7 @@ The controller computes and writes stack tokens for animation styling:
 - `--toast-stack-direction` (`1` for top stacks, `-1` for bottom stacks)
 - `--toast-enter-direction` (item-level; may differ for promoted queued items)
 - `--toast-exit-direction` (item-level; stable exit direction for stack position)
+- `--toast-swipe-movement-y` (item-level; live vertical swipe offset)
 
 These are updated on show, dismiss, exit complete, and item resize.
 
@@ -177,6 +201,7 @@ These are updated on show, dismiss, exit complete, and item resize.
 | Event | Detail |
 |-------|--------|
 | `toast:show` | `ToastShowOptions` |
+| `toast:update` | `{ id: string } & ToastUpdateOptions` |
 | `toast:dismiss` | `{ id: string }` or `string` |
 | `toast:clear` | none |
 
@@ -184,6 +209,12 @@ These are updated on show, dismiss, exit complete, and item resize.
 root.dispatchEvent(
   new CustomEvent("toast:show", {
     detail: { title: "Background sync complete", type: "success" },
+  }),
+);
+
+root.dispatchEvent(
+  new CustomEvent("toast:update", {
+    detail: { id: "save-1", title: "Saved", type: "success" },
   }),
 );
 

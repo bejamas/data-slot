@@ -18,7 +18,9 @@
     "build:docs": "bun run build && bun run --cwd website build",
     "preview:docs": "bun run --cwd website preview",
     "check:docs": "bun run --cwd website check",
-    "install:docs": "npm install --prefix website --workspaces=false"
+    "install:docs": "npm install --prefix website --workspaces=false",
+    "test:toast:sonner-parity": "bun run --filter @data-slot/toast build && playwright test -c playwright.toast-parity.config.ts",
+    "test:toast:parity": "bun run --filter @data-slot/toast build && bun test packages/toast/src/index.test.ts && playwright test -c playwright.toast-parity.config.ts"
   },
   "devDependencies": {
     "@ai-sdk/openai": "^1.3.24",
@@ -27,6 +29,7 @@
     "ai": "^4.3.19",
     "tsdown": "^0.12.9",
     "typescript": "^5.9.3",
-    "wrangler": "4.127.1"
+    "wrangler": "4.127.1",
+    "@playwright/test": "^1.54.2"
   }
 }
