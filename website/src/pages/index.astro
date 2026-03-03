@@ -286,9 +286,14 @@ bun add @data-slot/dialog`}
   document.querySelectorAll('[data-slot="carousel"]').forEach((el) =>
     createCarousel(el as HTMLElement)
   );
-  document.querySelectorAll('[data-slot="toast"]').forEach((el) =>
-    createToast(el as HTMLElement)
-  );
+  const toastControllers = new Map<string, ReturnType<typeof createToast>>();
+  document.querySelectorAll('[data-slot="toast"]').forEach((el) => {
+    const root = el as HTMLElement;
+    const controller = createToast(root);
+    if (root.id) {
+      toastControllers.set(root.id, controller);
+    }
+  });
   document.querySelectorAll('[data-slot="toggle"]').forEach((el) =>
     createToggle(el as HTMLElement)
   );
@@ -327,30 +332,57 @@ bun add @data-slot/dialog`}
       const root = document.getElementById(targetId);
       if (!root) return;
 
-      const kind = button.dataset["toastDemoKind"] as keyof typeof toastMessageByKind | undefined;
-      const selected = (kind && toastMessageByKind[kind]) || {
-        title: "Heads up",
-        description: "This is a toast message.",
-        type: "default",
-        duration: 4000,
-      };
+      const kind = button.dataset["toastDemoKind"];
+      const selected =
+        kind && kind in toastMessageByKind
+          ? toastMessageByKind[kind as keyof typeof toastMessageByKind]
+          : {
+              title: "Heads up",
+              description: "This is a toast message.",
+              type: "default",
+              duration: 4000,
+            };
+
+      if (kind === "promise") {
+        const controller = toastControllers.get(targetId);
+        if (!controller) return;
+
+        controller.promise(
+          new Promise((resolve) => {
+            setTimeout(() => resolve("Upload complete"), 1200);
+          }),
+          {
+            loading: {
+              title: "Uploading assets…",
+              description: "Please keep this tab open.",
+              duration: 0,
+            },
+            success: (value) => ({
+              title: String(value),
+              description: "All files synced successfully.",
+              type: "success",
+              duration: 3200,
+              action: { label: "View", value: "view" },
+            }),
+          },
+        );
+        return;
+      }
 
       if (kind === "loading") {
+        const controller = toastControllers.get(targetId);
+        if (!controller) return;
+
         const id = `load-${Date.now()}`;
-        root.dispatchEvent(new CustomEvent("toast:show", { detail: { ...selected, id } }));
+        controller.show({ ...selected, id });
         setTimeout(() => {
-          root.dispatchEvent(
-            new CustomEvent("toast:show", {
-              detail: {
-                id,
-                title: "Upload complete",
-                description: "All files synced successfully.",
-                type: "success",
-                duration: 3200,
-                action: { label: "View", value: "view" },
-              },
-            }),
-          );
+          controller.update(id, {
+            title: "Upload complete",
+            description: "All files synced successfully.",
+            type: "success",
+            duration: 3200,
+            action: { label: "View", value: "view" },
+          });
         }, 1200);
         return;
       }

@@ -12,6 +12,12 @@
     "description": "Shared utilities"
   },
   {
+    "name": "@data-slot/toast",
+    "size": 4676,
+    "sizeFormatted": "4.6 KB",
+    "description": "Imperative notifications"
+  },
+  {
     "name": "@data-slot/combobox",
     "size": 4241,
     "sizeFormatted": "4.1 KB",
@@ -22,12 +28,6 @@
     "size": 3861,
     "sizeFormatted": "3.8 KB",
     "description": "Dropdown select, form-ready"
-  },
-  {
-    "name": "@data-slot/toast",
-    "size": 3008,
-    "sizeFormatted": "2.9 KB",
-    "description": "Imperative notifications"
   },
   {
     "name": "@data-slot/dropdown-menu",
