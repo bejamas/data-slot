@@ -87,3 +87,11 @@ export type {
   CommandController,
   CommandFilter,
 } from "@data-slot/command";
+export { createCarousel } from "@data-slot/carousel";
+export type {
+  CarouselOptions,
+  CarouselController,
+} from "@data-slot/carousel";
+
+export { createToast } from "@data-slot/toast";
+export type { ToastPosition, ToastAction, ToastShowOptions, ToastOptions, ToastController } from "@data-slot/toast";
