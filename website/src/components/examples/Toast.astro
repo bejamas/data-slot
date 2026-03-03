@@ -68,7 +68,7 @@ const cssCode = `<div class="toast-demo-stack toast-demo-shell">
     list-style: none;
     margin: 0;
     padding: 0;
-    --toast-gap: 8;
+    --toast-gap: 14;
     pointer-events: auto;
     z-index: 80;
   }
@@ -87,17 +87,35 @@ const cssCode = `<div class="toast-demo-stack toast-demo-shell">
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
     transform: translate3d(
         0,
-        calc(var(--toast-index, 0) * 8px * var(--toast-stack-direction, -1)),
+        calc(var(--toast-index, 0) * 14px * var(--toast-stack-direction, -1)),
         0
       )
-      scale(calc(1 - var(--toast-index, 0) * 0.04));
-    opacity: calc(1 - var(--toast-index, 0) * 0.14);
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
+    opacity: 1;
     transition:
       transform 400ms ease,
       opacity 400ms ease,
+      height 400ms ease,
       box-shadow 200ms ease;
     will-change: transform, opacity;
     pointer-events: auto;
+  }
+
+  [data-slot="toast-item"] > * {
+    transition: opacity 400ms;
+  }
+
+  [data-slot="toast-item"][data-visible="false"] {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  [data-slot="toast-viewport"]:not([data-expanded]) [data-slot="toast-item"]:not([data-front]):not([data-state="closed"]) {
+    height: var(--toast-frontmost-height, auto);
+  }
+
+  [data-slot="toast-viewport"]:not([data-expanded]) [data-slot="toast-item"]:not([data-front]):not([data-state="closed"]) > * {
+    opacity: 0;
   }
 
   [data-slot="toast-item"][data-front] {
@@ -110,18 +128,17 @@ const cssCode = `<div class="toast-demo-stack toast-demo-shell">
       calc(var(--toast-offset-y, 0px) * var(--toast-stack-direction, -1)),
       0
     );
-    opacity: 1;
   }
 
   [data-slot="toast-item"][data-starting-style] {
-    transform: translate3d(0, calc(var(--toast-enter-direction, var(--toast-stack-direction, -1)) * -160%), 0)
-      scale(calc(1 - var(--toast-index, 0) * 0.04));
+    transform: translate3d(0, calc(var(--toast-enter-direction, var(--toast-stack-direction, -1)) * -100%), 0)
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
     opacity: 0;
   }
 
   [data-slot="toast-item"][data-ending-style] {
-    transform: translate3d(0, calc(var(--toast-exit-direction, var(--toast-stack-direction, -1)) * -160%), 0)
-      scale(calc(1 - var(--toast-index, 0) * 0.04));
+    transform: translate3d(0, calc(var(--toast-exit-direction, var(--toast-stack-direction, -1)) * -100%), 0)
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
     opacity: 0;
   }
 
@@ -216,7 +233,7 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
   width: min(22rem, calc(100vw - 2rem));
   height: var(--toast-stack-size, 0px);
   min-height: 1px;
-  --toast-gap: 8;
+  --toast-gap: 14;
   pointer-events: auto;
   z-index: 80;
 }
@@ -224,17 +241,35 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
 [data-slot="toast-item"] {
   transform: translate3d(
       0,
-      calc(var(--toast-index, 0) * 8px * var(--toast-stack-direction, -1)),
+      calc(var(--toast-index, 0) * 14px * var(--toast-stack-direction, -1)),
       0
     )
-    scale(calc(1 - var(--toast-index, 0) * 0.04));
-  opacity: calc(1 - var(--toast-index, 0) * 0.14);
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
+  opacity: 1;
   transition:
     transform 400ms ease,
     opacity 400ms ease,
+    height 400ms ease,
     box-shadow 200ms ease;
   will-change: transform, opacity;
   pointer-events: auto;
+}
+
+[data-slot="toast-item"] > * {
+  transition: opacity 400ms;
+}
+
+[data-slot="toast-item"][data-visible="false"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-slot="toast-viewport"]:not([data-expanded]) [data-slot="toast-item"]:not([data-front]):not([data-state="closed"]) {
+  height: var(--toast-frontmost-height, auto);
+}
+
+[data-slot="toast-viewport"]:not([data-expanded]) [data-slot="toast-item"]:not([data-front]):not([data-state="closed"]) > * {
+  opacity: 0;
 }
 
 [data-slot="toast-viewport"][data-expanded] [data-slot="toast-item"] {
@@ -243,18 +278,17 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
     calc(var(--toast-offset-y, 0px) * var(--toast-stack-direction, -1)),
     0
   );
-  opacity: 1;
 }
 
 [data-slot="toast-item"][data-starting-style] {
-  transform: translate3d(0, calc(var(--toast-enter-direction, var(--toast-stack-direction, -1)) * -160%), 0)
-    scale(calc(1 - var(--toast-index, 0) * 0.04));
+  transform: translate3d(0, calc(var(--toast-enter-direction, var(--toast-stack-direction, -1)) * -100%), 0)
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
   opacity: 0;
 }
 
 [data-slot="toast-item"][data-ending-style] {
-  transform: translate3d(0, calc(var(--toast-exit-direction, var(--toast-stack-direction, -1)) * -160%), 0)
-    scale(calc(1 - var(--toast-index, 0) * 0.04));
+  transform: translate3d(0, calc(var(--toast-exit-direction, var(--toast-stack-direction, -1)) * -100%), 0)
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
   opacity: 0;
 }`;
 ---
@@ -373,7 +407,7 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
     list-style: none;
     margin: 0;
     padding: 0;
-    --toast-gap: 8;
+    --toast-gap: 14;
     pointer-events: auto;
     z-index: 80;
   }
@@ -393,17 +427,35 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
     box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24);
     transform: translate3d(
         0,
-        calc(var(--toast-index, 0) * 8px * var(--toast-stack-direction, -1)),
+        calc(var(--toast-index, 0) * 14px * var(--toast-stack-direction, -1)),
         0
       )
-      scale(calc(1 - var(--toast-index, 0) * 0.04));
-    opacity: calc(1 - var(--toast-index, 0) * 0.14);
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
+    opacity: 1;
     transition:
       transform 400ms ease,
       opacity 400ms ease,
+      height 400ms ease,
       box-shadow 200ms ease;
     will-change: transform, opacity;
     pointer-events: auto;
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"] > * {
+    transition: opacity 400ms;
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-visible="false"] {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .toast-demo-viewport:not([data-expanded]) [data-slot="toast-item"]:not([data-front]):not([data-state="closed"]) {
+    height: var(--toast-frontmost-height, auto);
+  }
+
+  .toast-demo-viewport:not([data-expanded]) [data-slot="toast-item"]:not([data-front]):not([data-state="closed"]) > * {
+    opacity: 0;
   }
 
   .toast-demo-viewport [data-slot="toast-item"][data-front] {
@@ -416,18 +468,17 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
       calc(var(--toast-offset-y, 0px) * var(--toast-stack-direction, -1)),
       0
     );
-    opacity: 1;
   }
 
   .toast-demo-viewport [data-slot="toast-item"][data-starting-style] {
-    transform: translate3d(0, calc(var(--toast-enter-direction, var(--toast-stack-direction, -1)) * -160%), 0)
-      scale(calc(1 - var(--toast-index, 0) * 0.04));
+    transform: translate3d(0, calc(var(--toast-enter-direction, var(--toast-stack-direction, -1)) * -100%), 0)
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
     opacity: 0;
   }
 
   .toast-demo-viewport [data-slot="toast-item"][data-ending-style] {
-    transform: translate3d(0, calc(var(--toast-exit-direction, var(--toast-stack-direction, -1)) * -160%), 0)
-      scale(calc(1 - var(--toast-index, 0) * 0.04));
+    transform: translate3d(0, calc(var(--toast-exit-direction, var(--toast-stack-direction, -1)) * -100%), 0)
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
     opacity: 0;
   }
 

@@ -73,7 +73,7 @@ const toaster = createToast(element, {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `limit` | `number` | `3` | Maximum visible toasts at once; newest toasts stay visible and older ones move to queue |
+| `limit` | `number` | `3` | Maximum visible toasts at once; older toasts stay mounted with `data-visible="false"` |
 | `duration` | `number` | `5000` | Default auto-dismiss duration in ms (`0` = persistent) |
 | `position` | `"top-left" \| "top-center" \| "top-right" \| "bottom-left" \| "bottom-center" \| "bottom-right"` | `"bottom-right"` | Position token exposed as `data-position` on root |
 | `pauseOnHover` | `boolean` | `true` | Pause all active timers while viewport is hovered |
@@ -127,11 +127,11 @@ await handled.unwrap();
 | Method / Property | Description |
 |-------------------|-------------|
 | `show(options)` | Create and show a toast, returns its id |
-| `update(id, patch)` | Patch an existing active/queued toast in place |
+| `update(id, patch)` | Patch an existing active toast in place (visible or overflow-hidden) |
 | `promise(input, options)` | Drive loading/success/error toast states from a promise, returns `{ id, unwrap() }` |
 | `dismiss(id)` | Dismiss one toast |
 | `dismissAll()` | Dismiss all active toasts |
-| `count` | Active (non-exiting) toast count |
+| `count` | Total active (non-exiting) toast count, including overflow-hidden items |
 | `destroy()` | Cleanup listeners, timers, observers and restore portaled viewport |
 
 ## Slots
@@ -157,7 +157,7 @@ JS options take precedence over data attributes.
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `data-limit` | number | `3` | Max visible toasts at once (older items queue when full) |
+| `data-limit` | number | `3` | Max visible toasts at once (older items remain mounted, hidden, and non-interactive when full) |
 | `data-duration` | number | `5000` | Default duration in ms |
 | `data-position` | position token | `"bottom-right"` | Placement hint for styling |
 | `data-pause-on-hover` | boolean | `true` | Hover-based timer pause |
@@ -166,8 +166,9 @@ JS options take precedence over data attributes.
 
 Runtime attributes:
 
-- `toast-item`: `data-id`, `data-type`, `data-state`, `data-open`, `data-closed`, `data-front`, `data-starting-style`, `data-ending-style`
+- `toast-item`: `data-id`, `data-type`, `data-state`, `data-open`, `data-closed`, `data-front`, `data-visible`, `data-starting-style`, `data-ending-style`
 - `toast-item`: `data-swiping`, `data-swipe-out`, `data-dismissible="false"` (when swiping is disabled)
+- `toast-item`: `aria-hidden`, `inert` while `data-visible="false"` (removed when visible again)
 - `toast-viewport`: `data-expanded` (hover/focus fan-out state)
 
 ## Animation Tokens
@@ -179,9 +180,9 @@ The controller computes and writes stack tokens for animation styling:
 - `--toast-height`
 - `--toast-offset-y`
 - `--toast-frontmost-height` (on viewport)
-- `--toast-stack-size` (on viewport, full visible stack hit-area)
+- `--toast-stack-size` (on viewport, visible stack hit-area only; bounded by `limit`)
 - `--toast-stack-direction` (`1` for top stacks, `-1` for bottom stacks)
-- `--toast-enter-direction` (item-level; may differ for promoted queued items)
+- `--toast-enter-direction` (item-level; stack-aware entry direction)
 - `--toast-exit-direction` (item-level; stable exit direction for stack position)
 - `--toast-swipe-movement-y` (item-level; live vertical swipe offset)
 

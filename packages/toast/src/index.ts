@@ -34,6 +34,20 @@ const DEFAULT_DURATION = 5000;
 const DEFAULT_POSITION: ToastPosition = "bottom-right";
 const DEFAULT_GAP = 8;
 const DEFAULT_SWIPE_THRESHOLD = 80;
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "area[href]",
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "iframe",
+  '[tabindex]:not([tabindex^="-"])',
+  '[contenteditable=""]',
+  '[contenteditable="true"]',
+].join(", ");
+const PREV_TAB_INDEX_ATTR = "data-toast-prev-tabindex";
+const NO_TAB_INDEX = "__none__";
 
 export type ToastPosition = (typeof POSITIONS)[number];
 type ToastType = (typeof TOAST_TYPES)[number];
@@ -139,7 +153,6 @@ interface ToastEntry {
   action?: ToastAction;
   toast: ResolvedToast;
   exiting: boolean;
-  demoted: boolean;
 }
 
 interface ResolvedToast {
@@ -152,10 +165,6 @@ interface ResolvedToast {
   dismissible: boolean;
   closeButtonAriaLabel?: string;
   testId?: string;
-}
-
-interface QueuedToast extends ResolvedToast {
-  queuedAt: number;
 }
 
 interface ToastChangeDetail {
@@ -456,8 +465,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
   const entries = new Map<string, ToastEntry>();
   const activeOrder: string[] = [];
-  const queued = new Map<string, QueuedToast>();
-  const queueOrder: string[] = [];
+  const closeButtonLabelDefaults = new WeakMap<HTMLElement, string | null>();
   const cleanups: Array<() => void> = [];
 
   let idCounter = 0;
@@ -488,50 +496,60 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }
   };
 
-  const demoteOldestVisibleToQueue = () => {
-    const oldestId = activeOrder[0];
-    if (!oldestId) return;
-
-    const entry = entries.get(oldestId);
-    if (!entry || entry.exiting) return;
-
-    if (entry.duration > 0 && entry.timerId) {
-      const elapsed = Date.now() - entry.startedAt;
-      entry.remainingMs = Math.max(0, entry.remainingMs - elapsed);
+  const getFocusableNodes = (item: HTMLElement): HTMLElement[] => {
+    const nodes = [...item.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)];
+    if (item.matches(FOCUSABLE_SELECTOR)) {
+      nodes.unshift(item);
     }
-
-    clearTimer(entry);
-    removeFromActiveOrder(oldestId);
-    unobserveItem(entry.element);
-
-    const queuedToast: QueuedToast = {
-      ...entry.toast,
-      duration: entry.duration <= 0 ? 0 : Math.max(1, entry.remainingMs),
-      queuedAt: Date.now(),
-    };
-
-    queued.set(oldestId, queuedToast);
-    queueOrder.push(oldestId);
-    entry.demoted = true;
-    entry.exiting = true;
-    entry.element.removeAttribute("data-front");
-    entry.element.style.zIndex = "0";
-    entry.element.style.pointerEvents = "none";
-    setOpenState(entry.element, "closed");
-    reindex();
-    entry.presence.exit();
+    return nodes;
   };
 
-  const removeQueued = (id: string): QueuedToast | null => {
-    const queuedToast = queued.get(id);
-    if (!queuedToast) return null;
-    queued.delete(id);
-    const idx = queueOrder.indexOf(id);
-    if (idx !== -1) {
-      queueOrder.splice(idx, 1);
+  const setItemVisibilityInteractivity = (item: HTMLElement, isVisible: boolean) => {
+    if (isVisible) {
+      item.removeAttribute("aria-hidden");
+      item.removeAttribute("inert");
+
+      for (const node of getFocusableNodes(item)) {
+        if (!node.hasAttribute(PREV_TAB_INDEX_ATTR)) continue;
+
+        const previousTabIndex = node.getAttribute(PREV_TAB_INDEX_ATTR);
+        node.removeAttribute(PREV_TAB_INDEX_ATTR);
+        if (!previousTabIndex || previousTabIndex === NO_TAB_INDEX) {
+          node.removeAttribute("tabindex");
+        } else {
+          node.setAttribute("tabindex", previousTabIndex);
+        }
+      }
+      return;
     }
-    return queuedToast;
+
+    item.setAttribute("aria-hidden", "true");
+    item.setAttribute("inert", "");
+
+    for (const node of getFocusableNodes(item)) {
+      if (!node.hasAttribute(PREV_TAB_INDEX_ATTR)) {
+        const existingTabIndex = node.getAttribute("tabindex");
+        node.setAttribute(
+          PREV_TAB_INDEX_ATTR,
+          existingTabIndex === null ? NO_TAB_INDEX : existingTabIndex,
+        );
+      }
+      node.setAttribute("tabindex", "-1");
+    }
   };
+
+  const isVisibleFocusTarget = (target: EventTarget | null): boolean => {
+    if (!(target instanceof Node) || !viewport.contains(target)) return false;
+    if (!(target instanceof Element)) return true;
+
+    const item = target.closest<HTMLElement>('[data-slot="toast-item"]');
+    if (!item || !viewport.contains(item)) return true;
+
+    return item.getAttribute("data-visible") === "true" && item.getAttribute("data-state") === "open";
+  };
+
+  const hasVisibleFocusWithinViewport = () =>
+    isVisibleFocusTarget(doc.activeElement);
 
   const reindex = () => {
     const newestFirst: ToastEntry[] = [];
@@ -547,11 +565,15 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     const gap = getCssGap(viewport);
     const count = newestFirst.length;
     let cumulativeOffset = 0;
+    let visibleCumulativeOffset = 0;
+    let visibleCount = 0;
     let frontHeight = 0;
 
     for (let index = 0; index < newestFirst.length; index += 1) {
       const entry = newestFirst[index];
       if (!entry) continue;
+      const isVisible = index < resolvedLimit;
+      const wasVisible = entry.element.getAttribute("data-visible") !== "false";
 
       const rect = entry.element.getBoundingClientRect();
       const height = rect.height > 0 ? rect.height : entry.element.offsetHeight;
@@ -568,16 +590,37 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       entry.element.style.setProperty("--toast-offset-y", `${cumulativeOffset}px`);
       entry.element.style.setProperty("--toast-stack-direction", String(stackDirection));
       entry.element.style.zIndex = String(count - index + 1);
-      entry.element.style.pointerEvents = "";
+      entry.element.style.pointerEvents = isVisible ? "" : "none";
+      entry.element.setAttribute("data-visible", isVisible ? "true" : "false");
+      if (!isVisible && wasVisible) {
+        const active = doc.activeElement;
+        if (active instanceof HTMLElement && entry.element.contains(active)) {
+          active.blur();
+        }
+      }
+      setItemVisibilityInteractivity(entry.element, isVisible);
 
       cumulativeOffset += height + gap;
+      if (isVisible) {
+        visibleCount += 1;
+        visibleCumulativeOffset += height + gap;
+      }
     }
 
-    const stackSize = count > 0 ? Math.max(0, cumulativeOffset - gap) : 0;
+    const stackSize =
+      visibleCount > 0 ? Math.max(0, visibleCumulativeOffset - gap) : 0;
     viewport.style.setProperty("--toast-count", String(count));
     viewport.style.setProperty("--toast-frontmost-height", `${frontHeight}px`);
     viewport.style.setProperty("--toast-stack-size", `${stackSize}px`);
     viewport.style.setProperty("--toast-stack-direction", String(stackDirection));
+
+    if (pauseOnFocus) {
+      const nextPauseFocus = hasVisibleFocusWithinViewport();
+      if (pauseFocus !== nextPauseFocus) {
+        pauseFocus = nextPauseFocus;
+      }
+    }
+    syncPauseState();
   };
 
   const isPaused = () => pauseHover || pauseFocus;
@@ -594,13 +637,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   };
 
   const dismiss = (id: string) => {
-    const removedQueued = removeQueued(id);
-    if (removedQueued) {
-      emit<ToastChangeDetail>(root, "toast:change", { id, action: "dismiss" });
-      onDismiss?.(id);
-      return;
-    }
-
     const entry = entries.get(id);
     if (!entry || entry.exiting) return;
 
@@ -612,7 +648,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     entry.element.style.pointerEvents = "none";
     setOpenState(entry.element, "closed");
     reindex();
-    flushQueue();
 
     emit<ToastChangeDetail>(root, "toast:change", { id, action: "dismiss" });
     onDismiss?.(id);
@@ -746,9 +781,20 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }
 
     if (closeSlot) {
+      if (!closeButtonLabelDefaults.has(closeSlot)) {
+        closeButtonLabelDefaults.set(closeSlot, closeSlot.getAttribute("aria-label"));
+      }
       if (toast.closeButtonAriaLabel && toast.closeButtonAriaLabel.trim() !== "") {
         closeSlot.setAttribute("aria-label", toast.closeButtonAriaLabel);
-      } else if (!closeSlot.getAttribute("aria-label")) {
+      } else {
+        const defaultCloseLabel = closeButtonLabelDefaults.get(closeSlot);
+        if (defaultCloseLabel && defaultCloseLabel.trim() !== "") {
+          closeSlot.setAttribute("aria-label", defaultCloseLabel);
+        } else {
+          closeSlot.setAttribute("aria-label", "Close");
+        }
+      }
+      if (!closeSlot.getAttribute("aria-label")) {
         closeSlot.setAttribute("aria-label", "Close");
       }
     }
@@ -761,7 +807,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     do {
       idCounter += 1;
       candidate = `toast-${idCounter}`;
-    } while (entries.has(candidate) || queued.has(candidate));
+    } while (entries.has(candidate));
     return candidate;
   };
 
@@ -776,47 +822,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }, entry.remainingMs);
   };
 
-  const flushQueue = () => {
-    while (activeOrder.length < resolvedLimit) {
-      const nextId = queueOrder[queueOrder.length - 1];
-      if (!nextId) return;
-      if (entries.has(nextId)) return;
-
-      queueOrder.pop();
-
-      const nextQueued = queued.get(nextId);
-      if (!nextQueued) continue;
-
-      queued.delete(nextId);
-
-      let remaining = nextQueued.duration;
-      if (remaining > 0) {
-        const elapsedHidden = Date.now() - nextQueued.queuedAt;
-        remaining = Math.max(0, remaining - elapsedHidden);
-      }
-
-      if (remaining <= 0 && nextQueued.duration > 0) {
-        emit<ToastChangeDetail>(root, "toast:change", { id: nextQueued.id, action: "dismiss" });
-        onDismiss?.(nextQueued.id);
-        continue;
-      }
-
-      const next: ResolvedToast = {
-        id: nextQueued.id,
-        title: nextQueued.title,
-        description: nextQueued.description,
-        type: nextQueued.type,
-        duration: remaining,
-        action: nextQueued.action,
-        dismissible: nextQueued.dismissible,
-        closeButtonAriaLabel: nextQueued.closeButtonAriaLabel,
-        testId: nextQueued.testId,
-      };
-
-      mountToast(next, "oldest");
-    }
-  };
-
   const finishExit = (id: string) => {
     const entry = entries.get(id);
     if (!entry) return;
@@ -827,18 +832,14 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     entry.element.remove();
     entries.delete(id);
     reindex();
-    flushQueue();
   };
 
-  const mountToast = (toast: ResolvedToast, placement: "newest" | "oldest" = "newest") => {
+  const mountToast = (toast: ResolvedToast) => {
     const { fragment, item } = resolveTemplateFragment();
 
     item.setAttribute("data-id", toast.id);
     applyToastContentToItem(item, toast);
-    item.style.setProperty(
-      "--toast-enter-direction",
-      String(placement === "newest" ? stackDirection : -stackDirection),
-    );
+    item.style.setProperty("--toast-enter-direction", String(stackDirection));
     item.style.setProperty("--toast-exit-direction", String(stackDirection));
     item.style.setProperty("--toast-swipe-movement-y", "0px");
     setOpenState(item, "open");
@@ -860,15 +861,10 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       action: toast.action,
       toast,
       exiting: false,
-      demoted: false,
     };
 
     entries.set(toast.id, entry);
-    if (placement === "oldest") {
-      activeOrder.unshift(toast.id);
-    } else {
-      activeOrder.push(toast.id);
-    }
+    activeOrder.push(toast.id);
     entry.presence.enter();
     viewport.appendChild(fragment);
 
@@ -895,11 +891,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       forceRemoveEntry(id, true);
     }
 
-    if (removeQueued(id)) {
-      emit<ToastChangeDetail>(root, "toast:change", { id, action: "dismiss" });
-      onDismiss?.(id);
-    }
-
     const toast: ResolvedToast = {
       id,
       title: showOptions.title,
@@ -911,10 +902,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       closeButtonAriaLabel: showOptions.closeButtonAriaLabel,
       testId: showOptions.testId,
     };
-
-    if (activeOrder.length >= resolvedLimit) {
-      demoteOldestVisibleToQueue();
-    }
 
     mountToast(toast);
     return id;
@@ -956,16 +943,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
   const updateInternal = (id: string, patch: ToastUpdateOptions): boolean => {
     if (!id || id.trim() === "") return false;
-
-    const queuedToast = queued.get(id);
-    if (queuedToast) {
-      const { next, durationChanged } = resolveUpdatedToast(queuedToast, patch);
-      queued.set(id, {
-        ...next,
-        queuedAt: durationChanged ? Date.now() : queuedToast.queuedAt,
-      });
-      return true;
-    }
 
     const entry = entries.get(id);
     if (!entry || entry.exiting) return false;
@@ -1052,10 +1029,11 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     });
     const id = show(loadingOptions);
 
-    const task =
+    const task: Promise<T> = Promise.resolve().then(() =>
       typeof input === "function"
         ? (input as () => Promise<T>)()
-        : input;
+        : input,
+    );
 
     const tracked = task
       .then((value) => {
@@ -1091,10 +1069,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   };
 
   const dismissAll = () => {
-    for (const id of [...queueOrder]) {
-      dismiss(id);
-    }
-
     for (const id of [...activeOrder]) {
       dismiss(id);
     }
@@ -1267,16 +1241,22 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   );
 
   cleanups.push(
-    on(viewport, "focusin", () => {
+    on(viewport, "focusin", (event) => {
       if (!pauseOnFocus) return;
-      pauseFocus = true;
+      pauseFocus =
+        isVisibleFocusTarget((event as FocusEvent).target) ||
+        hasVisibleFocusWithinViewport();
       syncPauseState();
     }),
     on(viewport, "focusout", (event) => {
       if (!pauseOnFocus) return;
       const nextTarget = (event as FocusEvent).relatedTarget;
-      if (nextTarget instanceof Node && viewport.contains(nextTarget)) return;
-      pauseFocus = false;
+      if (isVisibleFocusTarget(nextTarget)) {
+        pauseFocus = true;
+        syncPauseState();
+        return;
+      }
+      pauseFocus = hasVisibleFocusWithinViewport();
       syncPauseState();
     }),
   );
@@ -1332,8 +1312,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       }
       entries.clear();
       activeOrder.length = 0;
-      queued.clear();
-      queueOrder.length = 0;
 
       portal.cleanup();
       bound.delete(root);
