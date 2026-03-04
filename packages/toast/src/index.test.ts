@@ -115,6 +115,9 @@ describe("Toast", () => {
     controller.show({ title: "Two" });
 
     expect(root.getAttribute("data-position")).toBe("bottom-center");
+    expect(root.querySelector('[data-slot="toast-viewport"]')?.getAttribute("data-position")).toBe(
+      "bottom-center",
+    );
     expect(controller.count).toBe(2);
     expect(root.querySelectorAll('[data-slot="toast-item"][data-visible="true"]')).toHaveLength(1);
 
@@ -1118,8 +1121,14 @@ describe("Toast", () => {
     expect(first.hasAttribute("data-front")).toBe(false);
     expect(second.style.getPropertyValue("--toast-index")).toBe("0");
     expect(first.style.getPropertyValue("--toast-index")).toBe("1");
+    expect(second.style.getPropertyValue("--toast-expanded-offset-y")).toContain("px");
+    expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toContain("px");
     expect(viewport.style.getPropertyValue("--toast-count")).toBe("2");
-    expect(viewport.style.getPropertyValue("--toast-stack-size")).toContain("px");
+    expect(viewport.style.getPropertyValue("--toast-expanded-stack-size")).toContain("px");
+    expect(viewport.style.getPropertyValue("--toast-collapsed-stack-size")).toContain("px");
+    expect(viewport.style.getPropertyValue("--toast-stack-size")).toBe(
+      viewport.style.getPropertyValue("--toast-collapsed-stack-size"),
+    );
 
     controller.destroy();
   });
@@ -1183,9 +1192,204 @@ describe("Toast", () => {
         (resizeCb as ResizeObserverCallback)([], {} as ResizeObserver);
       }
 
+      expect(first.style.getPropertyValue("--toast-expanded-offset-y")).toBe("88px");
+      expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("34px");
       expect(first.style.getPropertyValue("--toast-offset-y")).toBe("88px");
+      expect(second.style.getPropertyValue("--toast-expanded-offset-y")).toBe("0px");
+      expect(second.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("0px");
       expect(second.style.getPropertyValue("--toast-offset-y")).toBe("0px");
-      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("148px");
+      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
+        "148px",
+      );
+      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-collapsed-stack-size")).toBe(
+        "94px",
+      );
+      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("94px");
+
+      controller.destroy();
+    } finally {
+      (
+        globalThis as unknown as {
+          ResizeObserver?: typeof ResizeObserver;
+        }
+      ).ResizeObserver = OriginalResizeObserver;
+    }
+  });
+
+  it("uses intrinsic toast height for stack offsets when rendered height is collapsed", () => {
+    const OriginalResizeObserver = globalThis.ResizeObserver;
+    let resizeCb: ResizeObserverCallback | null = null;
+
+    class MockResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        resizeCb = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+
+    (
+      globalThis as unknown as {
+        ResizeObserver?: typeof ResizeObserver;
+      }
+    ).ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+    try {
+      const { root, controller } = setup({ duration: 0 });
+
+      const firstId = controller.show({ title: "Tall older" });
+      const secondId = controller.show({ title: "Short front" });
+
+      const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
+      const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
+
+      first.getBoundingClientRect =
+        (() =>
+          ({
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            width: 200,
+            height: 60,
+            right: 200,
+            bottom: 60,
+            toJSON: () => ({}),
+          }) as DOMRect);
+      second.getBoundingClientRect =
+        (() =>
+          ({
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            width: 200,
+            height: 60,
+            right: 200,
+            bottom: 60,
+            toJSON: () => ({}),
+          }) as DOMRect);
+
+      Object.defineProperty(first, "offsetHeight", { configurable: true, value: 60 });
+      Object.defineProperty(second, "offsetHeight", { configurable: true, value: 60 });
+      Object.defineProperty(first, "scrollHeight", { configurable: true, value: 140 });
+      Object.defineProperty(second, "scrollHeight", { configurable: true, value: 60 });
+
+      if (resizeCb) {
+        (resizeCb as ResizeObserverCallback)([], {} as ResizeObserver);
+      }
+
+      expect(first.style.getPropertyValue("--toast-height")).toBe("140px");
+      expect(first.style.getPropertyValue("--toast-expanded-offset-y")).toBe("68px");
+      expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("-66px");
+      expect(first.style.getPropertyValue("--toast-offset-y")).toBe("68px");
+      expect(second.style.getPropertyValue("--toast-height")).toBe("60px");
+      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
+        "208px",
+      );
+      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-collapsed-stack-size")).toBe(
+        "74px",
+      );
+      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("74px");
+
+      controller.destroy();
+    } finally {
+      (
+        globalThis as unknown as {
+          ResizeObserver?: typeof ResizeObserver;
+        }
+      ).ResizeObserver = OriginalResizeObserver;
+    }
+  });
+
+  it("keeps a fixed collapsed peek distance across mixed toast heights", () => {
+    const OriginalResizeObserver = globalThis.ResizeObserver;
+    let resizeCb: ResizeObserverCallback | null = null;
+
+    class MockResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        resizeCb = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+
+    (
+      globalThis as unknown as {
+        ResizeObserver?: typeof ResizeObserver;
+      }
+    ).ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+    try {
+      const { root, controller } = setup({ duration: 0 });
+
+      const firstId = controller.show({ title: "Oldest" });
+      const secondId = controller.show({ title: "Middle" });
+      const thirdId = controller.show({ title: "Newest" });
+
+      const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
+      const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
+      const third = root.querySelector(`[data-id="${thirdId}"]`) as HTMLElement;
+
+      first.getBoundingClientRect =
+        (() =>
+          ({
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            width: 200,
+            height: 110,
+            right: 200,
+            bottom: 110,
+            toJSON: () => ({}),
+          }) as DOMRect);
+      second.getBoundingClientRect =
+        (() =>
+          ({
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            width: 200,
+            height: 70,
+            right: 200,
+            bottom: 70,
+            toJSON: () => ({}),
+          }) as DOMRect);
+      third.getBoundingClientRect =
+        (() =>
+          ({
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            width: 200,
+            height: 90,
+            right: 200,
+            bottom: 90,
+            toJSON: () => ({}),
+          }) as DOMRect);
+
+      if (resizeCb) {
+        (resizeCb as ResizeObserverCallback)([], {} as ResizeObserver);
+      }
+
+      const c0 = Number.parseFloat(third.style.getPropertyValue("--toast-collapsed-offset-y"));
+      const c1 = Number.parseFloat(second.style.getPropertyValue("--toast-collapsed-offset-y"));
+      const c2 = Number.parseFloat(first.style.getPropertyValue("--toast-collapsed-offset-y"));
+      const h0 = Number.parseFloat(third.style.getPropertyValue("--toast-height"));
+      const h1 = Number.parseFloat(second.style.getPropertyValue("--toast-height"));
+      const h2 = Number.parseFloat(first.style.getPropertyValue("--toast-height"));
+
+      expect(c0).toBe(0);
+      expect(c1).toBe(34);
+      expect(c2).toBe(8);
+
+      expect(c1 + h1 - (c0 + h0)).toBeCloseTo(14, 3);
+      expect(c2 + h2 - (c1 + h1)).toBeCloseTo(14, 3);
 
       controller.destroy();
     } finally {
@@ -1258,6 +1462,12 @@ describe("Toast", () => {
 
       expect(first.getAttribute("data-visible")).toBe("false");
       expect(second.getAttribute("data-visible")).toBe("true");
+      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
+        "80px",
+      );
+      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-collapsed-stack-size")).toBe(
+        "80px",
+      );
       expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe(
         "80px",
       );
@@ -1270,6 +1480,97 @@ describe("Toast", () => {
         }
       ).ResizeObserver = OriginalResizeObserver;
     }
+  });
+
+  it("switches active --toast-stack-size between collapsed and expanded states", () => {
+    const OriginalResizeObserver = globalThis.ResizeObserver;
+    let resizeCb: ResizeObserverCallback | null = null;
+
+    class MockResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        resizeCb = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+
+    (
+      globalThis as unknown as {
+        ResizeObserver?: typeof ResizeObserver;
+      }
+    ).ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+    try {
+      const { root, viewport, controller } = setup({ duration: 0 });
+
+      const firstId = controller.show({ title: "One" });
+      const secondId = controller.show({ title: "Two" });
+
+      const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
+      const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
+
+      first.getBoundingClientRect =
+        (() =>
+          ({
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            width: 200,
+            height: 60,
+            right: 200,
+            bottom: 60,
+            toJSON: () => ({}),
+          }) as DOMRect);
+      second.getBoundingClientRect =
+        (() =>
+          ({
+            x: 0,
+            y: 0,
+            top: 0,
+            left: 0,
+            width: 200,
+            height: 80,
+            right: 200,
+            bottom: 80,
+            toJSON: () => ({}),
+          }) as DOMRect);
+
+      if (resizeCb) {
+        (resizeCb as ResizeObserverCallback)([], {} as ResizeObserver);
+      }
+
+      expect(viewport.hasAttribute("data-expanded")).toBe(false);
+      expect(viewport.style.getPropertyValue("--toast-stack-size")).toBe("94px");
+
+      viewport.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
+      expect(viewport.hasAttribute("data-expanded")).toBe(true);
+      expect(viewport.style.getPropertyValue("--toast-stack-size")).toBe("148px");
+
+      viewport.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true }));
+      expect(viewport.hasAttribute("data-expanded")).toBe(false);
+      expect(viewport.style.getPropertyValue("--toast-stack-size")).toBe("94px");
+
+      controller.destroy();
+    } finally {
+      (
+        globalThis as unknown as {
+          ResizeObserver?: typeof ResizeObserver;
+        }
+      ).ResizeObserver = OriginalResizeObserver;
+    }
+  });
+
+  it("does not inline override --toast-collapsed-peek", () => {
+    const { viewport, controller } = setup({ duration: 0 });
+
+    controller.show({ title: "One" });
+    controller.show({ title: "Two" });
+
+    expect(viewport.style.getPropertyValue("--toast-collapsed-peek")).toBe("");
+
+    controller.destroy();
   });
 
   it("create() auto-binds and allows rebind after destroy", () => {

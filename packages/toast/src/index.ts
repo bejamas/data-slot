@@ -33,6 +33,7 @@ const DEFAULT_LIMIT = 3;
 const DEFAULT_DURATION = 5000;
 const DEFAULT_POSITION: ToastPosition = "bottom-right";
 const DEFAULT_GAP = 8;
+const DEFAULT_COLLAPSED_PEEK = 14;
 const DEFAULT_SWIPE_THRESHOLD = 80;
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -209,6 +210,28 @@ const getCssGap = (viewport: HTMLElement): number => {
   if (!raw) return DEFAULT_GAP;
   const parsed = Number.parseFloat(raw);
   return Number.isFinite(parsed) ? parsed : DEFAULT_GAP;
+};
+
+const getCssCollapsedPeek = (viewport: HTMLElement): number => {
+  const raw = getComputedStyle(viewport).getPropertyValue("--toast-collapsed-peek").trim();
+  if (!raw) return DEFAULT_COLLAPSED_PEEK;
+  const parsed = Number.parseFloat(raw);
+  if (!Number.isFinite(parsed)) return DEFAULT_COLLAPSED_PEEK;
+  return Math.max(0, parsed);
+};
+
+const getToastHeight = (item: HTMLElement): number => {
+  const rectHeight = item.getBoundingClientRect().height;
+  const renderedHeight = rectHeight > 0 ? rectHeight : item.offsetHeight;
+  const intrinsicHeight = item.scrollHeight;
+
+  if (intrinsicHeight > 0 && renderedHeight > 0) {
+    return Math.max(intrinsicHeight, renderedHeight);
+  }
+  if (intrinsicHeight > 0) {
+    return intrinsicHeight;
+  }
+  return renderedHeight;
 };
 
 const isTemplateElement = (el: Element | null): el is HTMLTemplateElement =>
@@ -446,6 +469,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const stackDirection = getStackDirection(position);
 
   root.setAttribute("data-position", position);
+  viewport.setAttribute("data-position", position);
   if (!viewport.hasAttribute("role")) {
     viewport.setAttribute("role", "region");
   }
@@ -551,6 +575,22 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const hasVisibleFocusWithinViewport = () =>
     isVisibleFocusTarget(doc.activeElement);
 
+  const setViewportExpandedState = (expanded: boolean) => {
+    if (expanded) {
+      viewport.setAttribute("data-expanded", "");
+    } else {
+      viewport.removeAttribute("data-expanded");
+    }
+
+    const targetStackSize = expanded
+      ? viewport.style.getPropertyValue("--toast-expanded-stack-size")
+      : viewport.style.getPropertyValue("--toast-collapsed-stack-size");
+    viewport.style.setProperty(
+      "--toast-stack-size",
+      targetStackSize.trim() !== "" ? targetStackSize : "0px",
+    );
+  };
+
   const reindex = () => {
     const newestFirst: ToastEntry[] = [];
 
@@ -563,9 +603,12 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }
 
     const gap = getCssGap(viewport);
+    const collapsedPeek = getCssCollapsedPeek(viewport);
     const count = newestFirst.length;
-    let cumulativeOffset = 0;
-    let visibleCumulativeOffset = 0;
+    let expandedOffset = 0;
+    let collapsedOffset = 0;
+    let previousHeight = 0;
+    let visibleExpandedOffset = 0;
     let visibleCount = 0;
     let frontHeight = 0;
 
@@ -575,19 +618,22 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       const isVisible = index < resolvedLimit;
       const wasVisible = entry.element.getAttribute("data-visible") !== "false";
 
-      const rect = entry.element.getBoundingClientRect();
-      const height = rect.height > 0 ? rect.height : entry.element.offsetHeight;
+      const height = getToastHeight(entry.element);
       if (index === 0) {
         frontHeight = height;
         entry.element.setAttribute("data-front", "");
+        collapsedOffset = 0;
       } else {
+        collapsedOffset += previousHeight + collapsedPeek - height;
         entry.element.removeAttribute("data-front");
       }
 
       entry.element.style.setProperty("--toast-index", String(index));
       entry.element.style.setProperty("--toast-count", String(count));
       entry.element.style.setProperty("--toast-height", `${height}px`);
-      entry.element.style.setProperty("--toast-offset-y", `${cumulativeOffset}px`);
+      entry.element.style.setProperty("--toast-expanded-offset-y", `${expandedOffset}px`);
+      entry.element.style.setProperty("--toast-collapsed-offset-y", `${collapsedOffset}px`);
+      entry.element.style.setProperty("--toast-offset-y", `${expandedOffset}px`);
       entry.element.style.setProperty("--toast-stack-direction", String(stackDirection));
       entry.element.style.zIndex = String(count - index + 1);
       entry.element.style.pointerEvents = isVisible ? "" : "none";
@@ -600,18 +646,22 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       }
       setItemVisibilityInteractivity(entry.element, isVisible);
 
-      cumulativeOffset += height + gap;
+      expandedOffset += height + gap;
+      previousHeight = height;
       if (isVisible) {
         visibleCount += 1;
-        visibleCumulativeOffset += height + gap;
+        visibleExpandedOffset += height + gap;
       }
     }
 
-    const stackSize =
-      visibleCount > 0 ? Math.max(0, visibleCumulativeOffset - gap) : 0;
+    const expandedStackSize =
+      visibleCount > 0 ? Math.max(0, visibleExpandedOffset - gap) : 0;
+    const collapsedStackSize =
+      visibleCount > 0 ? Math.max(0, frontHeight + collapsedPeek * (visibleCount - 1)) : 0;
     viewport.style.setProperty("--toast-count", String(count));
     viewport.style.setProperty("--toast-frontmost-height", `${frontHeight}px`);
-    viewport.style.setProperty("--toast-stack-size", `${stackSize}px`);
+    viewport.style.setProperty("--toast-expanded-stack-size", `${expandedStackSize}px`);
+    viewport.style.setProperty("--toast-collapsed-stack-size", `${collapsedStackSize}px`);
     viewport.style.setProperty("--toast-stack-direction", String(stackDirection));
 
     if (pauseOnFocus) {
@@ -674,11 +724,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
   const syncPauseState = () => {
     const paused = isPaused();
-    if (paused) {
-      viewport.setAttribute("data-expanded", "");
-    } else {
-      viewport.removeAttribute("data-expanded");
-    }
+    setViewportExpandedState(paused);
 
     if (paused === timersPaused) return;
     timersPaused = paused;
