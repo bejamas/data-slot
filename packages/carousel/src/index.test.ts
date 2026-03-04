@@ -88,6 +88,16 @@ describe("Carousel", () => {
     }) as typeof content.scrollTo;
   };
 
+  const createScrollSpy = (content: HTMLElement) => {
+    const calls: ScrollToOptions[] = [];
+    content.scrollTo = ((options: ScrollToOptions) => {
+      calls.push(options);
+      if (typeof options.left === "number") content.scrollLeft = options.left;
+      if (typeof options.top === "number") content.scrollTop = options.top;
+    }) as typeof content.scrollTo;
+    return calls;
+  };
+
   it("throws when carousel-content slot is missing", () => {
     document.body.innerHTML = `<div data-slot="carousel" id="root"></div>`;
     const root = document.getElementById("root")!;
@@ -262,6 +272,148 @@ describe("Carousel", () => {
       }),
     );
     expect(controller.index).toBe(2);
+
+    controller.destroy();
+  });
+
+  it("uses smooth scrolling for controller and arrow button navigation by default", () => {
+    const { controller, content, prev, next } = setup({
+      options: { defaultIndex: 1 },
+    });
+    const calls = createScrollSpy(content);
+
+    controller.next();
+    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
+
+    controller.prev();
+    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
+
+    controller.goTo(0);
+    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
+
+    next?.click();
+    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
+
+    prev?.click();
+    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
+
+    controller.destroy();
+  });
+
+  it("uses smooth scrolling for keyboard and carousel:set navigation by default", () => {
+    const { root, content, controller } = setup({
+      options: { defaultIndex: 1 },
+    });
+    const calls = createScrollSpy(content);
+
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+    root.dispatchEvent(new CustomEvent("carousel:set", { detail: { action: "next" } }));
+    root.dispatchEvent(new CustomEvent("carousel:set", { detail: { index: 2 } }));
+
+    expect(calls).toHaveLength(4);
+    expect(calls.every((call) => call.behavior === "smooth")).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("falls back to auto scroll behavior when reduced-motion is preferred", () => {
+    const originalMatchMedia = window.matchMedia;
+
+    (
+      window as unknown as {
+        matchMedia?: typeof window.matchMedia;
+      }
+    ).matchMedia = ((query: string) =>
+      ({
+        matches: query === "(prefers-reduced-motion: reduce)",
+        media: query,
+        onchange: null,
+        addListener() {},
+        removeListener() {},
+        addEventListener() {},
+        removeEventListener() {},
+        dispatchEvent() {
+          return false;
+        },
+      }) as MediaQueryList) as typeof window.matchMedia;
+
+    try {
+      const { root, content, controller } = setup({
+        options: { defaultIndex: 1 },
+      });
+      const calls = createScrollSpy(content);
+
+      controller.next();
+      root.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+      root.dispatchEvent(new CustomEvent("carousel:set", { detail: { index: 2 } }));
+
+      expect(calls).toHaveLength(3);
+      expect(calls.every((call) => call.behavior === "auto")).toBe(true);
+
+      controller.destroy();
+    } finally {
+      if (originalMatchMedia) {
+        (
+          window as unknown as {
+            matchMedia?: typeof window.matchMedia;
+          }
+        ).matchMedia = originalMatchMedia;
+      } else {
+        delete (
+          window as unknown as {
+            matchMedia?: typeof window.matchMedia;
+          }
+        ).matchMedia;
+      }
+    }
+  });
+
+  it("keeps programmatic smooth navigation index stable during intermediate scroll events", async () => {
+    document.body.innerHTML = `
+      <div data-slot="carousel" id="root">
+        <div data-slot="carousel-content" id="content">
+          <div data-slot="carousel-item">Slide 1</div>
+          <div data-slot="carousel-item">Slide 2</div>
+          <div data-slot="carousel-item">Slide 3</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const content = document.getElementById("content") as HTMLElement;
+    const items = Array.from(
+      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
+    );
+    mockHorizontalGeometry(content, items, 100);
+    const controller = createCarousel(root);
+    const changes: number[] = [];
+
+    root.addEventListener("carousel:change", (event) => {
+      changes.push((event as CustomEvent<{ index: number }>).detail.index);
+    });
+
+    controller.next();
+    expect(controller.index).toBe(1);
+    expect(changes).toEqual([1]);
+
+    content.scrollLeft = 20;
+    content.dispatchEvent(new Event("scroll", { bubbles: true }));
+    await waitForRaf();
+
+    expect(controller.index).toBe(1);
+    expect(changes).toEqual([1]);
+
+    content.scrollLeft = 100;
+    content.dispatchEvent(new Event("scroll", { bubbles: true }));
+    await waitForRaf();
+
+    content.scrollLeft = 210;
+    content.dispatchEvent(new Event("scroll", { bubbles: true }));
+    await waitForRaf();
+
+    expect(controller.index).toBe(2);
+    expect(changes).toEqual([1, 2]);
 
     controller.destroy();
   });

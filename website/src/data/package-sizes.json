@@ -6,16 +6,16 @@
     "description": "Dropdown navigation menus"
   },
   {
+    "name": "@data-slot/toast",
+    "size": 5007,
+    "sizeFormatted": "4.9 KB",
+    "description": "Imperative notifications"
+  },
+  {
     "name": "@data-slot/core",
     "size": 4904,
     "sizeFormatted": "4.8 KB",
     "description": "Shared utilities"
-  },
-  {
-    "name": "@data-slot/toast",
-    "size": 4576,
-    "sizeFormatted": "4.5 KB",
-    "description": "Imperative notifications"
   },
   {
     "name": "@data-slot/combobox",
@@ -48,6 +48,12 @@
     "description": "Hover/focus tooltips"
   },
   {
+    "name": "@data-slot/carousel",
+    "size": 1947,
+    "sizeFormatted": "1.9 KB",
+    "description": "Scroll-snap carousels"
+  },
+  {
     "name": "@data-slot/popover",
     "size": 1928,
     "sizeFormatted": "1.9 KB",
@@ -58,12 +64,6 @@
     "size": 1887,
     "sizeFormatted": "1.8 KB",
     "description": "Tabbed interfaces, kbd nav"
-  },
-  {
-    "name": "@data-slot/carousel",
-    "size": 1871,
-    "sizeFormatted": "1.8 KB",
-    "description": "Scroll-snap carousels"
   },
   {
     "name": "@data-slot/dialog",

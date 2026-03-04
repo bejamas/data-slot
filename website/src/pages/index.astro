@@ -283,9 +283,65 @@ bun add @data-slot/dialog`}
   document.querySelectorAll('[data-slot="slider"]').forEach((el) =>
     createSlider(el as HTMLElement)
   );
-  document.querySelectorAll('[data-slot="carousel"]').forEach((el) =>
-    createCarousel(el as HTMLElement)
-  );
+  document.querySelectorAll('[data-slot="carousel"]').forEach((el) => {
+    const root = el as HTMLElement;
+    const controller = createCarousel(root);
+    const dots = Array.from(
+      root.querySelectorAll<HTMLElement>('[data-slot="carousel-dot"]')
+    );
+
+    if (dots.length === 0) return;
+    let lastDotIndex = -1;
+    let dotSyncTimeoutId: number | null = null;
+    let pendingDotIndex: number | null = null;
+
+    const updateDots = (index: number) => {
+      if (index === lastDotIndex) return;
+      lastDotIndex = index;
+      dots.forEach((dot, dotIndex) => {
+        const active = dotIndex === index;
+        dot.setAttribute("data-state", active ? "active" : "inactive");
+        if (active) {
+          dot.setAttribute("aria-current", "true");
+        } else {
+          dot.removeAttribute("aria-current");
+        }
+      });
+    };
+
+    dots.forEach((dot, dotIndex) => {
+      dot.addEventListener("click", () => {
+        pendingDotIndex = dotIndex;
+        updateDots(dotIndex);
+        controller.goTo(dotIndex);
+      });
+    });
+
+    root.addEventListener("carousel:change", (event) => {
+      const detail = (event as CustomEvent<{ index: number }>).detail;
+
+      // When dots initiate a long smooth scroll (e.g. slide 1 -> 3),
+      // ignore intermediate indices so active dot doesn't flicker.
+      if (pendingDotIndex !== null) {
+        if (detail.index !== pendingDotIndex) {
+          return;
+        }
+        pendingDotIndex = null;
+      }
+
+      if (dotSyncTimeoutId !== null) {
+        window.clearTimeout(dotSyncTimeoutId);
+      }
+
+      // Delay sync a bit so native smooth-scroll settling does not cause rapid dot flips.
+      dotSyncTimeoutId = window.setTimeout(() => {
+        dotSyncTimeoutId = null;
+        updateDots(detail.index);
+      }, 72);
+    });
+
+    updateDots(controller.index);
+  });
   const toastControllers = new Map<string, ReturnType<typeof createToast>>();
   document.querySelectorAll('[data-slot="toast"]').forEach((el) => {
     const root = el as HTMLElement;

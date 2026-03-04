@@ -11,6 +11,7 @@ import {
 } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
+const PROGRAMMATIC_SCROLL_LOCK_MS = 1200;
 type CarouselSetDetail = { index?: number; action?: "next" | "prev" };
 
 export interface CarouselOptions {
@@ -133,13 +134,43 @@ export function createCarousel(
 
   const cleanups: Array<() => void> = [];
   const win = root.ownerDocument?.defaultView ?? window;
+  const matchesMediaQuery = (query: string): boolean => {
+    if (typeof win.matchMedia !== "function") return false;
+    return win.matchMedia(query).matches;
+  };
+  const navigationBehavior: ScrollBehavior = matchesMediaQuery(
+    "(prefers-reduced-motion: reduce)",
+  )
+    ? "auto"
+    : "smooth";
 
   let currentIndex = normalizeIndex(defaultIndex, items.length, loop);
   let snapPoints: number[] = [];
   let scrollRafId: number | null = null;
+  let pendingProgrammaticIndex: number | null = null;
+  let programmaticUnlockTimeoutId: number | null = null;
 
   let resizeObserver: ResizeObserver | null = null;
   let mutationObserver: MutationObserver | null = null;
+
+  const clearProgrammaticScrollLock = () => {
+    pendingProgrammaticIndex = null;
+    if (programmaticUnlockTimeoutId !== null) {
+      win.clearTimeout(programmaticUnlockTimeoutId);
+      programmaticUnlockTimeoutId = null;
+    }
+  };
+
+  const lockProgrammaticScroll = (targetIndex: number) => {
+    pendingProgrammaticIndex = targetIndex;
+    if (programmaticUnlockTimeoutId !== null) {
+      win.clearTimeout(programmaticUnlockTimeoutId);
+    }
+    programmaticUnlockTimeoutId = win.setTimeout(() => {
+      pendingProgrammaticIndex = null;
+      programmaticUnlockTimeoutId = null;
+    }, PROGRAMMATIC_SCROLL_LOCK_MS);
+  };
 
   const getAxisPosition = () => (isHorizontal ? content.scrollLeft : content.scrollTop);
 
@@ -227,16 +258,16 @@ export function createCarousel(
     }
   };
 
-  const scrollToCurrent = () => {
+  const scrollToCurrent = (behavior: ScrollBehavior = "auto") => {
     if (items.length === 0) return;
 
     const target = snapPoints[currentIndex] ?? 0;
     if (isHorizontal) {
-      content.scrollTo({ left: target, behavior: "auto" });
+      content.scrollTo({ left: target, behavior });
       return;
     }
 
-    content.scrollTo({ top: target, behavior: "auto" });
+    content.scrollTo({ top: target, behavior });
   };
 
   const measureSnapPoints = () => {
@@ -261,6 +292,7 @@ export function createCarousel(
 
   const refreshItems = (emitChange: boolean) => {
     items = collectItems();
+    clearProgrammaticScrollLock();
 
     if (items.length === 0) {
       snapPoints = [];
@@ -285,6 +317,7 @@ export function createCarousel(
     requestedIndex: number,
     emitChange: boolean,
     scroll: boolean,
+    behavior: ScrollBehavior = "auto",
   ) => {
     if (items.length === 0) return;
 
@@ -293,22 +326,27 @@ export function createCarousel(
     currentIndex = nextIndex;
 
     if (scroll) {
-      scrollToCurrent();
+      if (behavior === "smooth" && changed) {
+        lockProgrammaticScroll(nextIndex);
+      } else {
+        clearProgrammaticScrollLock();
+      }
+      scrollToCurrent(behavior);
     }
 
     updateStates(changed && emitChange);
   };
 
-  const prev = () => {
+  const prev = (behavior: ScrollBehavior = navigationBehavior) => {
     if (items.length === 0) return;
     if (!loop && currentIndex <= 0) return;
-    setIndex(currentIndex - 1, true, true);
+    setIndex(currentIndex - 1, true, true, behavior);
   };
 
-  const next = () => {
+  const next = (behavior: ScrollBehavior = navigationBehavior) => {
     if (items.length === 0) return;
     if (!loop && currentIndex >= items.length - 1) return;
-    setIndex(currentIndex + 1, true, true);
+    setIndex(currentIndex + 1, true, true, behavior);
   };
 
   const onScroll = () => {
@@ -319,6 +357,10 @@ export function createCarousel(
       if (items.length === 0) return;
 
       const nearest = getNearestIndex(getAxisPosition());
+      if (pendingProgrammaticIndex !== null) {
+        if (nearest !== pendingProgrammaticIndex) return;
+        clearProgrammaticScrollLock();
+      }
       setIndex(nearest, true, false);
     });
   };
@@ -349,11 +391,11 @@ export function createCarousel(
         return;
       case "Home":
         event.preventDefault();
-        setIndex(0, true, true);
+        setIndex(0, true, true, navigationBehavior);
         return;
       case "End":
         event.preventDefault();
-        setIndex(items.length - 1, true, true);
+        setIndex(items.length - 1, true, true, navigationBehavior);
         return;
       default:
         return;
@@ -365,7 +407,7 @@ export function createCarousel(
     if (!detail || typeof detail !== "object") return;
 
     if (typeof detail.index === "number") {
-      setIndex(detail.index, true, true);
+      setIndex(detail.index, true, true, navigationBehavior);
       return;
     }
 
@@ -406,7 +448,7 @@ export function createCarousel(
     prev,
     next,
     goTo(index) {
-      setIndex(index, true, true);
+      setIndex(index, true, true, navigationBehavior);
     },
     get index() {
       return currentIndex;
@@ -426,6 +468,7 @@ export function createCarousel(
         scrollRafId = null;
       }
 
+      clearProgrammaticScrollLock();
       resizeObserver?.disconnect();
       mutationObserver?.disconnect();
       cleanups.forEach((fn) => fn());

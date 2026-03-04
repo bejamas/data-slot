@@ -2,27 +2,42 @@
 import { Code } from "astro:components";
 import ExampleBlock from "../ExampleBlock.astro";
 
-const cssCode = `<div data-slot="carousel" class="carousel">
+const cssCode = `<div data-slot="carousel" data-loop class="carousel">
   <div data-slot="carousel-content" class="carousel-content">
-    <div data-slot="carousel-item" class="carousel-item">Slide 1</div>
-    <div data-slot="carousel-item" class="carousel-item">Slide 2</div>
-    <div data-slot="carousel-item" class="carousel-item">Slide 3</div>
+    <div data-slot="carousel-item" class="carousel-item">01</div>
+    <div data-slot="carousel-item" class="carousel-item">02</div>
+    <div data-slot="carousel-item" class="carousel-item">03</div>
+    <div data-slot="carousel-item" class="carousel-item">04</div>
+    <div data-slot="carousel-item" class="carousel-item">05</div>
   </div>
 
-  <button data-slot="carousel-previous" class="carousel-nav carousel-prev" aria-label="Previous slide">
-    ←
-  </button>
-  <button data-slot="carousel-next" class="carousel-nav carousel-next" aria-label="Next slide">
-    →
-  </button>
+  <div class="carousel-controls">
+    <div class="carousel-nav-group">
+      <button data-slot="carousel-previous" class="carousel-nav" aria-label="Previous slide">
+        &lt;
+      </button>
+      <button data-slot="carousel-next" class="carousel-nav" aria-label="Next slide">
+        &gt;
+      </button>
+    </div>
+
+    <div class="carousel-dots">
+      <button data-slot="carousel-dot" data-state="active" class="carousel-dot" type="button" aria-label="Go to slide 1"></button>
+      <button data-slot="carousel-dot" data-state="inactive" class="carousel-dot" type="button" aria-label="Go to slide 2"></button>
+      <button data-slot="carousel-dot" data-state="inactive" class="carousel-dot" type="button" aria-label="Go to slide 3"></button>
+      <button data-slot="carousel-dot" data-state="inactive" class="carousel-dot" type="button" aria-label="Go to slide 4"></button>
+      <button data-slot="carousel-dot" data-state="inactive" class="carousel-dot" type="button" aria-label="Go to slide 5"></button>
+    </div>
+  </div>
 </div>
 
 <style>
   .carousel {
-    position: relative;
     width: 100%;
-    max-width: 28rem;
+    max-width: 56rem;
     margin-inline: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    color: #1a1a1a;
   }
 
   .carousel-content {
@@ -30,6 +45,9 @@ const cssCode = `<div data-slot="carousel" class="carousel">
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
+    border: 1px solid #cfcfcf;
+    border-radius: 0.75rem;
+    background: #f6f6f6;
   }
 
   .carousel-content::-webkit-scrollbar {
@@ -40,21 +58,47 @@ const cssCode = `<div data-slot="carousel" class="carousel">
     flex: 0 0 100%;
     min-width: 0;
     scroll-snap-align: start;
-    border: 1px solid #d4d4d4;
-    background: #fafafa;
-    padding: 2rem;
-    text-align: center;
+    height: 21rem;
+    display: grid;
+    place-items: center;
+    color: #1a1a1a;
+    font-size: 3.75rem;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.2em;
+    text-indent: 0.2em;
+  }
+
+  .carousel-controls {
+    margin-top: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .carousel-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
   .carousel-nav {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 2rem;
-    height: 2rem;
-    border: 1px solid #d4d4d4;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.5rem;
+    border: 1px solid #cfcfcf;
     background: #fff;
+    color: #1a1a1a;
+    font-size: 1.25rem;
+    line-height: 1;
     cursor: pointer;
+    transition: border-color 180ms ease, background-color 180ms ease;
+  }
+
+  .carousel-nav:hover {
+    border-color: #1a1a1a;
+    background: #f1f1f1;
   }
 
   .carousel-nav:disabled {
@@ -62,89 +106,178 @@ const cssCode = `<div data-slot="carousel" class="carousel">
     cursor: not-allowed;
   }
 
-  .carousel-prev { left: 0.5rem; }
-  .carousel-next { right: 0.5rem; }
+  .carousel-dots {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .carousel-dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 9999px;
+    border: 1px solid #c0c0c0;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 180ms ease, background-color 180ms ease;
+  }
+
+  .carousel-dot[data-state="active"] {
+    border-color: #1a1a1a;
+    background: #1a1a1a;
+  }
+
+  @media (max-width: 40rem) {
+    .carousel-item {
+      height: 14rem;
+      font-size: 2.5rem;
+    }
+
+    .carousel-controls {
+      margin-top: 1rem;
+    }
+
+    .carousel-nav {
+      width: 2.5rem;
+      height: 2.5rem;
+      font-size: 1.1rem;
+    }
+
+    .carousel-dots {
+      gap: 0.5rem;
+    }
+  }
 </style>`;
 
-const tailwindCode = `<div data-slot="carousel" class="relative mx-auto w-full max-w-md">
+const tailwindCode = `<div data-slot="carousel" data-loop class="mx-auto w-full max-w-4xl font-mono text-neutral-900">
   <div
     data-slot="carousel-content"
-    class="flex overflow-x-auto snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    class="flex overflow-x-auto snap-x snap-mandatory rounded-xl border border-neutral-300 bg-neutral-100 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
   >
-    <div data-slot="carousel-item" class="min-w-0 shrink-0 grow-0 basis-full snap-start border border-neutral-300 bg-neutral-50 p-8 text-center">
-      Slide 1
+    <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+      01
     </div>
-    <div data-slot="carousel-item" class="min-w-0 shrink-0 grow-0 basis-full snap-start border border-neutral-300 bg-neutral-50 p-8 text-center">
-      Slide 2
+    <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+      02
     </div>
-    <div data-slot="carousel-item" class="min-w-0 shrink-0 grow-0 basis-full snap-start border border-neutral-300 bg-neutral-50 p-8 text-center">
-      Slide 3
+    <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+      03
+    </div>
+    <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+      04
+    </div>
+    <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+      05
     </div>
   </div>
 
-  <button
-    data-slot="carousel-previous"
-    class="absolute left-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center border border-neutral-300 bg-white disabled:cursor-not-allowed disabled:opacity-45"
-    aria-label="Previous slide"
-  >
-    ←
-  </button>
-  <button
-    data-slot="carousel-next"
-    class="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center border border-neutral-300 bg-white disabled:cursor-not-allowed disabled:opacity-45"
-    aria-label="Next slide"
-  >
-    →
-  </button>
+  <div class="mt-4 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <button
+        data-slot="carousel-previous"
+        class="grid h-10 w-10 touch-manipulation place-items-center rounded-md border border-neutral-300 bg-white text-lg leading-none transition-colors hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
+        aria-label="Previous slide"
+      >
+        &lt;
+      </button>
+      <button
+        data-slot="carousel-next"
+        class="grid h-10 w-10 touch-manipulation place-items-center rounded-md border border-neutral-300 bg-white text-lg leading-none transition-colors hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
+        aria-label="Next slide"
+      >
+        &gt;
+      </button>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button data-slot="carousel-dot" data-state="active" type="button" aria-label="Go to slide 1" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 2" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 3" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 4" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 5" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+    </div>
+  </div>
 </div>`;
 ---
 
 <ExampleBlock label="Carousel">
-  <div slot="preview-css" data-slot="carousel" class="carousel-css">
+  <div slot="preview-css" data-slot="carousel" data-loop class="carousel-css">
     <div data-slot="carousel-content" class="carousel-content-css">
-      <div data-slot="carousel-item" class="carousel-item-css">Slide 1</div>
-      <div data-slot="carousel-item" class="carousel-item-css">Slide 2</div>
-      <div data-slot="carousel-item" class="carousel-item-css">Slide 3</div>
+      <div data-slot="carousel-item" class="carousel-item-css">01</div>
+      <div data-slot="carousel-item" class="carousel-item-css">02</div>
+      <div data-slot="carousel-item" class="carousel-item-css">03</div>
+      <div data-slot="carousel-item" class="carousel-item-css">04</div>
+      <div data-slot="carousel-item" class="carousel-item-css">05</div>
     </div>
 
-    <button data-slot="carousel-previous" class="carousel-nav-css carousel-prev-css" aria-label="Previous slide">
-      ←
-    </button>
-    <button data-slot="carousel-next" class="carousel-nav-css carousel-next-css" aria-label="Next slide">
-      →
-    </button>
+    <div class="carousel-controls-css">
+      <div class="carousel-nav-group-css">
+        <button data-slot="carousel-previous" class="carousel-nav-css" aria-label="Previous slide">
+          &lt;
+        </button>
+        <button data-slot="carousel-next" class="carousel-nav-css" aria-label="Next slide">
+          &gt;
+        </button>
+      </div>
+
+      <div class="carousel-dots-css">
+        <button data-slot="carousel-dot" data-state="active" class="carousel-dot-css" type="button" aria-label="Go to slide 1"></button>
+        <button data-slot="carousel-dot" data-state="inactive" class="carousel-dot-css" type="button" aria-label="Go to slide 2"></button>
+        <button data-slot="carousel-dot" data-state="inactive" class="carousel-dot-css" type="button" aria-label="Go to slide 3"></button>
+        <button data-slot="carousel-dot" data-state="inactive" class="carousel-dot-css" type="button" aria-label="Go to slide 4"></button>
+        <button data-slot="carousel-dot" data-state="inactive" class="carousel-dot-css" type="button" aria-label="Go to slide 5"></button>
+      </div>
+    </div>
   </div>
 
-  <div slot="preview-tailwind" data-slot="carousel" class="relative mx-auto w-full max-w-md">
+  <div slot="preview-tailwind" data-slot="carousel" data-loop class="mx-auto w-full max-w-4xl font-mono text-neutral-900">
     <div
       data-slot="carousel-content"
-      class="flex overflow-x-auto snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      class="flex overflow-x-auto snap-x snap-mandatory rounded-xl border border-neutral-300 bg-neutral-100 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <div data-slot="carousel-item" class="min-w-0 shrink-0 grow-0 basis-full snap-start border border-neutral-300 bg-neutral-50 p-8 text-center">
-        Slide 1
+      <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+        01
       </div>
-      <div data-slot="carousel-item" class="min-w-0 shrink-0 grow-0 basis-full snap-start border border-neutral-300 bg-neutral-50 p-8 text-center">
-        Slide 2
+      <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+        02
       </div>
-      <div data-slot="carousel-item" class="min-w-0 shrink-0 grow-0 basis-full snap-start border border-neutral-300 bg-neutral-50 p-8 text-center">
-        Slide 3
+      <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+        03
+      </div>
+      <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+        04
+      </div>
+      <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+        05
       </div>
     </div>
 
-    <button
-      data-slot="carousel-previous"
-      class="absolute left-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center border border-neutral-300 bg-white disabled:cursor-not-allowed disabled:opacity-45"
-      aria-label="Previous slide"
-    >
-      ←
-    </button>
-    <button
-      data-slot="carousel-next"
-      class="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center border border-neutral-300 bg-white disabled:cursor-not-allowed disabled:opacity-45"
-      aria-label="Next slide"
-    >
-      →
-    </button>
+    <div class="mt-4 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <button
+          data-slot="carousel-previous"
+          class="grid h-10 w-10 touch-manipulation place-items-center rounded-md border border-neutral-300 bg-white text-lg leading-none transition-colors hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
+          aria-label="Previous slide"
+        >
+          &lt;
+        </button>
+        <button
+          data-slot="carousel-next"
+          class="grid h-10 w-10 touch-manipulation place-items-center rounded-md border border-neutral-300 bg-white text-lg leading-none transition-colors hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
+          aria-label="Next slide"
+        >
+          &gt;
+        </button>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button data-slot="carousel-dot" data-state="active" type="button" aria-label="Go to slide 1" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 2" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 3" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 4" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 5" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+      </div>
+    </div>
   </div>
 
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
@@ -153,10 +286,11 @@ const tailwindCode = `<div data-slot="carousel" class="relative mx-auto w-full m
 
 <style>
   .carousel-css {
-    position: relative;
     width: 100%;
-    max-width: 28rem;
+    max-width: 56rem;
     margin-inline: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    color: #1a1a1a;
   }
 
   .carousel-content-css {
@@ -164,6 +298,9 @@ const tailwindCode = `<div data-slot="carousel" class="relative mx-auto w-full m
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
+    border: 1px solid #cfcfcf;
+    border-radius: 0.75rem;
+    background: #f6f6f6;
   }
 
   .carousel-content-css::-webkit-scrollbar {
@@ -174,21 +311,47 @@ const tailwindCode = `<div data-slot="carousel" class="relative mx-auto w-full m
     flex: 0 0 100%;
     min-width: 0;
     scroll-snap-align: start;
-    border: 1px solid #d4d4d4;
-    background: #fafafa;
-    padding: 2rem;
-    text-align: center;
+    height: 21rem;
+    display: grid;
+    place-items: center;
+    color: #1a1a1a;
+    font-size: 3.75rem;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.2em;
+    text-indent: 0.2em;
+  }
+
+  .carousel-controls-css {
+    margin-top: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .carousel-nav-group-css {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
   .carousel-nav-css {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 2rem;
-    height: 2rem;
-    border: 1px solid #d4d4d4;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.5rem;
+    border: 1px solid #cfcfcf;
     background: #fff;
+    color: #1a1a1a;
+    font-size: 1.25rem;
+    line-height: 1;
     cursor: pointer;
+    transition: border-color 180ms ease, background-color 180ms ease;
+  }
+
+  .carousel-nav-css:hover {
+    border-color: #1a1a1a;
+    background: #f1f1f1;
   }
 
   .carousel-nav-css:disabled {
@@ -196,11 +359,45 @@ const tailwindCode = `<div data-slot="carousel" class="relative mx-auto w-full m
     cursor: not-allowed;
   }
 
-  .carousel-prev-css {
-    left: 0.5rem;
+  .carousel-dots-css {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
-  .carousel-next-css {
-    right: 0.5rem;
+  .carousel-dot-css {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 9999px;
+    border: 1px solid #c0c0c0;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 180ms ease, background-color 180ms ease;
+  }
+
+  .carousel-dot-css[data-state="active"] {
+    border-color: #1a1a1a;
+    background: #1a1a1a;
+  }
+
+  @media (max-width: 40rem) {
+    .carousel-item-css {
+      height: 14rem;
+      font-size: 2.5rem;
+    }
+
+    .carousel-controls-css {
+      margin-top: 1rem;
+    }
+
+    .carousel-nav-css {
+      width: 2.5rem;
+      height: 2.5rem;
+      font-size: 1.1rem;
+    }
+
+    .carousel-dots-css {
+      gap: 0.5rem;
+    }
   }
 </style>

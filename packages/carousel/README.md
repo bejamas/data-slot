@@ -80,6 +80,17 @@ const carousel = createCarousel(element, {
 | `canScrollNext` | Whether next navigation is available |
 | `destroy()` | Cleanup listeners and observers |
 
+## Navigation Animation
+
+Carousel navigation uses native smooth scrolling by default for:
+
+- `prev()` / `next()` / `goTo()`
+- keyboard navigation (`Arrow*`, `Home`, `End`)
+- inbound `carousel:set` events
+- optional `carousel-previous` / `carousel-next` button clicks
+
+When the user prefers reduced motion (`prefers-reduced-motion: reduce`), navigation falls back to instant scroll behavior.
+
 ## Data Attributes
 
 JS options take precedence over data attributes.
