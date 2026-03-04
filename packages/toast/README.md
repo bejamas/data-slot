@@ -75,7 +75,7 @@ const toaster = createToast(element, {
 |--------|------|---------|-------------|
 | `limit` | `number` | `3` | Maximum visible toasts at once; older toasts stay mounted with `data-visible="false"` |
 | `duration` | `number` | `5000` | Default auto-dismiss duration in ms (`0` = persistent) |
-| `position` | `"top-left" \| "top-center" \| "top-right" \| "bottom-left" \| "bottom-center" \| "bottom-right"` | `"bottom-right"` | Position token exposed as `data-position` on root |
+| `position` | `"top-left" \| "top-center" \| "top-right" \| "bottom-left" \| "bottom-center" \| "bottom-right"` | `"bottom-right"` | Position token exposed as `data-position` on root and viewport |
 | `pauseOnHover` | `boolean` | `true` | Pause all active timers while viewport is hovered |
 | `pauseOnFocus` | `boolean` | `true` | Pause all active timers while viewport has focus within |
 | `portal` | `boolean` | `false` | Portal viewport to `document.body` |
@@ -178,9 +178,14 @@ The controller computes and writes stack tokens for animation styling:
 - `--toast-index` (0 = newest)
 - `--toast-count`
 - `--toast-height`
-- `--toast-offset-y`
+- `--toast-expanded-offset-y`
+- `--toast-collapsed-offset-y`
+- `--toast-offset-y` (backward-compatible alias of `--toast-expanded-offset-y`)
 - `--toast-frontmost-height` (on viewport)
-- `--toast-stack-size` (on viewport, visible stack hit-area only; bounded by `limit`)
+- `--toast-expanded-stack-size` (on viewport)
+- `--toast-collapsed-stack-size` (on viewport)
+- `--toast-stack-size` (on viewport, active size; collapsed by default, expanded while `data-expanded`)
+- `--toast-collapsed-peek` (on viewport; collapsed stack step)
 - `--toast-stack-direction` (`1` for top stacks, `-1` for bottom stacks)
 - `--toast-enter-direction` (item-level; stack-aware entry direction)
 - `--toast-exit-direction` (item-level; stable exit direction for stack position)
@@ -231,21 +236,29 @@ root.dispatchEvent(new CustomEvent("toast:clear"));
   right: 1rem;
   bottom: 1rem;
   width: min(360px, calc(100vw - 2rem));
+  height: var(--toast-stack-size, 0px);
   --toast-gap: 8;
+  --toast-collapsed-peek: 14;
 }
 
 [data-slot="toast-item"] {
   position: absolute;
   inset-inline: 0;
   bottom: 0;
-  transform: translateY(calc(var(--toast-index) * -8px))
+  transform: translateY(calc(var(--toast-collapsed-offset-y) * var(--toast-stack-direction) * 1px))
     scale(calc(1 - var(--toast-index) * 0.04));
-  opacity: calc(1 - var(--toast-index) * 0.12);
+  opacity: 1;
   transition: transform 400ms ease, opacity 400ms ease, box-shadow 200ms ease;
 }
 
+[data-slot="toast-viewport"]:not([data-expanded]) [data-slot="toast-item"]:not([data-front]):not([data-state="closed"]) > * {
+  opacity: 0;
+}
+
 [data-slot="toast-viewport"][data-expanded] [data-slot="toast-item"] {
-  transform: translateY(calc(var(--toast-offset-y) * var(--toast-stack-direction) * 1px));
+  transform: translateY(
+    calc(var(--toast-expanded-offset-y, var(--toast-offset-y)) * var(--toast-stack-direction) * 1px)
+  );
   opacity: 1;
 }
 
