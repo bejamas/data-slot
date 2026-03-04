@@ -46,6 +46,40 @@ describe("NavigationMenu", () => {
     return { root, triggers, contents, viewport, controller };
   };
 
+  const setupMixed = (options: Parameters<typeof createNavigationMenu>[1] = {}) => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+          <li data-slot="navigation-menu-item">
+            <a href="#" class="plain-link"><span>Pricing</span></a>
+          </li>
+          <li data-slot="navigation-menu-item" data-value="docs">
+            <button data-slot="navigation-menu-trigger">Docs</button>
+            <div data-slot="navigation-menu-content">Docs content</div>
+          </li>
+        </ul>
+        <div data-slot="navigation-menu-viewport"></div>
+      </nav>
+    `;
+    const root = document.getElementById("root")!;
+    const list = root.querySelector('[data-slot="navigation-menu-list"]') as HTMLElement;
+    const triggers = root.querySelectorAll(
+      '[data-slot="navigation-menu-trigger"]'
+    ) as NodeListOf<HTMLElement>;
+    const plainLink = root.querySelector(".plain-link") as HTMLElement;
+    const controller = createNavigationMenu(root, {
+      delayOpen: 0,
+      delayClose: 0,
+      ...options,
+    });
+
+    return { root, list, triggers, plainLink, controller };
+  };
+
   const getViewportPositioner = (viewport: HTMLElement): HTMLElement => {
     const parent = viewport.parentElement;
     if (!(parent instanceof HTMLElement)) {
@@ -1088,6 +1122,102 @@ describe("NavigationMenu", () => {
     );
 
     expect(document.activeElement).toBe(triggers[2]);
+
+    controller.destroy();
+  });
+
+  it("ArrowRight includes plain links and closes open submenu", () => {
+    const { root, triggers, plainLink, controller } = setupMixed();
+
+    triggers[0]?.focus();
+    controller.open("products");
+
+    triggers[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+    );
+
+    expect(document.activeElement).toBe(plainLink);
+    expect(controller.value).toBe(null);
+    expect(root.getAttribute("data-state")).toBe("closed");
+
+    controller.destroy();
+  });
+
+  it("ArrowRight from plain link focuses next submenu trigger", () => {
+    const { triggers, plainLink, controller } = setupMixed();
+
+    plainLink.focus();
+    plainLink.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+    );
+
+    expect(document.activeElement).toBe(triggers[1]);
+
+    controller.destroy();
+  });
+
+  it("wraps keyboard navigation across mixed submenu and plain items", () => {
+    const { triggers, controller } = setupMixed();
+
+    triggers[0]?.focus();
+    triggers[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggers[1]);
+
+    triggers[1]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggers[0]);
+
+    controller.destroy();
+  });
+
+  it("Home and End keys work when focus starts on a plain link", () => {
+    const { triggers, plainLink, controller } = setupMixed();
+
+    plainLink.focus();
+    plainLink.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Home", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggers[0]);
+
+    plainLink.focus();
+    plainLink.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "End", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggers[1]);
+
+    controller.destroy();
+  });
+
+  it("ArrowDown on plain link does not open submenu or prevent default", () => {
+    const { plainLink, controller } = setupMixed();
+
+    plainLink.focus();
+    const event = new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true,
+      cancelable: true,
+    });
+    plainLink.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(controller.value).toBe(null);
+
+    controller.destroy();
+  });
+
+  it("closes open submenu when focus moves to plain link", () => {
+    const { root, triggers, plainLink, controller } = setupMixed();
+
+    triggers[0]?.focus();
+    controller.open("products");
+    expect(controller.value).toBe("products");
+
+    plainLink.focus();
+    expect(controller.value).toBe(null);
+    expect(root.getAttribute("data-state")).toBe("closed");
 
     controller.destroy();
   });

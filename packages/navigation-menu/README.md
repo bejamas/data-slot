@@ -282,15 +282,15 @@ For exit animations, avoid CSS that force-hides content immediately by `data-sta
 
 ## Keyboard Navigation
 
-### Within Trigger List
+### Within Top-Level Items
 
 | Key | Action |
 |-----|--------|
-| `ArrowLeft` | Move focus to previous trigger |
-| `ArrowRight` | Move focus to next trigger |
-| `ArrowDown` | Move focus into content panel |
-| `Home` | Move focus to first trigger |
-| `End` | Move focus to last trigger |
+| `ArrowLeft` | Move focus to previous top-level item (submenu trigger or plain link) |
+| `ArrowRight` | Move focus to next top-level item (submenu trigger or plain link) |
+| `ArrowDown` | Move focus into content panel (only when focused item has submenu content) |
+| `Home` | Move focus to first top-level item |
+| `End` | Move focus to last top-level item |
 | `Escape` | Close menu |
 
 ### Within Content Panel

@@ -38,6 +38,18 @@ interface HoverSafeTriangle {
   edgeB: Point;
 }
 
+type TopLevelNavigable =
+  | {
+      kind: "submenu";
+      element: HTMLElement;
+      value: string;
+      trigger: HTMLElement;
+    }
+  | {
+      kind: "plain";
+      element: HTMLElement;
+    };
+
 const getAlignedPointOnRect = (rect: DOMRect, align: Align): Point => {
   if (align === "start") return { x: rect.left, y: rect.top };
   if (align === "end") return { x: rect.right, y: rect.bottom };
@@ -361,6 +373,7 @@ export function createNavigationMenu(
   const itemMap = new Map<
     string,
     {
+      value: string;
       item: HTMLElement;
       trigger: HTMLElement;
       content: HTMLElement;
@@ -406,6 +419,7 @@ export function createNavigationMenu(
 
     if (trigger && content) {
       itemMap.set(value, {
+        value,
         item,
         trigger,
         content,
@@ -436,15 +450,14 @@ export function createNavigationMenu(
 
   // Get all triggers for keyboard navigation
   const triggers = Array.from(itemMap.values()).map((v) => v.trigger);
-
-  // Reverse map for O(1) trigger -> value lookup
-  const valueByTrigger = new Map<HTMLElement, string>();
-  for (const [value, data] of itemMap) valueByTrigger.set(data.trigger, value);
+  const topLevelFocusableSelector =
+    'a[href], button:not([disabled]), [role="link"], [role="button"], [tabindex]:not([tabindex="-1"])';
 
   const getManagedItemByElement = (
     el: Element | null,
   ):
     | {
+        value: string;
         item: HTMLElement;
         trigger: HTMLElement;
         content: HTMLElement;
@@ -460,6 +473,59 @@ export function createNavigationMenu(
     const data = itemMap.get(value);
     if (!data || data.item !== item) return null;
     return data;
+  };
+
+  // Build ordered top-level keyboard navigables from authored item order.
+  const getTopLevelItemTarget = (item: HTMLElement): HTMLElement | null => {
+    if (item.matches(topLevelFocusableSelector)) return item;
+    const candidates = item.querySelectorAll<HTMLElement>(topLevelFocusableSelector);
+    for (const candidate of candidates) {
+      if (!item.contains(candidate)) continue;
+      if (candidate.closest('[data-slot="navigation-menu-content"]')) continue;
+      if (candidate.hidden || candidate.closest("[hidden]")) continue;
+      return candidate;
+    }
+    return null;
+  };
+  const topLevelNavigables: TopLevelNavigable[] = [];
+  const navigableByElement = new Map<HTMLElement, TopLevelNavigable>();
+  items.forEach((item) => {
+    const managed = getManagedItemByElement(item);
+    if (managed) {
+      const entry: TopLevelNavigable = {
+        kind: "submenu",
+        element: managed.trigger,
+        value: managed.value,
+        trigger: managed.trigger,
+      };
+      topLevelNavigables.push(entry);
+      navigableByElement.set(entry.element, entry);
+      return;
+    }
+
+    const plainTarget = getTopLevelItemTarget(item);
+    if (!plainTarget) return;
+    const entry: TopLevelNavigable = {
+      kind: "plain",
+      element: plainTarget,
+    };
+    topLevelNavigables.push(entry);
+    navigableByElement.set(entry.element, entry);
+  });
+
+  const getNavigableByTarget = (
+    target: EventTarget | null,
+  ): TopLevelNavigable | null => {
+    const el = target instanceof HTMLElement ? target : null;
+    if (!el) return null;
+
+    let current: HTMLElement | null = el;
+    while (current && current !== list) {
+      const entry = navigableByElement.get(current);
+      if (entry) return entry;
+      current = current.parentElement;
+    }
+    return null;
   };
 
   const isNonSubmenuListTarget = (target: EventTarget | null): boolean => {
@@ -1521,26 +1587,28 @@ export function createNavigationMenu(
   // Keyboard navigation within the list
   cleanups.push(
     on(list, "keydown", (e) => {
-      const target = e.target as HTMLElement;
-      const currentTriggerIndex = triggers.indexOf(target);
-      if (currentTriggerIndex === -1) return;
+      const currentNavigable = getNavigableByTarget(e.target);
+      if (!currentNavigable) return;
 
-      const triggerValue = valueByTrigger.get(target) ?? null;
-      let nextIndex = currentTriggerIndex;
+      const currentNavigableIndex = topLevelNavigables.indexOf(currentNavigable);
+      if (currentNavigableIndex === -1) return;
+
+      let nextIndex = currentNavigableIndex;
 
       switch (e.key) {
         case "ArrowLeft":
-          nextIndex = currentTriggerIndex - 1;
-          if (nextIndex < 0) nextIndex = triggers.length - 1;
+          nextIndex = currentNavigableIndex - 1;
+          if (nextIndex < 0) nextIndex = topLevelNavigables.length - 1;
           break;
         case "ArrowRight":
-          nextIndex = currentTriggerIndex + 1;
-          if (nextIndex >= triggers.length) nextIndex = 0;
+          nextIndex = currentNavigableIndex + 1;
+          if (nextIndex >= topLevelNavigables.length) nextIndex = 0;
           break;
         case "ArrowDown": {
-          e.preventDefault();
-          // Open content for this trigger and move focus into it
-          if (triggerValue) {
+          // Open content only when focused item has submenu content.
+          if (currentNavigable.kind === "submenu") {
+            e.preventDefault();
+            const triggerValue = currentNavigable.value;
             clickLocked = true; // Lock so pointerleave doesn't close
             updateState(triggerValue, true);
             requestAnimationFrame(() => {
@@ -1558,7 +1626,7 @@ export function createNavigationMenu(
           nextIndex = 0;
           break;
         case "End":
-          nextIndex = triggers.length - 1;
+          nextIndex = topLevelNavigables.length - 1;
           break;
         case "Escape":
           clickLocked = false;
@@ -1570,12 +1638,33 @@ export function createNavigationMenu(
       }
 
       e.preventDefault();
-      const nextTrigger = triggers[nextIndex];
-      if (nextTrigger) {
+      const nextNavigable = topLevelNavigables[nextIndex];
+      if (!nextNavigable) return;
+
+      if (nextNavigable.kind === "submenu") {
+        const nextTrigger = nextNavigable.trigger;
         triggers.forEach((t) => (t.tabIndex = t === nextTrigger ? 0 : -1));
         nextTrigger.focus();
         updateIndicator(nextTrigger);
+        return;
       }
+
+      if (currentValue !== null) {
+        closeMenuAndUnlock();
+      } else {
+        updateIndicator(null);
+      }
+      nextNavigable.element.focus();
+    }),
+  );
+
+  // When focus moves to non-submenu top-level items, close any open submenu.
+  cleanups.push(
+    on(list, "focusin", (e) => {
+      if (currentValue === null) return;
+      const navigable = getNavigableByTarget(e.target);
+      if (!navigable || navigable.kind === "submenu") return;
+      closeMenuAndUnlock();
     }),
   );
 
