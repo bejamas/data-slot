@@ -542,6 +542,47 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("does not close on non-submenu pointerover when click-locked", () => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+          <li data-slot="navigation-menu-item">
+            <a href="#" class="plain-link">Pricing</a>
+          </li>
+        </ul>
+        <div data-slot="navigation-menu-viewport"></div>
+      </nav>
+    `;
+    const root = document.getElementById("root")!;
+    const trigger = root.querySelector(
+      '[data-slot="navigation-menu-trigger"]',
+    ) as HTMLElement;
+    const plainLink = root.querySelector(".plain-link") as HTMLElement;
+    const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+    trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(controller.value).toBe("products");
+
+    plainLink.dispatchEvent(
+      new PointerEvent("pointerover", {
+        bubbles: true,
+        pointerType: "mouse",
+      } as PointerEventInit),
+    );
+    expect(controller.value).toBe("products");
+    expect(root.getAttribute("data-state")).toBe("open");
+
+    plainLink.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(controller.value).toBe(null);
+    expect(root.getAttribute("data-state")).toBe("closed");
+
+    controller.destroy();
+  });
+
   it("does not close on non-submenu pointerdown, but closes on click", () => {
     document.body.innerHTML = `
       <nav data-slot="navigation-menu" id="root">
@@ -608,6 +649,27 @@ describe("NavigationMenu", () => {
     );
     triggers[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(controller.value).toBe("solutions");
+
+    controller.destroy();
+  });
+
+  it("does not switch on submenu trigger hover when click-locked", () => {
+    const { root, triggers, controller } = setup();
+    const items = root.querySelectorAll(
+      '[data-slot="navigation-menu-item"]',
+    ) as NodeListOf<HTMLElement>;
+
+    triggers[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(controller.value).toBe("products");
+
+    items[1]?.dispatchEvent(
+      new PointerEvent("pointerenter", {
+        pointerType: "mouse",
+      } as PointerEventInit),
+    );
+
+    expect(controller.value).toBe("products");
+    expect(root.getAttribute("data-state")).toBe("open");
 
     controller.destroy();
   });

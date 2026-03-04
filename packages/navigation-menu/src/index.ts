@@ -1510,6 +1510,7 @@ export function createNavigationMenu(
   cleanups.push(
     on(list, "pointerover", (e) => {
       if (currentValue === null) return;
+      if (clickLocked) return;
       const event = e as PointerEvent;
       if (event.pointerType === "touch") return;
       if (!isNonSubmenuListTarget(event.target)) return;

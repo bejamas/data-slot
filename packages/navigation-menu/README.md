@@ -304,7 +304,7 @@ For exit animations, avoid CSS that force-hides content immediately by `data-sta
 ## Behavior
 
 - **Hover**: Opens after `delayOpen` ms, closes after `delayClose` ms
-- **Click**: Locks menu open until clicking outside or same trigger
+- **Click**: Locks menu open until explicit action (click same trigger, click another trigger, click outside, or `Escape`); hover does not switch/close while locked
 - **Focus**: Opens immediately on keyboard focus
 - **Switching**: Instant transition between items (no delay)
 
