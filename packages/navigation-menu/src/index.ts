@@ -76,7 +76,7 @@ export interface NavigationMenuOptions {
   delayOpen?: number;
   /** Delay before closing on mouse leave (ms) */
   delayClose?: number;
-  /** Whether focusing a trigger opens its content (default: true) */
+  /** Whether focusing a trigger opens its content (default: false) */
   openOnFocus?: boolean;
   /** Preferred side of viewport relative to trigger */
   side?: Side;
@@ -133,7 +133,7 @@ export function createNavigationMenu(
   const delayClose =
     options.delayClose ?? getDataNumber(root, "delayClose") ?? 0;
   const openOnFocus =
-    options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? true;
+    options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? false;
   const rootSide = options.side ?? getDataEnum(root, "side", SIDES) ?? "bottom";
   const rootAlign =
     options.align ?? getDataEnum(root, "align", ALIGNS) ?? "start";
@@ -583,6 +583,18 @@ export function createNavigationMenu(
     return Array.from(
       content.querySelectorAll<HTMLElement>(focusableSelector),
     ).filter((el) => !el.hidden && !el.closest("[hidden]"));
+  };
+
+  const focusContentForValue = (value: string): void => {
+    requestAnimationFrame(() => {
+      if (currentValue !== value) return;
+      const data = itemMap.get(value);
+      if (!data) return;
+      const focusables = getFocusableElements(data.content);
+      const first = focusables[0];
+      if (first) first.focus();
+      else data.content.focus(); // content has tabIndex=-1
+    });
   };
 
   const clearTimers = () => {
@@ -1527,11 +1539,13 @@ export function createNavigationMenu(
           // Menu open via hover, click to LOCK it open
           clickLocked = true;
           updateIndicator(trigger);
+          focusContentForValue(value);
         } else {
           // Opening a new/different item -> switch and lock
           clickLocked = true;
           updateState(value, true);
           updateIndicator(trigger);
+          focusContentForValue(value);
         }
       }),
     );
@@ -1643,14 +1657,7 @@ export function createNavigationMenu(
             const triggerValue = currentNavigable.value;
             clickLocked = true; // Lock so pointerleave doesn't close
             updateState(triggerValue, true);
-            requestAnimationFrame(() => {
-              const data = itemMap.get(triggerValue);
-              if (!data) return;
-              const focusables = getFocusableElements(data.content);
-              const first = focusables[0];
-              if (first) first.focus();
-              else data.content.focus(); // content has tabIndex=-1
-            });
+            focusContentForValue(triggerValue);
           }
           return;
         }

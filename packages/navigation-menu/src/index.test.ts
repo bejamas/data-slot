@@ -1228,11 +1228,11 @@ describe("NavigationMenu", () => {
     const { triggers, controller } = setupMixed();
 
     triggers[0]?.focus();
-    expect(controller.value).toBe("products");
+    expect(controller.value).toBe(null);
     triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
 
     triggers[1]?.focus();
-    expect(controller.value).toBe("docs");
+    expect(controller.value).toBe(null);
     triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
 
     controller.destroy();
@@ -1494,6 +1494,46 @@ describe("NavigationMenu", () => {
       // Focus happens in requestAnimationFrame
       await flushRAF();
       expect(document.activeElement).toBe(link1);
+
+      controller.destroy();
+    });
+
+    it("clicking trigger opens menu and focuses first content element", async () => {
+      const { triggers, link1, controller } = setupWithLinks();
+
+      triggers[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+      await flushRAF();
+      expect(controller.value).toBe("products");
+      expect(document.activeElement).toBe(link1);
+
+      controller.destroy();
+    });
+
+    it("clicking trigger with no focusables focuses content panel", async () => {
+      const { triggers, contents, controller } = setup();
+
+      triggers[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+      await flushRAF();
+      expect(controller.value).toBe("products");
+      expect(document.activeElement).toBe(contents[0]);
+
+      controller.destroy();
+    });
+
+    it("clicking another trigger switches menu and focuses new content", async () => {
+      const { triggers, link1, controller } = setupWithLinks();
+      const btn1 = document.getElementById("btn1") as HTMLElement;
+
+      triggers[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await flushRAF();
+      expect(document.activeElement).toBe(link1);
+
+      triggers[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await flushRAF();
+      expect(controller.value).toBe("solutions");
+      expect(document.activeElement).toBe(btn1);
 
       controller.destroy();
     });
@@ -1802,7 +1842,49 @@ describe("NavigationMenu", () => {
 
   // Data attribute tests
   describe("data attributes", () => {
-    it("data-open-on-focus='false' disables opening on focus", () => {
+    it("does not open on focus by default", () => {
+      document.body.innerHTML = `
+        <nav data-slot="navigation-menu" id="root">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">Content</div>
+            </li>
+          </ul>
+        </nav>
+      `;
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+      const controller = createNavigationMenu(root, { delayOpen: 0 });
+
+      trigger.focus();
+      expect(controller.value).toBe(null);
+
+      controller.destroy();
+    });
+
+    it("data-open-on-focus='true' enables opening on focus", () => {
+      document.body.innerHTML = `
+        <nav data-slot="navigation-menu" id="root" data-open-on-focus="true">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">Content</div>
+            </li>
+          </ul>
+        </nav>
+      `;
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+      const controller = createNavigationMenu(root, { delayOpen: 0 });
+
+      trigger.focus();
+      expect(controller.value).toBe("products");
+
+      controller.destroy();
+    });
+
+    it("data-open-on-focus='false' keeps focus open disabled", () => {
       document.body.innerHTML = `
         <nav data-slot="navigation-menu" id="root" data-open-on-focus="false">
           <ul data-slot="navigation-menu-list">
@@ -1818,7 +1900,6 @@ describe("NavigationMenu", () => {
       const controller = createNavigationMenu(root, { delayOpen: 0 });
 
       trigger.focus();
-      // Without openOnFocus, focus alone should not open the menu
       expect(controller.value).toBe(null);
 
       controller.destroy();

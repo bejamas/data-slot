@@ -71,7 +71,7 @@ const menu = createNavigationMenu(element, {
 |--------|------|---------|-------------|
 | `delayOpen` | `number` | `0` | Delay before opening on hover (ms) |
 | `delayClose` | `number` | `0` | Delay before closing on mouse leave (ms) |
-| `openOnFocus` | `boolean` | `true` | Whether focusing a trigger opens its content |
+| `openOnFocus` | `boolean` | `false` | Whether focusing a trigger opens its content |
 | `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Viewport side relative to trigger |
 | `align` | `"start" \| "center" \| "end"` | `"start"` | Viewport alignment on cross-axis |
 | `sideOffset` | `number` | `0` | Distance from trigger to viewport (px) |
@@ -88,7 +88,7 @@ Options can also be set via data attributes on the root element. JS options take
 |-----------|------|---------|-------------|
 | `data-delay-open` | number | `0` | Delay before opening on hover (ms) |
 | `data-delay-close` | number | `0` | Delay before closing on mouse leave (ms) |
-| `data-open-on-focus` | boolean | `true` | Whether focusing a trigger opens its content |
+| `data-open-on-focus` | boolean | `false` | Whether focusing a trigger opens its content |
 | `data-side` | string | `"bottom"` | Side: `"top"`, `"right"`, `"bottom"`, `"left"` |
 | `data-align` | string | `"start"` | Viewport alignment: `"start"`, `"center"`, or `"end"` |
 | `data-side-offset` | number | `0` | Distance from trigger to viewport (px) |
@@ -113,8 +113,8 @@ Can be set on:
 Their `data-side` / `data-align` are mirrored output values and are not used as placement inputs.
 
 ```html
-<!-- Faster hover response, no auto-open on focus -->
-<nav data-slot="navigation-menu" data-delay-open="100" data-open-on-focus="false">
+<!-- Faster hover response with focus auto-open opt-in -->
+<nav data-slot="navigation-menu" data-delay-open="100" data-open-on-focus="true">
   ...
 </nav>
 
@@ -311,7 +311,8 @@ Top-level submenu triggers and plain links remain in the natural tab order.
 
 - **Hover**: Opens after `delayOpen` ms, closes after `delayClose` ms
 - **Click**: Locks menu open until explicit action (click same trigger, click another trigger, click outside, or `Escape`); hover does not switch/close while locked
-- **Focus**: Opens immediately on keyboard focus
+- **Focus**: Does not auto-open by default; set `openOnFocus` / `data-open-on-focus="true"` to opt in
+- **Trigger open focus**: Opening via trigger activation moves focus into menu content (first focusable item, or content panel fallback)
 - **Switching**: Instant transition between items (no delay)
 
 ## Events
