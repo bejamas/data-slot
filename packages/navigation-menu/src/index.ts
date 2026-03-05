@@ -38,6 +38,18 @@ interface HoverSafeTriangle {
   edgeB: Point;
 }
 
+type TopLevelNavigable =
+  | {
+      kind: "submenu";
+      element: HTMLElement;
+      value: string;
+      trigger: HTMLElement;
+    }
+  | {
+      kind: "plain";
+      element: HTMLElement;
+    };
+
 const getAlignedPointOnRect = (rect: DOMRect, align: Align): Point => {
   if (align === "start") return { x: rect.left, y: rect.top };
   if (align === "end") return { x: rect.right, y: rect.bottom };
@@ -64,7 +76,7 @@ export interface NavigationMenuOptions {
   delayOpen?: number;
   /** Delay before closing on mouse leave (ms) */
   delayClose?: number;
-  /** Whether focusing a trigger opens its content (default: true) */
+  /** Whether focusing a trigger opens its content (default: false) */
   openOnFocus?: boolean;
   /** Preferred side of viewport relative to trigger */
   side?: Side;
@@ -121,7 +133,7 @@ export function createNavigationMenu(
   const delayClose =
     options.delayClose ?? getDataNumber(root, "delayClose") ?? 0;
   const openOnFocus =
-    options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? true;
+    options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? false;
   const rootSide = options.side ?? getDataEnum(root, "side", SIDES) ?? "bottom";
   const rootAlign =
     options.align ?? getDataEnum(root, "align", ALIGNS) ?? "start";
@@ -178,6 +190,7 @@ export function createNavigationMenu(
   let hoveredTrigger: HTMLElement | null = null;
   let clickLocked: boolean = false; // When true, menu stays open until click outside or toggle
   let suppressFocusOpenForTrigger: HTMLElement | null = null;
+  let pointerActivationTrigger: HTMLElement | null = null;
   let isRootHovered: boolean = false; // Track if pointer is over root
   let isDestroyed = false;
   let activeSafetyTriangle: HoverSafeTriangle | null = null;
@@ -361,6 +374,7 @@ export function createNavigationMenu(
   const itemMap = new Map<
     string,
     {
+      value: string;
       item: HTMLElement;
       trigger: HTMLElement;
       content: HTMLElement;
@@ -406,6 +420,7 @@ export function createNavigationMenu(
 
     if (trigger && content) {
       itemMap.set(value, {
+        value,
         item,
         trigger,
         content,
@@ -436,15 +451,14 @@ export function createNavigationMenu(
 
   // Get all triggers for keyboard navigation
   const triggers = Array.from(itemMap.values()).map((v) => v.trigger);
-
-  // Reverse map for O(1) trigger -> value lookup
-  const valueByTrigger = new Map<HTMLElement, string>();
-  for (const [value, data] of itemMap) valueByTrigger.set(data.trigger, value);
+  const topLevelFocusableSelector =
+    'a[href], button:not([disabled]), [role="link"], [role="button"], [tabindex]:not([tabindex="-1"])';
 
   const getManagedItemByElement = (
     el: Element | null,
   ):
     | {
+        value: string;
         item: HTMLElement;
         trigger: HTMLElement;
         content: HTMLElement;
@@ -460,6 +474,136 @@ export function createNavigationMenu(
     const data = itemMap.get(value);
     if (!data || data.item !== item) return null;
     return data;
+  };
+
+  // Build ordered top-level keyboard navigables from authored item order.
+  const getTopLevelItemTarget = (item: HTMLElement): HTMLElement | null => {
+    if (item.matches(topLevelFocusableSelector)) return item;
+    const candidates = item.querySelectorAll<HTMLElement>(topLevelFocusableSelector);
+    for (const candidate of candidates) {
+      if (!item.contains(candidate)) continue;
+      if (candidate.closest('[data-slot="navigation-menu-content"]')) continue;
+      if (candidate.hidden || candidate.closest("[hidden]")) continue;
+      return candidate;
+    }
+    return null;
+  };
+  const topLevelNavigables: TopLevelNavigable[] = [];
+  const navigableByElement = new Map<HTMLElement, TopLevelNavigable>();
+  items.forEach((item) => {
+    const managed = getManagedItemByElement(item);
+    if (managed) {
+      const entry: TopLevelNavigable = {
+        kind: "submenu",
+        element: managed.trigger,
+        value: managed.value,
+        trigger: managed.trigger,
+      };
+      topLevelNavigables.push(entry);
+      navigableByElement.set(entry.element, entry);
+      return;
+    }
+
+    const plainTarget = getTopLevelItemTarget(item);
+    if (!plainTarget) return;
+    const entry: TopLevelNavigable = {
+      kind: "plain",
+      element: plainTarget,
+    };
+    topLevelNavigables.push(entry);
+    navigableByElement.set(entry.element, entry);
+  });
+
+  const getNavigableByTarget = (
+    target: EventTarget | null,
+  ): TopLevelNavigable | null => {
+    const el = target instanceof HTMLElement ? target : null;
+    if (!el) return null;
+
+    let current: HTMLElement | null = el;
+    while (current && current !== list) {
+      const entry = navigableByElement.get(current);
+      if (entry) return entry;
+      current = current.parentElement;
+    }
+    return null;
+  };
+
+  const getPlainNavigableByTarget = (
+    target: EventTarget | null,
+  ): Extract<TopLevelNavigable, { kind: "plain" }> | null => {
+    const navigable = getNavigableByTarget(target);
+    return navigable?.kind === "plain" ? navigable : null;
+  };
+
+  interface TopLevelFocusOptions {
+    preserveOpenOnPlain?: boolean;
+  }
+
+  const focusTopLevelNavigable = (
+    navigable: TopLevelNavigable,
+    options: TopLevelFocusOptions = {},
+  ): boolean => {
+    const doc = root.ownerDocument;
+    const preserveOpenOnPlain = options.preserveOpenOnPlain ?? false;
+
+    if (navigable.kind === "submenu") {
+      navigable.trigger.focus();
+      if (doc.activeElement !== navigable.trigger) return false;
+      syncIndicator(navigable.trigger);
+      return true;
+    }
+
+    if (currentValue !== null && !preserveOpenOnPlain) {
+      closeMenuAndUnlock();
+    }
+    navigable.element.focus();
+    if (doc.activeElement !== navigable.element) return false;
+    if (currentValue !== null && preserveOpenOnPlain) {
+      syncIndicator();
+    } else {
+      updateIndicator(navigable.element);
+    }
+    return true;
+  };
+
+  const focusAdjacentTopLevelFromIndex = (
+    currentIndex: number,
+    direction: 1 | -1,
+    options: TopLevelFocusOptions = {},
+  ): boolean => {
+    for (
+      let nextIndex = currentIndex + direction;
+      nextIndex >= 0 && nextIndex < topLevelNavigables.length;
+      nextIndex += direction
+    ) {
+      const nextNavigable = topLevelNavigables[nextIndex];
+      if (!nextNavigable) continue;
+      if (focusTopLevelNavigable(nextNavigable, options)) return true;
+    }
+    return false;
+  };
+
+  const focusAdjacentTopLevelFromNavigable = (
+    navigable: TopLevelNavigable,
+    direction: 1 | -1,
+    options: TopLevelFocusOptions = {},
+  ): boolean => {
+    const currentIndex = topLevelNavigables.indexOf(navigable);
+    if (currentIndex === -1) return false;
+    return focusAdjacentTopLevelFromIndex(currentIndex, direction, options);
+  };
+
+  const focusAdjacentTopLevelFromTrigger = (
+    trigger: HTMLElement,
+    direction: 1 | -1,
+    options: TopLevelFocusOptions = {},
+  ): boolean => {
+    const currentIndex = topLevelNavigables.findIndex(
+      (entry) => entry.kind === "submenu" && entry.trigger === trigger,
+    );
+    if (currentIndex === -1) return false;
+    return focusAdjacentTopLevelFromIndex(currentIndex, direction, options);
   };
 
   const isNonSubmenuListTarget = (target: EventTarget | null): boolean => {
@@ -484,6 +628,64 @@ export function createNavigationMenu(
     return Array.from(
       content.querySelectorAll<HTMLElement>(focusableSelector),
     ).filter((el) => !el.hidden && !el.closest("[hidden]"));
+  };
+
+  const isElementActuallyFocusable = (el: HTMLElement): boolean => {
+    if (!el.isConnected) return false;
+    if (el.hidden || el.closest("[hidden]")) return false;
+    if ("disabled" in el && (el as HTMLButtonElement).disabled) return false;
+    if (el.getAttribute("aria-hidden") === "true") return false;
+    if (el.getAttribute("tabindex") === "-1") return false;
+    if (el.matches(focusableSelector)) return true;
+    return el.tabIndex >= 0;
+  };
+
+  const isWithinThisMenu = (candidate: HTMLElement): boolean => {
+    if (root.contains(candidate)) return true;
+    if (viewport?.contains(candidate)) return true;
+
+    const positioner = viewportPortal?.container;
+    if (positioner instanceof HTMLElement && positioner.contains(candidate)) {
+      return true;
+    }
+
+    for (const { content } of itemMap.values()) {
+      if (content.contains(candidate)) return true;
+    }
+
+    return false;
+  };
+
+  const focusNextFocusableAfterRoot = (): boolean => {
+    const doc = root.ownerDocument;
+    const candidates = Array.from(doc.querySelectorAll<HTMLElement>("*"));
+    for (const candidate of candidates) {
+      if (!isElementActuallyFocusable(candidate)) continue;
+      if (isWithinThisMenu(candidate)) continue;
+      if (
+        ((root as Node).compareDocumentPosition(candidate) &
+          Node.DOCUMENT_POSITION_FOLLOWING) ===
+        0
+      ) {
+        continue;
+      }
+
+      candidate.focus();
+      if (doc.activeElement === candidate) return true;
+    }
+    return false;
+  };
+
+  const focusContentForValue = (value: string): void => {
+    requestAnimationFrame(() => {
+      if (currentValue !== value) return;
+      const data = itemMap.get(value);
+      if (!data) return;
+      const focusables = getFocusableElements(data.content);
+      const first = focusables[0];
+      if (first) first.focus();
+      else data.content.focus(); // content has tabIndex=-1
+    });
   };
 
   const clearTimers = () => {
@@ -1143,6 +1345,21 @@ export function createNavigationMenu(
     indicator.setAttribute("data-state", "visible");
   };
 
+  const getActiveTrigger = (): HTMLElement | null => {
+    if (!currentValue) return null;
+    const data = itemMap.get(currentValue);
+    return data?.trigger ?? null;
+  };
+
+  const syncIndicator = (preferred: HTMLElement | null = null) => {
+    const activeTrigger = getActiveTrigger();
+    if (activeTrigger) {
+      updateIndicator(activeTrigger);
+      return;
+    }
+    updateIndicator(preferred);
+  };
+
   const updateState = (value: string | null, immediate = false) => {
     clearHoverSafetyState();
     // Skip if value hasn't changed
@@ -1172,11 +1389,13 @@ export function createNavigationMenu(
       const direction =
         isSwitching && newData ? getMotionDirection(newData.index) : null;
 
-      // If closing and focus is inside content, move focus to last trigger first
+      // If closing while focus is inside the active content panel, restore focus to its trigger.
       const active = document.activeElement as HTMLElement | null;
-      if (value === null && active && containsWithPortals(root, active)) {
-        const lastTrigger = prevValue ? itemMap.get(prevValue)?.trigger : null;
-        if (lastTrigger) lastTrigger.focus();
+      if (value === null && active && prevValue) {
+        const previousData = itemMap.get(prevValue);
+        if (previousData && containsWithPortals(previousData.content, active)) {
+          previousData.trigger.focus();
+        }
       }
 
       // Update all items
@@ -1186,10 +1405,6 @@ export function createNavigationMenu(
 
         setAria(trigger, "expanded", isActive);
         trigger.setAttribute("data-state", isActive ? "open" : "closed");
-        // Roving tabindex: active trigger or last active (on close) gets 0
-        if (isActive) trigger.tabIndex = 0;
-        else if (wasActive && value === null) trigger.tabIndex = 0;
-        else trigger.tabIndex = -1;
         item.setAttribute("data-state", isActive ? "open" : "closed");
 
         if (!isActive) {
@@ -1333,8 +1548,8 @@ export function createNavigationMenu(
       (trigger as HTMLButtonElement).type = "button";
     setAria(trigger, "expanded", false);
     trigger.setAttribute("data-state", "closed");
-    // First trigger gets tabIndex 0, rest get -1 (roving tabindex)
-    trigger.tabIndex = trigger === triggers[0] ? 0 : -1;
+    // Keep all top-level triggers tabbable for natural Tab/Shift+Tab traversal.
+    trigger.tabIndex = 0;
     item.setAttribute("data-state", "closed");
     content.setAttribute("data-state", "inactive");
     content.setAttribute("aria-hidden", "true");
@@ -1403,7 +1618,7 @@ export function createNavigationMenu(
           return;
         }
         if (openOnFocus) updateState(value, true);
-        updateIndicator(trigger);
+        syncIndicator(trigger);
       }),
     );
 
@@ -1411,12 +1626,19 @@ export function createNavigationMenu(
     cleanups.push(
       on(trigger, "pointerdown", () => {
         suppressFocusOpenForTrigger = trigger;
+        pointerActivationTrigger = trigger;
+      }),
+      on(trigger, "keydown", () => {
+        // Prevent stale pointer origin from affecting keyboard activation.
+        pointerActivationTrigger = null;
       }),
     );
 
     // Click on trigger - toggles and locks open state
     cleanups.push(
       on(trigger, "click", () => {
+        const isPointerActivation = pointerActivationTrigger === trigger;
+        pointerActivationTrigger = null;
         suppressFocusOpenForTrigger = null;
         clearTimers(); // Cancel any pending open/close timers
 
@@ -1430,11 +1652,17 @@ export function createNavigationMenu(
           // Menu open via hover, click to LOCK it open
           clickLocked = true;
           updateIndicator(trigger);
+          if (!isPointerActivation) {
+            focusContentForValue(value);
+          }
         } else {
           // Opening a new/different item -> switch and lock
           clickLocked = true;
           updateState(value, true);
           updateIndicator(trigger);
+          if (!isPointerActivation) {
+            focusContentForValue(value);
+          }
         }
       }),
     );
@@ -1443,9 +1671,20 @@ export function createNavigationMenu(
   // Close open submenu when interacting with non-submenu list targets (plain links/items).
   cleanups.push(
     on(list, "pointerover", (e) => {
-      if (currentValue === null) return;
       const event = e as PointerEvent;
       if (event.pointerType === "touch") return;
+      const plainNavigable = getPlainNavigableByTarget(event.target);
+      if (plainNavigable) {
+        if (currentValue !== null) {
+          if (clickLocked) return;
+          closeMenuAndUnlock();
+        }
+        updateIndicator(plainNavigable.element);
+        return;
+      }
+
+      if (currentValue === null) return;
+      if (clickLocked) return;
       if (!isNonSubmenuListTarget(event.target)) return;
       closeMenuAndUnlock();
     }),
@@ -1459,6 +1698,15 @@ export function createNavigationMenu(
   // Track pointer enter/leave on root for scoping document handlers
   // Cancel hover timers on any pointerdown inside root
   cleanups.push(
+    on(list, "focusin", (e) => {
+      const plainNavigable = getPlainNavigableByTarget(e.target);
+      if (!plainNavigable) return;
+      if (currentValue !== null) {
+        syncIndicator();
+        return;
+      }
+      updateIndicator(plainNavigable.element);
+    }),
     on(root, "pointerenter", () => {
       isRootHovered = true;
     }),
@@ -1521,36 +1769,44 @@ export function createNavigationMenu(
   // Keyboard navigation within the list
   cleanups.push(
     on(list, "keydown", (e) => {
-      const target = e.target as HTMLElement;
-      const currentTriggerIndex = triggers.indexOf(target);
-      if (currentTriggerIndex === -1) return;
+      const currentNavigable = getNavigableByTarget(e.target);
+      if (!currentNavigable) return;
 
-      const triggerValue = valueByTrigger.get(target) ?? null;
-      let nextIndex = currentTriggerIndex;
+      const currentNavigableIndex = topLevelNavigables.indexOf(currentNavigable);
+      if (currentNavigableIndex === -1) return;
+
+      let nextIndex = currentNavigableIndex;
 
       switch (e.key) {
+        case "Tab": {
+          // Keep forward Tab traversal linear while a submenu is open.
+          if (e.shiftKey || currentValue === null) return;
+          if (
+            focusAdjacentTopLevelFromNavigable(currentNavigable, 1, {
+              preserveOpenOnPlain: true,
+            }) ||
+            focusNextFocusableAfterRoot()
+          ) {
+            e.preventDefault();
+          }
+          return;
+        }
         case "ArrowLeft":
-          nextIndex = currentTriggerIndex - 1;
-          if (nextIndex < 0) nextIndex = triggers.length - 1;
+          nextIndex = currentNavigableIndex - 1;
+          if (nextIndex < 0) nextIndex = topLevelNavigables.length - 1;
           break;
         case "ArrowRight":
-          nextIndex = currentTriggerIndex + 1;
-          if (nextIndex >= triggers.length) nextIndex = 0;
+          nextIndex = currentNavigableIndex + 1;
+          if (nextIndex >= topLevelNavigables.length) nextIndex = 0;
           break;
         case "ArrowDown": {
-          e.preventDefault();
-          // Open content for this trigger and move focus into it
-          if (triggerValue) {
+          // Open content only when focused item has submenu content.
+          if (currentNavigable.kind === "submenu") {
+            e.preventDefault();
+            const triggerValue = currentNavigable.value;
             clickLocked = true; // Lock so pointerleave doesn't close
             updateState(triggerValue, true);
-            requestAnimationFrame(() => {
-              const data = itemMap.get(triggerValue);
-              if (!data) return;
-              const focusables = getFocusableElements(data.content);
-              const first = focusables[0];
-              if (first) first.focus();
-              else data.content.focus(); // content has tabIndex=-1
-            });
+            focusContentForValue(triggerValue);
           }
           return;
         }
@@ -1558,7 +1814,7 @@ export function createNavigationMenu(
           nextIndex = 0;
           break;
         case "End":
-          nextIndex = triggers.length - 1;
+          nextIndex = topLevelNavigables.length - 1;
           break;
         case "Escape":
           clickLocked = false;
@@ -1570,12 +1826,11 @@ export function createNavigationMenu(
       }
 
       e.preventDefault();
-      const nextTrigger = triggers[nextIndex];
-      if (nextTrigger) {
-        triggers.forEach((t) => (t.tabIndex = t === nextTrigger ? 0 : -1));
-        nextTrigger.focus();
-        updateIndicator(nextTrigger);
-      }
+      const nextNavigable = topLevelNavigables[nextIndex];
+      if (!nextNavigable) return;
+      focusTopLevelNavigable(nextNavigable, {
+        preserveOpenOnPlain: true,
+      });
     }),
   );
 
@@ -1591,6 +1846,27 @@ export function createNavigationMenu(
         if (currentIndex === -1) return;
 
         switch (e.key) {
+          case "Tab": {
+            if (!e.shiftKey && currentIndex === focusables.length - 1) {
+              if (
+                focusAdjacentTopLevelFromTrigger(trigger, 1, {
+                  preserveOpenOnPlain: true,
+                }) ||
+                focusNextFocusableAfterRoot()
+              ) {
+                e.preventDefault();
+              }
+              return;
+            }
+
+            if (e.shiftKey && currentIndex === 0) {
+              e.preventDefault();
+              trigger.focus();
+              return;
+            }
+
+            return;
+          }
           case "ArrowDown":
           case "ArrowRight": {
             e.preventDefault();
@@ -1642,10 +1918,15 @@ export function createNavigationMenu(
   // Close when focus leaves root (and unlock clickLocked)
   cleanups.push(
     on(document, "focusin", (e) => {
-      if (currentValue === null) return;
-      if (!containsWithPortals(root, e.target as Node)) {
+      const target = e.target as Node;
+      if (containsWithPortals(root, target)) return;
+
+      if (currentValue !== null) {
         closeMenuAndUnlock();
+        return;
       }
+
+      updateIndicator(null);
     }),
   );
 
@@ -1667,12 +1948,14 @@ export function createNavigationMenu(
       if (currentValue) {
         requestAnimationFrame(() => updateViewportPositioner());
       }
-      if (hoveredTrigger)
-        requestAnimationFrame(() => updateIndicator(hoveredTrigger));
+      if (currentValue || hoveredTrigger) {
+        requestAnimationFrame(() => syncIndicator(hoveredTrigger));
+      }
     }),
     on(list, "scroll", () => {
-      if (hoveredTrigger)
-        requestAnimationFrame(() => updateIndicator(hoveredTrigger));
+      if (currentValue || hoveredTrigger) {
+        requestAnimationFrame(() => syncIndicator(hoveredTrigger));
+      }
     }),
   );
 

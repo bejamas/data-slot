@@ -793,6 +793,8 @@ html {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  text-decoration: none;
+  color: inherit;
   transition: color 0.15s;
   position: relative;
   z-index: 1;
@@ -811,6 +813,10 @@ html {
 
 .nav-menu-trigger[data-state="open"]::after {
   transform: rotate(180deg);
+}
+
+.nav-menu-trigger-plain::after {
+  content: none;
 }
 
 /* Viewport - the animated container */

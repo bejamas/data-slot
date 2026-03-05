@@ -71,7 +71,7 @@ const menu = createNavigationMenu(element, {
 |--------|------|---------|-------------|
 | `delayOpen` | `number` | `0` | Delay before opening on hover (ms) |
 | `delayClose` | `number` | `0` | Delay before closing on mouse leave (ms) |
-| `openOnFocus` | `boolean` | `true` | Whether focusing a trigger opens its content |
+| `openOnFocus` | `boolean` | `false` | Whether focusing a trigger opens its content |
 | `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Viewport side relative to trigger |
 | `align` | `"start" \| "center" \| "end"` | `"start"` | Viewport alignment on cross-axis |
 | `sideOffset` | `number` | `0` | Distance from trigger to viewport (px) |
@@ -88,7 +88,7 @@ Options can also be set via data attributes on the root element. JS options take
 |-----------|------|---------|-------------|
 | `data-delay-open` | number | `0` | Delay before opening on hover (ms) |
 | `data-delay-close` | number | `0` | Delay before closing on mouse leave (ms) |
-| `data-open-on-focus` | boolean | `true` | Whether focusing a trigger opens its content |
+| `data-open-on-focus` | boolean | `false` | Whether focusing a trigger opens its content |
 | `data-side` | string | `"bottom"` | Side: `"top"`, `"right"`, `"bottom"`, `"left"` |
 | `data-align` | string | `"start"` | Viewport alignment: `"start"`, `"center"`, or `"end"` |
 | `data-side-offset` | number | `0` | Distance from trigger to viewport (px) |
@@ -113,8 +113,8 @@ Can be set on:
 Their `data-side` / `data-align` are mirrored output values and are not used as placement inputs.
 
 ```html
-<!-- Faster hover response, no auto-open on focus -->
-<nav data-slot="navigation-menu" data-delay-open="100" data-open-on-focus="false">
+<!-- Faster hover response with focus auto-open opt-in -->
+<nav data-slot="navigation-menu" data-delay-open="100" data-open-on-focus="true">
   ...
 </nav>
 
@@ -158,7 +158,7 @@ Their `data-side` / `data-align` are mirrored output values and are not used as 
 
 ### Optional Slots
 
-- `navigation-menu-indicator` - Animated highlight that follows the hovered trigger
+- `navigation-menu-indicator` - Animated highlight that follows top-level hover/focus targets; when a submenu is open, it stays anchored to the active trigger
 - `navigation-menu-viewport` - Container for content with size transitions
 - `navigation-menu-viewport-positioner` - Positioning wrapper for viewport (generated if not authored)
 - `navigation-menu-bridge` - Hover safety shield (gap bridge + triangle corridor)
@@ -282,16 +282,20 @@ For exit animations, avoid CSS that force-hides content immediately by `data-sta
 
 ## Keyboard Navigation
 
-### Within Trigger List
+### Within Top-Level Items
 
 | Key | Action |
 |-----|--------|
-| `ArrowLeft` | Move focus to previous trigger |
-| `ArrowRight` | Move focus to next trigger |
-| `ArrowDown` | Move focus into content panel |
-| `Home` | Move focus to first trigger |
-| `End` | Move focus to last trigger |
+| `ArrowLeft` | Move focus to previous top-level item (submenu trigger or plain link) |
+| `ArrowRight` | Move focus to next top-level item (submenu trigger or plain link) |
+| `Tab` | Move focus to next top-level item in DOM order |
+| `Shift+Tab` | Move focus to previous top-level item in reverse DOM order |
+| `ArrowDown` | Move focus into content panel (only when focused item has submenu content) |
+| `Home` | Move focus to first top-level item |
+| `End` | Move focus to last top-level item |
 | `Escape` | Close menu |
+
+Top-level submenu triggers and plain links remain in the natural tab order.
 
 ### Within Content Panel
 
@@ -299,13 +303,19 @@ For exit animations, avoid CSS that force-hides content immediately by `data-sta
 |-----|--------|
 | `ArrowDown` / `ArrowRight` | Move to next focusable element |
 | `ArrowUp` / `ArrowLeft` | Move to previous element (returns to trigger at start) |
+| `Tab` | From last content item, move focus to next top-level nav item; if none, move to next focusable after nav root |
+| `Shift+Tab` | From first content item, move focus back to owning trigger |
 | `Escape` | Close menu and return focus to trigger |
 
 ## Behavior
 
 - **Hover**: Opens after `delayOpen` ms, closes after `delayClose` ms
-- **Click**: Locks menu open until clicking outside or same trigger
-- **Focus**: Opens immediately on keyboard focus
+- **Click**: Locks menu open until explicit action (click same trigger, click another trigger, click outside, or `Escape`); hover does not switch/close while locked
+- **Focus**: Does not auto-open by default; set `openOnFocus` / `data-open-on-focus="true"` to opt in
+- **Trigger open focus**:
+  - Pointer click/tap keeps focus on the trigger
+  - Keyboard activation/programmatic click moves focus into menu content (first focusable item, or content panel fallback)
+- **Indicator**: Plain top-level links participate in indicator positioning when no submenu is open; open submenu state takes precedence
 - **Switching**: Instant transition between items (no delay)
 
 ## Events
