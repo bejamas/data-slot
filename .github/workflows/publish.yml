@@ -53,6 +53,10 @@ jobs:
         run: |
           set -euo pipefail
 
+          NPM_REGISTRY="https://registry.npmjs.org"
+          PUBLISH_VERIFY_ATTEMPTS="${PUBLISH_VERIFY_ATTEMPTS:-30}"
+          PUBLISH_VERIFY_SLEEP_SECONDS="${PUBLISH_VERIFY_SLEEP_SECONDS:-10}"
+
           # Resolve release version: from tag (e.g. v0.2.10 -> 0.2.10) or from core's package.json
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             RELEASE_VERSION="${GITHUB_REF#refs/tags/v}"
@@ -60,6 +64,19 @@ jobs:
             RELEASE_VERSION=$(jq -r .version packages/core/package.json)
           fi
           echo "Using release version: $RELEASE_VERSION"
+          echo "Using npm registry: $NPM_REGISTRY"
+
+          npm_registry_config="$(npm config get registry | tr -d '[:space:]' | sed 's:/*$::')"
+          if [[ "$npm_registry_config" != "$NPM_REGISTRY" ]]; then
+            echo "ERROR: npm is configured for unexpected registry: ${npm_registry_config}"
+            exit 1
+          fi
+
+          npm_dry_run="$(npm config get dry-run | tr -d '[:space:]')"
+          if [[ "$npm_dry_run" == "true" ]]; then
+            echo "ERROR: npm dry-run is enabled; refusing to run publish workflow."
+            exit 1
+          fi
 
           rewrite_workspace_data_slot_deps() {
             local manifest="$1"
@@ -86,26 +103,38 @@ jobs:
             mv "$tmp_manifest" "$manifest"
           }
 
-          wait_for_npm_package_version() {
+          wait_for_registry_package_version() {
             local pkg="$1"
             local version="$2"
-            local attempts=10
-            local sleep_seconds=6
+            local attempts="$PUBLISH_VERIFY_ATTEMPTS"
+            local sleep_seconds="$PUBLISH_VERIFY_SLEEP_SECONDS"
+            local pkg_encoded
+            local status_code
             local i
 
+            pkg_encoded="$(jq -nr --arg v "$pkg" '$v|@uri')"
+
             for ((i = 1; i <= attempts; i++)); do
-              if npm view "${pkg}@${version}" version >/dev/null 2>&1; then
+              status_code="$(
+                curl -sS -o /dev/null -w "%{http_code}" "${NPM_REGISTRY}/${pkg_encoded}/${version}" || true
+              )"
+
+              if [[ "$status_code" == "200" ]]; then
                 echo "  [OK] ${pkg}@${version} is available"
                 return 0
               fi
 
               if ((i < attempts)); then
-                echo "  ... ${pkg}@${version} not visible yet (attempt ${i}/${attempts}); retrying in ${sleep_seconds}s"
+                echo "  ... ${pkg}@${version} not visible yet (HTTP ${status_code}, attempt ${i}/${attempts}); retrying in ${sleep_seconds}s"
                 sleep "$sleep_seconds"
               fi
             done
 
-            echo "ERROR: ${pkg}@${version} not available on npm after ${attempts} attempts"
+            echo "ERROR: ${pkg}@${version} not available on npm after ${attempts} attempts (last HTTP ${status_code})"
+            echo "Debug: npm view ${pkg} versions --json --prefer-online"
+            npm view "$pkg" versions --json --prefer-online --registry "$NPM_REGISTRY" || true
+            echo "Debug: registry dist-tags for ${pkg}"
+            curl -sS "${NPM_REGISTRY}/${pkg_encoded}" | jq '.["dist-tags"] // {}' || true
             return 1
           }
 
@@ -132,13 +161,20 @@ jobs:
             # Replace internal workspace:* deps with the release version.
             rewrite_workspace_data_slot_deps "$tmp/package/package.json"
 
+            local pkg_name
+            local pkg_version
+            pkg_name="$(jq -r .name "$tmp/package/package.json")"
+            pkg_version="$(jq -r .version "$tmp/package/package.json")"
+
             echo "=== Packed manifest for $dir ($tgz) ==="
             cat "$tmp/package/package.json"
 
             # Publish from extracted folder (cwd publish)
             pushd "$tmp/package" >/dev/null
-            bunx npm publish --access public --provenance
+            bunx npm publish --access public --provenance --registry "$NPM_REGISTRY"
             popd >/dev/null
+
+            wait_for_registry_package_version "$pkg_name" "$pkg_version"
 
             rm -rf "$tmp"
             rm -f "$tgz_path"
@@ -161,19 +197,6 @@ jobs:
           publish_pkg packages/select
           publish_pkg packages/combobox
           publish_pkg packages/hover-card
-
-          echo "Waiting for @data-slot/ui dependencies to be available on npm..."
-          mapfile -t ui_internal_deps < <(
-            jq -r '
-              (.dependencies // {})
-              | keys[]
-              | select(startswith("@data-slot/"))
-              | select(. != "@data-slot/ui")
-            ' packages/ui/package.json
-          )
-          for dep in "${ui_internal_deps[@]}"; do
-            wait_for_npm_package_version "$dep" "$RELEASE_VERSION"
-          done
 
           publish_pkg packages/ui
 
