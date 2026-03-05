@@ -16,7 +16,10 @@ const cssCode = `<nav data-slot="navigation-menu" class="nav-menu">
         </div>
       </div>
     </li>
-    <!-- More items... -->
+    <li data-slot="navigation-menu-item" class="nav-menu-item">
+      <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">Docs</a>
+    </li>
+    <!-- More submenu items... -->
     <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
   </ul>
   <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
@@ -33,9 +36,12 @@ const cssCode = `<nav data-slot="navigation-menu" class="nav-menu">
     display: flex;
     align-items: center;
     gap: 0.35rem;
+    text-decoration: none;
+    color: inherit;
   }
   .nav-menu-trigger::after { content: "▼"; font-size: 0.6rem; }
   .nav-menu-trigger[data-state="open"]::after { transform: rotate(180deg); }
+  .nav-menu-trigger-plain::after { content: none; }
   .nav-menu-viewport {
     position: absolute;
     top: 0;
@@ -83,7 +89,17 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
         </div>
       </div>
     </li>
-    <!-- More items... -->
+    <li data-slot="navigation-menu-item" class="static">
+      <a
+        href="#"
+        class="px-4 py-2.5 bg-transparent border-none cursor-pointer
+               flex items-center gap-1.5 transition-colors relative z-1
+               hover:text-accent text-inherit no-underline"
+      >
+        Docs
+      </a>
+    </li>
+    <!-- More submenu items... -->
     <div
       data-slot="navigation-menu-indicator"
       class="absolute bg-code-bg z-0 rounded-md transition-all duration-150
@@ -169,6 +185,9 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
             </a>
           </div>
         </div>
+      </li>
+      <li data-slot="navigation-menu-item" class="nav-menu-item">
+        <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">Docs</a>
       </li>
       <li data-slot="navigation-menu-item" data-value="resources" class="nav-menu-item">
         <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Resources</button>
@@ -295,6 +314,14 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
             </a>
           </div>
         </div>
+      </li>
+      <li data-slot="navigation-menu-item" class="static">
+        <a
+          href="#"
+          class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent text-inherit no-underline"
+        >
+          Docs
+        </a>
       </li>
       <li data-slot="navigation-menu-item" data-value="resources" data-align="center" class="static">
         <button

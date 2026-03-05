@@ -528,8 +528,16 @@ export function createNavigationMenu(
     return null;
   };
 
-  const focusTopLevelNavigable = (navigable: TopLevelNavigable): boolean => {
+  interface TopLevelFocusOptions {
+    preserveOpenOnPlain?: boolean;
+  }
+
+  const focusTopLevelNavigable = (
+    navigable: TopLevelNavigable,
+    options: TopLevelFocusOptions = {},
+  ): boolean => {
     const doc = root.ownerDocument;
+    const preserveOpenOnPlain = options.preserveOpenOnPlain ?? false;
 
     if (navigable.kind === "submenu") {
       navigable.trigger.focus();
@@ -538,18 +546,23 @@ export function createNavigationMenu(
       return true;
     }
 
-    if (currentValue !== null) {
+    if (currentValue !== null && !preserveOpenOnPlain) {
       closeMenuAndUnlock();
-    } else {
+    } else if (currentValue === null) {
       updateIndicator(null);
     }
     navigable.element.focus();
-    return doc.activeElement === navigable.element;
+    if (doc.activeElement !== navigable.element) return false;
+    if (currentValue !== null && preserveOpenOnPlain) {
+      syncIndicator();
+    }
+    return true;
   };
 
   const focusAdjacentTopLevelFromIndex = (
     currentIndex: number,
     direction: 1 | -1,
+    options: TopLevelFocusOptions = {},
   ): boolean => {
     for (
       let nextIndex = currentIndex + direction;
@@ -558,7 +571,7 @@ export function createNavigationMenu(
     ) {
       const nextNavigable = topLevelNavigables[nextIndex];
       if (!nextNavigable) continue;
-      if (focusTopLevelNavigable(nextNavigable)) return true;
+      if (focusTopLevelNavigable(nextNavigable, options)) return true;
     }
     return false;
   };
@@ -566,21 +579,23 @@ export function createNavigationMenu(
   const focusAdjacentTopLevelFromNavigable = (
     navigable: TopLevelNavigable,
     direction: 1 | -1,
+    options: TopLevelFocusOptions = {},
   ): boolean => {
     const currentIndex = topLevelNavigables.indexOf(navigable);
     if (currentIndex === -1) return false;
-    return focusAdjacentTopLevelFromIndex(currentIndex, direction);
+    return focusAdjacentTopLevelFromIndex(currentIndex, direction, options);
   };
 
   const focusAdjacentTopLevelFromTrigger = (
     trigger: HTMLElement,
     direction: 1 | -1,
+    options: TopLevelFocusOptions = {},
   ): boolean => {
     const currentIndex = topLevelNavigables.findIndex(
       (entry) => entry.kind === "submenu" && entry.trigger === trigger,
     );
     if (currentIndex === -1) return false;
-    return focusAdjacentTopLevelFromIndex(currentIndex, direction);
+    return focusAdjacentTopLevelFromIndex(currentIndex, direction, options);
   };
 
   const isNonSubmenuListTarget = (target: EventTarget | null): boolean => {
@@ -1729,7 +1744,9 @@ export function createNavigationMenu(
           // Keep forward Tab traversal linear while a submenu is open.
           if (e.shiftKey || currentValue === null) return;
           if (
-            focusAdjacentTopLevelFromNavigable(currentNavigable, 1) ||
+            focusAdjacentTopLevelFromNavigable(currentNavigable, 1, {
+              preserveOpenOnPlain: true,
+            }) ||
             focusNextFocusableAfterRoot()
           ) {
             e.preventDefault();
@@ -1773,17 +1790,9 @@ export function createNavigationMenu(
       e.preventDefault();
       const nextNavigable = topLevelNavigables[nextIndex];
       if (!nextNavigable) return;
-      focusTopLevelNavigable(nextNavigable);
-    }),
-  );
-
-  // When focus moves to non-submenu top-level items, close any open submenu.
-  cleanups.push(
-    on(list, "focusin", (e) => {
-      if (currentValue === null) return;
-      const navigable = getNavigableByTarget(e.target);
-      if (!navigable || navigable.kind === "submenu") return;
-      closeMenuAndUnlock();
+      focusTopLevelNavigable(nextNavigable, {
+        preserveOpenOnPlain: true,
+      });
     }),
   );
 
@@ -1802,7 +1811,9 @@ export function createNavigationMenu(
           case "Tab": {
             if (!e.shiftKey && currentIndex === focusables.length - 1) {
               if (
-                focusAdjacentTopLevelFromTrigger(trigger, 1) ||
+                focusAdjacentTopLevelFromTrigger(trigger, 1, {
+                  preserveOpenOnPlain: true,
+                }) ||
                 focusNextFocusableAfterRoot()
               ) {
                 e.preventDefault();

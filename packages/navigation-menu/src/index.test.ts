@@ -1437,7 +1437,7 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("ArrowRight includes plain links and closes open submenu", () => {
+  it("ArrowRight includes plain links and keeps open submenu", () => {
     const { root, triggers, plainLink, controller } = setupMixed();
 
     triggers[0]?.focus();
@@ -1448,8 +1448,8 @@ describe("NavigationMenu", () => {
     );
 
     expect(document.activeElement).toBe(plainLink);
-    expect(controller.value).toBe(null);
-    expect(root.getAttribute("data-state")).toBe("closed");
+    expect(controller.value).toBe("products");
+    expect(root.getAttribute("data-state")).toBe("open");
 
     controller.destroy();
   });
@@ -1519,7 +1519,7 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("closes open submenu when focus moves to plain link", () => {
+  it("keeps open submenu when focus moves to plain link", () => {
     const { root, triggers, plainLink, controller } = setupMixed();
 
     triggers[0]?.focus();
@@ -1527,11 +1527,59 @@ describe("NavigationMenu", () => {
     expect(controller.value).toBe("products");
 
     plainLink.focus();
-    expect(controller.value).toBe(null);
-    expect(root.getAttribute("data-state")).toBe("closed");
+    expect(controller.value).toBe("products");
+    expect(root.getAttribute("data-state")).toBe("open");
     expect(document.activeElement).toBe(plainLink);
 
     controller.destroy();
+  });
+
+  it("Tab traverses plain top-level items without closing the open submenu", () => {
+    const { root, triggers, plainLink, controller } = setupMixed();
+
+    const after = document.createElement("button");
+    after.id = "after-nav";
+    document.body.appendChild(after);
+
+    triggers[0]?.focus();
+    controller.open("products");
+    expect(controller.value).toBe("products");
+
+    const firstTab = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+    triggers[0]?.dispatchEvent(firstTab);
+    expect(firstTab.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(plainLink);
+    expect(controller.value).toBe("products");
+    expect(root.getAttribute("data-state")).toBe("open");
+
+    const secondTab = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+    plainLink.dispatchEvent(secondTab);
+    expect(secondTab.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(triggers[1]);
+    expect(controller.value).toBe("products");
+    expect(root.getAttribute("data-state")).toBe("open");
+
+    const thirdTab = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+    triggers[1]?.dispatchEvent(thirdTab);
+    expect(thirdTab.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(after);
+    expect(controller.value).toBe(null);
+    expect(root.getAttribute("data-state")).toBe("closed");
+
+    controller.destroy();
+    after.remove();
   });
 
   it("create() binds all navigation menu components", () => {
