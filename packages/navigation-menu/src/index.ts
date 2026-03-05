@@ -529,6 +529,13 @@ export function createNavigationMenu(
     return null;
   };
 
+  const getPlainNavigableByTarget = (
+    target: EventTarget | null,
+  ): Extract<TopLevelNavigable, { kind: "plain" }> | null => {
+    const navigable = getNavigableByTarget(target);
+    return navigable?.kind === "plain" ? navigable : null;
+  };
+
   interface TopLevelFocusOptions {
     preserveOpenOnPlain?: boolean;
   }
@@ -549,13 +556,13 @@ export function createNavigationMenu(
 
     if (currentValue !== null && !preserveOpenOnPlain) {
       closeMenuAndUnlock();
-    } else if (currentValue === null) {
-      updateIndicator(null);
     }
     navigable.element.focus();
     if (doc.activeElement !== navigable.element) return false;
     if (currentValue !== null && preserveOpenOnPlain) {
       syncIndicator();
+    } else {
+      updateIndicator(navigable.element);
     }
     return true;
   };
@@ -1664,10 +1671,20 @@ export function createNavigationMenu(
   // Close open submenu when interacting with non-submenu list targets (plain links/items).
   cleanups.push(
     on(list, "pointerover", (e) => {
-      if (currentValue === null) return;
-      if (clickLocked) return;
       const event = e as PointerEvent;
       if (event.pointerType === "touch") return;
+      const plainNavigable = getPlainNavigableByTarget(event.target);
+      if (plainNavigable) {
+        if (currentValue !== null) {
+          if (clickLocked) return;
+          closeMenuAndUnlock();
+        }
+        updateIndicator(plainNavigable.element);
+        return;
+      }
+
+      if (currentValue === null) return;
+      if (clickLocked) return;
       if (!isNonSubmenuListTarget(event.target)) return;
       closeMenuAndUnlock();
     }),
@@ -1681,6 +1698,15 @@ export function createNavigationMenu(
   // Track pointer enter/leave on root for scoping document handlers
   // Cancel hover timers on any pointerdown inside root
   cleanups.push(
+    on(list, "focusin", (e) => {
+      const plainNavigable = getPlainNavigableByTarget(e.target);
+      if (!plainNavigable) return;
+      if (currentValue !== null) {
+        syncIndicator();
+        return;
+      }
+      updateIndicator(plainNavigable.element);
+    }),
     on(root, "pointerenter", () => {
       isRootHovered = true;
     }),

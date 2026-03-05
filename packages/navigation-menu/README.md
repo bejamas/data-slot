@@ -158,7 +158,7 @@ Their `data-side` / `data-align` are mirrored output values and are not used as 
 
 ### Optional Slots
 
-- `navigation-menu-indicator` - Animated highlight that follows the hovered trigger
+- `navigation-menu-indicator` - Animated highlight that follows top-level hover/focus targets; when a submenu is open, it stays anchored to the active trigger
 - `navigation-menu-viewport` - Container for content with size transitions
 - `navigation-menu-viewport-positioner` - Positioning wrapper for viewport (generated if not authored)
 - `navigation-menu-bridge` - Hover safety shield (gap bridge + triangle corridor)
@@ -315,6 +315,7 @@ Top-level submenu triggers and plain links remain in the natural tab order.
 - **Trigger open focus**:
   - Pointer click/tap keeps focus on the trigger
   - Keyboard activation/programmatic click moves focus into menu content (first focusable item, or content panel fallback)
+- **Indicator**: Plain top-level links participate in indicator positioning when no submenu is open; open submenu state takes precedence
 - **Switching**: Instant transition between items (no delay)
 
 ## Events

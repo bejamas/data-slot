@@ -80,6 +80,49 @@ describe("NavigationMenu", () => {
     return { root, list, triggers, plainLink, controller };
   };
 
+  const setupMixedWithIndicator = (
+    options: Parameters<typeof createNavigationMenu>[1] = {}
+  ) => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+          <li data-slot="navigation-menu-item">
+            <a href="#" class="plain-link"><span>Docs</span></a>
+          </li>
+          <li data-slot="navigation-menu-item" data-value="resources">
+            <button data-slot="navigation-menu-trigger">Resources</button>
+            <div data-slot="navigation-menu-content">Resources content</div>
+          </li>
+          <div data-slot="navigation-menu-indicator"></div>
+        </ul>
+        <div data-slot="navigation-menu-viewport"></div>
+      </nav>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const list = root.querySelector(
+      '[data-slot="navigation-menu-list"]'
+    ) as HTMLElement;
+    const triggers = root.querySelectorAll(
+      '[data-slot="navigation-menu-trigger"]'
+    ) as NodeListOf<HTMLElement>;
+    const plainLink = root.querySelector(".plain-link") as HTMLElement;
+    const indicator = root.querySelector(
+      '[data-slot="navigation-menu-indicator"]'
+    ) as HTMLElement;
+    const controller = createNavigationMenu(root, {
+      delayOpen: 0,
+      delayClose: 0,
+      ...options,
+    });
+
+    return { root, list, triggers, plainLink, indicator, controller };
+  };
+
   const setupWithIndicator = (
     options: Parameters<typeof createNavigationMenu>[1] = {}
   ) => {
@@ -341,6 +384,173 @@ describe("NavigationMenu", () => {
     expect(indicator.style.getPropertyValue("--indicator-left")).toBe("20px");
     expect(triggers[0]!.getAttribute("data-state")).toBe("open");
     expect(triggers[1]!.getAttribute("data-state")).toBe("closed");
+
+    controller.destroy();
+  });
+
+  it("shows indicator on plain top-level link when focused with menu closed", () => {
+    const { list, triggers, plainLink, indicator, controller } =
+      setupMixedWithIndicator();
+
+    const rect = (
+      left: number,
+      top: number,
+      width: number,
+      height: number
+    ): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    list.getBoundingClientRect = () => rect(100, 100, 500, 40);
+    triggers[0]!.getBoundingClientRect = () => rect(120, 100, 120, 40);
+    plainLink.getBoundingClientRect = () => rect(260, 100, 100, 40);
+    triggers[1]!.getBoundingClientRect = () => rect(380, 100, 120, 40);
+
+    plainLink.focus();
+
+    expect(controller.value).toBe(null);
+    expect(document.activeElement).toBe(plainLink);
+    expect(indicator.getAttribute("data-state")).toBe("visible");
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("160px");
+
+    controller.destroy();
+  });
+
+  it("shows indicator on plain top-level link on hover when menu is closed", () => {
+    const { list, triggers, plainLink, indicator, controller } =
+      setupMixedWithIndicator();
+
+    const rect = (
+      left: number,
+      top: number,
+      width: number,
+      height: number
+    ): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    list.getBoundingClientRect = () => rect(100, 100, 500, 40);
+    triggers[0]!.getBoundingClientRect = () => rect(120, 100, 120, 40);
+    plainLink.getBoundingClientRect = () => rect(260, 100, 100, 40);
+    triggers[1]!.getBoundingClientRect = () => rect(380, 100, 120, 40);
+
+    plainLink.dispatchEvent(
+      new PointerEvent("pointerover", {
+        bubbles: true,
+        pointerType: "mouse",
+      } as PointerEventInit)
+    );
+
+    expect(controller.value).toBe(null);
+    expect(indicator.getAttribute("data-state")).toBe("visible");
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("160px");
+
+    controller.destroy();
+  });
+
+  it("hovering plain top-level link closes unlocked submenu and moves indicator to plain link", () => {
+    const { root, list, triggers, plainLink, indicator, controller } =
+      setupMixedWithIndicator();
+
+    const rect = (
+      left: number,
+      top: number,
+      width: number,
+      height: number
+    ): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    list.getBoundingClientRect = () => rect(100, 100, 500, 40);
+    triggers[0]!.getBoundingClientRect = () => rect(120, 100, 120, 40);
+    plainLink.getBoundingClientRect = () => rect(260, 100, 100, 40);
+    triggers[1]!.getBoundingClientRect = () => rect(380, 100, 120, 40);
+
+    controller.open("products");
+    expect(controller.value).toBe("products");
+    expect(root.getAttribute("data-state")).toBe("open");
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("20px");
+
+    plainLink.dispatchEvent(
+      new PointerEvent("pointerover", {
+        bubbles: true,
+        pointerType: "mouse",
+      } as PointerEventInit)
+    );
+
+    expect(controller.value).toBe(null);
+    expect(root.getAttribute("data-state")).toBe("closed");
+    expect(indicator.getAttribute("data-state")).toBe("visible");
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("160px");
+
+    controller.destroy();
+  });
+
+  it("keeps indicator on open submenu trigger when plain top-level link receives focus", () => {
+    const { root, list, triggers, plainLink, indicator, controller } =
+      setupMixedWithIndicator();
+
+    const rect = (
+      left: number,
+      top: number,
+      width: number,
+      height: number
+    ): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    list.getBoundingClientRect = () => rect(100, 100, 500, 40);
+    triggers[0]!.getBoundingClientRect = () => rect(120, 100, 120, 40);
+    plainLink.getBoundingClientRect = () => rect(260, 100, 100, 40);
+    triggers[1]!.getBoundingClientRect = () => rect(380, 100, 120, 40);
+
+    controller.open("products");
+    expect(controller.value).toBe("products");
+    expect(root.getAttribute("data-state")).toBe("open");
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("20px");
+
+    plainLink.focus();
+
+    expect(document.activeElement).toBe(plainLink);
+    expect(controller.value).toBe("products");
+    expect(root.getAttribute("data-state")).toBe("open");
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("20px");
 
     controller.destroy();
   });
