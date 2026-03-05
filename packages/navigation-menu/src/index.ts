@@ -190,6 +190,7 @@ export function createNavigationMenu(
   let hoveredTrigger: HTMLElement | null = null;
   let clickLocked: boolean = false; // When true, menu stays open until click outside or toggle
   let suppressFocusOpenForTrigger: HTMLElement | null = null;
+  let pointerActivationTrigger: HTMLElement | null = null;
   let isRootHovered: boolean = false; // Track if pointer is over root
   let isDestroyed = false;
   let activeSafetyTriangle: HoverSafeTriangle | null = null;
@@ -1618,12 +1619,19 @@ export function createNavigationMenu(
     cleanups.push(
       on(trigger, "pointerdown", () => {
         suppressFocusOpenForTrigger = trigger;
+        pointerActivationTrigger = trigger;
+      }),
+      on(trigger, "keydown", () => {
+        // Prevent stale pointer origin from affecting keyboard activation.
+        pointerActivationTrigger = null;
       }),
     );
 
     // Click on trigger - toggles and locks open state
     cleanups.push(
       on(trigger, "click", () => {
+        const isPointerActivation = pointerActivationTrigger === trigger;
+        pointerActivationTrigger = null;
         suppressFocusOpenForTrigger = null;
         clearTimers(); // Cancel any pending open/close timers
 
@@ -1637,13 +1645,17 @@ export function createNavigationMenu(
           // Menu open via hover, click to LOCK it open
           clickLocked = true;
           updateIndicator(trigger);
-          focusContentForValue(value);
+          if (!isPointerActivation) {
+            focusContentForValue(value);
+          }
         } else {
           // Opening a new/different item -> switch and lock
           clickLocked = true;
           updateState(value, true);
           updateIndicator(trigger);
-          focusContentForValue(value);
+          if (!isPointerActivation) {
+            focusContentForValue(value);
+          }
         }
       }),
     );

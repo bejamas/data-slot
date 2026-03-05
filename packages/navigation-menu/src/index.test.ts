@@ -1757,6 +1757,23 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
 
+    it("pointer clicking trigger opens menu and keeps focus on trigger", async () => {
+      const { triggers, link1, controller } = setupWithLinks();
+
+      triggers[0]?.focus();
+      triggers[0]?.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true })
+      );
+      triggers[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+      await flushRAF();
+      expect(controller.value).toBe("products");
+      expect(document.activeElement).toBe(triggers[0]);
+      expect(document.activeElement).not.toBe(link1);
+
+      controller.destroy();
+    });
+
     it("clicking trigger with no focusables focuses content panel", async () => {
       const { triggers, contents, controller } = setup();
 
@@ -1781,6 +1798,30 @@ describe("NavigationMenu", () => {
       await flushRAF();
       expect(controller.value).toBe("solutions");
       expect(document.activeElement).toBe(btn1);
+
+      controller.destroy();
+    });
+
+    it("pointer clicking another trigger switches menu and keeps focus on clicked trigger", async () => {
+      const { triggers, controller } = setupWithLinks();
+
+      triggers[0]?.focus();
+      triggers[0]?.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true })
+      );
+      triggers[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await flushRAF();
+      expect(controller.value).toBe("products");
+      expect(document.activeElement).toBe(triggers[0]);
+
+      triggers[1]?.focus();
+      triggers[1]?.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true })
+      );
+      triggers[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await flushRAF();
+      expect(controller.value).toBe("solutions");
+      expect(document.activeElement).toBe(triggers[1]);
 
       controller.destroy();
     });

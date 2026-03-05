@@ -312,7 +312,9 @@ Top-level submenu triggers and plain links remain in the natural tab order.
 - **Hover**: Opens after `delayOpen` ms, closes after `delayClose` ms
 - **Click**: Locks menu open until explicit action (click same trigger, click another trigger, click outside, or `Escape`); hover does not switch/close while locked
 - **Focus**: Does not auto-open by default; set `openOnFocus` / `data-open-on-focus="true"` to opt in
-- **Trigger open focus**: Opening via trigger activation moves focus into menu content (first focusable item, or content panel fallback)
+- **Trigger open focus**:
+  - Pointer click/tap keeps focus on the trigger
+  - Keyboard activation/programmatic click moves focus into menu content (first focusable item, or content panel fallback)
 - **Switching**: Instant transition between items (no delay)
 
 ## Events
