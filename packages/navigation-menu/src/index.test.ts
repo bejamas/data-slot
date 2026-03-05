@@ -1796,7 +1796,7 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
 
-    it("Tab from last content item exits nav naturally when no next top-level item", async () => {
+    it("Tab from last content item moves focus to next focusable after nav root", async () => {
       document.body.innerHTML = `
         <a href="#" id="before">Before</a>
         <nav data-slot="navigation-menu" id="root">
@@ -1811,6 +1811,104 @@ describe("NavigationMenu", () => {
           <div data-slot="navigation-menu-viewport"></div>
         </nav>
         <a href="#" id="after">After</a>
+      `;
+
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector(
+        '[data-slot="navigation-menu-trigger"]'
+      ) as HTMLElement;
+      const onlyLink = document.getElementById("only-link") as HTMLElement;
+      const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+      trigger.focus();
+      trigger.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
+      await flushRAF();
+      expect(document.activeElement).toBe(onlyLink);
+
+      const event = new KeyboardEvent("keydown", {
+        key: "Tab",
+        bubbles: true,
+        cancelable: true,
+      });
+      onlyLink.dispatchEvent(event);
+      const after = document.getElementById("after") as HTMLElement;
+      expect(event.defaultPrevented).toBe(true);
+      expect(document.activeElement).toBe(after);
+
+      controller.destroy();
+    });
+
+    it("Tab from last content item skips adjacent targets that cannot receive focus", async () => {
+      document.body.innerHTML = `
+        <nav data-slot="navigation-menu" id="root">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">
+                <a href="#" id="only-link">Only link</a>
+              </div>
+            </li>
+            <li data-slot="navigation-menu-item">
+              <button data-slot="navigation-menu-trigger" id="dead-trigger">Dead target</button>
+            </li>
+          </ul>
+          <div data-slot="navigation-menu-viewport"></div>
+        </nav>
+        <a href="#" id="after">After</a>
+      `;
+
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector(
+        '[data-slot="navigation-menu-trigger"]'
+      ) as HTMLElement;
+      const onlyLink = document.getElementById("only-link") as HTMLElement;
+      const deadTrigger = document.getElementById("dead-trigger") as HTMLButtonElement & {
+        focus: (...args: unknown[]) => void;
+      };
+      const originalFocus = deadTrigger.focus.bind(deadTrigger);
+      deadTrigger.focus = () => {};
+      const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+      try {
+        trigger.focus();
+        trigger.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+        );
+        await flushRAF();
+        expect(document.activeElement).toBe(onlyLink);
+
+        const event = new KeyboardEvent("keydown", {
+          key: "Tab",
+          bubbles: true,
+          cancelable: true,
+        });
+        onlyLink.dispatchEvent(event);
+        const after = document.getElementById("after") as HTMLElement;
+        expect(event.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(after);
+      } finally {
+        deadTrigger.focus = originalFocus as unknown as (
+          ...args: unknown[]
+        ) => void;
+        controller.destroy();
+      }
+    });
+
+    it("Tab from last content item allows default when no next focusable after nav", async () => {
+      document.body.innerHTML = `
+        <nav data-slot="navigation-menu" id="root">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">
+                <a href="#" id="only-link">Only link</a>
+              </div>
+            </li>
+          </ul>
+          <div data-slot="navigation-menu-viewport"></div>
+        </nav>
       `;
 
       const root = document.getElementById("root")!;

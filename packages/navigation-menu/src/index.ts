@@ -528,11 +528,14 @@ export function createNavigationMenu(
     return null;
   };
 
-  const focusTopLevelNavigable = (navigable: TopLevelNavigable): void => {
+  const focusTopLevelNavigable = (navigable: TopLevelNavigable): boolean => {
+    const doc = root.ownerDocument;
+
     if (navigable.kind === "submenu") {
       navigable.trigger.focus();
+      if (doc.activeElement !== navigable.trigger) return false;
       updateIndicator(navigable.trigger);
-      return;
+      return true;
     }
 
     if (currentValue !== null) {
@@ -541,6 +544,7 @@ export function createNavigationMenu(
       updateIndicator(null);
     }
     navigable.element.focus();
+    return doc.activeElement === navigable.element;
   };
 
   const focusAdjacentTopLevelFromTrigger = (
@@ -551,14 +555,16 @@ export function createNavigationMenu(
       (entry) => entry.kind === "submenu" && entry.trigger === trigger,
     );
     if (currentIndex === -1) return false;
-
-    const nextIndex = currentIndex + direction;
-    if (nextIndex < 0 || nextIndex >= topLevelNavigables.length) return false;
-    const nextNavigable = topLevelNavigables[nextIndex];
-    if (!nextNavigable) return false;
-
-    focusTopLevelNavigable(nextNavigable);
-    return true;
+    for (
+      let nextIndex = currentIndex + direction;
+      nextIndex >= 0 && nextIndex < topLevelNavigables.length;
+      nextIndex += direction
+    ) {
+      const nextNavigable = topLevelNavigables[nextIndex];
+      if (!nextNavigable) continue;
+      if (focusTopLevelNavigable(nextNavigable)) return true;
+    }
+    return false;
   };
 
   const isNonSubmenuListTarget = (target: EventTarget | null): boolean => {
@@ -583,6 +589,52 @@ export function createNavigationMenu(
     return Array.from(
       content.querySelectorAll<HTMLElement>(focusableSelector),
     ).filter((el) => !el.hidden && !el.closest("[hidden]"));
+  };
+
+  const isElementActuallyFocusable = (el: HTMLElement): boolean => {
+    if (!el.isConnected) return false;
+    if (el.hidden || el.closest("[hidden]")) return false;
+    if ("disabled" in el && (el as HTMLButtonElement).disabled) return false;
+    if (el.getAttribute("aria-hidden") === "true") return false;
+    if (el.getAttribute("tabindex") === "-1") return false;
+    if (el.matches(focusableSelector)) return true;
+    return el.tabIndex >= 0;
+  };
+
+  const isWithinThisMenu = (candidate: HTMLElement): boolean => {
+    if (root.contains(candidate)) return true;
+    if (viewport?.contains(candidate)) return true;
+
+    const positioner = viewportPortal?.container;
+    if (positioner instanceof HTMLElement && positioner.contains(candidate)) {
+      return true;
+    }
+
+    for (const { content } of itemMap.values()) {
+      if (content.contains(candidate)) return true;
+    }
+
+    return false;
+  };
+
+  const focusNextFocusableAfterRoot = (): boolean => {
+    const doc = root.ownerDocument;
+    const candidates = Array.from(doc.querySelectorAll<HTMLElement>("*"));
+    for (const candidate of candidates) {
+      if (!isElementActuallyFocusable(candidate)) continue;
+      if (isWithinThisMenu(candidate)) continue;
+      if (
+        ((root as Node).compareDocumentPosition(candidate) &
+          Node.DOCUMENT_POSITION_FOLLOWING) ===
+        0
+      ) {
+        continue;
+      }
+
+      candidate.focus();
+      if (doc.activeElement === candidate) return true;
+    }
+    return false;
   };
 
   const focusContentForValue = (value: string): void => {
@@ -1707,7 +1759,10 @@ export function createNavigationMenu(
         switch (e.key) {
           case "Tab": {
             if (!e.shiftKey && currentIndex === focusables.length - 1) {
-              if (focusAdjacentTopLevelFromTrigger(trigger, 1)) {
+              if (
+                focusAdjacentTopLevelFromTrigger(trigger, 1) ||
+                focusNextFocusableAfterRoot()
+              ) {
                 e.preventDefault();
               }
               return;

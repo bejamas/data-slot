@@ -303,7 +303,7 @@ Top-level submenu triggers and plain links remain in the natural tab order.
 |-----|--------|
 | `ArrowDown` / `ArrowRight` | Move to next focusable element |
 | `ArrowUp` / `ArrowLeft` | Move to previous element (returns to trigger at start) |
-| `Tab` | From last content item, move focus to next top-level nav item; if none, exit nav naturally |
+| `Tab` | From last content item, move focus to next top-level nav item; if none, move to next focusable after nav root |
 | `Shift+Tab` | From first content item, move focus back to owning trigger |
 | `Escape` | Close menu and return focus to trigger |
 
