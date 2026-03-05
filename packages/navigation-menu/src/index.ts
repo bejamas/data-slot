@@ -528,6 +528,39 @@ export function createNavigationMenu(
     return null;
   };
 
+  const focusTopLevelNavigable = (navigable: TopLevelNavigable): void => {
+    if (navigable.kind === "submenu") {
+      navigable.trigger.focus();
+      updateIndicator(navigable.trigger);
+      return;
+    }
+
+    if (currentValue !== null) {
+      closeMenuAndUnlock();
+    } else {
+      updateIndicator(null);
+    }
+    navigable.element.focus();
+  };
+
+  const focusAdjacentTopLevelFromTrigger = (
+    trigger: HTMLElement,
+    direction: 1 | -1,
+  ): boolean => {
+    const currentIndex = topLevelNavigables.findIndex(
+      (entry) => entry.kind === "submenu" && entry.trigger === trigger,
+    );
+    if (currentIndex === -1) return false;
+
+    const nextIndex = currentIndex + direction;
+    if (nextIndex < 0 || nextIndex >= topLevelNavigables.length) return false;
+    const nextNavigable = topLevelNavigables[nextIndex];
+    if (!nextNavigable) return false;
+
+    focusTopLevelNavigable(nextNavigable);
+    return true;
+  };
+
   const isNonSubmenuListTarget = (target: EventTarget | null): boolean => {
     if (!(target instanceof Node) || !list.contains(target)) return false;
     const el = target instanceof HTMLElement ? target : target.parentElement;
@@ -1238,11 +1271,13 @@ export function createNavigationMenu(
       const direction =
         isSwitching && newData ? getMotionDirection(newData.index) : null;
 
-      // If closing and focus is inside content, move focus to last trigger first
+      // If closing while focus is inside the active content panel, restore focus to its trigger.
       const active = document.activeElement as HTMLElement | null;
-      if (value === null && active && containsWithPortals(root, active)) {
-        const lastTrigger = prevValue ? itemMap.get(prevValue)?.trigger : null;
-        if (lastTrigger) lastTrigger.focus();
+      if (value === null && active && prevValue) {
+        const previousData = itemMap.get(prevValue);
+        if (previousData && containsWithPortals(previousData.content, active)) {
+          previousData.trigger.focus();
+        }
       }
 
       // Update all items
@@ -1252,10 +1287,6 @@ export function createNavigationMenu(
 
         setAria(trigger, "expanded", isActive);
         trigger.setAttribute("data-state", isActive ? "open" : "closed");
-        // Roving tabindex: active trigger or last active (on close) gets 0
-        if (isActive) trigger.tabIndex = 0;
-        else if (wasActive && value === null) trigger.tabIndex = 0;
-        else trigger.tabIndex = -1;
         item.setAttribute("data-state", isActive ? "open" : "closed");
 
         if (!isActive) {
@@ -1399,8 +1430,8 @@ export function createNavigationMenu(
       (trigger as HTMLButtonElement).type = "button";
     setAria(trigger, "expanded", false);
     trigger.setAttribute("data-state", "closed");
-    // First trigger gets tabIndex 0, rest get -1 (roving tabindex)
-    trigger.tabIndex = trigger === triggers[0] ? 0 : -1;
+    // Keep all top-level triggers tabbable for natural Tab/Shift+Tab traversal.
+    trigger.tabIndex = 0;
     item.setAttribute("data-state", "closed");
     content.setAttribute("data-state", "inactive");
     content.setAttribute("aria-hidden", "true");
@@ -1641,21 +1672,7 @@ export function createNavigationMenu(
       e.preventDefault();
       const nextNavigable = topLevelNavigables[nextIndex];
       if (!nextNavigable) return;
-
-      if (nextNavigable.kind === "submenu") {
-        const nextTrigger = nextNavigable.trigger;
-        triggers.forEach((t) => (t.tabIndex = t === nextTrigger ? 0 : -1));
-        nextTrigger.focus();
-        updateIndicator(nextTrigger);
-        return;
-      }
-
-      if (currentValue !== null) {
-        closeMenuAndUnlock();
-      } else {
-        updateIndicator(null);
-      }
-      nextNavigable.element.focus();
+      focusTopLevelNavigable(nextNavigable);
     }),
   );
 
@@ -1681,6 +1698,22 @@ export function createNavigationMenu(
         if (currentIndex === -1) return;
 
         switch (e.key) {
+          case "Tab": {
+            if (!e.shiftKey && currentIndex === focusables.length - 1) {
+              if (focusAdjacentTopLevelFromTrigger(trigger, 1)) {
+                e.preventDefault();
+              }
+              return;
+            }
+
+            if (e.shiftKey && currentIndex === 0) {
+              e.preventDefault();
+              trigger.focus();
+              return;
+            }
+
+            return;
+          }
           case "ArrowDown":
           case "ArrowRight": {
             e.preventDefault();

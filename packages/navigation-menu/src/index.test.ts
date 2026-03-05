@@ -1188,6 +1188,56 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("keeps submenu triggers tabbable across open and switch", () => {
+    const { triggers, controller } = setup();
+
+    triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
+
+    controller.open("products");
+    triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
+
+    controller.open("solutions");
+    triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
+
+    controller.close();
+    triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
+
+    controller.destroy();
+  });
+
+  it("does not change trigger tabbability during arrow navigation", () => {
+    const { triggers, controller } = setup();
+
+    triggers[0]?.focus();
+    triggers[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggers[1]);
+    triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
+
+    triggers[1]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggers[0]);
+    triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
+
+    controller.destroy();
+  });
+
+  it("keeps mixed submenu triggers tabbable", () => {
+    const { triggers, controller } = setupMixed();
+
+    triggers[0]?.focus();
+    expect(controller.value).toBe("products");
+    triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
+
+    triggers[1]?.focus();
+    expect(controller.value).toBe("docs");
+    triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
+
+    controller.destroy();
+  });
+
   it("ArrowRight includes plain links and closes open submenu", () => {
     const { root, triggers, plainLink, controller } = setupMixed();
 
@@ -1280,6 +1330,7 @@ describe("NavigationMenu", () => {
     plainLink.focus();
     expect(controller.value).toBe(null);
     expect(root.getAttribute("data-state")).toBe("closed");
+    expect(document.activeElement).toBe(plainLink);
 
     controller.destroy();
   });
@@ -1648,6 +1699,102 @@ describe("NavigationMenu", () => {
         new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
       );
       expect(document.activeElement).toBe(triggers[0]);
+
+      controller.destroy();
+    });
+
+    it("Tab from last content item moves focus to next top-level trigger", async () => {
+      const { triggers, link1, link2, link3, controller } = setupWithLinks();
+
+      triggers[0]?.focus();
+      controller.open("products");
+
+      triggers[0]?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
+      await flushRAF();
+      expect(document.activeElement).toBe(link1);
+
+      link1.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
+      link2.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
+      expect(document.activeElement).toBe(link3);
+
+      link3.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true })
+      );
+      expect(document.activeElement).toBe(triggers[1]);
+
+      controller.destroy();
+    });
+
+    it("Shift+Tab from first content item returns focus to owning trigger", async () => {
+      const { triggers, link1, controller } = setupWithLinks();
+
+      triggers[0]?.focus();
+      controller.open("products");
+
+      triggers[0]?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
+      await flushRAF();
+      expect(document.activeElement).toBe(link1);
+
+      link1.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Tab",
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+      expect(document.activeElement).toBe(triggers[0]);
+
+      controller.destroy();
+    });
+
+    it("Tab from last content item exits nav naturally when no next top-level item", async () => {
+      document.body.innerHTML = `
+        <a href="#" id="before">Before</a>
+        <nav data-slot="navigation-menu" id="root">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">
+                <a href="#" id="only-link">Only link</a>
+              </div>
+            </li>
+          </ul>
+          <div data-slot="navigation-menu-viewport"></div>
+        </nav>
+        <a href="#" id="after">After</a>
+      `;
+
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector(
+        '[data-slot="navigation-menu-trigger"]'
+      ) as HTMLElement;
+      const onlyLink = document.getElementById("only-link") as HTMLElement;
+      const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+      trigger.focus();
+      trigger.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
+      await flushRAF();
+      expect(document.activeElement).toBe(onlyLink);
+
+      const event = new KeyboardEvent("keydown", {
+        key: "Tab",
+        bubbles: true,
+        cancelable: true,
+      });
+      onlyLink.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(document.activeElement).toBe(onlyLink);
 
       controller.destroy();
     });

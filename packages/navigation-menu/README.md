@@ -288,10 +288,14 @@ For exit animations, avoid CSS that force-hides content immediately by `data-sta
 |-----|--------|
 | `ArrowLeft` | Move focus to previous top-level item (submenu trigger or plain link) |
 | `ArrowRight` | Move focus to next top-level item (submenu trigger or plain link) |
+| `Tab` | Move focus to next top-level item in DOM order |
+| `Shift+Tab` | Move focus to previous top-level item in reverse DOM order |
 | `ArrowDown` | Move focus into content panel (only when focused item has submenu content) |
 | `Home` | Move focus to first top-level item |
 | `End` | Move focus to last top-level item |
 | `Escape` | Close menu |
+
+Top-level submenu triggers and plain links remain in the natural tab order.
 
 ### Within Content Panel
 
@@ -299,6 +303,8 @@ For exit animations, avoid CSS that force-hides content immediately by `data-sta
 |-----|--------|
 | `ArrowDown` / `ArrowRight` | Move to next focusable element |
 | `ArrowUp` / `ArrowLeft` | Move to previous element (returns to trigger at start) |
+| `Tab` | From last content item, move focus to next top-level nav item; if none, exit nav naturally |
+| `Shift+Tab` | From first content item, move focus back to owning trigger |
 | `Escape` | Close menu and return focus to trigger |
 
 ## Behavior
