@@ -534,7 +534,7 @@ export function createNavigationMenu(
     if (navigable.kind === "submenu") {
       navigable.trigger.focus();
       if (doc.activeElement !== navigable.trigger) return false;
-      updateIndicator(navigable.trigger);
+      syncIndicator(navigable.trigger);
       return true;
     }
 
@@ -1306,6 +1306,21 @@ export function createNavigationMenu(
     indicator.setAttribute("data-state", "visible");
   };
 
+  const getActiveTrigger = (): HTMLElement | null => {
+    if (!currentValue) return null;
+    const data = itemMap.get(currentValue);
+    return data?.trigger ?? null;
+  };
+
+  const syncIndicator = (preferred: HTMLElement | null = null) => {
+    const activeTrigger = getActiveTrigger();
+    if (activeTrigger) {
+      updateIndicator(activeTrigger);
+      return;
+    }
+    updateIndicator(preferred);
+  };
+
   const updateState = (value: string | null, immediate = false) => {
     clearHoverSafetyState();
     // Skip if value hasn't changed
@@ -1564,7 +1579,7 @@ export function createNavigationMenu(
           return;
         }
         if (openOnFocus) updateState(value, true);
-        updateIndicator(trigger);
+        syncIndicator(trigger);
       }),
     );
 
@@ -1852,12 +1867,14 @@ export function createNavigationMenu(
       if (currentValue) {
         requestAnimationFrame(() => updateViewportPositioner());
       }
-      if (hoveredTrigger)
-        requestAnimationFrame(() => updateIndicator(hoveredTrigger));
+      if (currentValue || hoveredTrigger) {
+        requestAnimationFrame(() => syncIndicator(hoveredTrigger));
+      }
     }),
     on(list, "scroll", () => {
-      if (hoveredTrigger)
-        requestAnimationFrame(() => updateIndicator(hoveredTrigger));
+      if (currentValue || hoveredTrigger) {
+        requestAnimationFrame(() => syncIndicator(hoveredTrigger));
+      }
     }),
   );
 

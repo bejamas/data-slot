@@ -80,6 +80,45 @@ describe("NavigationMenu", () => {
     return { root, list, triggers, plainLink, controller };
   };
 
+  const setupWithIndicator = (
+    options: Parameters<typeof createNavigationMenu>[1] = {}
+  ) => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+          <li data-slot="navigation-menu-item" data-value="solutions">
+            <button data-slot="navigation-menu-trigger">Solutions</button>
+            <div data-slot="navigation-menu-content">Solutions content</div>
+          </li>
+          <div data-slot="navigation-menu-indicator"></div>
+        </ul>
+        <div data-slot="navigation-menu-viewport"></div>
+      </nav>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const list = root.querySelector(
+      '[data-slot="navigation-menu-list"]'
+    ) as HTMLElement;
+    const triggers = root.querySelectorAll(
+      '[data-slot="navigation-menu-trigger"]'
+    ) as NodeListOf<HTMLElement>;
+    const indicator = root.querySelector(
+      '[data-slot="navigation-menu-indicator"]'
+    ) as HTMLElement;
+    const controller = createNavigationMenu(root, {
+      delayOpen: 0,
+      delayClose: 0,
+      ...options,
+    });
+
+    return { root, list, triggers, indicator, controller };
+  };
+
   const getViewportPositioner = (viewport: HTMLElement): HTMLElement => {
     const parent = viewport.parentElement;
     if (!(parent instanceof HTMLElement)) {
@@ -262,6 +301,127 @@ describe("NavigationMenu", () => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve(undefined))),
     );
     expect(indicator.hasAttribute("data-instant")).toBe(false);
+
+    controller.destroy();
+  });
+
+  it("keeps indicator on active trigger when focus moves to another submenu trigger", () => {
+    const { list, triggers, indicator, controller } = setupWithIndicator();
+
+    const rect = (
+      left: number,
+      top: number,
+      width: number,
+      height: number
+    ): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    list.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    triggers[0]!.getBoundingClientRect = () => rect(120, 100, 140, 40);
+    triggers[1]!.getBoundingClientRect = () => rect(280, 100, 140, 40);
+
+    controller.open("products");
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("20px");
+    expect(triggers[0]!.getAttribute("data-state")).toBe("open");
+
+    triggers[1]!.focus();
+
+    expect(document.activeElement).toBe(triggers[1]);
+    expect(controller.value).toBe("products");
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("20px");
+    expect(triggers[0]!.getAttribute("data-state")).toBe("open");
+    expect(triggers[1]!.getAttribute("data-state")).toBe("closed");
+
+    controller.destroy();
+  });
+
+  it("keeps indicator aligned to active trigger on resize even when focus is elsewhere", async () => {
+    const { list, triggers, indicator, controller } = setupWithIndicator();
+
+    const rect = (
+      left: number,
+      top: number,
+      width: number,
+      height: number
+    ): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    list.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    let productsLeft = 120;
+    triggers[0]!.getBoundingClientRect = () => rect(productsLeft, 100, 140, 40);
+    triggers[1]!.getBoundingClientRect = () => rect(280, 100, 140, 40);
+
+    controller.open("products");
+    triggers[1]!.focus();
+    expect(controller.value).toBe("products");
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("20px");
+
+    productsLeft = 170;
+    window.dispatchEvent(new Event("resize"));
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => resolve(undefined))
+    );
+
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("70px");
+    expect(controller.value).toBe("products");
+
+    controller.destroy();
+  });
+
+  it("openOnFocus switches active value and indicator with focused trigger", () => {
+    const { list, triggers, indicator, controller } = setupWithIndicator({
+      openOnFocus: true,
+    });
+
+    const rect = (
+      left: number,
+      top: number,
+      width: number,
+      height: number
+    ): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    list.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    triggers[0]!.getBoundingClientRect = () => rect(120, 100, 140, 40);
+    triggers[1]!.getBoundingClientRect = () => rect(280, 100, 140, 40);
+
+    triggers[0]!.focus();
+    expect(controller.value).toBe("products");
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("20px");
+
+    triggers[1]!.focus();
+    expect(controller.value).toBe("solutions");
+    expect(indicator.style.getPropertyValue("--indicator-left")).toBe("180px");
 
     controller.destroy();
   });
