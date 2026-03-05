@@ -345,6 +345,45 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("hides indicator when focus leaves nav while menu is closed", () => {
+    const { list, triggers, indicator, controller } = setupWithIndicator();
+
+    const rect = (
+      left: number,
+      top: number,
+      width: number,
+      height: number
+    ): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    list.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    triggers[0]!.getBoundingClientRect = () => rect(120, 100, 140, 40);
+    triggers[1]!.getBoundingClientRect = () => rect(280, 100, 140, 40);
+
+    triggers[0]!.focus();
+    expect(indicator.getAttribute("data-state")).toBe("visible");
+
+    const after = document.createElement("button");
+    after.id = "after";
+    document.body.appendChild(after);
+
+    after.focus();
+    expect(document.activeElement).toBe(after);
+    expect(indicator.getAttribute("data-state")).toBe("hidden");
+
+    controller.destroy();
+  });
+
   it("keeps indicator aligned to active trigger on resize even when focus is elsewhere", async () => {
     const { list, triggers, indicator, controller } = setupWithIndicator();
 
@@ -2093,6 +2132,61 @@ describe("NavigationMenu", () => {
       onlyLink.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(false);
       expect(document.activeElement).toBe(onlyLink);
+
+      controller.destroy();
+    });
+
+    it("Tab from top-level trigger moves to next focusable when submenu is open", async () => {
+      document.body.innerHTML = `
+        <nav data-slot="navigation-menu" id="root">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">
+                <a href="#" id="link1">Link 1</a>
+              </div>
+            </li>
+            <li data-slot="navigation-menu-item" data-value="solutions">
+              <button data-slot="navigation-menu-trigger">Solutions</button>
+              <div data-slot="navigation-menu-content">
+                <a href="#" id="link2">Link 2</a>
+              </div>
+            </li>
+          </ul>
+          <div data-slot="navigation-menu-viewport"></div>
+        </nav>
+        <a href="#" id="after">After</a>
+      `;
+
+      const root = document.getElementById("root")!;
+      const triggers = root.querySelectorAll(
+        '[data-slot="navigation-menu-trigger"]'
+      ) as NodeListOf<HTMLElement>;
+      const link1 = document.getElementById("link1") as HTMLElement;
+      const after = document.getElementById("after") as HTMLElement;
+      const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+      triggers[0]!.focus();
+      controller.open("products");
+      triggers[0]!.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
+      await flushRAF();
+      expect(document.activeElement).toBe(link1);
+
+      link1.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true })
+      );
+      expect(document.activeElement).toBe(triggers[1]);
+
+      const event = new KeyboardEvent("keydown", {
+        key: "Tab",
+        bubbles: true,
+        cancelable: true,
+      });
+      triggers[1]!.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      expect(document.activeElement).toBe(after);
 
       controller.destroy();
     });

@@ -547,14 +547,10 @@ export function createNavigationMenu(
     return doc.activeElement === navigable.element;
   };
 
-  const focusAdjacentTopLevelFromTrigger = (
-    trigger: HTMLElement,
+  const focusAdjacentTopLevelFromIndex = (
+    currentIndex: number,
     direction: 1 | -1,
   ): boolean => {
-    const currentIndex = topLevelNavigables.findIndex(
-      (entry) => entry.kind === "submenu" && entry.trigger === trigger,
-    );
-    if (currentIndex === -1) return false;
     for (
       let nextIndex = currentIndex + direction;
       nextIndex >= 0 && nextIndex < topLevelNavigables.length;
@@ -565,6 +561,26 @@ export function createNavigationMenu(
       if (focusTopLevelNavigable(nextNavigable)) return true;
     }
     return false;
+  };
+
+  const focusAdjacentTopLevelFromNavigable = (
+    navigable: TopLevelNavigable,
+    direction: 1 | -1,
+  ): boolean => {
+    const currentIndex = topLevelNavigables.indexOf(navigable);
+    if (currentIndex === -1) return false;
+    return focusAdjacentTopLevelFromIndex(currentIndex, direction);
+  };
+
+  const focusAdjacentTopLevelFromTrigger = (
+    trigger: HTMLElement,
+    direction: 1 | -1,
+  ): boolean => {
+    const currentIndex = topLevelNavigables.findIndex(
+      (entry) => entry.kind === "submenu" && entry.trigger === trigger,
+    );
+    if (currentIndex === -1) return false;
+    return focusAdjacentTopLevelFromIndex(currentIndex, direction);
   };
 
   const isNonSubmenuListTarget = (target: EventTarget | null): boolean => {
@@ -1709,6 +1725,17 @@ export function createNavigationMenu(
       let nextIndex = currentNavigableIndex;
 
       switch (e.key) {
+        case "Tab": {
+          // Keep forward Tab traversal linear while a submenu is open.
+          if (e.shiftKey || currentValue === null) return;
+          if (
+            focusAdjacentTopLevelFromNavigable(currentNavigable, 1) ||
+            focusNextFocusableAfterRoot()
+          ) {
+            e.preventDefault();
+          }
+          return;
+        }
         case "ArrowLeft":
           nextIndex = currentNavigableIndex - 1;
           if (nextIndex < 0) nextIndex = topLevelNavigables.length - 1;
@@ -1842,10 +1869,15 @@ export function createNavigationMenu(
   // Close when focus leaves root (and unlock clickLocked)
   cleanups.push(
     on(document, "focusin", (e) => {
-      if (currentValue === null) return;
-      if (!containsWithPortals(root, e.target as Node)) {
+      const target = e.target as Node;
+      if (containsWithPortals(root, target)) return;
+
+      if (currentValue !== null) {
         closeMenuAndUnlock();
+        return;
       }
+
+      updateIndicator(null);
     }),
   );
 
