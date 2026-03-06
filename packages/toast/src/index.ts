@@ -6,6 +6,7 @@ import {
   getDataNumber,
   createPortalLifecycle,
   createPresenceLifecycle,
+  focusElement,
   on,
   emit,
 } from "@data-slot/core";
@@ -49,6 +50,29 @@ const FOCUSABLE_SELECTOR = [
 ].join(", ");
 const PREV_TAB_INDEX_ATTR = "data-toast-prev-tabindex";
 const NO_TAB_INDEX = "__none__";
+const RUNTIME_MEASUREMENT_ATTRS = [
+  "data-mounted",
+  "data-expanded",
+  "data-front",
+  "data-visible",
+  "data-removed",
+  "data-swiping",
+  "data-swipe-out",
+  "aria-hidden",
+  "inert",
+] as const;
+const RUNTIME_MEASUREMENT_STYLE_PROPS = [
+  "--toast-index",
+  "--toast-count",
+  "--toast-height",
+  "--toast-initial-height",
+  "--toast-offset",
+  "--toast-expanded-offset-y",
+  "--toast-collapsed-offset-y",
+  "--toast-offset-y",
+  "--toast-lift",
+  "--toast-stack-direction",
+] as const;
 
 export type ToastPosition = (typeof POSITIONS)[number];
 type ToastType = (typeof TOAST_TYPES)[number];
@@ -154,6 +178,9 @@ interface ToastEntry {
   action?: ToastAction;
   toast: ResolvedToast;
   exiting: boolean;
+  measuredHeight: number;
+  mountRafId: number | null;
+  mountRafId2: number | null;
 }
 
 interface ResolvedToast {
@@ -220,16 +247,61 @@ const getCssCollapsedPeek = (viewport: HTMLElement): number => {
   return Math.max(0, parsed);
 };
 
-const getToastHeight = (item: HTMLElement): number => {
+const getToastHeight = (
+  item: HTMLElement,
+  measurementHost: HTMLElement,
+  fallbackWidth: number,
+): number => {
   const rectHeight = item.getBoundingClientRect().height;
   const renderedHeight = rectHeight > 0 ? rectHeight : item.offsetHeight;
   const intrinsicHeight = item.scrollHeight;
+  const styles = getComputedStyle(item);
+  const borderTop = Number.parseFloat(styles.borderTopWidth);
+  const borderBottom = Number.parseFloat(styles.borderBottomWidth);
+  const borderHeight =
+    (Number.isFinite(borderTop) ? borderTop : 0) +
+    (Number.isFinite(borderBottom) ? borderBottom : 0);
+  const intrinsicBorderBoxHeight =
+    intrinsicHeight > 0 ? intrinsicHeight + borderHeight : 0;
+  const measurementWidth =
+    item.getBoundingClientRect().width || item.offsetWidth || fallbackWidth;
 
-  if (intrinsicHeight > 0 && renderedHeight > 0) {
-    return Math.max(intrinsicHeight, renderedHeight);
+  if (measurementWidth > 0) {
+    const clone = item.cloneNode(true) as HTMLElement;
+    for (const attr of RUNTIME_MEASUREMENT_ATTRS) {
+      clone.removeAttribute(attr);
+    }
+    for (const prop of RUNTIME_MEASUREMENT_STYLE_PROPS) {
+      clone.style.removeProperty(prop);
+    }
+
+    clone.setAttribute("aria-hidden", "true");
+    clone.style.position = "relative";
+    clone.style.inset = "auto";
+    clone.style.left = "auto";
+    clone.style.right = "auto";
+    clone.style.top = "auto";
+    clone.style.bottom = "auto";
+    clone.style.width = `${measurementWidth}px`;
+    clone.style.pointerEvents = "none";
+    clone.style.opacity = "1";
+    clone.style.transform = "none";
+    clone.style.transition = "none";
+    clone.style.animation = "none";
+    clone.style.zIndex = "-1";
+
+    measurementHost.append(clone);
+    const cloneRectHeight = clone.getBoundingClientRect().height;
+    const cloneHeight = cloneRectHeight > 0 ? cloneRectHeight : clone.offsetHeight;
+    clone.remove();
+
+    if (cloneHeight > 0) {
+      return cloneHeight;
+    }
   }
-  if (intrinsicHeight > 0) {
-    return intrinsicHeight;
+
+  if (intrinsicBorderBoxHeight > 0) {
+    return intrinsicBorderBoxHeight;
   }
   return renderedHeight;
 };
@@ -262,6 +334,14 @@ const setOpenState = (el: HTMLElement, state: "open" | "closed") => {
     el.setAttribute("data-closed", "");
     el.removeAttribute("data-open");
   }
+};
+
+const setBooleanDataAttribute = (
+  element: HTMLElement,
+  name: string,
+  value: boolean,
+) => {
+  element.setAttribute(name, value ? "true" : "false");
 };
 
 const setItemA11y = (item: HTMLElement, type: ToastShowOptions["type"]) => {
@@ -491,13 +571,29 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const activeOrder: string[] = [];
   const closeButtonLabelDefaults = new WeakMap<HTMLElement, string | null>();
   const cleanups: Array<() => void> = [];
+  const measurementHost = doc.createElement("div");
+
+  measurementHost.setAttribute("aria-hidden", "true");
+  measurementHost.style.position = "fixed";
+  measurementHost.style.left = "-9999px";
+  measurementHost.style.top = "0";
+  measurementHost.style.visibility = "hidden";
+  measurementHost.style.pointerEvents = "none";
+  measurementHost.style.zIndex = "-1";
+  measurementHost.style.display = "block";
+  measurementHost.style.contain = "layout style paint";
+  (doc.body ?? doc.documentElement).append(measurementHost);
 
   let idCounter = 0;
   let destroyed = false;
   let pauseHover = false;
   let pauseFocus = false;
+  let pauseWindow = false;
+  let pauseDocument = doc.visibilityState === "hidden";
+  let collapseDeferred = false;
   let timersPaused = false;
   let swipeState: SwipeState | null = null;
+  let previousFocusedElement: HTMLElement | null = null;
 
   const resizeObserver =
     typeof ResizeObserver !== "undefined"
@@ -520,12 +616,40 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }
   };
 
+  const clearMountTracking = (entry: ToastEntry) => {
+    const win = doc.defaultView ?? window;
+    if (entry.mountRafId !== null) {
+      win.cancelAnimationFrame(entry.mountRafId);
+      entry.mountRafId = null;
+    }
+    if (entry.mountRafId2 !== null) {
+      win.cancelAnimationFrame(entry.mountRafId2);
+      entry.mountRafId2 = null;
+    }
+  };
+
+  const isFocusableNode = (node: HTMLElement) => {
+    if (node.hidden || node.hasAttribute("hidden")) return false;
+    if (node.closest("[hidden]")) return false;
+    if (node.closest("[inert]")) return false;
+    if ("disabled" in node && (node as HTMLButtonElement).disabled) return false;
+    if (node.getAttribute("aria-hidden") === "true") return false;
+    return true;
+  };
+
   const getFocusableNodes = (item: HTMLElement): HTMLElement[] => {
-    const nodes = [...item.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)];
-    if (item.matches(FOCUSABLE_SELECTOR)) {
+    const nodes = [...item.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)].filter(isFocusableNode);
+    if (item.matches(FOCUSABLE_SELECTOR) && isFocusableNode(item)) {
       nodes.unshift(item);
     }
     return nodes;
+  };
+
+  const getPrimaryFocusTarget = (item: HTMLElement): HTMLElement | null => {
+    const focusables = getFocusableNodes(item);
+    if (focusables[0]) return focusables[0];
+    if (item.tabIndex >= 0 && isFocusableNode(item)) return item;
+    return null;
   };
 
   const getManagedFocusableNodes = (item: HTMLElement): HTMLElement[] => {
@@ -572,9 +696,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       return;
     }
 
-    item.setAttribute("aria-hidden", "true");
-    item.setAttribute("inert", "");
-
     for (const node of getFocusableNodes(item)) {
       if (!node.hasAttribute(PREV_TAB_INDEX_ATTR)) {
         const existingTabIndex = node.getAttribute("tabindex");
@@ -585,6 +706,9 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       }
       node.setAttribute("tabindex", "-1");
     }
+
+    item.setAttribute("aria-hidden", "true");
+    item.setAttribute("inert", "");
   };
 
   const isVisibleFocusTarget = (target: EventTarget | null): boolean => {
@@ -600,6 +724,68 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const hasVisibleFocusWithinViewport = () =>
     isVisibleFocusTarget(doc.activeElement);
 
+  const hasExitingEntries = () => {
+    for (const entry of entries.values()) {
+      if (entry.exiting) return true;
+    }
+    return false;
+  };
+
+  const isViewportExpanded = () => pauseHover || pauseFocus || collapseDeferred;
+
+  const isTimerPauseActive = () => pauseHover || pauseFocus || pauseWindow || pauseDocument;
+
+  const clearDeferredCollapseIfSettled = () => {
+    if (!collapseDeferred) return;
+    if (pauseHover || pauseFocus) {
+      collapseDeferred = false;
+      return;
+    }
+    if (!hasExitingEntries()) {
+      collapseDeferred = false;
+    }
+  };
+
+  const focusNextVisibleToast = () => {
+    for (let i = activeOrder.length - 1; i >= 0; i -= 1) {
+      const id = activeOrder[i];
+      if (!id) continue;
+      const entry = entries.get(id);
+      if (!entry || entry.exiting) continue;
+      if (entry.element.getAttribute("data-visible") !== "true") continue;
+
+      const target = getPrimaryFocusTarget(entry.element);
+      if (target) {
+        focusElement(target);
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const restorePreviousFocus = () => {
+    if (previousFocusedElement && previousFocusedElement.isConnected) {
+      focusElement(previousFocusedElement);
+      return true;
+    }
+    return false;
+  };
+
+  const handleDismissFocus = () => {
+    const active = doc.activeElement;
+    if (!(active instanceof HTMLElement) || !viewport.contains(active)) return;
+    if (focusNextVisibleToast()) return;
+    if (restorePreviousFocus()) return;
+    active.blur();
+  };
+
+  const setEntriesExpandedState = (expanded: boolean) => {
+    for (const entry of entries.values()) {
+      setBooleanDataAttribute(entry.element, "data-expanded", expanded);
+    }
+  };
+
   const setViewportExpandedState = (expanded: boolean) => {
     if (expanded) {
       viewport.setAttribute("data-expanded", "");
@@ -614,6 +800,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       "--toast-stack-size",
       targetStackSize.trim() !== "" ? targetStackSize : "0px",
     );
+    setEntriesExpandedState(expanded);
   };
 
   const reindex = () => {
@@ -631,8 +818,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     const collapsedPeek = getCssCollapsedPeek(viewport);
     const count = newestFirst.length;
     let expandedOffset = 0;
-    let collapsedOffset = 0;
-    let previousHeight = 0;
     let visibleExpandedOffset = 0;
     let visibleCount = 0;
     let frontHeight = 0;
@@ -643,26 +828,32 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       const isVisible = index < resolvedLimit;
       const wasVisible = entry.element.getAttribute("data-visible") !== "false";
 
-      const height = getToastHeight(entry.element);
+      const height = getToastHeight(
+        entry.element,
+        measurementHost,
+        viewport.getBoundingClientRect().width || viewport.clientWidth,
+      );
+      entry.measuredHeight = height;
       if (index === 0) {
         frontHeight = height;
-        entry.element.setAttribute("data-front", "");
-        collapsedOffset = 0;
-      } else {
-        collapsedOffset += previousHeight + collapsedPeek - height;
-        entry.element.removeAttribute("data-front");
       }
+      const collapsedOffset = index * collapsedPeek;
 
       entry.element.style.setProperty("--toast-index", String(index));
       entry.element.style.setProperty("--toast-count", String(count));
       entry.element.style.setProperty("--toast-height", `${height}px`);
+      entry.element.style.setProperty("--toast-initial-height", `${height}px`);
+      entry.element.style.setProperty("--toast-offset", `${expandedOffset}px`);
       entry.element.style.setProperty("--toast-expanded-offset-y", `${expandedOffset}px`);
       entry.element.style.setProperty("--toast-collapsed-offset-y", `${collapsedOffset}px`);
       entry.element.style.setProperty("--toast-offset-y", `${expandedOffset}px`);
+      entry.element.style.setProperty("--toast-lift", String(stackDirection));
       entry.element.style.setProperty("--toast-stack-direction", String(stackDirection));
+      setBooleanDataAttribute(entry.element, "data-front", index === 0);
+      setBooleanDataAttribute(entry.element, "data-visible", isVisible);
+      setBooleanDataAttribute(entry.element, "data-removed", false);
       entry.element.style.zIndex = String(count - index + 1);
       entry.element.style.pointerEvents = isVisible ? "" : "none";
-      entry.element.setAttribute("data-visible", isVisible ? "true" : "false");
       if (!isVisible && wasVisible) {
         const active = doc.activeElement;
         if (active instanceof HTMLElement && entry.element.contains(active)) {
@@ -672,7 +863,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       setItemVisibilityInteractivity(entry.element, isVisible);
 
       expandedOffset += height + gap;
-      previousHeight = height;
       if (isVisible) {
         visibleCount += 1;
         visibleExpandedOffset += height + gap;
@@ -687,6 +877,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     viewport.style.setProperty("--toast-frontmost-height", `${frontHeight}px`);
     viewport.style.setProperty("--toast-expanded-stack-size", `${expandedStackSize}px`);
     viewport.style.setProperty("--toast-collapsed-stack-size", `${collapsedStackSize}px`);
+    viewport.style.setProperty("--toast-lift", String(stackDirection));
     viewport.style.setProperty("--toast-stack-direction", String(stackDirection));
 
     if (pauseOnFocus) {
@@ -697,8 +888,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }
     syncPauseState();
   };
-
-  const isPaused = () => pauseHover || pauseFocus;
 
   const pauseAllTimers = () => {
     const now = Date.now();
@@ -711,23 +900,30 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }
   };
 
-  const dismiss = (id: string) => {
+  const dismissInternal = (id: string, manageFocus: boolean) => {
     const entry = entries.get(id);
     if (!entry || entry.exiting) return;
 
     entry.exiting = true;
     clearTimer(entry);
     removeFromActiveOrder(id);
-    entry.element.removeAttribute("data-front");
+    setBooleanDataAttribute(entry.element, "data-removed", true);
     entry.element.style.zIndex = "0";
     entry.element.style.pointerEvents = "none";
     setOpenState(entry.element, "closed");
     reindex();
+    if (manageFocus) {
+      handleDismissFocus();
+    }
 
     emit<ToastChangeDetail>(root, "toast:change", { id, action: "dismiss" });
     onDismiss?.(id);
 
     entry.presence.exit();
+  };
+
+  const dismiss = (id: string) => {
+    dismissInternal(id, true);
   };
 
   const resumeAllTimers = () => {
@@ -748,8 +944,9 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   };
 
   const syncPauseState = () => {
-    const paused = isPaused();
-    setViewportExpandedState(paused);
+    clearDeferredCollapseIfSettled();
+    setViewportExpandedState(isViewportExpanded());
+    const paused = isTimerPauseActive();
 
     if (paused === timersPaused) return;
     timersPaused = paused;
@@ -775,6 +972,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     const shouldNotifyDismiss = notifyDismiss && !entry.exiting;
 
     clearTimer(entry);
+    clearMountTracking(entry);
     removeFromActiveOrder(id);
     unobserveItem(entry.element);
     entry.presence.cleanup();
@@ -894,11 +1092,25 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }, entry.remainingMs);
   };
 
+  const scheduleMounted = (entry: ToastEntry) => {
+    const win = doc.defaultView ?? window;
+    clearMountTracking(entry);
+    entry.mountRafId = win.requestAnimationFrame(() => {
+      entry.mountRafId = null;
+      entry.mountRafId2 = win.requestAnimationFrame(() => {
+        entry.mountRafId2 = null;
+        if (destroyed || !entries.has(entry.id) || entry.exiting) return;
+        setBooleanDataAttribute(entry.element, "data-mounted", true);
+      });
+    });
+  };
+
   const finishExit = (id: string) => {
     const entry = entries.get(id);
     if (!entry) return;
 
     clearTimer(entry);
+    clearMountTracking(entry);
     unobserveItem(entry.element);
     entry.presence.cleanup();
     entry.element.remove();
@@ -911,9 +1123,17 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
     item.setAttribute("data-id", toast.id);
     applyToastContentToItem(item, toast);
+    setBooleanDataAttribute(item, "data-mounted", false);
+    setBooleanDataAttribute(item, "data-removed", false);
+    setBooleanDataAttribute(item, "data-front", false);
+    setBooleanDataAttribute(item, "data-visible", false);
+    setBooleanDataAttribute(item, "data-expanded", isViewportExpanded());
+    setBooleanDataAttribute(item, "data-swiping", false);
+    setBooleanDataAttribute(item, "data-swipe-out", false);
     item.style.setProperty("--toast-enter-direction", String(stackDirection));
     item.style.setProperty("--toast-exit-direction", String(stackDirection));
     item.style.setProperty("--toast-swipe-movement-y", "0px");
+    item.style.setProperty("--toast-lift", String(stackDirection));
     setOpenState(item, "open");
 
     const entry: ToastEntry = {
@@ -933,15 +1153,18 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       action: toast.action,
       toast,
       exiting: false,
+      measuredHeight: 0,
+      mountRafId: null,
+      mountRafId2: null,
     };
 
     entries.set(toast.id, entry);
     activeOrder.push(toast.id);
-    entry.presence.enter();
     viewport.appendChild(fragment);
 
     observeItem(item);
     reindex();
+    scheduleMounted(entry);
     startTimer(entry);
 
     emit<ToastChangeDetail>(root, "toast:change", { id: toast.id, action: "show" });
@@ -1024,6 +1247,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     entry.action = next.action;
 
     applyToastContentToItem(entry.element, next);
+    entry.measuredHeight = 0;
 
     if (!next.dismissible && swipeState?.id === id) {
       swipeState = null;
@@ -1141,8 +1365,13 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   };
 
   const dismissAll = () => {
+    const shouldManageFocus =
+      doc.activeElement instanceof HTMLElement && viewport.contains(doc.activeElement);
     for (const id of [...activeOrder]) {
-      dismiss(id);
+      dismissInternal(id, false);
+    }
+    if (shouldManageFocus) {
+      handleDismissFocus();
     }
   };
 
@@ -1181,8 +1410,8 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   };
 
   const clearSwipeStyles = (entry: ToastEntry) => {
-    entry.element.removeAttribute("data-swiping");
-    entry.element.removeAttribute("data-swipe-out");
+    setBooleanDataAttribute(entry.element, "data-swiping", false);
+    setBooleanDataAttribute(entry.element, "data-swipe-out", false);
     entry.element.style.removeProperty("--toast-swipe-movement-y");
   };
 
@@ -1208,7 +1437,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       currentY: event.clientY,
     };
 
-    entry.element.setAttribute("data-swiping", "");
+    setBooleanDataAttribute(entry.element, "data-swiping", true);
     entry.element.style.setProperty("--toast-swipe-movement-y", "0px");
     if ("setPointerCapture" in entry.element) {
       try {
@@ -1232,7 +1461,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     const directedDelta = rawDeltaY * -stackDirection;
     const adjustedDeltaY = directedDelta < 0 ? rawDeltaY * 0.2 : rawDeltaY;
     entry.element.style.setProperty("--toast-swipe-movement-y", `${adjustedDeltaY}px`);
-    entry.element.setAttribute("data-swiping", "");
+    setBooleanDataAttribute(entry.element, "data-swiping", true);
   };
 
   const endSwipe = (event: PointerEvent | null, cancelled = false) => {
@@ -1259,7 +1488,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
     clearSwipeStyles(entry);
     if (shouldDismiss) {
-      entry.element.setAttribute("data-swipe-out", "");
+      setBooleanDataAttribute(entry.element, "data-swipe-out", true);
       dismiss(entry.id);
     }
   };
@@ -1302,12 +1531,16 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   cleanups.push(
     on(viewport, "pointerenter", () => {
       if (!pauseOnHover) return;
+      collapseDeferred = false;
       pauseHover = true;
       syncPauseState();
     }),
     on(viewport, "pointerleave", () => {
       if (!pauseOnHover) return;
       pauseHover = false;
+      if (!pauseFocus && hasExitingEntries()) {
+        collapseDeferred = true;
+      }
       syncPauseState();
     }),
   );
@@ -1315,6 +1548,14 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   cleanups.push(
     on(viewport, "focusin", (event) => {
       if (!pauseOnFocus) return;
+      const relatedTarget = (event as FocusEvent).relatedTarget;
+      if (
+        relatedTarget instanceof HTMLElement &&
+        !viewport.contains(relatedTarget)
+      ) {
+        previousFocusedElement = relatedTarget;
+      }
+      collapseDeferred = false;
       pauseFocus =
         isVisibleFocusTarget((event as FocusEvent).target) ||
         hasVisibleFocusWithinViewport();
@@ -1324,11 +1565,32 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       if (!pauseOnFocus) return;
       const nextTarget = (event as FocusEvent).relatedTarget;
       if (isVisibleFocusTarget(nextTarget)) {
+        collapseDeferred = false;
         pauseFocus = true;
         syncPauseState();
         return;
       }
       pauseFocus = hasVisibleFocusWithinViewport();
+      if (!pauseFocus && !pauseHover && hasExitingEntries()) {
+        collapseDeferred = true;
+      }
+      syncPauseState();
+    }),
+  );
+
+  const win = doc.defaultView ?? window;
+
+  cleanups.push(
+    on(win, "blur", () => {
+      pauseWindow = true;
+      syncPauseState();
+    }),
+    on(win, "focus", () => {
+      pauseWindow = false;
+      syncPauseState();
+    }),
+    on(doc, "visibilitychange", () => {
+      pauseDocument = doc.visibilityState === "hidden";
       syncPauseState();
     }),
   );
@@ -1369,7 +1631,11 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       destroyed = true;
       pauseHover = false;
       pauseFocus = false;
+      pauseWindow = false;
+      pauseDocument = false;
+      collapseDeferred = false;
       timersPaused = false;
+      previousFocusedElement = null;
       viewport.removeAttribute("data-expanded");
 
       cleanups.forEach((cleanup) => cleanup());
@@ -1379,11 +1645,13 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
       for (const entry of entries.values()) {
         clearTimer(entry);
+        clearMountTracking(entry);
         entry.presence.cleanup();
         entry.element.remove();
       }
       entries.clear();
       activeOrder.length = 0;
+      measurementHost.remove();
 
       portal.cleanup();
       bound.delete(root);

@@ -83,6 +83,8 @@ const toaster = createToast(element, {
 | `onDismiss` | `(id: string) => void` | `undefined` | Callback when a toast starts dismissing |
 | `onAction` | `(id: string, value: string \| undefined) => void` | `undefined` | Callback when action button is clicked |
 
+Timers also pause automatically while the document is hidden or the window loses focus.
+
 ### `show(options)`
 
 ```ts
@@ -166,7 +168,7 @@ JS options take precedence over data attributes.
 
 Runtime attributes:
 
-- `toast-item`: `data-id`, `data-type`, `data-state`, `data-open`, `data-closed`, `data-front`, `data-visible`, `data-starting-style`, `data-ending-style`
+- `toast-item`: `data-id`, `data-type`, `data-state`, `data-open`, `data-closed`, `data-mounted`, `data-removed`, `data-front`, `data-visible`, `data-expanded`
 - `toast-item`: `data-swiping`, `data-swipe-out`, `data-dismissible="false"` (when swiping is disabled)
 - `toast-item`: `aria-hidden`, `inert` while `data-visible="false"` (removed when visible again)
 - `toast-viewport`: `data-expanded` (hover/focus fan-out state)
@@ -178,17 +180,18 @@ The controller computes and writes stack tokens for animation styling:
 - `--toast-index` (0 = newest)
 - `--toast-count`
 - `--toast-height`
+- `--toast-initial-height`
+- `--toast-offset`
 - `--toast-expanded-offset-y`
 - `--toast-collapsed-offset-y`
 - `--toast-offset-y` (backward-compatible alias of `--toast-expanded-offset-y`)
+- `--toast-lift` (`1` for top stacks, `-1` for bottom stacks)
 - `--toast-frontmost-height` (on viewport)
 - `--toast-expanded-stack-size` (on viewport)
 - `--toast-collapsed-stack-size` (on viewport)
 - `--toast-stack-size` (on viewport, active size; collapsed by default, expanded while `data-expanded`)
 - `--toast-collapsed-peek` (on viewport; collapsed stack step)
 - `--toast-stack-direction` (`1` for top stacks, `-1` for bottom stacks)
-- `--toast-enter-direction` (item-level; stack-aware entry direction)
-- `--toast-exit-direction` (item-level; stable exit direction for stack position)
 - `--toast-swipe-movement-y` (item-level; live vertical swipe offset)
 
 These are updated on show, dismiss, exit complete, and item resize.
@@ -237,39 +240,86 @@ root.dispatchEvent(new CustomEvent("toast:clear"));
   bottom: 1rem;
   width: min(360px, calc(100vw - 2rem));
   height: var(--toast-stack-size, 0px);
-  --toast-gap: 8;
-  --toast-collapsed-peek: 14;
+  --toast-gap: 8px;
+  --toast-collapsed-peek: 14px;
 }
 
 [data-slot="toast-item"] {
   position: absolute;
   inset-inline: 0;
   bottom: 0;
-  transform: translateY(calc(var(--toast-collapsed-offset-y) * var(--toast-stack-direction) * 1px))
-    scale(calc(1 - var(--toast-index) * 0.04));
-  opacity: 1;
-  transition: transform 400ms ease, opacity 400ms ease, box-shadow 200ms ease;
-}
-
-[data-slot="toast-viewport"]:not([data-expanded]) [data-slot="toast-item"]:not([data-front]):not([data-state="closed"]) > * {
+  box-sizing: border-box;
   opacity: 0;
+  transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
+  transition:
+    transform 400ms ease,
+    opacity 400ms ease,
+    height 400ms ease,
+    box-shadow 200ms ease;
 }
 
-[data-slot="toast-viewport"][data-expanded] [data-slot="toast-item"] {
-  transform: translateY(
-    calc(var(--toast-expanded-offset-y, var(--toast-offset-y)) * var(--toast-stack-direction) * 1px)
+[data-slot="toast-item"][data-mounted="true"] {
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+}
+
+[data-slot="toast-item"][data-mounted="true"][data-expanded="false"][data-front="false"] {
+  transform: translate3d(
+      0,
+      calc(var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1)),
+      0
+    )
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
+  height: var(--toast-frontmost-height);
+}
+
+[data-slot="toast-item"][data-mounted="true"][data-expanded="true"] {
+  transform: translate3d(
+    0,
+    calc(var(--toast-offset, 0px) * var(--toast-lift, -1)),
+    0
   );
-  opacity: 1;
+  height: var(--toast-initial-height);
 }
 
-[data-slot="toast-item"][data-starting-style] {
-  transform: translateY(calc(var(--toast-enter-direction) * 24px));
+[data-slot="toast-item"][data-expanded="false"][data-front="false"][data-state="open"] > * {
   opacity: 0;
 }
 
-[data-slot="toast-item"][data-ending-style] {
-  transform: translateY(calc(var(--toast-exit-direction) * 24px));
+[data-slot="toast-item"][data-visible="false"] {
   opacity: 0;
+  pointer-events: none;
+}
+
+[data-slot="toast-item"][data-expanded="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: calc(var(--toast-gap, 0px) + 1px);
+  bottom: 100%;
+}
+
+[data-slot="toast-item"][data-removed="true"][data-front="true"][data-swipe-out="false"] {
+  transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
+  opacity: 0;
+}
+
+[data-slot="toast-item"][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="true"] {
+  transform: translate3d(
+    0,
+    calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-lift, -1) * -100%),
+    0
+  );
+  opacity: 0;
+}
+
+[data-slot="toast-item"][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="false"] {
+  transform: translate3d(0, 40%, 0);
+  opacity: 0;
+  transition:
+    transform 500ms ease,
+    opacity 200ms ease;
 }
 ```
 

@@ -323,6 +323,63 @@ describe("Toast", () => {
     controller.destroy();
   });
 
+  it("pauses timers when the window blurs and resumes on focus", async () => {
+    const { viewport, controller } = setup();
+
+    controller.show({ title: "Backgrounded", duration: 40 });
+    await wait(20);
+
+    window.dispatchEvent(new Event("blur"));
+    await wait(40);
+
+    expect(controller.count).toBe(1);
+    expect(viewport.hasAttribute("data-expanded")).toBe(false);
+
+    window.dispatchEvent(new Event("focus"));
+    await wait(30);
+    await waitForClose();
+
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("pauses timers when the document is hidden and resumes when visible again", async () => {
+    const { controller } = setup();
+    const originalVisibilityState = document.visibilityState;
+
+    try {
+      controller.show({ title: "Hidden tab", duration: 40 });
+      await wait(20);
+
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "hidden",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await wait(40);
+
+      expect(controller.count).toBe(1);
+
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "visible",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await wait(30);
+      await waitForClose();
+
+      expect(controller.count).toBe(0);
+    } finally {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: originalVisibilityState,
+      });
+    }
+
+    controller.destroy();
+  });
+
   it("keeps focus pause active while focus moves within viewport", async () => {
     const { root, viewport, controller } = setup({ pauseOnFocus: true });
 
@@ -357,6 +414,71 @@ describe("Toast", () => {
 
     expect(viewport.hasAttribute("data-expanded")).toBe(false);
     expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("moves focus to the next visible toast when dismissing a focused toast", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const firstId = controller.show({
+      title: "First",
+      action: { label: "First action" },
+    });
+    const secondId = controller.show({
+      title: "Second",
+      action: { label: "Second action" },
+    });
+
+    const firstAction = root.querySelector(
+      `[data-id="${firstId}"] [data-slot="toast-action"]`,
+    ) as HTMLElement;
+    const secondAction = root.querySelector(
+      `[data-id="${secondId}"] [data-slot="toast-action"]`,
+    ) as HTMLElement;
+
+    secondAction.focus();
+    controller.dismiss(secondId);
+
+    expect(document.activeElement).toBe(firstAction);
+
+    controller.destroy();
+  });
+
+  it("restores focus to the previous element when the last focused toast is dismissed", () => {
+    const { root, controller } = setup(
+      { duration: 0, pauseOnFocus: true },
+      `
+        <button id="before" type="button">Before</button>
+        <div data-slot="toast" id="root">
+          <template data-slot="toast-template">
+            <li data-slot="toast-item" role="status" aria-atomic="true">
+              <span data-slot="toast-title"></span>
+              <button data-slot="toast-action" type="button"></button>
+              <button data-slot="toast-close" type="button" aria-label="Close">×</button>
+            </li>
+          </template>
+          <ol data-slot="toast-viewport"></ol>
+        </div>
+      `,
+    );
+
+    const previous = document.getElementById("before") as HTMLButtonElement;
+    const id = controller.show({
+      title: "Only toast",
+      action: { label: "Action" },
+    });
+    const action = root.querySelector(
+      `[data-id="${id}"] [data-slot="toast-action"]`,
+    ) as HTMLElement;
+
+    previous.focus();
+    action.focus();
+    action.dispatchEvent(new FocusEvent("focusin", { bubbles: true, relatedTarget: previous }));
+
+    controller.dismiss(id);
+
+    expect(document.activeElement).toBe(previous);
 
     controller.destroy();
   });
@@ -627,10 +749,10 @@ describe("Toast", () => {
     const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
     const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
 
-    expect(second.getAttribute("data-front")).toBe("");
+    expect(second.getAttribute("data-front")).toBe("true");
     controller.dismiss(secondId);
 
-    expect(first.getAttribute("data-front")).toBe("");
+    expect(first.getAttribute("data-front")).toBe("true");
     expect(second.style.pointerEvents).toBe("none");
 
     controller.destroy();
@@ -829,6 +951,35 @@ describe("Toast", () => {
     controller.destroy();
   });
 
+  it("promise() does not reopen a toast that was dismissed before the promise settles", async () => {
+    const { root, controller } = setup({ duration: 0 });
+    let resolvePromise: ((value: string) => void) | null = null;
+
+    const handled = controller.promise(
+      new Promise<string>((resolve) => {
+        resolvePromise = resolve;
+      }),
+      {
+        loading: { title: "Loading", duration: 0 },
+        success: { title: "Done", duration: 0 },
+        error: { title: "Failed", duration: 0 },
+      },
+    );
+
+    expect(root.querySelector(`[data-id="${handled.id}"]`)).toBeTruthy();
+
+    controller.dismiss(handled.id);
+    resolvePromise?.("done");
+
+    await handled.unwrap();
+    await waitForClose();
+
+    expect(root.querySelector(`[data-id="${handled.id}"]`)).toBeNull();
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
   it("promise() normalizes sync factory throws into rejection and error update", async () => {
     const { root, controller } = setup({ duration: 0 });
 
@@ -941,7 +1092,7 @@ describe("Toast", () => {
     );
 
     expect(controller.count).toBe(1);
-    expect(item.hasAttribute("data-swiping")).toBe(false);
+    expect(item.getAttribute("data-swiping")).toBe("false");
     expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("");
 
     controller.destroy();
@@ -1164,11 +1315,12 @@ describe("Toast", () => {
     const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
     const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
 
-    expect(second.getAttribute("data-front")).toBe("");
-    expect(first.hasAttribute("data-front")).toBe(false);
+    expect(second.getAttribute("data-front")).toBe("true");
+    expect(first.getAttribute("data-front")).toBe("false");
     expect(second.style.getPropertyValue("--toast-index")).toBe("0");
     expect(first.style.getPropertyValue("--toast-index")).toBe("1");
-    expect(second.style.getPropertyValue("--toast-expanded-offset-y")).toContain("px");
+    expect(second.style.getPropertyValue("--toast-initial-height")).toContain("px");
+    expect(second.style.getPropertyValue("--toast-offset")).toContain("px");
     expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toContain("px");
     expect(viewport.style.getPropertyValue("--toast-count")).toBe("2");
     expect(viewport.style.getPropertyValue("--toast-expanded-stack-size")).toContain("px");
@@ -1240,7 +1392,7 @@ describe("Toast", () => {
       }
 
       expect(first.style.getPropertyValue("--toast-expanded-offset-y")).toBe("88px");
-      expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("34px");
+      expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("14px");
       expect(first.style.getPropertyValue("--toast-offset-y")).toBe("88px");
       expect(second.style.getPropertyValue("--toast-expanded-offset-y")).toBe("0px");
       expect(second.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("0px");
@@ -1322,23 +1474,27 @@ describe("Toast", () => {
       Object.defineProperty(second, "offsetHeight", { configurable: true, value: 60 });
       Object.defineProperty(first, "scrollHeight", { configurable: true, value: 140 });
       Object.defineProperty(second, "scrollHeight", { configurable: true, value: 60 });
+      first.style.borderTopWidth = "2px";
+      first.style.borderBottomWidth = "4px";
+      second.style.borderTopWidth = "1px";
+      second.style.borderBottomWidth = "1px";
 
       if (resizeCb) {
         (resizeCb as ResizeObserverCallback)([], {} as ResizeObserver);
       }
 
-      expect(first.style.getPropertyValue("--toast-height")).toBe("140px");
-      expect(first.style.getPropertyValue("--toast-expanded-offset-y")).toBe("68px");
-      expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("-66px");
-      expect(first.style.getPropertyValue("--toast-offset-y")).toBe("68px");
-      expect(second.style.getPropertyValue("--toast-height")).toBe("60px");
+      expect(first.style.getPropertyValue("--toast-height")).toBe("146px");
+      expect(first.style.getPropertyValue("--toast-expanded-offset-y")).toBe("70px");
+      expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("14px");
+      expect(first.style.getPropertyValue("--toast-offset-y")).toBe("70px");
+      expect(second.style.getPropertyValue("--toast-height")).toBe("62px");
       expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
-        "208px",
+        "216px",
       );
       expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-collapsed-stack-size")).toBe(
-        "74px",
+        "76px",
       );
-      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("74px");
+      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("76px");
 
       controller.destroy();
     } finally {
@@ -1432,11 +1588,14 @@ describe("Toast", () => {
       const h2 = Number.parseFloat(first.style.getPropertyValue("--toast-height"));
 
       expect(c0).toBe(0);
-      expect(c1).toBe(34);
-      expect(c2).toBe(8);
+      expect(c1).toBe(14);
+      expect(c2).toBe(28);
 
-      expect(c1 + h1 - (c0 + h0)).toBeCloseTo(14, 3);
-      expect(c2 + h2 - (c1 + h1)).toBeCloseTo(14, 3);
+      expect(c1 - c0).toBeCloseTo(14, 3);
+      expect(c2 - c1).toBeCloseTo(14, 3);
+      expect(h0).toBe(90);
+      expect(h1).toBe(70);
+      expect(h2).toBe(110);
 
       controller.destroy();
     } finally {
@@ -1607,6 +1766,48 @@ describe("Toast", () => {
         }
       ).ResizeObserver = OriginalResizeObserver;
     }
+  });
+
+  it("keeps the viewport expanded until exit transitions finish", async () => {
+    const { root, viewport, controller } = setup(
+      { duration: 0 },
+      `
+        <div data-slot="toast" id="root">
+          <template data-slot="toast-template">
+            <li
+              data-slot="toast-item"
+              role="status"
+              aria-atomic="true"
+              style="transition-property: opacity; transition-duration: 1s;"
+            >
+              <span data-slot="toast-title"></span>
+              <button data-slot="toast-close" type="button" aria-label="Close">×</button>
+            </li>
+          </template>
+          <ol data-slot="toast-viewport"></ol>
+        </div>
+      `,
+    );
+
+    controller.show({ title: "Older" });
+    const newestId = controller.show({ title: "Newest" });
+    const newest = root.querySelector(`[data-id="${newestId}"]`) as HTMLElement;
+
+    viewport.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
+    expect(viewport.hasAttribute("data-expanded")).toBe(true);
+
+    controller.dismiss(newestId);
+    viewport.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true }));
+
+    expect(newest.getAttribute("data-ending-style")).toBe("");
+    expect(viewport.hasAttribute("data-expanded")).toBe(true);
+
+    newest.dispatchEvent(new TransitionEvent("transitionend", { bubbles: true }));
+    await waitForClose();
+
+    expect(viewport.hasAttribute("data-expanded")).toBe(false);
+
+    controller.destroy();
   });
 
   it("does not inline override --toast-collapsed-peek", () => {
