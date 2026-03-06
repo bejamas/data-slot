@@ -12,6 +12,8 @@ import {
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
 const PROGRAMMATIC_SCROLL_LOCK_MS = 1200;
+const FOCUSABLE_CANDIDATES =
+  'a[href],button,input,select,textarea,[contenteditable]:not([contenteditable="false"]),[tabindex]';
 type CarouselSetDetail = { index?: number; action?: "next" | "prev" };
 
 export interface CarouselOptions {
@@ -77,6 +79,18 @@ const setControlDisabled = (el: HTMLElement, disabled: boolean) => {
   setAria(el, "disabled", disabled);
 };
 
+const setInert = (el: HTMLElement, inert: boolean) => {
+  if ("inert" in el) {
+    (el as HTMLElement & { inert?: boolean }).inert = inert;
+  }
+
+  if (inert) {
+    el.setAttribute("inert", "");
+  } else {
+    el.removeAttribute("inert");
+  }
+};
+
 /**
  * Create a carousel controller for a root element.
  *
@@ -133,6 +147,10 @@ export function createCarousel(
   const nextControls = getParts<HTMLElement>(root, "carousel-next");
 
   const cleanups: Array<() => void> = [];
+  const managedFocusableByItem = new WeakMap<
+    HTMLElement,
+    Array<{ element: HTMLElement; tabindex: string | null }>
+  >();
   const win = root.ownerDocument?.defaultView ?? window;
   const matchesMediaQuery = (query: string): boolean => {
     if (typeof win.matchMedia !== "function") return false;
@@ -239,6 +257,52 @@ export function createCarousel(
     }
   };
 
+  const collectFocusableCandidates = (item: HTMLElement) => {
+    const focusable = Array.from(item.querySelectorAll<HTMLElement>(FOCUSABLE_CANDIDATES));
+
+    if (item.matches(FOCUSABLE_CANDIDATES)) {
+      focusable.unshift(item);
+    }
+
+    return focusable;
+  };
+
+  const restoreItemFocusability = (item: HTMLElement) => {
+    setInert(item, false);
+
+    const managed = managedFocusableByItem.get(item);
+    if (!managed) return;
+
+    for (const { element, tabindex } of managed) {
+      if (!element.isConnected) continue;
+
+      if (tabindex === null) {
+        element.removeAttribute("tabindex");
+      } else {
+        element.setAttribute("tabindex", tabindex);
+      }
+    }
+
+    managedFocusableByItem.delete(item);
+  };
+
+  const disableItemFocusability = (item: HTMLElement) => {
+    const managed =
+      managedFocusableByItem.get(item) ??
+      collectFocusableCandidates(item).map((element) => ({
+        element,
+        tabindex: element.getAttribute("tabindex"),
+      }));
+
+    managedFocusableByItem.set(item, managed);
+
+    for (const { element } of managed) {
+      element.setAttribute("tabindex", "-1");
+    }
+
+    setInert(item, true);
+  };
+
   const updateStates = (emitChange: boolean) => {
     root.setAttribute("data-index", String(currentIndex));
 
@@ -248,6 +312,11 @@ export function createCarousel(
       const active = i === currentIndex;
       item.setAttribute("data-state", active ? "active" : "inactive");
       setAria(item, "hidden", !active);
+      if (active) {
+        restoreItemFocusability(item);
+      } else {
+        disableItemFocusability(item);
+      }
     }
 
     updateControls();
@@ -291,6 +360,7 @@ export function createCarousel(
   };
 
   const refreshItems = (emitChange: boolean) => {
+    const activeItem = items[currentIndex] ?? null;
     items = collectItems();
     clearProgrammaticScrollLock();
 
@@ -302,7 +372,11 @@ export function createCarousel(
       return;
     }
 
-    const nextIndex = normalizeIndex(currentIndex, items.length, loop);
+    const preservedIndex = activeItem ? items.indexOf(activeItem) : -1;
+    const nextIndex =
+      preservedIndex >= 0
+        ? preservedIndex
+        : normalizeIndex(currentIndex, items.length, loop);
     const changed = nextIndex !== currentIndex;
     currentIndex = nextIndex;
 
@@ -424,14 +498,20 @@ export function createCarousel(
   updateStates(false);
 
   cleanups.push(on(content, "scroll", onScroll));
-  cleanups.push(on(root, "keydown", onKeyDown, { capture: true }));
+  cleanups.push(on(root, "keydown", onKeyDown));
   cleanups.push(on(root, "carousel:set", onSet));
 
   for (const control of previousControls) {
+    if (control.tagName === "BUTTON" && !control.hasAttribute("type")) {
+      (control as HTMLButtonElement).type = "button";
+    }
     cleanups.push(on(control, "click", () => prev()));
   }
 
   for (const control of nextControls) {
+    if (control.tagName === "BUTTON" && !control.hasAttribute("type")) {
+      (control as HTMLButtonElement).type = "button";
+    }
     cleanups.push(on(control, "click", () => next()));
   }
 
