@@ -431,6 +431,39 @@ describe("Toast", () => {
     controller.destroy();
   });
 
+  it("restores tabindex for custom focusable nodes when hidden overflow toast is shown again", async () => {
+    const { root, controller } = setup(
+      { limit: 1, duration: 0 },
+      `
+        <div data-slot="toast" id="root">
+          <template data-slot="toast-template">
+            <li data-slot="toast-item" role="status" aria-atomic="true">
+              <span data-slot="toast-title"></span>
+              <div data-testid="custom-focus" tabindex="0">Focusable custom node</div>
+              <button data-slot="toast-close" type="button" aria-label="Close">×</button>
+            </li>
+          </template>
+          <ol data-slot="toast-viewport"></ol>
+        </div>
+      `,
+    );
+
+    const first = controller.show({ title: "One" });
+    const second = controller.show({ title: "Two" });
+
+    const customNode = root.querySelector(
+      `[data-slot="toast-item"][data-id="${first}"] [data-testid="custom-focus"]`,
+    ) as HTMLElement;
+    expect(customNode.getAttribute("tabindex")).toBe("-1");
+
+    controller.dismiss(second);
+    await waitForClose();
+
+    expect(customNode.getAttribute("tabindex")).toBe("0");
+
+    controller.destroy();
+  });
+
   it("update patches hidden overflow toast before it is revealed", async () => {
     const { root, controller } = setup({ limit: 1, duration: 0 });
 
@@ -1056,8 +1089,20 @@ describe("Toast", () => {
     controller.destroy();
   });
 
-  it("reusing an existing id force-replaces previous instance", async () => {
-    const { root, controller } = setup({ duration: 0 });
+  it("reusing an exiting id force-replaces previous instance without duplicate dismiss signals", async () => {
+    const dismissCalls: string[] = [];
+    const dismissEvents: string[] = [];
+    const { root, controller } = setup({
+      duration: 0,
+      onDismiss: (id) => dismissCalls.push(id),
+    });
+
+    root.addEventListener("toast:change", (event) => {
+      const detail = (event as CustomEvent<{ id: string; action: "show" | "dismiss" }>).detail;
+      if (detail.action === "dismiss") {
+        dismissEvents.push(detail.id);
+      }
+    });
 
     controller.show({ id: "job", title: "Loading" });
     controller.dismiss("job");
@@ -1067,6 +1112,8 @@ describe("Toast", () => {
     const matching = root.querySelectorAll('[data-slot="toast-item"][data-id="job"]');
     expect(matching.length).toBe(1);
     expect(matching[0]?.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Done");
+    expect(dismissCalls.filter((id) => id === "job")).toHaveLength(1);
+    expect(dismissEvents.filter((id) => id === "job")).toHaveLength(1);
 
     await waitForClose();
     controller.destroy();
