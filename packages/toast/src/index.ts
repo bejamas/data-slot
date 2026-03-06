@@ -528,12 +528,37 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     return nodes;
   };
 
+  const getManagedFocusableNodes = (item: HTMLElement): HTMLElement[] => {
+    const nodes: HTMLElement[] = [];
+    const seen = new Set<HTMLElement>();
+
+    const push = (node: HTMLElement) => {
+      if (seen.has(node)) return;
+      seen.add(node);
+      nodes.push(node);
+    };
+
+    for (const node of getFocusableNodes(item)) {
+      push(node);
+    }
+
+    if (item.hasAttribute(PREV_TAB_INDEX_ATTR)) {
+      push(item);
+    }
+
+    for (const node of item.querySelectorAll<HTMLElement>(`[${PREV_TAB_INDEX_ATTR}]`)) {
+      push(node);
+    }
+
+    return nodes;
+  };
+
   const setItemVisibilityInteractivity = (item: HTMLElement, isVisible: boolean) => {
     if (isVisible) {
       item.removeAttribute("aria-hidden");
       item.removeAttribute("inert");
 
-      for (const node of getFocusableNodes(item)) {
+      for (const node of getManagedFocusableNodes(item)) {
         if (!node.hasAttribute(PREV_TAB_INDEX_ATTR)) continue;
 
         const previousTabIndex = node.getAttribute(PREV_TAB_INDEX_ATTR);
@@ -747,6 +772,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const forceRemoveEntry = (id: string, notifyDismiss = false) => {
     const entry = entries.get(id);
     if (!entry) return;
+    const shouldNotifyDismiss = notifyDismiss && !entry.exiting;
 
     clearTimer(entry);
     removeFromActiveOrder(id);
@@ -756,7 +782,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     entries.delete(id);
     reindex();
 
-    if (notifyDismiss) {
+    if (shouldNotifyDismiss) {
       emit<ToastChangeDetail>(root, "toast:change", { id, action: "dismiss" });
       onDismiss?.(id);
     }
