@@ -69,23 +69,76 @@ describe("Carousel", () => {
 
     items.forEach((item, index) => {
       item.getBoundingClientRect = () =>
-        ({
-          left: index * itemSize,
-          top: 0,
-          width: itemSize,
-          height: 80,
-          right: (index + 1) * itemSize,
-          bottom: 80,
-          x: index * itemSize,
-          y: 0,
-          toJSON() {},
-        }) as DOMRect;
+        {
+          const left = index * itemSize - content.scrollLeft;
+
+          return ({
+            left,
+            top: 0,
+            width: itemSize,
+            height: 80,
+            right: left + itemSize,
+            bottom: 80,
+            x: left,
+            y: 0,
+            toJSON() {},
+          }) as DOMRect;
+        };
     });
 
     content.scrollTo = ((options: ScrollToOptions) => {
       if (typeof options.left === "number") content.scrollLeft = options.left;
       if (typeof options.top === "number") content.scrollTop = options.top;
     }) as typeof content.scrollTo;
+  };
+
+  const mockDynamicHorizontalGeometry = (
+    content: HTMLElement,
+    itemSize = 100,
+  ) => {
+    content.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        width: itemSize,
+        height: 80,
+        right: itemSize,
+        bottom: 80,
+        x: 0,
+        y: 0,
+        toJSON() {},
+      }) as DOMRect;
+
+    const sync = () => {
+      Array.from(content.children).forEach((child, index) => {
+        if (!(child instanceof HTMLElement)) return;
+
+        child.getBoundingClientRect = () =>
+          {
+            const left = index * itemSize - content.scrollLeft;
+
+            return ({
+              left,
+              top: 0,
+              width: itemSize,
+              height: 80,
+              right: left + itemSize,
+              bottom: 80,
+              x: left,
+              y: 0,
+              toJSON() {},
+            }) as DOMRect;
+          };
+      });
+    };
+
+    content.scrollTo = ((options: ScrollToOptions) => {
+      if (typeof options.left === "number") content.scrollLeft = options.left;
+      if (typeof options.top === "number") content.scrollTop = options.top;
+    }) as typeof content.scrollTo;
+
+    sync();
+    return sync;
   };
 
   const createScrollSpy = (content: HTMLElement) => {
@@ -225,6 +278,82 @@ describe("Carousel", () => {
 
     field.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     expect(controller.index).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("does not navigate when a nested widget handles the key event", () => {
+    document.body.innerHTML = `
+      <div data-slot="carousel" id="root">
+        <div data-slot="carousel-content">
+          <div data-slot="carousel-item">
+            <button id="nested">Nested</button>
+          </div>
+          <div data-slot="carousel-item">Slide 2</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const nested = document.getElementById("nested") as HTMLButtonElement;
+    const controller = createCarousel(root);
+
+    nested.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+      }
+    });
+
+    nested.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+
+    expect(controller.index).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("removes hidden slides from the tab order and restores authored tabindex values", () => {
+    document.body.innerHTML = `
+      <div data-slot="carousel" id="root">
+        <div data-slot="carousel-content">
+          <div data-slot="carousel-item" id="slide-1">
+            <a href="#first" id="first-link">First</a>
+          </div>
+          <div data-slot="carousel-item" id="slide-2">
+            <button id="second-button">Second</button>
+            <div id="second-custom" tabindex="0">Custom</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const slide1 = document.getElementById("slide-1") as HTMLElement;
+    const slide2 = document.getElementById("slide-2") as HTMLElement;
+    const firstLink = document.getElementById("first-link") as HTMLAnchorElement;
+    const secondButton = document.getElementById("second-button") as HTMLButtonElement;
+    const secondCustom = document.getElementById("second-custom") as HTMLElement;
+    const controller = createCarousel(root);
+
+    expect(slide2.getAttribute("aria-hidden")).toBe("true");
+    expect(slide2.hasAttribute("inert")).toBe(true);
+    expect(secondButton.getAttribute("tabindex")).toBe("-1");
+    expect(secondCustom.getAttribute("tabindex")).toBe("-1");
+
+    controller.goTo(1);
+
+    expect(slide1.getAttribute("aria-hidden")).toBe("true");
+    expect(slide1.hasAttribute("inert")).toBe(true);
+    expect(firstLink.getAttribute("tabindex")).toBe("-1");
+    expect(slide2.getAttribute("aria-hidden")).toBe("false");
+    expect(slide2.hasAttribute("inert")).toBe(false);
+    expect(secondButton.hasAttribute("tabindex")).toBe(false);
+    expect(secondCustom.getAttribute("tabindex")).toBe("0");
 
     controller.destroy();
   });
@@ -477,7 +606,9 @@ describe("Carousel", () => {
       item.textContent = "Slide 3";
       content.appendChild(item);
 
-      callback?.([], {} as MutationObserver);
+      if (callback) {
+        callback([] as MutationRecord[], {} as MutationObserver);
+      }
 
       expect(controller.count).toBe(3);
       expect(item.getAttribute("role")).toBe("group");
@@ -498,6 +629,120 @@ describe("Carousel", () => {
         ).MutationObserver;
       }
     }
+  });
+
+  it("preserves the active slide when items are inserted or removed before it", () => {
+    const OriginalMutationObserver = globalThis.MutationObserver;
+    let callback: MutationCallback | null = null;
+
+    class MockMutationObserver {
+      constructor(cb: MutationCallback) {
+        callback = cb;
+      }
+
+      observe() {}
+      disconnect() {}
+      takeRecords() {
+        return [];
+      }
+    }
+
+    (
+      globalThis as unknown as {
+        MutationObserver?: typeof MutationObserver;
+      }
+    ).MutationObserver = MockMutationObserver as unknown as typeof MutationObserver;
+
+    try {
+      document.body.innerHTML = `
+        <div data-slot="carousel" id="root">
+          <div data-slot="carousel-content" id="content">
+            <div data-slot="carousel-item">Slide 1</div>
+            <div data-slot="carousel-item" id="active-slide">Slide 2</div>
+            <div data-slot="carousel-item">Slide 3</div>
+          </div>
+        </div>
+      `;
+
+      const root = document.getElementById("root")!;
+      const content = document.getElementById("content") as HTMLElement;
+      const activeSlide = document.getElementById("active-slide") as HTMLElement;
+      const syncGeometry = mockDynamicHorizontalGeometry(content, 100);
+      const controller = createCarousel(root);
+      const changes: number[] = [];
+
+      root.addEventListener("carousel:change", (event) => {
+        changes.push((event as CustomEvent<{ index: number }>).detail.index);
+      });
+
+      controller.goTo(1);
+      expect(controller.index).toBe(1);
+      expect(changes).toEqual([1]);
+
+      const inserted = document.createElement("div");
+      inserted.setAttribute("data-slot", "carousel-item");
+      inserted.textContent = "Inserted";
+      content.insertBefore(inserted, activeSlide);
+      syncGeometry();
+      if (callback) {
+        callback([] as MutationRecord[], {} as MutationObserver);
+      }
+
+      expect(controller.index).toBe(2);
+      expect(content.scrollLeft).toBe(200);
+      expect(changes).toEqual([1, 2]);
+
+      inserted.remove();
+      syncGeometry();
+      if (callback) {
+        callback([] as MutationRecord[], {} as MutationObserver);
+      }
+
+      expect(controller.index).toBe(1);
+      expect(content.scrollLeft).toBe(100);
+      expect(changes).toEqual([1, 2, 1]);
+
+      controller.destroy();
+    } finally {
+      if (OriginalMutationObserver) {
+        (
+          globalThis as unknown as {
+            MutationObserver?: typeof MutationObserver;
+          }
+        ).MutationObserver = OriginalMutationObserver;
+      } else {
+        delete (
+          globalThis as unknown as {
+            MutationObserver?: typeof MutationObserver;
+          }
+        ).MutationObserver;
+      }
+    }
+  });
+
+  it("sets nav control buttons to type=button without overriding authored types", () => {
+    document.body.innerHTML = `
+      <form id="form">
+        <div data-slot="carousel" id="root">
+          <div data-slot="carousel-content">
+            <div data-slot="carousel-item">Slide 1</div>
+            <div data-slot="carousel-item">Slide 2</div>
+          </div>
+          <button data-slot="carousel-previous" id="prev">Prev</button>
+          <button data-slot="carousel-next" id="next" type="submit">Next</button>
+        </div>
+      </form>
+    `;
+
+    const root = document.getElementById("root")!;
+    const prev = document.getElementById("prev") as HTMLButtonElement;
+    const next = document.getElementById("next") as HTMLButtonElement;
+    const controller = createCarousel(root);
+
+    expect(prev.getAttribute("type")).toBe("button");
+    expect(next.getAttribute("type")).toBe("submit");
+
+    controller.destroy();
   });
 
   it("auto-discovers with create() and dedupes already-bound roots", () => {
