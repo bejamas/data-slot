@@ -445,6 +445,34 @@ describe("Toast", () => {
     controller.destroy();
   });
 
+  it("does not steal focus when dismissing a different toast", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const firstId = controller.show({
+      title: "First",
+      action: { label: "First action" },
+    });
+    const secondId = controller.show({
+      title: "Second",
+      action: { label: "Second action" },
+    });
+    controller.show({
+      title: "Third",
+      action: { label: "Third action" },
+    });
+
+    const firstAction = root.querySelector(
+      `[data-id="${firstId}"] [data-slot="toast-action"]`,
+    ) as HTMLElement;
+
+    firstAction.focus();
+    controller.dismiss(secondId);
+
+    expect(document.activeElement).toBe(firstAction);
+
+    controller.destroy();
+  });
+
   it("restores focus to the previous element when the last focused toast is dismissed", () => {
     const { root, controller } = setup(
       { duration: 0, pauseOnFocus: true },
@@ -1330,6 +1358,77 @@ describe("Toast", () => {
     );
 
     controller.destroy();
+  });
+
+  it("measures toast height within the viewport context so scoped styles are preserved", () => {
+    const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      if (this.matches('[data-slot="toast-viewport"]')) {
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 320,
+          height: 0,
+          right: 320,
+          bottom: 0,
+          toJSON: () => ({}),
+        } as DOMRect;
+      }
+
+      if (this.matches('[data-slot="toast-item"]')) {
+        const height =
+          this.getAttribute("aria-hidden") === "true"
+            ? this.closest(".scoped")
+              ? 120
+              : 24
+            : 56;
+
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 240,
+          height,
+          right: 240,
+          bottom: height,
+          toJSON: () => ({}),
+        } as DOMRect;
+      }
+
+      return originalGetBoundingClientRect.call(this);
+    };
+
+    try {
+      const { root, controller } = setup(
+        { duration: 0 },
+        `
+          <div class="scoped">
+            <div data-slot="toast" id="root">
+              <template data-slot="toast-template">
+                <li data-slot="toast-item" role="status" aria-atomic="true">
+                  <span data-slot="toast-title"></span>
+                  <button data-slot="toast-close" type="button" aria-label="Close">×</button>
+                </li>
+              </template>
+              <ol data-slot="toast-viewport"></ol>
+            </div>
+          </div>
+        `,
+      );
+
+      const id = controller.show({ title: "Scoped height" });
+      const item = root.querySelector(`[data-id="${id}"]`) as HTMLElement;
+
+      expect(item.style.getPropertyValue("--toast-initial-height")).toBe("120px");
+
+      controller.destroy();
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    }
   });
 
   it("reindexes on ResizeObserver callback", () => {

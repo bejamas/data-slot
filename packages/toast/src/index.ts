@@ -249,7 +249,7 @@ const getCssCollapsedPeek = (viewport: HTMLElement): number => {
 
 const getToastHeight = (
   item: HTMLElement,
-  measurementHost: HTMLElement,
+  viewport: HTMLElement,
   fallbackWidth: number,
 ): number => {
   const rectHeight = item.getBoundingClientRect().height;
@@ -276,21 +276,20 @@ const getToastHeight = (
     }
 
     clone.setAttribute("aria-hidden", "true");
-    clone.style.position = "relative";
-    clone.style.inset = "auto";
-    clone.style.left = "auto";
-    clone.style.right = "auto";
-    clone.style.top = "auto";
-    clone.style.bottom = "auto";
+    clone.style.position = "absolute";
+    clone.style.inset = "0 auto auto 0";
     clone.style.width = `${measurementWidth}px`;
+    clone.style.height = "auto";
+    clone.style.maxHeight = "none";
     clone.style.pointerEvents = "none";
+    clone.style.visibility = "hidden";
     clone.style.opacity = "1";
     clone.style.transform = "none";
     clone.style.transition = "none";
     clone.style.animation = "none";
     clone.style.zIndex = "-1";
 
-    measurementHost.append(clone);
+    viewport.append(clone);
     const cloneRectHeight = clone.getBoundingClientRect().height;
     const cloneHeight = cloneRectHeight > 0 ? cloneRectHeight : clone.offsetHeight;
     clone.remove();
@@ -571,19 +570,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const activeOrder: string[] = [];
   const closeButtonLabelDefaults = new WeakMap<HTMLElement, string | null>();
   const cleanups: Array<() => void> = [];
-  const measurementHost = doc.createElement("div");
-
-  measurementHost.setAttribute("aria-hidden", "true");
-  measurementHost.style.position = "fixed";
-  measurementHost.style.left = "-9999px";
-  measurementHost.style.top = "0";
-  measurementHost.style.visibility = "hidden";
-  measurementHost.style.pointerEvents = "none";
-  measurementHost.style.zIndex = "-1";
-  measurementHost.style.display = "block";
-  measurementHost.style.contain = "layout style paint";
-  (doc.body ?? doc.documentElement).append(measurementHost);
-
   let idCounter = 0;
   let destroyed = false;
   let pauseHover = false;
@@ -772,9 +758,10 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     return false;
   };
 
-  const handleDismissFocus = () => {
+  const handleDismissFocus = (dismissedElement?: HTMLElement) => {
     const active = doc.activeElement;
     if (!(active instanceof HTMLElement) || !viewport.contains(active)) return;
+    if (dismissedElement && !dismissedElement.contains(active)) return;
     if (focusNextVisibleToast()) return;
     if (restorePreviousFocus()) return;
     active.blur();
@@ -830,7 +817,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
       const height = getToastHeight(
         entry.element,
-        measurementHost,
+        viewport,
         viewport.getBoundingClientRect().width || viewport.clientWidth,
       );
       entry.measuredHeight = height;
@@ -913,7 +900,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     setOpenState(entry.element, "closed");
     reindex();
     if (manageFocus) {
-      handleDismissFocus();
+      handleDismissFocus(entry.element);
     }
 
     emit<ToastChangeDetail>(root, "toast:change", { id, action: "dismiss" });
@@ -1651,8 +1638,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       }
       entries.clear();
       activeOrder.length = 0;
-      measurementHost.remove();
-
       portal.cleanup();
       bound.delete(root);
     },
