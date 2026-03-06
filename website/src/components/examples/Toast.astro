@@ -70,7 +70,7 @@ const cssCode = `<div class="toast-demo-stack toast-demo-shell">
     list-style: none;
     margin: 0;
     padding: 0;
-    --toast-gap: 14;
+    --toast-gap: 14px;
     --toast-collapsed-peek: 14px;
     pointer-events: auto;
     z-index: 80;
@@ -118,21 +118,20 @@ const cssCode = `<div class="toast-demo-stack toast-demo-shell">
     align-items: center;
     gap: 0.75rem;
     justify-content: space-between;
+    box-sizing: border-box;
     background: #1f1f1f;
     color: #f8f8f8;
     border: 1px solid #2f2f2f;
     padding: 0.7rem 0.75rem;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
-    transform: translate3d(
-        0,
-        calc(var(--toast-collapsed-offset-y, 0px) * var(--toast-stack-direction, -1)),
-        0
-      )
-      scale(calc(1 - var(--toast-index, 0) * 0.05));
-    opacity: 1;
+    outline: none;
+    touch-action: none;
+    transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
+    opacity: 0;
     transition:
       transform 400ms ease,
       opacity 400ms ease,
+      height 400ms ease,
       box-shadow 200ms ease;
     will-change: transform, opacity;
     pointer-events: auto;
@@ -153,8 +152,52 @@ const cssCode = `<div class="toast-demo-stack toast-demo-shell">
     bottom: 0;
   }
 
+  [data-slot="toast-item"][data-swiping="false"][data-removed="true"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: scaleY(2);
+  }
+
+  [data-slot="toast-item"][data-expanded="true"]::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: calc(var(--toast-gap, 0px) + 1px);
+    bottom: 100%;
+  }
+
+  [data-slot="toast-item"][data-mounted="true"] {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+
+  [data-slot="toast-item"][data-mounted="true"][data-expanded="false"][data-front="false"] {
+    transform: translate3d(
+        0,
+        calc(var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1)),
+        0
+      )
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
+    height: var(--toast-frontmost-height);
+  }
+
+  [data-slot="toast-item"][data-mounted="true"][data-expanded="true"] {
+    transform: translate3d(
+      0,
+      calc(var(--toast-offset, 0px) * var(--toast-lift, -1)),
+      0
+    );
+    height: var(--toast-initial-height);
+  }
+
   [data-slot="toast-item"] > * {
     transition: opacity 400ms;
+  }
+
+  [data-slot="toast-item"][data-expanded="false"][data-front="false"][data-state="open"] > * {
+    opacity: 0;
   }
 
   [data-slot="toast-item"][data-visible="false"] {
@@ -162,32 +205,66 @@ const cssCode = `<div class="toast-demo-stack toast-demo-shell">
     pointer-events: none;
   }
 
-  [data-slot="toast-viewport"]:not([data-expanded]) [data-slot="toast-item"]:not([data-front]):not([data-state="closed"]) > * {
-    opacity: 0;
-  }
-
-  [data-slot="toast-item"][data-front] {
+  [data-slot="toast-item"][data-front="true"] {
     box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
   }
 
-  [data-slot="toast-viewport"][data-expanded] [data-slot="toast-item"] {
+  [data-slot="toast-item"][data-removed="true"][data-front="true"][data-swipe-out="false"] {
     transform: translate3d(
       0,
-      calc(var(--toast-expanded-offset-y, var(--toast-offset-y, 0px)) * var(--toast-stack-direction, -1)),
+      calc(var(--toast-lift, -1) * -100%),
       0
     );
-  }
-
-  [data-slot="toast-item"][data-starting-style] {
-    transform: translate3d(0, calc(var(--toast-enter-direction, var(--toast-stack-direction, -1)) * -100%), 0)
-      scale(calc(1 - var(--toast-index, 0) * 0.05));
     opacity: 0;
   }
 
-  [data-slot="toast-item"][data-ending-style] {
-    transform: translate3d(0, calc(var(--toast-exit-direction, var(--toast-stack-direction, -1)) * -100%), 0)
-      scale(calc(1 - var(--toast-index, 0) * 0.05));
+  [data-slot="toast-item"][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="true"] {
+    transform: translate3d(
+      0,
+      calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-lift, -1) * -100%),
+      0
+    );
     opacity: 0;
+  }
+
+  [data-slot="toast-item"][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="false"] {
+    transform: translate3d(0, 40%, 0);
+    opacity: 0;
+    transition:
+      transform 500ms ease,
+      opacity 200ms ease;
+  }
+
+  [data-slot="toast-item"][data-removed="true"][data-front="false"]::before {
+    height: calc(var(--toast-initial-height, 0px) + 20%);
+  }
+
+  [data-slot="toast-item"][data-swiping="true"] {
+    transition: none;
+  }
+
+  [data-slot="toast-item"][data-swiping="true"][data-front="true"] {
+    transform: translate3d(0, var(--toast-swipe-movement-y, 0px), 0);
+  }
+
+  [data-slot="toast-item"][data-swiping="true"][data-expanded="false"][data-front="false"] {
+    transform: translate3d(
+        0,
+        calc(
+          var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+            var(--toast-swipe-movement-y, 0px)
+        ),
+        0
+      )
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
+  }
+
+  [data-slot="toast-item"][data-swiping="true"][data-expanded="true"] {
+    transform: translate3d(
+      0,
+      calc(var(--toast-offset, 0px) * var(--toast-lift, -1) + var(--toast-swipe-movement-y, 0px)),
+      0
+    );
   }
 
   .toast-copy {
@@ -297,7 +374,7 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
   width: min(22rem, calc(100vw - 2rem));
   height: var(--toast-stack-size, 0px);
   min-height: 1px;
-  --toast-gap: 14;
+  --toast-gap: 14px;
   --toast-collapsed-peek: 14px;
   pointer-events: auto;
   z-index: 80;
@@ -350,16 +427,15 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
 [data-slot="toast-item"] {
   transform-origin: bottom center;
   align-items: center;
-  transform: translate3d(
-      0,
-      calc(var(--toast-collapsed-offset-y, 0px) * var(--toast-stack-direction, -1)),
-      0
-    )
-    scale(calc(1 - var(--toast-index, 0) * 0.05));
-  opacity: 1;
+  box-sizing: border-box;
+  outline: none;
+  touch-action: none;
+  transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
+  opacity: 0;
   transition:
     transform 400ms ease,
     opacity 400ms ease,
+    height 400ms ease,
     box-shadow 200ms ease;
   will-change: transform, opacity;
   pointer-events: auto;
@@ -369,8 +445,52 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
   align-items: flex-start;
 }
 
+[data-slot="toast-item"][data-swiping="false"][data-removed="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: scaleY(2);
+}
+
+[data-slot="toast-item"][data-expanded="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: calc(var(--toast-gap, 0px) + 1px);
+  bottom: 100%;
+}
+
+[data-slot="toast-item"][data-mounted="true"] {
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+}
+
+[data-slot="toast-item"][data-mounted="true"][data-expanded="false"][data-front="false"] {
+  transform: translate3d(
+      0,
+      calc(var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1)),
+      0
+    )
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
+  height: var(--toast-frontmost-height);
+}
+
+[data-slot="toast-item"][data-mounted="true"][data-expanded="true"] {
+  transform: translate3d(
+    0,
+    calc(var(--toast-offset, 0px) * var(--toast-lift, -1)),
+    0
+  );
+  height: var(--toast-initial-height);
+}
+
 [data-slot="toast-item"] > * {
   transition: opacity 400ms;
+}
+
+[data-slot="toast-item"][data-expanded="false"][data-front="false"][data-state="open"] > * {
+  opacity: 0;
 }
 
 [data-slot="toast-item"][data-visible="false"] {
@@ -383,28 +503,62 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
   display: none !important;
 }
 
-[data-slot="toast-viewport"]:not([data-expanded]) [data-slot="toast-item"]:not([data-front]):not([data-state="closed"]) > * {
-  opacity: 0;
-}
-
-[data-slot="toast-viewport"][data-expanded] [data-slot="toast-item"] {
+[data-slot="toast-item"][data-removed="true"][data-front="true"][data-swipe-out="false"] {
   transform: translate3d(
     0,
-    calc(var(--toast-expanded-offset-y, var(--toast-offset-y, 0px)) * var(--toast-stack-direction, -1)),
+    calc(var(--toast-lift, -1) * -100%),
     0
   );
-}
-
-[data-slot="toast-item"][data-starting-style] {
-  transform: translate3d(0, calc(var(--toast-enter-direction, var(--toast-stack-direction, -1)) * -100%), 0)
-    scale(calc(1 - var(--toast-index, 0) * 0.05));
   opacity: 0;
 }
 
-[data-slot="toast-item"][data-ending-style] {
-  transform: translate3d(0, calc(var(--toast-exit-direction, var(--toast-stack-direction, -1)) * -100%), 0)
-    scale(calc(1 - var(--toast-index, 0) * 0.05));
+[data-slot="toast-item"][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="true"] {
+  transform: translate3d(
+    0,
+    calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-lift, -1) * -100%),
+    0
+  );
   opacity: 0;
+}
+
+[data-slot="toast-item"][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="false"] {
+  transform: translate3d(0, 40%, 0);
+  opacity: 0;
+  transition:
+    transform 500ms ease,
+    opacity 200ms ease;
+}
+
+[data-slot="toast-item"][data-removed="true"][data-front="false"]::before {
+  height: calc(var(--toast-initial-height, 0px) + 20%);
+}
+
+[data-slot="toast-item"][data-swiping="true"] {
+  transition: none;
+}
+
+[data-slot="toast-item"][data-swiping="true"][data-front="true"] {
+  transform: translate3d(0, var(--toast-swipe-movement-y, 0px), 0);
+}
+
+[data-slot="toast-item"][data-swiping="true"][data-expanded="false"][data-front="false"] {
+  transform: translate3d(
+      0,
+      calc(
+        var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+          var(--toast-swipe-movement-y, 0px)
+      ),
+      0
+    )
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
+}
+
+[data-slot="toast-item"][data-swiping="true"][data-expanded="true"] {
+  transform: translate3d(
+    0,
+    calc(var(--toast-offset, 0px) * var(--toast-lift, -1) + var(--toast-swipe-movement-y, 0px)),
+    0
+  );
 }`;
 ---
 
@@ -467,9 +621,10 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
   </div>
 
   <p slot="note" class="mt-3">
-    Uses runtime stack variables (<code>--toast-collapsed-offset-y</code>, <code>--toast-expanded-offset-y</code>) and presence attributes
-    for entry/exit. Motion is transform/opacity-only with <code>will-change</code> for smooth compositing. Hover or focus within viewport
-    to expand/fan the stack.
+    Uses runtime stack tokens (<code>--toast-offset</code>, <code>--toast-frontmost-height</code>) plus
+    <code>data-mounted</code>/<code>data-removed</code> state for Sonner-style stack enter/exit. Primary motion stays on
+    transform/opacity, with shell height transitions to keep the collapsed stack stable. Hover or focus within the viewport to expand
+    the stack.
   </p>
 
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
@@ -524,7 +679,7 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
     list-style: none;
     margin: 0;
     padding: 0;
-    --toast-gap: 14;
+    --toast-gap: 14px;
     --toast-collapsed-peek: 14px;
     pointer-events: auto;
     z-index: 80;
@@ -572,22 +727,21 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
+    box-sizing: border-box;
     border: 1px solid #2f2f2f;
     border-radius: 0.8rem;
     background: linear-gradient(180deg, #272727 0%, #1f1f1f 100%);
     color: #f8f8f8;
     padding: 0.72rem 0.78rem;
     box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24);
-    transform: translate3d(
-        0,
-        calc(var(--toast-collapsed-offset-y, 0px) * var(--toast-stack-direction, -1)),
-        0
-      )
-      scale(calc(1 - var(--toast-index, 0) * 0.05));
-    opacity: 1;
+    outline: none;
+    touch-action: none;
+    transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
+    opacity: 0;
     transition:
       transform 400ms ease,
       opacity 400ms ease,
+      height 400ms ease,
       box-shadow 200ms ease;
     will-change: transform, opacity;
     pointer-events: auto;
@@ -608,8 +762,52 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
     bottom: 0;
   }
 
+  .toast-demo-viewport [data-slot="toast-item"][data-swiping="false"][data-removed="true"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: scaleY(2);
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-expanded="true"]::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: calc(var(--toast-gap, 0px) + 1px);
+    bottom: 100%;
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-mounted="true"] {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-mounted="true"][data-expanded="false"][data-front="false"] {
+    transform: translate3d(
+        0,
+        calc(var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1)),
+        0
+      )
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
+    height: var(--toast-frontmost-height);
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-mounted="true"][data-expanded="true"] {
+    transform: translate3d(
+      0,
+      calc(var(--toast-offset, 0px) * var(--toast-lift, -1)),
+      0
+    );
+    height: var(--toast-initial-height);
+  }
+
   .toast-demo-viewport [data-slot="toast-item"] > * {
     transition: opacity 400ms;
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-expanded="false"][data-front="false"][data-state="open"] > * {
+    opacity: 0;
   }
 
   .toast-demo-viewport [data-slot="toast-item"][data-visible="false"] {
@@ -617,32 +815,66 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
     pointer-events: none;
   }
 
-  .toast-demo-viewport:not([data-expanded]) [data-slot="toast-item"]:not([data-front]):not([data-state="closed"]) > * {
-    opacity: 0;
-  }
-
-  .toast-demo-viewport [data-slot="toast-item"][data-front] {
+  .toast-demo-viewport [data-slot="toast-item"][data-front="true"] {
     box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
   }
 
-  .toast-demo-viewport[data-expanded] [data-slot="toast-item"] {
+  .toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-front="true"][data-swipe-out="false"] {
     transform: translate3d(
       0,
-      calc(var(--toast-expanded-offset-y, var(--toast-offset-y, 0px)) * var(--toast-stack-direction, -1)),
+      calc(var(--toast-lift, -1) * -100%),
       0
     );
-  }
-
-  .toast-demo-viewport [data-slot="toast-item"][data-starting-style] {
-    transform: translate3d(0, calc(var(--toast-enter-direction, var(--toast-stack-direction, -1)) * -100%), 0)
-      scale(calc(1 - var(--toast-index, 0) * 0.05));
     opacity: 0;
   }
 
-  .toast-demo-viewport [data-slot="toast-item"][data-ending-style] {
-    transform: translate3d(0, calc(var(--toast-exit-direction, var(--toast-stack-direction, -1)) * -100%), 0)
-      scale(calc(1 - var(--toast-index, 0) * 0.05));
+  .toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="true"] {
+    transform: translate3d(
+      0,
+      calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-lift, -1) * -100%),
+      0
+    );
     opacity: 0;
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="false"] {
+    transform: translate3d(0, 40%, 0);
+    opacity: 0;
+    transition:
+      transform 500ms ease,
+      opacity 200ms ease;
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-front="false"]::before {
+    height: calc(var(--toast-initial-height, 0px) + 20%);
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-swiping="true"] {
+    transition: none;
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-swiping="true"][data-front="true"] {
+    transform: translate3d(0, var(--toast-swipe-movement-y, 0px), 0);
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-swiping="true"][data-expanded="false"][data-front="false"] {
+    transform: translate3d(
+        0,
+        calc(
+          var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+            var(--toast-swipe-movement-y, 0px)
+        ),
+        0
+      )
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-swiping="true"][data-expanded="true"] {
+    transform: translate3d(
+      0,
+      calc(var(--toast-offset, 0px) * var(--toast-lift, -1) + var(--toast-swipe-movement-y, 0px)),
+      0
+    );
   }
 
   .toast-demo-viewport [data-slot="toast-title"] {
