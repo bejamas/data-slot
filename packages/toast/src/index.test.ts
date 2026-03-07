@@ -1071,6 +1071,125 @@ describe("Toast", () => {
     controller.destroy();
   });
 
+  it("swipe dismisses toast to the right in right-anchored stacks", async () => {
+    const { root, controller } = setup({ duration: 0, position: "bottom-right" });
+
+    const id = controller.show({ title: "Swipe right" });
+    const item = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+
+    item.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 11,
+        button: 0,
+        clientX: 80,
+        clientY: 120,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 11,
+        clientX: 260,
+        clientY: 120,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 11,
+        clientX: 260,
+        clientY: 120,
+      }),
+    );
+
+    await waitForClose();
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("locks diagonal swipe to the horizontal axis once chosen", () => {
+    const { root, controller } = setup({ duration: 0, position: "bottom-right" });
+
+    const id = controller.show({ title: "Lock horizontal" });
+    const item = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+
+    item.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 21,
+        button: 0,
+        clientX: 80,
+        clientY: 120,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 21,
+        clientX: 150,
+        clientY: 150,
+      }),
+    );
+
+    expect(item.style.getPropertyValue("--toast-swipe-movement-x")).toBe("70px");
+    expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("0px");
+
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 21,
+        clientX: 150,
+        clientY: 320,
+      }),
+    );
+
+    expect(item.style.getPropertyValue("--toast-swipe-movement-x")).toBe("70px");
+    expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("0px");
+
+    document.dispatchEvent(
+      new PointerEvent("pointercancel", { bubbles: true, pointerId: 21 }),
+    );
+
+    controller.destroy();
+  });
+
+  it("prevents default browser selection behavior during an active swipe", () => {
+    const { root, controller } = setup({ duration: 0, position: "bottom-right" });
+
+    const id = controller.show({ title: "Prevent selection" });
+    const item = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+
+    item.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 23,
+        button: 0,
+        clientX: 80,
+        clientY: 120,
+      }),
+    );
+
+    const moveEvent = new PointerEvent("pointermove", {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 23,
+      clientX: 150,
+      clientY: 140,
+    });
+    const dispatchResult = document.dispatchEvent(moveEvent);
+
+    expect(dispatchResult).toBe(false);
+    expect(moveEvent.defaultPrevented).toBe(true);
+
+    document.dispatchEvent(
+      new PointerEvent("pointercancel", { bubbles: true, pointerId: 23 }),
+    );
+
+    controller.destroy();
+  });
+
   it("swipe dismisses toast in top stacks", async () => {
     const { root, controller } = setup({ duration: 0, position: "top-left" });
 
@@ -1094,6 +1213,90 @@ describe("Toast", () => {
 
     await waitForClose();
     expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("swipe dismisses toast to the left in left-anchored stacks", async () => {
+    const { root, controller } = setup({ duration: 0, position: "top-left" });
+
+    const id = controller.show({ title: "Swipe left" });
+    const item = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+
+    item.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 12,
+        button: 0,
+        clientX: 260,
+        clientY: 160,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 12,
+        clientX: 40,
+        clientY: 160,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 12,
+        clientX: 40,
+        clientY: 160,
+      }),
+    );
+
+    await waitForClose();
+    expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("locks diagonal swipe to the vertical axis once chosen", () => {
+    const { root, controller } = setup({ duration: 0, position: "bottom-right" });
+
+    const id = controller.show({ title: "Lock vertical" });
+    const item = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+
+    item.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 22,
+        button: 0,
+        clientX: 80,
+        clientY: 120,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 22,
+        clientX: 110,
+        clientY: 200,
+      }),
+    );
+
+    expect(item.style.getPropertyValue("--toast-swipe-movement-x")).toBe("0px");
+    expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("80px");
+
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 22,
+        clientX: 280,
+        clientY: 200,
+      }),
+    );
+
+    expect(item.style.getPropertyValue("--toast-swipe-movement-x")).toBe("0px");
+    expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("80px");
+
+    document.dispatchEvent(
+      new PointerEvent("pointercancel", { bubbles: true, pointerId: 22 }),
+    );
 
     controller.destroy();
   });
@@ -1122,6 +1325,44 @@ describe("Toast", () => {
     expect(controller.count).toBe(1);
     expect(item.getAttribute("data-swiping")).toBe("false");
     expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("");
+
+    controller.destroy();
+  });
+
+  it("horizontal swipe does not dismiss center-anchored stacks", () => {
+    const { root, controller } = setup({ duration: 0, position: "bottom-center" });
+
+    const id = controller.show({ title: "Center stack" });
+    const item = root.querySelector(`[data-slot="toast-item"][data-id="${id}"]`) as HTMLElement;
+
+    item.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 13,
+        button: 0,
+        clientX: 80,
+        clientY: 120,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 13,
+        clientX: 280,
+        clientY: 120,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 13,
+        clientX: 280,
+        clientY: 120,
+      }),
+    );
+
+    expect(controller.count).toBe(1);
+    expect(item.getAttribute("data-state")).toBe("open");
 
     controller.destroy();
   });
