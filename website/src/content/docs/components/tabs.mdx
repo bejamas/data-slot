@@ -1,0 +1,17 @@
+---
+title: Tabs
+description: Headless tabs component for vanilla JavaScript with keyboard navigation and optional indicators.
+---
+
+import DemoRuntime from "../../../components/starlight/DemoRuntime.astro";
+import ComponentDocPage from "../../../components/docs/ComponentDocPage.astro";
+import TabsBasic from "../../../components/examples/TabsBasic.astro";
+import TabsIndicator from "../../../components/examples/TabsIndicator.astro";
+import { componentDocs } from "../../../data/component-docs";
+
+<DemoRuntime />
+
+<ComponentDocPage doc={componentDocs["tabs"]}>
+  <TabsBasic />
+  <TabsIndicator />
+</ComponentDocPage>

@@ -6,7 +6,7 @@ interface Props {
 const { label = "interactive" } = Astro.props;
 ---
 
-<div class="border border-dashed border-[#ccc] p-6 my-6">
+<div class="border border-dashed border-[#ccc] p-6 my-6 not-content flex flex-col gap-4">
   <div class="text-xs text-[#666] mb-4 uppercase tracking-wider">↓ {label}</div>
   <div class="preview-css">
     <slot name="preview-css"><slot name="preview" /></slot>
@@ -20,10 +20,10 @@ const { label = "interactive" } = Astro.props;
       <span class="text-[0.7rem] transition-transform duration-150 group-open:rotate-90">▶</span>
       View source
     </summary>
-    <div class="code-css mt-3">
+    <div class="mt-3 code-css">
       <slot name="code-css" />
     </div>
-    <div class="code-tailwind mt-3">
+    <div class="mt-3 code-tailwind">
       <slot name="code-tailwind" />
     </div>
   </details>

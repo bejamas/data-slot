@@ -1,0 +1,215 @@
+<script>
+  import { createAccordion } from "../../../../packages/accordion/dist/index.js";
+  import { createCarousel } from "../../../../packages/carousel/dist/index.js";
+  import { createCollapsible } from "../../../../packages/collapsible/dist/index.js";
+  import { createCombobox } from "../../../../packages/combobox/dist/index.js";
+  import { createDialog } from "../../../../packages/dialog/dist/index.js";
+  import { createDropdownMenu } from "../../../../packages/dropdown-menu/dist/index.js";
+  import { createHoverCard } from "../../../../packages/hover-card/dist/index.js";
+  import { createNavigationMenu } from "../../../../packages/navigation-menu/dist/index.js";
+  import { createPopover } from "../../../../packages/popover/dist/index.js";
+  import { createSelect } from "../../../../packages/select/dist/index.js";
+  import { createSlider } from "../../../../packages/slider/dist/index.js";
+  import { createTabs } from "../../../../packages/tabs/dist/index.js";
+  import { createToast } from "../../../../packages/toast/dist/index.js";
+  import { createToggle } from "../../../../packages/toggle/dist/index.js";
+  import { createToggleGroup } from "../../../../packages/toggle-group/dist/index.js";
+  import { createTooltip } from "../../../../packages/tooltip/dist/index.js";
+
+  const runtimeWindow = window as Window;
+
+  if (!runtimeWindow.__dataSlotDocsRuntimeInitialized) {
+    runtimeWindow.__dataSlotDocsRuntimeInitialized = true;
+
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="tabs"]')
+      .forEach((el) => createTabs(el));
+
+    const accordionSingleCss = document.getElementById("accordion-single-css");
+    const accordionMultipleCss = document.getElementById("accordion-multiple-css");
+    const accordionSingleTw = document.getElementById("accordion-single-tw");
+    const accordionMultipleTw = document.getElementById("accordion-multiple-tw");
+
+    if (accordionSingleCss) createAccordion(accordionSingleCss);
+    if (accordionMultipleCss) createAccordion(accordionMultipleCss, { multiple: true });
+    if (accordionSingleTw) createAccordion(accordionSingleTw);
+    if (accordionMultipleTw) createAccordion(accordionMultipleTw, { multiple: true });
+
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="dialog"]')
+      .forEach((el) => createDialog(el));
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="collapsible"]')
+      .forEach((el) => createCollapsible(el));
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="tooltip"]')
+      .forEach((el) => createTooltip(el));
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="popover"]')
+      .forEach((el) => createPopover(el));
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="hover-card"]')
+      .forEach((el) => createHoverCard(el));
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="navigation-menu"]')
+      .forEach((el) => createNavigationMenu(el));
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="dropdown-menu"]')
+      .forEach((el) => createDropdownMenu(el));
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="select"]')
+      .forEach((el) => createSelect(el));
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="combobox"]')
+      .forEach((el) => createCombobox(el));
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="slider"]')
+      .forEach((el) => createSlider(el));
+
+    document.querySelectorAll<HTMLElement>('[data-slot="carousel"]').forEach((el) => {
+      const root = el;
+      const controller = createCarousel(root);
+      const dots = Array.from(root.querySelectorAll<HTMLElement>('[data-slot="carousel-dot"]'));
+
+      if (dots.length === 0) return;
+
+      let lastDotIndex = -1;
+      let dotSyncTimeoutId: number | null = null;
+      let pendingDotIndex: number | null = null;
+
+      const updateDots = (index: number) => {
+        if (index === lastDotIndex) return;
+        lastDotIndex = index;
+        dots.forEach((dot, dotIndex) => {
+          const active = dotIndex === index;
+          dot.setAttribute("data-state", active ? "active" : "inactive");
+          if (active) {
+            dot.setAttribute("aria-current", "true");
+          } else {
+            dot.removeAttribute("aria-current");
+          }
+        });
+      };
+
+      dots.forEach((dot, dotIndex) => {
+        dot.addEventListener("click", () => {
+          pendingDotIndex = dotIndex;
+          updateDots(dotIndex);
+          controller.goTo(dotIndex);
+        });
+      });
+
+      root.addEventListener("carousel:change", (event) => {
+        const detail = (event as CustomEvent<{ index: number }>).detail;
+
+        if (pendingDotIndex !== null) {
+          if (detail.index !== pendingDotIndex) return;
+          pendingDotIndex = null;
+        }
+
+        if (dotSyncTimeoutId !== null) {
+          window.clearTimeout(dotSyncTimeoutId);
+        }
+
+        dotSyncTimeoutId = window.setTimeout(() => {
+          dotSyncTimeoutId = null;
+          updateDots(detail.index);
+        }, 72);
+      });
+
+      updateDots(controller.index);
+    });
+
+    const toastControllers = new Map<string, ReturnType<typeof createToast>>();
+    document.querySelectorAll<HTMLElement>('[data-slot="toast"]').forEach((el) => {
+      const controller = createToast(el);
+      if (el.id) {
+        toastControllers.set(el.id, controller);
+      }
+    });
+
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="toggle"]')
+      .forEach((el) => createToggle(el));
+    document
+      .querySelectorAll<HTMLElement>('[data-slot="toggle-group"]')
+      .forEach((el) => createToggleGroup(el));
+
+    const toastMessageByKind = {
+      success: {
+        title: "Changes saved",
+        description: "Everything is synced.",
+        type: "success",
+        duration: 3500,
+        action: { label: "Undo", value: "undo" },
+      },
+      error: {
+        title: "Upload failed",
+        description: "Try again in a few seconds.",
+        type: "error",
+        duration: 5000,
+        action: { label: "Retry", value: "retry" },
+      },
+      loading: {
+        title: "Uploading assets...",
+        description: "Please keep this tab open.",
+        type: "loading",
+        duration: 0,
+      },
+    };
+
+    document.querySelectorAll<HTMLElement>("[data-toast-demo-btn]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const targetId = button.dataset.toastDemoTarget;
+        if (!targetId) return;
+
+        const root = document.getElementById(targetId);
+        if (!root) return;
+
+        const kind = button.dataset.toastDemoKind;
+        const selected =
+          kind && kind in toastMessageByKind
+            ? toastMessageByKind[kind as keyof typeof toastMessageByKind]
+            : {
+                title: "Heads up",
+                description: "This is a toast message.",
+                type: "default",
+                duration: 4000,
+              };
+
+        if (kind === "promise") {
+          const controller = toastControllers.get(targetId);
+          if (!controller) return;
+
+          controller.promise(
+            new Promise((resolve) => {
+              setTimeout(() => resolve("Upload complete"), 1200);
+            }),
+            {
+              loading: {
+                title: "Uploading assets...",
+                description: "Please keep this tab open.",
+                duration: 0,
+              },
+              success: (value) => ({
+                title: String(value),
+                description: "All files synced successfully.",
+                type: "success",
+                duration: 3200,
+              }),
+              error: {
+                title: "Upload failed",
+                description: "Try again in a few seconds.",
+                type: "error",
+              },
+            },
+          );
+          return;
+        }
+
+        const controller = toastControllers.get(targetId);
+        controller?.show(selected.title, selected);
+      });
+    });
+  }
+</script>

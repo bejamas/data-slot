@@ -1,0 +1,45 @@
+---
+title: Quick Start
+description: Build the base markup, then bind behavior with the shared create and createX APIs.
+---
+
+All `data-slot` packages follow the same model:
+
+1. Add `data-slot` attributes to your HTML.
+2. Bind behavior with `create()` for auto-discovery or `createX()` for a specific root.
+3. Style state with `data-state`, `hidden`, and ARIA attributes.
+
+## Base example
+
+```html
+<div data-slot="tabs" data-default-value="one">
+  <div data-slot="tabs-list">
+    <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+    <button data-slot="tabs-trigger" data-value="two">Tab Two</button>
+  </div>
+  <div data-slot="tabs-content" data-value="one">Content One</div>
+  <div data-slot="tabs-content" data-value="two">Content Two</div>
+</div>
+```
+
+```js
+import { create } from "@data-slot/tabs";
+
+const controllers = create();
+```
+
+## Scope to a single root
+
+```ts
+import { createTabs } from "@data-slot/tabs";
+
+const tabs = createTabs(document.querySelector('[data-slot="tabs"]'));
+tabs.select("two");
+tabs.destroy();
+```
+
+## Common pattern
+
+- `create(scope?)` finds and binds all matching roots in a document or subtree.
+- `createX(root, options?)` creates a controller for one root element.
+- Controllers expose state plus imperative methods like `open()`, `close()`, `select()`, or `destroy()`.

@@ -1,0 +1,11 @@
+---
+import DefaultPageFrame from "@astrojs/starlight/components/PageFrame.astro";
+import DemoModePanel from "./DemoModePanel.astro";
+---
+
+<DefaultPageFrame>
+  <slot name="header" slot="header" />
+  <slot name="sidebar" slot="sidebar" />
+  <slot />
+</DefaultPageFrame>
+<DemoModePanel />

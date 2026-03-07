@@ -1,0 +1,266 @@
+---
+const { toc } = Astro.locals.starlightRoute;
+---
+
+{
+  toc && (
+    <mobile-starlight-toc data-min-h={toc.minHeadingLevel} data-max-h={toc.maxHeadingLevel}>
+      <nav aria-labelledby="starlight__on-this-page--mobile">
+        <details id="starlight__mobile-toc">
+          <summary id="starlight__on-this-page--mobile" class="sl-flex">
+            <span class="toggle sl-flex">
+              {Astro.locals.t("tableOfContents.onThisPage")}
+              <span class="caret" aria-hidden="true">›</span>
+            </span>
+            <span class="display-current" />
+          </summary>
+          <div class="dropdown">
+            <ul class="isMobile" />
+          </div>
+        </details>
+      </nav>
+    </mobile-starlight-toc>
+  )
+}
+
+<style>
+  @layer starlight.core {
+    nav {
+      position: fixed;
+      z-index: var(--sl-z-index-toc);
+      top: calc(var(--sl-nav-height) - 1px);
+      inset-inline: 0;
+      border-top: 1px solid var(--sl-color-gray-5);
+      background-color: var(--sl-color-bg-nav);
+    }
+    @media (min-width: 50rem) {
+      nav {
+        inset-inline-start: var(--sl-content-inline-start, 0);
+      }
+    }
+
+    summary {
+      gap: 0.5rem;
+      align-items: center;
+      height: var(--sl-mobile-toc-height);
+      border-bottom: 1px solid var(--sl-color-hairline-shade);
+      padding: 0.5rem 1rem;
+      font-size: var(--sl-text-xs);
+      outline-offset: var(--sl-outline-offset-inside);
+    }
+    summary::marker,
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .toggle {
+      flex-shrink: 0;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid var(--sl-color-gray-5);
+      border-radius: 0.5rem;
+      padding-block: 0.5rem;
+      padding-inline-start: 0.75rem;
+      padding-inline-end: 0.5rem;
+      line-height: 1;
+      background-color: var(--sl-color-black);
+      user-select: none;
+      cursor: pointer;
+    }
+    details[open] .toggle {
+      color: var(--sl-color-white);
+      border-color: var(--sl-color-accent);
+    }
+    details .toggle:hover {
+      color: var(--sl-color-white);
+      border-color: var(--sl-color-gray-2);
+    }
+
+    .caret {
+      display: inline-block;
+      line-height: 1;
+      transition: transform 0.2s ease;
+    }
+    :global([dir="rtl"]) .caret {
+      transform: rotateZ(180deg);
+    }
+    details[open] .caret {
+      transform: rotateZ(90deg);
+    }
+
+    .display-current {
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      color: var(--sl-color-white);
+    }
+
+    .dropdown {
+      --border-top: 1px;
+      margin-top: calc(-1 * var(--border-top));
+      border: var(--border-top) solid var(--sl-color-gray-6);
+      border-top-color: var(--sl-color-hairline-shade);
+      max-height: calc(85vh - var(--sl-nav-height) - var(--sl-mobile-toc-height));
+      overflow-y: auto;
+      background-color: var(--sl-color-black);
+      box-shadow: var(--sl-shadow-md);
+      overscroll-behavior: contain;
+    }
+  }
+</style>
+
+<script>
+  const PAGE_TITLE_ID = "_top";
+
+  const buildHeadings = (minH, maxH) => {
+    const headings = [];
+    const title = document.getElementById(PAGE_TITLE_ID);
+    if (title) {
+      headings.push({ id: PAGE_TITLE_ID, text: "Overview", level: 1 });
+    }
+
+    const markdownRoot = document.querySelector("main .sl-markdown-content");
+    if (!markdownRoot) return headings;
+
+    const selector = Array.from({ length: maxH - minH + 1 }, (_, index) => `h${minH + index}[id]`).join(",");
+
+    markdownRoot.querySelectorAll(selector).forEach((heading) => {
+      if (!(heading instanceof HTMLElement) || heading.closest(".not-content")) return;
+      headings.push({
+        id: heading.id,
+        text: heading.textContent?.trim() ?? "",
+        level: Number(heading.tagName.slice(1)),
+      });
+    });
+
+    return headings.filter((heading) => heading.id && heading.text);
+  };
+
+  const createLinkItem = (heading, minH) => {
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    const label = document.createElement("span");
+    const depth = String(Math.max(0, heading.level - minH));
+
+    item.style.setProperty("--depth", depth);
+    link.style.setProperty("--depth", depth);
+    label.style.setProperty("--depth", depth);
+    link.href = `#${encodeURIComponent(heading.id)}`;
+    label.textContent = heading.text;
+    link.append(label);
+    item.append(link);
+
+    return { item, link };
+  };
+
+  const renderList = (list, headings, minH) => {
+    list.replaceChildren();
+
+    let currentLevel = minH;
+    let currentList = list;
+    let currentItem = null;
+    const stack = [{ level: minH, list }];
+    const links = [];
+
+    headings.forEach((heading) => {
+      const normalizedLevel = heading.level === 1 ? minH : heading.level;
+
+      if (normalizedLevel > currentLevel && currentItem) {
+        const childList = document.createElement("ul");
+        childList.classList.add("isMobile");
+        currentItem.append(childList);
+        currentList = childList;
+        stack.push({ level: normalizedLevel, list: childList });
+      } else if (normalizedLevel < currentLevel) {
+        while (stack.length > 1 && stack[stack.length - 1].level > normalizedLevel) {
+          stack.pop();
+        }
+        currentList = stack[stack.length - 1].list;
+      } else {
+        currentList = stack[stack.length - 1].list;
+      }
+
+      currentLevel = normalizedLevel;
+      const { item, link } = createLinkItem(heading, minH);
+      currentItem = item;
+      currentList.append(item);
+      links.push(link);
+    });
+
+    return links;
+  };
+
+  class MobileDataSlotTOC extends HTMLElement {
+    current = null;
+
+    connectedCallback() {
+      const details = this.querySelector("details");
+      const display = this.querySelector(".display-current");
+      const list = this.querySelector(".dropdown ul");
+      if (!details || !display || !list) return;
+
+      const minH = Number(this.dataset.minH || "2");
+      const maxH = Number(this.dataset.maxH || "3");
+      const headings = buildHeadings(minH, maxH);
+      const links = renderList(list, headings, minH);
+      const headingElements = headings
+        .map((heading) => document.getElementById(heading.id))
+        .filter((heading) => heading instanceof HTMLElement);
+
+      const setCurrent = (id) => {
+        const next = links.find((link) => decodeURIComponent(link.hash.slice(1)) === id);
+        if (!next || next === this.current) return;
+        this.current?.removeAttribute("aria-current");
+        next.setAttribute("aria-current", "true");
+        this.current = next;
+        display.textContent = next.textContent ?? "";
+      };
+
+      if (headingElements[0] instanceof HTMLElement) {
+        setCurrent(headingElements[0].id);
+      }
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const visible = entries.find((entry) => entry.isIntersecting);
+          if (!visible || !(visible.target instanceof HTMLElement)) return;
+          setCurrent(visible.target.id);
+        },
+        { rootMargin: this.getRootMargin() },
+      );
+
+      headingElements.forEach((heading) => observer.observe(heading));
+      links.forEach((link) => {
+        link.addEventListener("click", () => {
+          details.open = false;
+        });
+      });
+
+      window.addEventListener("click", (event) => {
+        if (!details.contains(event.target)) {
+          details.open = false;
+        }
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && details.open) {
+          details.open = false;
+        }
+      });
+    }
+
+    getRootMargin() {
+      const navBarHeight = document.querySelector("header")?.getBoundingClientRect().height || 0;
+      const summaryHeight = this.querySelector("summary")?.getBoundingClientRect().height || 0;
+      const top = navBarHeight + summaryHeight + 32;
+      const bottom = top + 53;
+      const height = document.documentElement.clientHeight;
+      return `-${top}px 0% ${bottom - height}px`;
+    }
+  }
+
+  if (!customElements.get("mobile-starlight-toc")) {
+    customElements.define("mobile-starlight-toc", MobileDataSlotTOC);
+  }
+</script>

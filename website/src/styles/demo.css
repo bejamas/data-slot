@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 
 @theme {
-  --font-mono: "Geist Mono", monospace;
+  --font-mono: "IBM Plex Mono", monospace;
   --color-bg: #faf9f7;
   --color-text: #1a1a1a;
   --color-muted: #666;
@@ -14,6 +14,10 @@
 /* ============================================
    CSS Variables for CSS Example Styles
    ============================================ */
+html {
+  scrollbar-gutter: stable;
+}
+
 :root {
   --bg: #faf9f7;
   --text: #1a1a1a;
@@ -25,11 +29,6 @@
   --string: #22863a;
   --comment: #6a737d;
   --function: #6f42c1;
-}
-
-html {
-  font-family: var(--font-mono);
-  scrollbar-gutter: stable;
 }
 
 /* ============================================
@@ -993,21 +992,21 @@ div[data-slot="navigation-menu-positioner"] {
 /* ============================================
    Code/Preview Mode Switcher
    ============================================ */
-html.mode-css .code-tailwind,
-html:not(.mode-tailwind) .code-tailwind {
+html[data-docs-demo-mode="css"] .code-tailwind,
+html:not([data-docs-demo-mode="tailwind"]) .code-tailwind {
   display: none;
 }
 
-html.mode-tailwind .code-css {
+html[data-docs-demo-mode="tailwind"] .code-css {
   display: none;
 }
 
-html.mode-css .preview-tailwind,
-html:not(.mode-tailwind) .preview-tailwind {
+html[data-docs-demo-mode="css"] .preview-tailwind,
+html:not([data-docs-demo-mode="tailwind"]) .preview-tailwind {
   display: none;
 }
 
-html.mode-tailwind .preview-css {
+html[data-docs-demo-mode="tailwind"] .preview-css {
   display: none;
 }
 

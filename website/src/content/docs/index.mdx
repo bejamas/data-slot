@@ -1,0 +1,54 @@
+---
+title: data-slot
+description: Headless UI components for vanilla JavaScript. Tiny, accessible, unstyled.
+template: splash
+hero:
+  title: data-slot
+  tagline: Headless UI components for vanilla JavaScript. Tiny, accessible, unstyled.
+  actions:
+    - text: Install
+      link: /getting-started/installation/
+      variant: primary
+    - text: Browse Components
+      link: /components/
+      variant: secondary
+---
+
+import PackagesTable from "../../components/PackagesTable.astro";
+
+## Why data-slot
+
+- Zero dependencies and framework-agnostic primitives.
+- Accessible behavior with headless markup you can style your own way.
+- Tiny package sizes with install-only-what-you-need ergonomics.
+
+## Package sizes
+
+<PackagesTable />
+
+## Quick start
+
+```html
+<div data-slot="tabs" data-default-value="one">
+  <div data-slot="tabs-list">
+    <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+    <button data-slot="tabs-trigger" data-value="two">Tab Two</button>
+  </div>
+  <div data-slot="tabs-content" data-value="one">Content One</div>
+  <div data-slot="tabs-content" data-value="two">Content Two</div>
+</div>
+```
+
+```js
+import { create } from "@data-slot/tabs";
+
+const controllers = create();
+controllers[0]?.select("two");
+```
+
+## Learn the patterns
+
+- Start with [Installation](/getting-started/installation/) to choose package-level or bundle-level imports.
+- Use [Quick Start](/getting-started/quick-start/) for the base markup and controller pattern.
+- Use [Styling](/getting-started/styling/) to apply CSS or Tailwind to `data-state` and ARIA hooks.
+- Use [API Patterns](/getting-started/api-patterns/) to see the common controller and event model shared by the packages.

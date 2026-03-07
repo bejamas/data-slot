@@ -1,0 +1,152 @@
+---
+const version = "0.2.116";
+---
+
+<div class="demo-mode-panel" id="demo-mode-panel">
+  <div class="demo-mode-panel__header">
+    <span aria-hidden="true">+</span>
+    <span>settings</span>
+  </div>
+  <div class="demo-mode-panel__body">
+    <div class="demo-mode-panel__row">
+      <span>examples mode:</span>
+      <div class="demo-mode-panel__controls">
+        <button type="button" class="toggle-btn" data-mode="css" aria-pressed="true">css</button>
+        <span>/</span>
+        <button type="button" class="toggle-btn" data-mode="tailwind" aria-pressed="false">
+          tailwind
+        </button>
+      </div>
+    </div>
+    <div class="demo-mode-panel__row">
+      <span>ver:</span>
+      <span class="demo-mode-panel__version">{version}</span>
+    </div>
+  </div>
+  <div class="demo-mode-panel__footer">
+    <a href="https://github.com/bejamas/data-slot">github</a>
+    <span>·</span>
+    <a href="https://npmjs.com/org/data-slot">npm</a>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = "code-mode";
+  const DEFAULT_MODE = "css";
+
+  const applyMode = (mode) => {
+    document.documentElement.dataset.docsDemoMode = mode;
+  };
+
+  const syncButtons = (mode) => {
+    document.querySelectorAll("#demo-mode-panel .toggle-btn").forEach((button) => {
+      button.setAttribute(
+        "aria-pressed",
+        button.getAttribute("data-mode") === mode ? "true" : "false",
+      );
+    });
+  };
+
+  const initDemoModePanel = () => {
+    const buttons = document.querySelectorAll("#demo-mode-panel .toggle-btn");
+    if (buttons.length === 0) return;
+
+    const mode = localStorage.getItem(STORAGE_KEY) ?? DEFAULT_MODE;
+    applyMode(mode);
+    syncButtons(mode);
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const nextMode = button.getAttribute("data-mode") ?? DEFAULT_MODE;
+        localStorage.setItem(STORAGE_KEY, nextMode);
+        applyMode(nextMode);
+        syncButtons(nextMode);
+      });
+    });
+  };
+
+  initDemoModePanel();
+</script>
+
+<style>
+  .demo-mode-panel {
+    position: fixed;
+    inset: auto 1rem 1rem auto;
+    z-index: 30;
+    min-width: 12rem;
+    overflow: hidden;
+    border: 1px solid var(--sl-color-border);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-text);
+    font-size: 0.75rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .demo-mode-panel__header,
+  .demo-mode-panel__footer {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.65rem 0.8rem;
+    background: var(--sl-color-gray-6);
+    color: var(--sl-color-text-secondary);
+    text-transform: lowercase;
+  }
+
+  .demo-mode-panel__body {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  .demo-mode-panel__row,
+  .demo-mode-panel__controls,
+  .demo-mode-panel__footer {
+    display: flex;
+    align-items: center;
+  }
+
+  .demo-mode-panel__row {
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .demo-mode-panel__controls {
+    gap: 0.35rem;
+  }
+
+  .demo-mode-panel__version {
+    color: #22863a;
+  }
+
+  .toggle-btn {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    padding: 0.15rem 0.35rem;
+    text-transform: lowercase;
+  }
+
+  .toggle-btn[aria-pressed="true"] {
+    background: var(--sl-color-text);
+    color: var(--sl-color-bg);
+  }
+
+  .demo-mode-panel a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .demo-mode-panel a:hover {
+    color: var(--sl-color-accent-high);
+  }
+
+  @media (max-width: 50rem) {
+    .demo-mode-panel {
+      inset: auto 1rem 1rem 1rem;
+      min-width: 0;
+    }
+  }
+</style>

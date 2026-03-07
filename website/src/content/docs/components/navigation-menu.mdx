@@ -1,0 +1,15 @@
+---
+title: Navigation Menu
+description: Headless navigation menu component for building complex site menus in vanilla JavaScript.
+---
+
+import DemoRuntime from "../../../components/starlight/DemoRuntime.astro";
+import ComponentDocPage from "../../../components/docs/ComponentDocPage.astro";
+import NavigationMenu from "../../../components/examples/NavigationMenu.astro";
+import { componentDocs } from "../../../data/component-docs";
+
+<DemoRuntime />
+
+<ComponentDocPage doc={componentDocs["navigation-menu"]}>
+  <NavigationMenu />
+</ComponentDocPage>

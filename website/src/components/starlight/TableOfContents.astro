@@ -1,0 +1,153 @@
+---
+const { toc } = Astro.locals.starlightRoute;
+---
+
+{
+  toc && (
+    <starlight-toc data-min-h={toc.minHeadingLevel} data-max-h={toc.maxHeadingLevel}>
+      <nav aria-labelledby="starlight__on-this-page">
+        <h2 id="starlight__on-this-page">{Astro.locals.t("tableOfContents.onThisPage")}</h2>
+        <ul />
+      </nav>
+    </starlight-toc>
+  )
+}
+
+<script>
+  const PAGE_TITLE_ID = "_top";
+
+  const buildHeadings = (minH, maxH) => {
+    const headings = [];
+    const title = document.getElementById(PAGE_TITLE_ID);
+    if (title) {
+      headings.push({ id: PAGE_TITLE_ID, text: "Overview", level: 1 });
+    }
+
+    const markdownRoot = document.querySelector("main .sl-markdown-content");
+    if (!markdownRoot) return headings;
+
+    const selector = Array.from({ length: maxH - minH + 1 }, (_, index) => `h${minH + index}[id]`).join(",");
+
+    markdownRoot.querySelectorAll(selector).forEach((heading) => {
+      if (!(heading instanceof HTMLElement) || heading.closest(".not-content")) return;
+      headings.push({
+        id: heading.id,
+        text: heading.textContent?.trim() ?? "",
+        level: Number(heading.tagName.slice(1)),
+      });
+    });
+
+    return headings.filter((heading) => heading.id && heading.text);
+  };
+
+  const createLinkItem = (heading, minH) => {
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    const label = document.createElement("span");
+    const depth = String(Math.max(0, heading.level - minH));
+
+    item.style.setProperty("--depth", depth);
+    link.style.setProperty("--depth", depth);
+    label.style.setProperty("--depth", depth);
+    link.href = `#${encodeURIComponent(heading.id)}`;
+    label.textContent = heading.text;
+    link.append(label);
+    item.append(link);
+
+    return { item, link };
+  };
+
+  const renderList = (list, headings, minH) => {
+    list.replaceChildren();
+
+    const root = list;
+    let currentLevel = minH;
+    let currentList = root;
+    let currentItem = null;
+    const stack = [{ level: minH, list: root }];
+    const links = [];
+
+    headings.forEach((heading) => {
+      const normalizedLevel = heading.level === 1 ? minH : heading.level;
+
+      if (normalizedLevel > currentLevel && currentItem) {
+        const childList = document.createElement("ul");
+        currentItem.append(childList);
+        currentList = childList;
+        stack.push({ level: normalizedLevel, list: childList });
+      } else if (normalizedLevel < currentLevel) {
+        while (stack.length > 1 && stack[stack.length - 1].level > normalizedLevel) {
+          stack.pop();
+        }
+        currentList = stack[stack.length - 1].list;
+      } else {
+        currentList = stack[stack.length - 1].list;
+      }
+
+      currentLevel = normalizedLevel;
+      const { item, link } = createLinkItem(heading, minH);
+      currentItem = item;
+      currentList.append(item);
+      links.push(link);
+    });
+
+    return links;
+  };
+
+  class DataSlotTOC extends HTMLElement {
+    current = null;
+
+    connectedCallback() {
+      const nav = this.querySelector("nav");
+      const list = nav?.querySelector("ul");
+      if (!nav || !list) return;
+
+      const minH = Number(this.dataset.minH || "2");
+      const maxH = Number(this.dataset.maxH || "3");
+      const headings = buildHeadings(minH, maxH);
+      const links = renderList(list, headings, minH);
+      const headingElements = headings
+        .map((heading) => document.getElementById(heading.id))
+        .filter((heading) => heading instanceof HTMLElement);
+
+      this.initObservers(links, headingElements);
+    }
+
+    initObservers(links, headings) {
+      if (headings.length === 0) return;
+
+      const setCurrent = (id) => {
+        const next = links.find((link) => decodeURIComponent(link.hash.slice(1)) === id);
+        if (!next || next === this.current) return;
+        this.current?.removeAttribute("aria-current");
+        next.setAttribute("aria-current", "true");
+        this.current = next;
+      };
+
+      setCurrent(headings[0].id);
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const visible = entries.find((entry) => entry.isIntersecting);
+          if (!visible || !(visible.target instanceof HTMLElement)) return;
+          setCurrent(visible.target.id);
+        },
+        { rootMargin: this.getRootMargin() },
+      );
+
+      headings.forEach((heading) => observer.observe(heading));
+    }
+
+    getRootMargin() {
+      const navBarHeight = document.querySelector("header")?.getBoundingClientRect().height || 0;
+      const top = navBarHeight + 32;
+      const bottom = top + 53;
+      const height = document.documentElement.clientHeight;
+      return `-${top}px 0% ${bottom - height}px`;
+    }
+  }
+
+  if (!customElements.get("starlight-toc")) {
+    customElements.define("starlight-toc", DataSlotTOC);
+  }
+</script>

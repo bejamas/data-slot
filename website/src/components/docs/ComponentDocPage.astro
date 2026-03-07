@@ -1,0 +1,728 @@
+---
+import { Code as AstroCode } from "astro:components";
+import { Code as EcCode } from "@astrojs/starlight/components";
+import type { ComponentDoc, ControllerRow, EventRow, SlotReference } from "../../data/component-docs";
+
+interface Props {
+  doc: ComponentDoc;
+}
+
+const { doc } = Astro.props;
+
+const installCode = `npm install ${doc.packageName}`;
+const createCode = `import { ${doc.createFn} } from "${doc.packageName}";
+
+const controller = ${doc.createFn}(root);`;
+
+const controllerRows = doc.controller ?? [];
+const outboundEvents = (doc.events ?? []).filter((event) => event.direction === "outbound");
+const inboundEvents = (doc.events ?? []).filter((event) => event.direction === "inbound");
+
+const hasRows = (rows?: unknown[]) => Array.isArray(rows) && rows.length > 0;
+const slotId = (slot: SlotReference) => `slot-${slot.name}`;
+const controllerLabel = (entry: ControllerRow) =>
+  entry.kind === "property" ? `${entry.name} (property)` : `${entry.name}()`;
+const statusLabel = (slot: SlotReference) => `${slot.status} · ${slot.authored}`;
+const eventLabel = (event: EventRow) =>
+  event.direction === "outbound" ? `${event.name}` : `${event.name}`;
+const inlineParts = (value: string) =>
+  value.split(/(`[^`]+`)/g).filter(Boolean).map((part) => ({
+    code: part.startsWith("`") && part.endsWith("`"),
+    text: part.startsWith("`") && part.endsWith("`") ? part.slice(1, -1) : part,
+  }));
+const slotMarkup = (slot: SlotReference) => {
+  const tagMatch = slot.element.match(/^<([a-z0-9-]+)([^>]*)>/i);
+  const tagName = tagMatch?.[1] ?? "div";
+  const rawAttrs = tagMatch?.[2]?.trim() ?? "";
+  const attrs = rawAttrs.length > 0 ? ` ${rawAttrs}` : "";
+
+  if (/data-slot\s*=/.test(attrs)) {
+    return `<${tagName}${attrs}></${tagName}>`;
+  }
+
+  return `<${tagName} data-slot="${slot.name}"${attrs}></${tagName}>`;
+};
+---
+
+{doc.overview.map((paragraph) => <p>{paragraph}</p>)}
+
+<h2 id="anatomy">Anatomy</h2>
+{doc.anatomy.map((paragraph) => <p>{paragraph}</p>)}
+{doc.anatomyMarkup && (
+  <div class="anatomy-markup not-content">
+    <EcCode code={doc.anatomyMarkup} lang="html" meta="slot-links" frame="none" />
+  </div>
+)}
+
+<h2 id="examples">Examples</h2>
+{doc.examples.map((paragraph) => <p>{paragraph}</p>)}
+<slot />
+
+<h2 id="styling">Styling</h2>
+{doc.styling.map((paragraph) => <p>{paragraph}</p>)}
+
+<h2 id="accessibility">Accessibility</h2>
+{doc.accessibility.map((paragraph) => <p>{paragraph}</p>)}
+
+<h2 id="api-reference">API Reference</h2>
+
+<div class="api-shell not-content">
+  <div>
+    <p class="api-shell-label">Install</p>
+    <EcCode code={installCode} lang="bash" frame="none" />
+  </div>
+  <div>
+    <p class="api-shell-label">Create a controller</p>
+    <EcCode code={createCode} lang="ts" frame="none" />
+  </div>
+</div>
+
+<h3 id="api-slots">Slots</h3>
+{doc.optionPrecedence && <p>{doc.optionPrecedence}</p>}
+
+<div class="slot-index not-content">
+  {doc.slots.map((slot) => (
+    <a href={`#${slotId(slot)}`}>{slot.name}</a>
+  ))}
+</div>
+
+<div class="slot-reference">
+  {doc.slots.map((slot) => (
+    <article class="slot-card" id={slotId(slot)}>
+      <div class="slot-card-header">
+        <div class="slot-card-copy">
+          <h4>{slot.name}</h4>
+          <p>{slot.summary}</p>
+        </div>
+        <span class="slot-badge">{statusLabel(slot)}</span>
+      </div>
+
+      <section class="slot-snippet">
+        <p class="slot-snippet-label">Markup</p>
+        <EcCode code={slotMarkup(slot)} lang="html" meta="slot-links" frame="none" />
+      </section>
+
+      {hasRows(slot.inputRows) ? (
+        <section class="slot-section">
+          <h5>Accepted options and attributes</h5>
+          <div class="slot-disclosure-shell">
+            <div class="slot-disclosure-head" aria-hidden="true">
+              <span></span>
+              <span>Input</span>
+              <span>Type</span>
+              <span>Default</span>
+            </div>
+            <div class="slot-disclosure-list">
+              {slot.inputRows?.map((row) => (
+                <details class="slot-disclosure-item">
+                  <summary class="slot-disclosure-summary">
+                    <span class="slot-disclosure-toggle" aria-hidden="true">▸</span>
+                    <span class="slot-rich-text">
+                      {inlineParts(row.name).map((part) =>
+                        part.code ? <code>{part.text}</code> : <>{part.text}</>
+                      )}
+                    </span>
+                    <span class="slot-rich-text">
+                      {row.type ? inlineParts(row.type).map((part) =>
+                        part.code ? <code>{part.text}</code> : <>{part.text}</>
+                      ) : "—"}
+                    </span>
+                    <span class="slot-rich-text">
+                      {row.default ? inlineParts(row.default).map((part) =>
+                        part.code ? <code>{part.text}</code> : <>{part.text}</>
+                      ) : "—"}
+                    </span>
+                  </summary>
+                  <div class="slot-disclosure-panel">
+                    <div class="slot-disclosure-detail">
+                      <p class="slot-disclosure-description slot-rich-text">
+                        {inlineParts(row.description).map((part) =>
+                          part.code ? <code>{part.text}</code> : <>{part.text}</>
+                        )}
+                      </p>
+                      <dl class="slot-disclosure-meta">
+                        <div>
+                          <dt>Prop</dt>
+                          <dd class="slot-rich-text">
+                            {inlineParts(row.name).map((part) =>
+                              part.code ? <code>{part.text}</code> : <>{part.text}</>
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Type</dt>
+                          <dd class="slot-rich-text">
+                            {row.type ? inlineParts(row.type).map((part) =>
+                              part.code ? <code>{part.text}</code> : <>{part.text}</>
+                            ) : "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Default</dt>
+                          <dd class="slot-rich-text">
+                            {row.default ? inlineParts(row.default).map((part) =>
+                              part.code ? <code>{part.text}</code> : <>{part.text}</>
+                            ) : "—"}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section class="slot-section">
+          <h5>Accepted options and attributes</h5>
+          <p class="empty-state">None.</p>
+        </section>
+      )}
+
+      {hasRows(slot.outputRows) ? (
+        <section class="slot-section">
+          <h5>Output attributes and ARIA</h5>
+          <div class="slot-table-shell">
+          <table class="slot-table slot-table-outputs">
+            <colgroup>
+              <col class="slot-col-wide" />
+              <col class="slot-col-values" />
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Hook</th>
+                <th>Values</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {slot.outputRows?.map((row) => (
+                <tr>
+                  <td class="slot-rich-text">
+                    {inlineParts(row.name).map((part) =>
+                      part.code ? <code>{part.text}</code> : <>{part.text}</>
+                    )}
+                  </td>
+                  <td class="slot-rich-text">
+                    {row.values ? inlineParts(row.values).map((part) =>
+                      part.code ? <code>{part.text}</code> : <>{part.text}</>
+                    ) : "—"}
+                  </td>
+                  <td class="slot-rich-text">
+                    {inlineParts(row.description).map((part) =>
+                      part.code ? <code>{part.text}</code> : <>{part.text}</>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </div>
+        </section>
+      ) : (
+        <section class="slot-section">
+          <h5>Output attributes and ARIA</h5>
+          <p class="empty-state">None.</p>
+        </section>
+      )}
+
+      {hasRows(slot.cssVariables) ? (
+        <section class="slot-section">
+          <h5>CSS variables</h5>
+          <div class="slot-table-shell">
+          <table class="slot-table slot-table-vars">
+            <colgroup>
+              <col class="slot-col-wide" />
+              <col class="slot-col-values" />
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Availability</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {slot.cssVariables?.map((row) => (
+                <tr>
+                  <td class="slot-rich-text">
+                    {inlineParts(row.name).map((part) =>
+                      part.code ? <code>{part.text}</code> : <>{part.text}</>
+                    )}
+                  </td>
+                  <td class="slot-rich-text">
+                    {row.availability ? inlineParts(row.availability).map((part) =>
+                      part.code ? <code>{part.text}</code> : <>{part.text}</>
+                    ) : "Direct"}
+                  </td>
+                  <td class="slot-rich-text">
+                    {inlineParts(row.description).map((part) =>
+                      part.code ? <code>{part.text}</code> : <>{part.text}</>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </div>
+        </section>
+      ) : (
+        <section class="slot-section">
+          <h5>CSS variables</h5>
+          <p class="empty-state">None.</p>
+        </section>
+      )}
+
+      {slot.notes && slot.notes.length > 0 && (
+        <section class="slot-section">
+          <h5>Notes</h5>
+          <ul>
+            {slot.notes.map((note) => (
+              <li class="slot-rich-text">
+                {inlineParts(note).map((part) =>
+                  part.code ? <code>{part.text}</code> : <>{part.text}</>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </article>
+  ))}
+</div>
+
+<h3 id="api-controller">Controller</h3>
+{controllerRows.length > 0 ? (
+  <table>
+    <thead>
+      <tr>
+        <th>API</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {controllerRows.map((entry) => (
+        <tr>
+          <td><code>{controllerLabel(entry)}</code></td>
+          <td>{entry.description}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+) : (
+  <p>No controller API is documented for this component.</p>
+)}
+
+<h3 id="api-events">Events</h3>
+{outboundEvents.length > 0 && (
+  <>
+    <h4>Outbound events</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Detail</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {outboundEvents.map((event) => (
+          <tr>
+            <td><code>{eventLabel(event)}</code></td>
+            <td>{event.detail}</td>
+            <td>{event.description}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </>
+)}
+
+{inboundEvents.length > 0 && (
+  <>
+    <h4>Inbound events</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Detail</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {inboundEvents.map((event) => (
+          <tr>
+            <td><code>{eventLabel(event)}</code></td>
+            <td>{event.detail}</td>
+            <td>{event.description}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </>
+)}
+
+<h2 id="references">References</h2>
+<ul>
+  {doc.references.map((reference) => (
+    <li>
+      <a href={reference.href}>{reference.label}</a>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .anatomy-markup {
+    margin-block: 1.5rem;
+  }
+
+  .slot-index {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-block: 1.5rem;
+  }
+
+  .slot-index a {
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 999px;
+    padding: 0.4rem 0.8rem;
+    text-decoration: none;
+  }
+
+  .api-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+    margin-block: 1.5rem;
+  }
+
+  .api-shell .expressive-code,
+  .api-shell .astro-code {
+    margin: 0;
+  }
+
+  .api-shell .frame,
+  .api-shell .astro-code {
+    border: 1px solid var(--sl-color-gray-6);
+    border-radius: 0.85rem;
+    background: color-mix(in srgb, var(--sl-color-bg) 98%, var(--sl-color-gray-7) 2%);
+  }
+
+  .api-shell .frame .header {
+    display: none;
+  }
+
+  .api-shell-label {
+    margin-bottom: 0.5rem;
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .slot-reference {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .slot-card {
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    background: color-mix(in srgb, var(--sl-color-bg) 96%, var(--sl-color-accent-low) 4%);
+  }
+
+  .slot-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 1.25rem;
+  }
+
+  .slot-card-copy {
+    min-width: 0;
+  }
+
+  .slot-card-header h4 {
+    margin: 0;
+  }
+
+  .slot-card-header p {
+    margin: 0.35rem 0 0;
+  }
+
+  .slot-badge {
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 999px;
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-xs);
+    letter-spacing: 0.06em;
+    padding: 0.35rem 0.7rem;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .slot-snippet {
+    margin-bottom: 1.25rem;
+  }
+
+  .slot-snippet-label {
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-xs);
+    letter-spacing: 0.06em;
+    margin: 0 0 0.45rem;
+    text-transform: uppercase;
+  }
+
+  .slot-snippet .expressive-code,
+  .slot-snippet .astro-code {
+    margin: 0;
+  }
+
+  .slot-snippet .frame,
+  .slot-snippet .astro-code {
+    border: 1px solid var(--sl-color-gray-6);
+    border-radius: 0.85rem;
+    background: color-mix(in srgb, var(--sl-color-bg) 98%, var(--sl-color-gray-7) 2%);
+  }
+
+  .slot-snippet .frame .header {
+    display: none;
+  }
+
+  .slot-snippet .frame pre,
+  .slot-snippet .astro-code {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .slot-card h5 {
+    margin: 0 0 0.75rem;
+    font-size: var(--sl-text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .slot-section + .slot-section {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--sl-color-gray-6);
+  }
+
+  .slot-table-shell {
+    overflow-x: auto;
+    border: 1px solid var(--sl-color-gray-6);
+    border-radius: 0.85rem;
+    background: color-mix(in srgb, var(--sl-color-bg) 98%, var(--sl-color-gray-7) 2%);
+  }
+
+  .slot-disclosure-shell {
+    border: 1px solid var(--sl-color-gray-6);
+    border-radius: 0.85rem;
+    background: color-mix(in srgb, var(--sl-color-bg) 98%, var(--sl-color-gray-7) 2%);
+    overflow: hidden;
+  }
+
+  .slot-disclosure-head,
+  .slot-disclosure-summary {
+    display: grid;
+    grid-template-columns:
+      1.25rem
+      minmax(0, 2.8fr)
+      minmax(8rem, 1.4fr)
+      minmax(9rem, 1.5fr);
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .slot-disclosure-head {
+    padding: 0.85rem 0.95rem;
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, var(--sl-color-bg) 92%, var(--sl-color-accent-low) 8%);
+    border-bottom: 1px solid var(--sl-color-gray-6);
+  }
+
+  .slot-disclosure-item + .slot-disclosure-item {
+    border-top: 1px solid var(--sl-color-gray-6);
+  }
+
+  .slot-disclosure-summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 0.85rem 0.95rem;
+    transition: background-color 160ms ease;
+  }
+
+  .slot-disclosure-item:hover .slot-disclosure-summary,
+  .slot-disclosure-item[open] .slot-disclosure-summary {
+    background: color-mix(in srgb, var(--sl-color-bg) 95%, var(--sl-color-accent-low) 5%);
+  }
+
+  .slot-disclosure-summary::marker {
+    content: "";
+  }
+
+  .slot-disclosure-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .slot-disclosure-toggle {
+    color: var(--sl-color-gray-2);
+    font-size: 0.9rem;
+    line-height: 1.1;
+    transform: rotate(-90deg);
+    transition: transform 160ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .slot-disclosure-item[open] .slot-disclosure-toggle {
+    transform: rotate(0deg);
+  }
+
+  .slot-disclosure-summary > span {
+    min-width: 0;
+  }
+
+  .slot-disclosure-summary .slot-rich-text {
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .slot-disclosure-summary .slot-rich-text code {
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .slot-disclosure-panel {
+    padding: 0 0.95rem 0.95rem;
+    border-top: 1px solid var(--sl-color-gray-6);
+    background: color-mix(in srgb, var(--sl-color-bg) 95%, var(--sl-color-accent-low) 5%);
+  }
+
+  .slot-disclosure-detail {
+    padding-top: 0.95rem;
+  }
+
+  .slot-disclosure-description {
+    margin: 0;
+  }
+
+  .slot-disclosure-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin: 0;
+    padding-top: 0.95rem;
+  }
+
+  .slot-disclosure-meta dt {
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-xs);
+    letter-spacing: 0.06em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  .slot-disclosure-meta dd {
+    margin: 0.35rem 0 0;
+  }
+
+  .slot-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .slot-table th,
+  .slot-table td {
+    padding: 0.85rem 0.95rem;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--sl-color-gray-6);
+  }
+
+  .slot-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .slot-table th {
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, var(--sl-color-bg) 92%, var(--sl-color-accent-low) 8%);
+  }
+
+  .slot-col-wide {
+    width: 34%;
+  }
+
+  .slot-col-type {
+    width: 14%;
+  }
+
+  .slot-col-default {
+    width: 14%;
+  }
+
+  .slot-col-values {
+    width: 24%;
+  }
+
+  .slot-rich-text {
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  .slot-rich-text code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .empty-state {
+    color: var(--sl-color-gray-2);
+  }
+
+  @media (max-width: 50rem) {
+    .slot-card {
+      padding: 1.15rem;
+    }
+
+    .slot-card-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .slot-table {
+      min-width: 42rem;
+    }
+
+    .slot-disclosure-head,
+    .slot-disclosure-summary {
+      grid-template-columns:
+        1rem
+        minmax(0, 1.8fr)
+        minmax(6rem, 1fr)
+        minmax(6.5rem, 1fr);
+      gap: 0.75rem;
+      align-items: start;
+    }
+
+    .slot-disclosure-meta {
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+    }
+  }
+</style>

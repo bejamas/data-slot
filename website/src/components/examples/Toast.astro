@@ -209,6 +209,37 @@ const cssCode = `<div class="toast-demo-stack toast-demo-shell">
     box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
   }
 
+  [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="true"] {
+    transform: translate3d(
+      var(--toast-swipe-end-x, 0px),
+      var(--toast-swipe-end-y, 0px),
+      0
+    );
+    opacity: 0;
+  }
+
+  [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="true"] {
+    transform: translate3d(
+      var(--toast-swipe-end-x, 0px),
+      calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-swipe-end-y, 0px)),
+      0
+    );
+    opacity: 0;
+  }
+
+  [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="false"] {
+    transform: translate3d(
+        var(--toast-swipe-end-x, 0px),
+        calc(
+          var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+            var(--toast-swipe-end-y, 0px)
+        ),
+        0
+      )
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
+    opacity: 0;
+  }
+
   [data-slot="toast-item"][data-removed="true"][data-front="true"] {
     transform: translate3d(
       0,
@@ -244,12 +275,16 @@ const cssCode = `<div class="toast-demo-stack toast-demo-shell">
   }
 
   [data-slot="toast-item"][data-swiping="true"][data-front="true"] {
-    transform: translate3d(0, var(--toast-swipe-movement-y, 0px), 0);
+    transform: translate3d(
+      var(--toast-swipe-movement-x, 0px),
+      var(--toast-swipe-movement-y, 0px),
+      0
+    );
   }
 
   [data-slot="toast-item"][data-swiping="true"][data-expanded="false"][data-front="false"] {
     transform: translate3d(
-        0,
+        var(--toast-swipe-movement-x, 0px),
         calc(
           var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
             var(--toast-swipe-movement-y, 0px)
@@ -261,7 +296,7 @@ const cssCode = `<div class="toast-demo-stack toast-demo-shell">
 
   [data-slot="toast-item"][data-swiping="true"][data-expanded="true"] {
     transform: translate3d(
-      0,
+      var(--toast-swipe-movement-x, 0px),
       calc(var(--toast-offset, 0px) * var(--toast-lift, -1) + var(--toast-swipe-movement-y, 0px)),
       0
     );
@@ -503,6 +538,37 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
   display: none !important;
 }
 
+[data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="true"] {
+  transform: translate3d(
+    var(--toast-swipe-end-x, 0px),
+    var(--toast-swipe-end-y, 0px),
+    0
+  );
+  opacity: 0;
+}
+
+[data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="true"] {
+  transform: translate3d(
+    var(--toast-swipe-end-x, 0px),
+    calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-swipe-end-y, 0px)),
+    0
+  );
+  opacity: 0;
+}
+
+[data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="false"] {
+  transform: translate3d(
+      var(--toast-swipe-end-x, 0px),
+      calc(
+        var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+          var(--toast-swipe-end-y, 0px)
+      ),
+      0
+    )
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
+  opacity: 0;
+}
+
 [data-slot="toast-item"][data-removed="true"][data-front="true"] {
   transform: translate3d(
     0,
@@ -538,12 +604,16 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
 }
 
 [data-slot="toast-item"][data-swiping="true"][data-front="true"] {
-  transform: translate3d(0, var(--toast-swipe-movement-y, 0px), 0);
+  transform: translate3d(
+    var(--toast-swipe-movement-x, 0px),
+    var(--toast-swipe-movement-y, 0px),
+    0
+  );
 }
 
 [data-slot="toast-item"][data-swiping="true"][data-expanded="false"][data-front="false"] {
   transform: translate3d(
-      0,
+      var(--toast-swipe-movement-x, 0px),
       calc(
         var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
           var(--toast-swipe-movement-y, 0px)
@@ -555,7 +625,7 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
 
 [data-slot="toast-item"][data-swiping="true"][data-expanded="true"] {
   transform: translate3d(
-    0,
+    var(--toast-swipe-movement-x, 0px),
     calc(var(--toast-offset, 0px) * var(--toast-lift, -1) + var(--toast-swipe-movement-y, 0px)),
     0
   );
@@ -819,6 +889,37 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
     box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
   }
 
+  .toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="true"] {
+    transform: translate3d(
+      var(--toast-swipe-end-x, 0px),
+      var(--toast-swipe-end-y, 0px),
+      0
+    );
+    opacity: 0;
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="true"] {
+    transform: translate3d(
+      var(--toast-swipe-end-x, 0px),
+      calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-swipe-end-y, 0px)),
+      0
+    );
+    opacity: 0;
+  }
+
+  .toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="false"] {
+    transform: translate3d(
+        var(--toast-swipe-end-x, 0px),
+        calc(
+          var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+            var(--toast-swipe-end-y, 0px)
+        ),
+        0
+      )
+      scale(calc(1 - var(--toast-index, 0) * 0.05));
+    opacity: 0;
+  }
+
   .toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-front="true"] {
     transform: translate3d(
       0,
@@ -854,12 +955,16 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
   }
 
   .toast-demo-viewport [data-slot="toast-item"][data-swiping="true"][data-front="true"] {
-    transform: translate3d(0, var(--toast-swipe-movement-y, 0px), 0);
+    transform: translate3d(
+      var(--toast-swipe-movement-x, 0px),
+      var(--toast-swipe-movement-y, 0px),
+      0
+    );
   }
 
   .toast-demo-viewport [data-slot="toast-item"][data-swiping="true"][data-expanded="false"][data-front="false"] {
     transform: translate3d(
-        0,
+        var(--toast-swipe-movement-x, 0px),
         calc(
           var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
             var(--toast-swipe-movement-y, 0px)
@@ -871,7 +976,7 @@ const tailwindCode = `<div class="toast-demo-stack relative min-h-[240px] border
 
   .toast-demo-viewport [data-slot="toast-item"][data-swiping="true"][data-expanded="true"] {
     transform: translate3d(
-      0,
+      var(--toast-swipe-movement-x, 0px),
       calc(var(--toast-offset, 0px) * var(--toast-lift, -1) + var(--toast-swipe-movement-y, 0px)),
       0
     );

@@ -1,0 +1,38 @@
+---
+title: API Patterns
+description: Learn the shared controller, options, events, and data-attribute patterns used across data-slot packages.
+---
+
+## Auto-discovery
+
+```ts
+import { create } from "@data-slot/tabs";
+
+const controllers = create();
+const scopedControllers = create(document.querySelector(".app"));
+```
+
+## Manual controllers
+
+```ts
+import { createDialog } from "@data-slot/dialog";
+
+const dialog = createDialog(element, {
+  defaultOpen: false,
+  onOpenChange: (open) => console.log(open),
+});
+```
+
+## Data attributes and options
+
+Most packages let you configure behavior either in JavaScript or with `data-*` attributes on the root element. JavaScript options take precedence.
+
+## Controller lifecycle
+
+- Read state through properties like `value`, `isOpen`, or `index`.
+- Change state with imperative methods like `open()`, `close()`, `select()`, or `goTo()`.
+- Call `destroy()` when you need to tear down listeners explicitly.
+
+## Events
+
+Packages that expose meaningful state transitions also emit custom events and, in some cases, support inbound control events. Check each package page for the exact event names and payloads.

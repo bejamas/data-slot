@@ -1,0 +1,62 @@
+---
+import EditLink from "virtual:starlight/components/EditLink";
+import LastUpdated from "virtual:starlight/components/LastUpdated";
+import config from "virtual:starlight/user-config";
+
+const github =
+  config.social.find((link) => link.icon === "github")?.href ??
+  "https://github.com/bejamas/data-slot";
+const issuesUrl = `${github}/issues/new`;
+---
+
+<footer class="footer">
+  <div class="meta">
+    <EditLink />
+    <a href={issuesUrl} target="_blank" rel="noreferrer">Open an issue</a>
+    <LastUpdated />
+  </div>
+  <div class="links">
+    <a href={github} target="_blank" rel="noreferrer">GitHub</a>
+    <a href="https://npmjs.com/org/data-slot" target="_blank" rel="noreferrer">npm</a>
+    <span>MIT License</span>
+    <span>
+      Made for the vanilla web by
+      <a href="https://ui.bejamas.com" target="_blank" rel="noreferrer">bejamas/ui</a>
+    </span>
+  </div>
+</footer>
+
+<style>
+  footer.footer {
+    display: grid;
+    gap: 1rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--sl-color-border);
+  }
+
+  .meta,
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    font-size: var(--sl-text-sm);
+  }
+
+  .meta {
+    color: var(--sl-color-text-secondary);
+  }
+
+  .links {
+    color: var(--sl-color-text-secondary);
+  }
+
+  .footer :global(a) {
+    color: var(--sl-color-text);
+    text-decoration: none;
+  }
+
+  .footer :global(a:hover) {
+    color: var(--sl-color-accent-high);
+  }
+</style>

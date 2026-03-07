@@ -1,0 +1,44 @@
+---
+title: Installation
+description: Install data-slot packages for the components you need, or use the convenience bundle.
+---
+
+`data-slot` is published as small package-level primitives plus a convenience bundle.
+
+## Install individual packages
+
+```bash
+npm install @data-slot/tabs @data-slot/dialog
+```
+
+```bash
+pnpm add @data-slot/tabs @data-slot/dialog
+```
+
+```bash
+yarn add @data-slot/tabs @data-slot/dialog
+```
+
+```bash
+bun add @data-slot/tabs @data-slot/dialog
+```
+
+## Install the bundle
+
+```bash
+npm install @data-slot/ui
+```
+
+Use the bundle when you want a single dependency and are comfortable with larger imports. Use individual packages when you want the smallest possible bundles.
+
+## Choose an import style
+
+```ts
+import { create } from "@data-slot/tabs";
+```
+
+```ts
+import { create } from "@data-slot/ui/tabs";
+```
+
+The first form is the preferred production path for tree-shaking. The second form is convenient when you already depend on the bundle.

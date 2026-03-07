@@ -1,0 +1,30 @@
+---
+import ThemeHead from "toolbeam-docs-theme/overrides/Head.astro";
+---
+
+<ThemeHead {...Astro.props}>
+  <link rel="icon shortcut" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <meta name="theme-color" content="#1a1a1a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="data-slot" />
+  <meta name="apple-mobile-web-app-title" content="data-slot" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="msapplication-navbutton-color" content="#1a1a1a" />
+  <meta name="robots" content="index, max-image-preview:large" />
+
+  <meta property="og:image" content="https://data-slot.com/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://data-slot.com/og-image.png" />
+
+  <script async src="https://plausible.io/js/pa-zvT90o__72pucRtEL557X.js"></script>
+  <script is:inline>
+    window.plausible =
+      window.plausible ||
+      function () {
+        (window.plausible.q = window.plausible.q || []).push(arguments);
+      };
+  </script>
+</ThemeHead>

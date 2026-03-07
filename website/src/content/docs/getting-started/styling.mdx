@@ -1,0 +1,41 @@
+---
+title: Styling
+description: Style data-slot primitives using data-state, hidden, CSS variables, and ARIA attributes.
+---
+
+`data-slot` components are unstyled. Their contract is behavioral, so styling stays in your CSS or utility classes.
+
+## Target state hooks
+
+```css
+[data-slot="tabs-trigger"][aria-selected="true"] {
+  font-weight: 700;
+}
+
+[data-slot="dialog"][data-state="open"] [data-slot="dialog-content"] {
+  display: grid;
+}
+
+[data-slot="accordion-content"][hidden] {
+  display: none;
+}
+```
+
+## Tailwind example
+
+```html
+<button
+  data-slot="tabs-trigger"
+  class="px-4 py-2 aria-selected:font-bold aria-selected:border-b-2"
+>
+  Tab
+</button>
+```
+
+## What to expect
+
+- Interactive parts expose `data-state` values like `open`, `closed`, `active`, and `inactive`.
+- Many components also expose useful ARIA state such as `aria-selected`, `aria-expanded`, and `aria-current`.
+- Some components expose CSS variables for positioning and animation, such as the tabs indicator and dialog stack indices.
+
+For package-specific hooks, check the reference page for the component you are styling.
