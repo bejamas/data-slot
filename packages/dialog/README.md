@@ -13,6 +13,7 @@ npm install @data-slot/dialog
 ```html
 <div data-slot="dialog">
   <button data-slot="dialog-trigger">Open Dialog</button>
+  <div data-slot="dialog-overlay" hidden></div>
   <div data-slot="dialog-content" hidden>
     <h2 data-slot="dialog-title">Dialog Title</h2>
     <p data-slot="dialog-description">Dialog description text.</p>
@@ -26,6 +27,8 @@ npm install @data-slot/dialog
   const controllers = create();
 </script>
 ```
+
+Wrap `dialog-overlay` and `dialog-content` in an optional `dialog-portal` slot when you want the dialog moved to `document.body` while it is in use.
 
 ## API
 
@@ -107,7 +110,8 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
 ```html
 <div data-slot="dialog">
   <button data-slot="dialog-trigger">Open</button>
-  <div data-slot="dialog-content" role="dialog">
+  <div data-slot="dialog-overlay" hidden></div>
+  <div data-slot="dialog-content" role="dialog" hidden>
     <h2 data-slot="dialog-title">Title</h2>
     <p data-slot="dialog-description">Description</p>
     <button data-slot="dialog-close">Close</button>
@@ -117,7 +121,8 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
 
 ### Required Slots
 
-- `dialog-content` - The dialog panel (required)
+- `dialog-overlay` - The backdrop behind the dialog panel
+- `dialog-content` - The dialog panel
 
 ### Optional Slots
 
@@ -125,32 +130,63 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
 - `dialog-title` - Title for `aria-labelledby`
 - `dialog-description` - Description for `aria-describedby`
 - `dialog-close` - Button to close the dialog
+- `dialog-portal` - Optional wrapper around `dialog-overlay` and `dialog-content` that is portaled to `document.body` on first open
+
+### Composed Portal Markup (Optional)
+
+```html
+<div data-slot="dialog">
+  <button data-slot="dialog-trigger">Open</button>
+  <div data-slot="dialog-portal">
+    <div data-slot="dialog-overlay" hidden></div>
+    <div data-slot="dialog-content" hidden>
+      <h2 data-slot="dialog-title">Title</h2>
+      <p data-slot="dialog-description">Description</p>
+      <button data-slot="dialog-close">Close</button>
+    </div>
+  </div>
+</div>
+```
+
+When present, `dialog-portal` is moved to `document.body` on first open so the dialog can escape local stacking contexts. It remains there while the controller is alive and is restored to its authored position on `destroy()`.
 
 ## Styling
 
 Use `data-state` attributes for CSS styling:
 
 ```css
-/* Backdrop/overlay */
-[data-slot="dialog-content"] {
+/* Backdrop */
+[data-slot="dialog-overlay"] {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
   background: rgba(0, 0, 0, 0.5);
 }
 
-/* Closed state */
-[data-slot="dialog"][data-state="closed"] [data-slot="dialog-content"] {
+/* Panel */
+[data-slot="dialog-content"] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+}
+
+/* Hidden state */
+[data-slot="dialog-overlay"][hidden],
+[data-slot="dialog-content"][hidden] {
   display: none;
 }
 
 /* Animation */
+[data-slot="dialog-overlay"],
 [data-slot="dialog-content"] {
   opacity: 0;
   transition: opacity 0.2s;
 }
 
+[data-slot="dialog"][data-state="open"] [data-slot="dialog-overlay"],
 [data-slot="dialog"][data-state="open"] [data-slot="dialog-content"] {
   opacity: 1;
 }
@@ -167,8 +203,13 @@ When multiple dialogs are open, `data-stack-index` and CSS variables are exposed
 With Tailwind:
 
 ```html
-<div data-slot="dialog-content" class="fixed inset-0 grid place-items-center bg-black/50 data-[state=closed]:hidden">
-  <div class="bg-white rounded-lg p-6 max-w-md">
+<div data-slot="dialog-portal">
+  <div data-slot="dialog-overlay" class="fixed inset-0 bg-black/50" hidden></div>
+  <div
+    data-slot="dialog-content"
+    class="fixed left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6"
+    hidden
+  >
     <!-- Dialog content -->
   </div>
 </div>
