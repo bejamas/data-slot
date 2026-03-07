@@ -2,315 +2,299 @@
 import { Code } from "astro:components";
 import ExampleBlock from "../ExampleBlock.astro";
 
+const chevronSvg = `<svg class="nav-menu-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.5 3 3 3-3"/></svg>`;
+
 const cssCode = `<nav data-slot="navigation-menu" class="nav-menu">
   <ul data-slot="navigation-menu-list" class="nav-menu-list">
-    <li data-slot="navigation-menu-item" data-value="products" class="nav-menu-item">
-      <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Products</button>
+    <li data-slot="navigation-menu-item" data-value="overview" class="nav-menu-item">
+      <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">
+        Overview
+        ${chevronSvg}
+      </button>
       <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
         <div class="nav-menu-grid">
           <a href="#" class="nav-menu-link">
-            <div class="nav-menu-link-title">Analytics</div>
-            <div class="nav-menu-link-desc">Real-time metrics</div>
+            <div class="nav-menu-link-title">Quick Start</div>
+            <div class="nav-menu-link-desc">Get up and running in minutes</div>
           </a>
           <!-- More links... -->
         </div>
       </div>
     </li>
     <li data-slot="navigation-menu-item" class="nav-menu-item">
-      <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">Docs</a>
+      <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">GitHub</a>
     </li>
-    <!-- More submenu items... -->
     <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
   </ul>
   <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
 </nav>
 
 <style>
-  .nav-menu { position: relative; }
+  .nav-menu {
+    position: relative;
+    border-radius: 0.5rem;
+    background: #f9fafb;
+    padding: 0.25rem;
+  }
   .nav-menu-list { display: flex; list-style: none; position: relative; }
   .nav-menu-trigger {
-    padding: 0.6rem 1rem;
+    height: 2.5rem;
+    padding: 0 0.875rem;
     background: none;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    text-decoration: none;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
     color: inherit;
+    user-select: none;
   }
-  .nav-menu-trigger::after { content: "▼"; font-size: 0.6rem; }
-  .nav-menu-trigger[data-state="open"]::after { transform: rotate(180deg); }
-  .nav-menu-trigger-plain::after { content: none; }
+  .nav-menu-trigger:hover,
+  .nav-menu-trigger[data-state="open"] { background: #f3f4f6; }
+  .nav-menu-chevron { transition: transform 0.2s ease; }
+  [data-state="open"] > .nav-menu-chevron { transform: rotate(180deg); }
+  .nav-menu-trigger-plain { text-decoration: none; }
   .nav-menu-viewport {
     position: absolute;
-    top: 0;
-    left: 0;
-    transform: translate3d(0, 0, 0);
-    background: #faf9f7;
+    background: white;
     border-radius: 8px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.12);
     width: var(--viewport-width, 0);
     height: var(--viewport-height, 0);
     transition: transform 0.25s, width 0.25s, height 0.25s;
   }
-  .nav-menu-content { position: absolute; top: 100%; padding: 1.5rem 1rem; }
-  .nav-menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; width: 380px; }
+  .nav-menu-content { position: absolute; top: 0; }
+  .nav-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+    min-width: 400px;
+    padding: 0.375rem;
+  }
+  .nav-menu-flex-list {
+    display: flex;
+    flex-direction: column;
+    max-width: 400px;
+    padding: 0.375rem;
+  }
+  .nav-menu-link {
+    display: block;
+    padding: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 0.375rem;
+  }
+  .nav-menu-link:hover { background: #f3f4f6; }
+  .nav-menu-link-title {
+    font-weight: 500;
+    font-size: 1rem;
+    line-height: 1.25rem;
+    margin: 0 0 0.25rem;
+  }
+  .nav-menu-link-desc {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: #6b7280;
+    margin: 0;
+  }
 </style>`;
 
-const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
-  <ul data-slot="navigation-menu-list" class="flex relative list-none">
-    <li data-slot="navigation-menu-item" data-value="products" class="static">
-      <button
-        data-slot="navigation-menu-trigger"
-        class="px-4 py-2.5 bg-transparent border-none cursor-pointer
-               flex items-center gap-1.5 transition-colors relative z-1
-               hover:text-accent data-[state=open]:text-accent
-               after:content-['▼'] after:text-[0.6rem]
-               after:transition-transform after:duration-200
-               data-[state=open]:after:rotate-180"
-      >
-        Products
+const tailwindCode = `<nav data-slot="navigation-menu"
+     class="relative min-w-max rounded-lg bg-gray-50 p-1 text-gray-900">
+  <ul data-slot="navigation-menu-list" class="flex list-none relative">
+    <li data-slot="navigation-menu-item" data-value="overview" class="static">
+      <button data-slot="navigation-menu-trigger"
+              class="flex items-center justify-center gap-1.5 h-10 px-3.5
+                     rounded-md font-medium select-none
+                     hover:bg-gray-100 data-[state=open]:bg-gray-100">
+        Overview
+        <svg class="transition-transform duration-200
+                    [[data-state=open]>&]:rotate-180"
+             xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+             viewBox="0 0 12 12" fill="none" stroke="currentColor"
+             stroke-width="1.5" stroke-linecap="round"
+             stroke-linejoin="round">
+          <path d="m3 4.5 3 3 3-3"/>
+        </svg>
       </button>
-      <div
-        data-slot="navigation-menu-content"
-        class="absolute top-full pt-6 px-4 pb-0
-               data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4
-               data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none
-               data-[state=inactive]:invisible data-[state=active]:visible"
-        hidden
-      >
-        <div class="grid grid-cols-2 gap-3 w-[380px]">
-          <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-            <div class="mb-1 font-medium">Analytics</div>
-            <div class="text-sm text-muted">Real-time metrics</div>
+      <div data-slot="navigation-menu-content" hidden
+           class="absolute top-0 opacity-100
+                  data-[state=inactive]:opacity-0
+                  data-[state=inactive]:pointer-events-none">
+        <div class="grid list-none grid-cols-2 gap-0 min-w-[400px] p-1.5">
+          <a href="#"
+             class="block rounded-md p-3 no-underline text-inherit
+                    hover:bg-gray-100">
+            <div class="m-0 mb-1 text-base font-medium leading-5">
+              Quick Start
+            </div>
+            <div class="m-0 text-sm leading-5 text-gray-500">
+              Get up and running in minutes
+            </div>
           </a>
           <!-- More links... -->
         </div>
       </div>
     </li>
     <li data-slot="navigation-menu-item" class="static">
-      <a
-        href="#"
-        class="px-4 py-2.5 bg-transparent border-none cursor-pointer
-               flex items-center gap-1.5 transition-colors relative z-1
-               hover:text-accent text-inherit no-underline"
-      >
-        Docs
+      <a href="#"
+         class="flex items-center justify-center h-10 px-3.5 rounded-md
+                font-medium select-none no-underline text-inherit
+                hover:bg-gray-100">
+        GitHub
       </a>
     </li>
-    <!-- More submenu items... -->
-    <div
-      data-slot="navigation-menu-indicator"
-      class="absolute bg-code-bg z-0 rounded-md transition-all duration-150
-             pointer-events-none opacity-0 data-[state=visible]:opacity-100"
-      style="left: var(--indicator-left, 0); top: var(--indicator-top, 0);
-             width: var(--indicator-width, 0); height: var(--indicator-height, 0);"
-    ></div>
+    <div data-slot="navigation-menu-indicator"
+         class="absolute bg-gray-100 z-0 rounded-md transition-all
+                duration-150 pointer-events-none opacity-0
+                data-[state=visible]:opacity-100"></div>
   </ul>
-  <div
-    data-slot="navigation-menu-viewport"
-    class="absolute top-0 left-0 bg-bg rounded-lg shadow-lg
-           overflow-hidden mt-2 opacity-0 pointer-events-none
-           data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
-    style="width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
-  ></div>
+  <div data-slot="navigation-menu-viewport"
+       class="absolute top-0 left-0 bg-white rounded-lg shadow-xl
+              overflow-hidden transition-all duration-250
+              opacity-0 pointer-events-none
+              data-[state=open]:opacity-100
+              data-[state=open]:pointer-events-auto"></div>
 </nav>
 
-/* CSS needed for animations (viewport size + content direction) */
+/* CSS needed for viewport animation */
 [data-slot="navigation-menu-viewport"] {
+  width: var(--viewport-width, 0);
+  height: var(--viewport-height, 0);
   transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1),
               width 0.25s cubic-bezier(0.32, 0.72, 0, 1),
               height 0.25s cubic-bezier(0.32, 0.72, 0, 1),
               opacity 0.15s ease;
   will-change: transform, width, height;
-}
-[data-slot="navigation-menu-viewport"][data-instant] {
-  transition: opacity 0.15s ease;
-}
-[data-slot="navigation-menu-content"][data-motion="from-right"] {
-  animation: slideFromRight 0.25s ease;
-}
-[data-slot="navigation-menu-content"][data-motion="from-left"] {
-  animation: slideFromLeft 0.25s ease;
 }`;
 ---
 
 <ExampleBlock label="mega menu with directional animations">
-  <nav slot="preview-css" data-slot="navigation-menu" class="nav-menu" id="nav-menu-css"  data-side-offset="8">
-  
+  <nav slot="preview-css" data-slot="navigation-menu" class="nav-menu" id="nav-menu-css" data-side-offset="8">
     <ul data-slot="navigation-menu-list" class="nav-menu-list">
-      <li data-slot="navigation-menu-item" data-value="products" class="nav-menu-item">
-        <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Products</button>
+      <li data-slot="navigation-menu-item" data-value="overview" class="nav-menu-item">
+        <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">
+          Overview
+          <svg class="nav-menu-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.5 3 3 3-3"/></svg>
+        </button>
         <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
           <div class="nav-menu-grid">
             <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Analytics</div>
-              <div class="nav-menu-link-desc">Real-time metrics</div>
+              <div class="nav-menu-link-title">Quick Start</div>
+              <div class="nav-menu-link-desc">Get up and running in minutes</div>
             </a>
             <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Automation</div>
-              <div class="nav-menu-link-desc">Workflow tools</div>
+              <div class="nav-menu-link-title">Accessibility</div>
+              <div class="nav-menu-link-desc">Built-in ARIA and keyboard support</div>
             </a>
             <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Security</div>
-              <div class="nav-menu-link-desc">Enterprise-grade</div>
+              <div class="nav-menu-link-title">Releases</div>
+              <div class="nav-menu-link-desc">Changelog and version history</div>
             </a>
             <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Integrations</div>
-              <div class="nav-menu-link-desc">Connect everything</div>
+              <div class="nav-menu-link-title">About</div>
+              <div class="nav-menu-link-desc">Learn more about the project</div>
             </a>
           </div>
         </div>
       </li>
-      <li data-slot="navigation-menu-item" data-value="solutions" class="nav-menu-item">
-        <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Solutions</button>
+      <li data-slot="navigation-menu-item" data-value="handbook" class="nav-menu-item">
+        <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">
+          Handbook
+          <svg class="nav-menu-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.5 3 3 3-3"/></svg>
+        </button>
         <div data-slot="navigation-menu-content" class="nav-menu-content" hidden data-align="center">
-          <div class="nav-menu-grid">
+          <div class="nav-menu-flex-list">
             <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Startups</div>
-              <div class="nav-menu-link-desc">Move fast</div>
+              <div class="nav-menu-link-title">Styling</div>
+              <div class="nav-menu-link-desc">Use CSS, Tailwind, or any styling approach</div>
             </a>
             <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Enterprise</div>
-              <div class="nav-menu-link-desc">Scale securely</div>
+              <div class="nav-menu-link-title">Animation</div>
+              <div class="nav-menu-link-desc">Add transitions with data attributes</div>
             </a>
             <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Agencies</div>
-              <div class="nav-menu-link-desc">Client projects</div>
-            </a>
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">E-commerce</div>
-              <div class="nav-menu-link-desc">Sell online</div>
+              <div class="nav-menu-link-title">Composition</div>
+              <div class="nav-menu-link-desc">Combine components together</div>
             </a>
           </div>
         </div>
       </li>
       <li data-slot="navigation-menu-item" class="nav-menu-item">
-        <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">Docs</a>
-      </li>
-      <li data-slot="navigation-menu-item" data-value="resources" class="nav-menu-item">
-        <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Resources</button>
-        <div data-slot="navigation-menu-content" class="nav-menu-content" hidden data-align="center">
-          <div class="nav-menu-grid-wide">
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Documentation</div>
-              <div class="nav-menu-link-desc">Get started</div>
-            </a>
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Blog</div>
-              <div class="nav-menu-link-desc">Latest updates</div>
-            </a>
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Contact</div>
-              <div class="nav-menu-link-desc">Get in touch</div>
-            </a>
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Support</div>
-              <div class="nav-menu-link-desc">Get help</div>
-            </a>
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Training</div>
-              <div class="nav-menu-link-desc">Learn new skills</div>
-            </a>
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">Events</div>
-              <div class="nav-menu-link-desc">Upcoming webinars</div>
-            </a>
-          </div>
-        </div>
-      </li>
-      <li data-slot="navigation-menu-item" data-value="company" class="nav-menu-item">
-        <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Company</button>
-        <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
-          <div class="nav-menu-single">
-            <a href="#" class="nav-menu-link">
-              <div class="nav-menu-link-title">About Us</div>
-              <div class="nav-menu-link-desc">Our story</div>
-            </a>
-          </div>
-        </div>
+        <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">GitHub</a>
       </li>
       <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
     </ul>
-  
+
     <div data-slot="navigation-menu-positioner" class="isolate z-50">
         <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
     </div>
 
   </nav>
-  
-  <nav slot="preview-tailwind" data-slot="navigation-menu" class="relative" id="nav-menu-tw">
-    <ul data-slot="navigation-menu-list" class="
-      flex list-none relative z-10
-      [&_[data-slot='navigation-menu-content'][data-state='active']]:animate-in
-[&_[data-slot='navigation-menu-content'][data-state='inactive']]:animate-out
-[&_[data-slot='navigation-menu-content'][data-motion='from-right']]:slide-in-from-right-4
-[&_[data-slot='navigation-menu-content'][data-motion='from-left']]:slide-in-from-left-4
-[&_[data-slot='navigation-menu-content'][data-motion='to-right']]:slide-to-right-4
-[&_[data-slot='navigation-menu-content'][data-motion='to-left']]:slide-to-left-4
-      "
-    >
-      <li data-slot="navigation-menu-item" data-value="products" class="static">
+
+  <nav slot="preview-tailwind" data-slot="navigation-menu" class="relative min-w-max rounded-lg bg-gray-50 p-1 text-gray-900" id="nav-menu-tw">
+    <ul data-slot="navigation-menu-list" class="flex list-none relative z-10">
+      <li data-slot="navigation-menu-item" data-value="overview" class="static">
         <button
           data-slot="navigation-menu-trigger"
-          class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent data-[state=open]:text-accent after:content-['▼'] after:text-[0.6rem] after:transition-transform after:duration-200 data-[state=open]:after:rotate-180"
+          class="flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-md font-medium select-none hover:bg-gray-100 data-[state=open]:bg-gray-100"
         >
-          Products
+          Overview
+          <svg class="transition-transform duration-200 [[data-state=open]>&]:rotate-180" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.5 3 3 3-3"/></svg>
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4 data-[motion='from-left']:slide-in-from-left-4 data-motion[to-right]:animate-slide-to-right-4 data-[state=active]:animate-in data-[state=inactive]:animate-out "
+          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible data-[state=active]:visible"
           hidden
         >
-          <div class="grid grid-cols-2 gap-3 w-[380px] p-2">
-            <a href="#" class="block p-3 no-underline rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Analytics</div>
-              <div class="text-sm text-muted">Real-time metrics</div>
+          <div class="grid list-none grid-cols-2 gap-0 min-w-[400px] p-1.5">
+            <a href="#" class="block rounded-md p-3 no-underline text-inherit hover:bg-gray-100">
+              <div class="m-0 mb-1 text-base font-medium leading-5">Quick Start</div>
+              <div class="m-0 text-sm leading-5 text-gray-500">Get up and running in minutes</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Automation</div>
-              <div class="text-sm text-muted">Workflow tools</div>
+            <a href="#" class="block rounded-md p-3 no-underline text-inherit hover:bg-gray-100">
+              <div class="m-0 mb-1 text-base font-medium leading-5">Accessibility</div>
+              <div class="m-0 text-sm leading-5 text-gray-500">Built-in ARIA and keyboard support</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Security</div>
-              <div class="text-sm text-muted">Enterprise-grade</div>
+            <a href="#" class="block rounded-md p-3 no-underline text-inherit hover:bg-gray-100">
+              <div class="m-0 mb-1 text-base font-medium leading-5">Releases</div>
+              <div class="m-0 text-sm leading-5 text-gray-500">Changelog and version history</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Integrations</div>
-              <div class="text-sm text-muted">Connect everything</div>
+            <a href="#" class="block rounded-md p-3 no-underline text-inherit hover:bg-gray-100">
+              <div class="m-0 mb-1 text-base font-medium leading-5">About</div>
+              <div class="m-0 text-sm leading-5 text-gray-500">Learn more about the project</div>
             </a>
           </div>
         </div>
       </li>
-      <li data-slot="navigation-menu-item" data-value="solutions" data-align="center" class="static">
+      <li data-slot="navigation-menu-item" data-value="handbook" data-align="center" class="static">
         <button
           data-slot="navigation-menu-trigger"
-          class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent data-[state=open]:text-accent after:content-['▼'] after:text-[0.6rem] after:transition-transform after:duration-200 data-[state=open]:after:rotate-180"
+          class="flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-md font-medium select-none hover:bg-gray-100 data-[state=open]:bg-gray-100"
         >
-          Solutions
+          Handbook
+          <svg class="transition-transform duration-200 [[data-state=open]>&]:rotate-180" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.5 3 3 3-3"/></svg>
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible data-[state=active]:visible"
           hidden
         >
-          <div class="grid grid-cols-2 gap-2 w-[380px] p-2">
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Startups</div>
-              <div class="text-sm text-muted">Move fast</div>
+          <div class="flex list-none max-w-[400px] flex-col p-1.5">
+            <a href="#" class="block rounded-md p-3 no-underline text-inherit hover:bg-gray-100">
+              <div class="m-0 mb-1 text-base font-medium leading-5">Styling</div>
+              <div class="m-0 text-sm leading-5 text-gray-500">Use CSS, Tailwind, or any styling approach</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Enterprise</div>
-              <div class="text-sm text-muted">Scale securely</div>
+            <a href="#" class="block rounded-md p-3 no-underline text-inherit hover:bg-gray-100">
+              <div class="m-0 mb-1 text-base font-medium leading-5">Animation</div>
+              <div class="m-0 text-sm leading-5 text-gray-500">Add transitions with data attributes</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Agencies</div>
-              <div class="text-sm text-muted">Client projects</div>
-            </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">E-commerce</div>
-              <div class="text-sm text-muted">Sell online</div>
+            <a href="#" class="block rounded-md p-3 no-underline text-inherit hover:bg-gray-100">
+              <div class="m-0 mb-1 text-base font-medium leading-5">Composition</div>
+              <div class="m-0 text-sm leading-5 text-gray-500">Combine components together</div>
             </a>
           </div>
         </div>
@@ -318,82 +302,24 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
       <li data-slot="navigation-menu-item" class="static">
         <a
           href="#"
-          class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent text-inherit no-underline"
+          class="flex items-center justify-center h-10 px-3.5 rounded-md font-medium select-none no-underline text-inherit hover:bg-gray-100"
         >
-          Docs
+          GitHub
         </a>
-      </li>
-      <li data-slot="navigation-menu-item" data-value="resources" data-align="center" class="static">
-        <button
-          data-slot="navigation-menu-trigger"
-          class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent data-[state=open]:text-accent after:content-['▼'] after:text-[0.6rem] after:transition-transform after:duration-200 data-[state=open]:after:rotate-180"
-        >
-          Resources
-        </button>
-        <div
-          data-slot="navigation-menu-content"
-          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
-          hidden
-        >
-          <div class="grid grid-cols-3 gap-3 p-2 w-[520px]">
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Documentation</div>
-              <div class="text-sm text-muted">Get started</div>
-            </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Blog</div>
-              <div class="text-sm text-muted">Latest updates</div>
-            </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Contact</div>
-              <div class="text-sm text-muted">Get in touch</div>
-            </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Support</div>
-              <div class="text-sm text-muted">Get help</div>
-            </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Training</div>
-              <div class="text-sm text-muted">Learn new skills</div>
-            </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">Events</div>
-              <div class="text-sm text-muted">Upcoming webinars</div>
-            </a>
-          </div>
-        </div>
-      </li>
-      <li data-slot="navigation-menu-item" data-value="company" class="static">
-        <button
-          data-slot="navigation-menu-trigger"
-          class="px-4 py-2.5 z-1 relative bg-transparent border-none cursor-pointer flex items-center gap-1.5 transition-colors hover:text-accent data-[state=open]:text-accent after:content-['▼'] after:text-[0.6rem] after:transition-transform after:duration-200 data-[state=open]:after:rotate-180"
-        >
-          Company
-        </button>
-        <div
-          data-slot="navigation-menu-content"
-          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
-          hidden
-        >
-          <div class="w-[140px] p-2">
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
-              <div class="mb-1 font-medium">About Us</div>
-              <div class="text-sm text-muted">Our story</div>
-            </a>
-          </div>
-        </div>
       </li>
       <div
         data-slot="navigation-menu-indicator"
-        class="absolute bg-code-bg z-0 rounded-md transition-all data-instant:transition-opacity duration-150 pointer-events-none opacity-0 data-[state=visible]:opacity-100"
+        class="absolute bg-gray-100 z-0 rounded-md transition-all duration-150 pointer-events-none opacity-0 data-[state=visible]:opacity-100"
         style="left: var(--indicator-left, 0); top: var(--indicator-top, 0); width: var(--indicator-width, 0); height: var(--indicator-height, 0);"
       ></div>
     </ul>
-    <div
-      data-slot="navigation-menu-viewport"
-      class="absolute mt-2 data-instant:transition-opacity duration-150 top-0 left-0 bg-bg rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12),0_0_0_1px_var(--color-border)] overflow-hidden opacity-0 pointer-events-none data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
-      style="width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
-    ></div>
+    <div data-slot="navigation-menu-positioner" class="isolate z-50">
+      <div
+        data-slot="navigation-menu-viewport"
+        class="absolute top-0 left-0 bg-white rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12),0_0_0_1px_var(--color-border)] overflow-hidden opacity-0 pointer-events-none data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
+        style="width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
+      ></div>
+    </div>
   </nav>
   <div slot="note">
     <p class="mt-3 text-muted">

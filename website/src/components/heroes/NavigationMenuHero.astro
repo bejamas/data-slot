@@ -1,27 +1,30 @@
 ---
 import ComponentHero from "../docs/ComponentHero.astro";
 
+const chevronSvg = `<svg class="nav-menu-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.5 3 3 3-3"/></svg>`;
+
 const cssCode = `<nav data-slot="navigation-menu" class="nav-menu">
   <ul data-slot="navigation-menu-list" class="nav-menu-list">
-    <li data-slot="navigation-menu-item" data-value="products" class="nav-menu-item">
+    <li data-slot="navigation-menu-item" data-value="overview" class="nav-menu-item">
       <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">
-        Products
+        Overview
+        ${chevronSvg}
       </button>
       <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
         <div class="nav-menu-grid">
           <a href="#" class="nav-menu-link">
-            <div class="nav-menu-link-title">Analytics</div>
-            <div class="nav-menu-link-desc">Real-time metrics</div>
+            <div class="nav-menu-link-title">Quick Start</div>
+            <div class="nav-menu-link-desc">Get up and running in minutes</div>
           </a>
           <a href="#" class="nav-menu-link">
-            <div class="nav-menu-link-title">Integrations</div>
-            <div class="nav-menu-link-desc">Connect your tools</div>
+            <div class="nav-menu-link-title">Accessibility</div>
+            <div class="nav-menu-link-desc">Built-in ARIA and keyboard support</div>
           </a>
         </div>
       </div>
     </li>
     <li data-slot="navigation-menu-item" class="nav-menu-item">
-      <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">Docs</a>
+      <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">GitHub</a>
     </li>
     <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
   </ul>
@@ -29,62 +32,122 @@ const cssCode = `<nav data-slot="navigation-menu" class="nav-menu">
 </nav>
 
 <style>
-  .nav-menu { position: relative; }
+  .nav-menu {
+    position: relative;
+    border-radius: 0.5rem;
+    background: #f9fafb;
+    padding: 0.25rem;
+  }
   .nav-menu-list { display: flex; list-style: none; position: relative; }
   .nav-menu-trigger {
-    padding: 0.6rem 1rem; background: none; border: none;
-    cursor: pointer; display: flex; align-items: center; gap: 0.35rem;
-    text-decoration: none; color: inherit;
+    height: 2.5rem;
+    padding: 0 0.875rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    color: inherit;
+    user-select: none;
   }
-  .nav-menu-trigger::after { content: "▼"; font-size: 0.6rem; }
-  .nav-menu-trigger-plain::after { content: none; }
+  .nav-menu-trigger:hover,
+  .nav-menu-trigger[data-state="open"] { background: #f3f4f6; }
+  .nav-menu-chevron { transition: transform 0.2s ease; }
+  [data-state="open"] > .nav-menu-chevron { transform: rotate(180deg); }
+  .nav-menu-trigger-plain { text-decoration: none; }
   .nav-menu-viewport {
-    position: absolute; background: #faf9f7; border-radius: 8px;
+    position: absolute;
+    background: white;
+    border-radius: 8px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-    width: var(--viewport-width, 0); height: var(--viewport-height, 0);
+    width: var(--viewport-width, 0);
+    height: var(--viewport-height, 0);
     transition: transform 0.25s, width 0.25s, height 0.25s;
   }
   .nav-menu-content { position: absolute; top: 0; }
   .nav-menu-grid {
-    display: grid; grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem; width: 320px; padding: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+    min-width: 400px;
+    padding: 0.375rem;
   }
   .nav-menu-link {
-    display: block; padding: 0.75rem; text-decoration: none;
-    color: inherit; border-radius: 4px;
+    display: block;
+    padding: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 0.375rem;
   }
-  .nav-menu-link:hover { background: #f0eeeb; }
-  .nav-menu-link-title { font-weight: 500; margin-bottom: 0.25rem; }
-  .nav-menu-link-desc { font-size: 0.85rem; color: #666; }
+  .nav-menu-link:hover { background: #f3f4f6; }
+  .nav-menu-link-title {
+    font-weight: 500;
+    font-size: 1rem;
+    line-height: 1.25rem;
+    margin: 0 0 0.25rem;
+  }
+  .nav-menu-link-desc {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: #6b7280;
+    margin: 0;
+  }
 </style>`;
 
-const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
+const tailwindCode = `<nav data-slot="navigation-menu"
+     class="relative min-w-max rounded-lg bg-gray-50 p-1 text-gray-900">
   <ul data-slot="navigation-menu-list" class="flex list-none relative">
-    <li data-slot="navigation-menu-item" data-value="products" class="static">
+    <li data-slot="navigation-menu-item" data-value="overview" class="static">
       <button data-slot="navigation-menu-trigger"
-              class="px-4 py-2.5 bg-transparent border-none cursor-pointer
-                     flex items-center gap-1.5 text-inherit no-underline
-                     after:content-['▼'] after:text-[0.6rem]">
-        Products
+              class="flex items-center justify-center gap-1.5 h-10 px-3.5
+                     rounded-md font-medium select-none
+                     hover:bg-gray-100 data-[state=open]:bg-gray-100">
+        Overview
+        <svg class="transition-transform duration-200
+                    [[data-state=open]>&]:rotate-180"
+             xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+             viewBox="0 0 12 12" fill="none" stroke="currentColor"
+             stroke-width="1.5" stroke-linecap="round"
+             stroke-linejoin="round">
+          <path d="m3 4.5 3 3 3-3"/>
+        </svg>
       </button>
       <div data-slot="navigation-menu-content" hidden>
-        <div class="grid grid-cols-2 gap-3 w-80 p-3">
-          <a href="#" class="block p-3 no-underline text-inherit rounded
-                            hover:bg-gray-100">
-            <div class="font-medium mb-1">Analytics</div>
-            <div class="text-sm text-gray-500">Real-time metrics</div>
+        <div class="grid grid-cols-2 gap-0 min-w-[400px] p-1.5">
+          <a href="#"
+             class="block rounded-md p-3 no-underline text-inherit
+                    hover:bg-gray-100">
+            <div class="m-0 mb-1 text-base font-medium leading-5">
+              Quick Start
+            </div>
+            <div class="m-0 text-sm leading-5 text-gray-500">
+              Get up and running in minutes
+            </div>
           </a>
-          <a href="#" class="block p-3 no-underline text-inherit rounded
-                            hover:bg-gray-100">
-            <div class="font-medium mb-1">Integrations</div>
-            <div class="text-sm text-gray-500">Connect your tools</div>
+          <a href="#"
+             class="block rounded-md p-3 no-underline text-inherit
+                    hover:bg-gray-100">
+            <div class="m-0 mb-1 text-base font-medium leading-5">
+              Accessibility
+            </div>
+            <div class="m-0 text-sm leading-5 text-gray-500">
+              Built-in ARIA and keyboard support
+            </div>
           </a>
         </div>
       </div>
     </li>
     <li data-slot="navigation-menu-item" class="static">
-      <a href="#" class="px-4 py-2.5 bg-transparent border-none cursor-pointer
-                         flex items-center text-inherit no-underline">Docs</a>
+      <a href="#"
+         class="flex items-center justify-center h-10 px-3.5 rounded-md
+                font-medium select-none no-underline text-inherit
+                hover:bg-gray-100">
+        GitHub
+      </a>
     </li>
     <div data-slot="navigation-menu-indicator"
          class="absolute bg-gray-100 rounded-md transition-all duration-150
@@ -99,35 +162,41 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
 <ComponentHero cssCode={cssCode} tailwindCode={tailwindCode}>
   <nav slot="preview-css" data-slot="navigation-menu" class="nav-menu">
     <ul data-slot="navigation-menu-list" class="nav-menu-list">
-      <li data-slot="navigation-menu-item" data-value="products" class="nav-menu-item">
-        <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Products</button>
+      <li data-slot="navigation-menu-item" data-value="overview" class="nav-menu-item">
+        <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">
+          Overview
+          <svg class="nav-menu-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.5 3 3 3-3"/></svg>
+        </button>
         <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
-          <div class="nav-menu-grid" style="width: 320px">
-            <a href="#" class="nav-menu-link"><div class="nav-menu-link-title">Analytics</div><div class="nav-menu-link-desc">Real-time metrics</div></a>
-            <a href="#" class="nav-menu-link"><div class="nav-menu-link-title">Integrations</div><div class="nav-menu-link-desc">Connect your tools</div></a>
+          <div class="nav-menu-grid" style="min-width: 400px">
+            <a href="#" class="nav-menu-link"><div class="nav-menu-link-title">Quick Start</div><div class="nav-menu-link-desc">Get up and running in minutes</div></a>
+            <a href="#" class="nav-menu-link"><div class="nav-menu-link-title">Accessibility</div><div class="nav-menu-link-desc">Built-in ARIA and keyboard support</div></a>
           </div>
         </div>
       </li>
       <li data-slot="navigation-menu-item" class="nav-menu-item">
-        <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">Docs</a>
+        <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">GitHub</a>
       </li>
       <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
     </ul>
     <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
   </nav>
-  <nav slot="preview-tailwind" data-slot="navigation-menu" class="relative">
+  <nav slot="preview-tailwind" data-slot="navigation-menu" class="relative min-w-max rounded-lg bg-gray-50 p-1 text-gray-900">
     <ul data-slot="navigation-menu-list" class="flex list-none relative p-0 m-0">
-      <li data-slot="navigation-menu-item" data-value="products" class="static">
-        <button data-slot="navigation-menu-trigger" class="px-4 py-2.5 bg-transparent border-none cursor-pointer flex items-center gap-1.5 text-inherit no-underline after:content-['▼'] after:text-[0.6rem] font-[inherit]">Products</button>
+      <li data-slot="navigation-menu-item" data-value="overview" class="static">
+        <button data-slot="navigation-menu-trigger" class="flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-md font-medium select-none hover:bg-gray-100 data-[state=open]:bg-gray-100 font-[inherit] bg-transparent border-none cursor-pointer">
+          Overview
+          <svg class="transition-transform duration-200 [[data-state=open]>&]:rotate-180" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.5 3 3 3-3"/></svg>
+        </button>
         <div data-slot="navigation-menu-content" hidden>
-          <div class="grid grid-cols-2 gap-3 w-80 p-3">
-            <a href="#" class="block p-3 no-underline text-inherit rounded hover:bg-gray-100"><div class="font-medium mb-1">Analytics</div><div class="text-sm text-gray-500">Real-time metrics</div></a>
-            <a href="#" class="block p-3 no-underline text-inherit rounded hover:bg-gray-100"><div class="font-medium mb-1">Integrations</div><div class="text-sm text-gray-500">Connect your tools</div></a>
+          <div class="grid grid-cols-2 gap-0 min-w-[400px] p-1.5">
+            <a href="#" class="block rounded-md p-3 no-underline text-inherit hover:bg-gray-100"><div class="m-0 mb-1 text-base font-medium leading-5">Quick Start</div><div class="m-0 text-sm leading-5 text-gray-500">Get up and running in minutes</div></a>
+            <a href="#" class="block rounded-md p-3 no-underline text-inherit hover:bg-gray-100"><div class="m-0 mb-1 text-base font-medium leading-5">Accessibility</div><div class="m-0 text-sm leading-5 text-gray-500">Built-in ARIA and keyboard support</div></a>
           </div>
         </div>
       </li>
       <li data-slot="navigation-menu-item" class="static">
-        <a href="#" class="px-4 py-2.5 bg-transparent border-none cursor-pointer flex items-center text-inherit no-underline">Docs</a>
+        <a href="#" class="flex items-center justify-center h-10 px-3.5 rounded-md font-medium select-none no-underline text-inherit hover:bg-gray-100">GitHub</a>
       </li>
       <div data-slot="navigation-menu-indicator" class="absolute bg-gray-100 rounded-md transition-all duration-150 pointer-events-none z-0"></div>
     </ul>
