@@ -201,6 +201,15 @@ const clampCoord = (value: number, min: number, max: number): number => {
   return Math.min(Math.max(value, min), max);
 };
 
+const rectOverlapsViewportAxis = (
+  start: number,
+  end: number,
+  min: number,
+  max: number
+): boolean => end > min && start < max;
+
+const isVerticalSide = (side: PopupSide): boolean => side === "top" || side === "bottom";
+
 export function computeFloatingPosition(input: ComputeFloatingPositionInput): FloatingPosition {
   const viewport = resolveViewportBounds(input);
   const allowedSides = input.allowedSides?.length
@@ -219,52 +228,74 @@ export function computeFloatingPosition(input: ComputeFloatingPositionInput): Fl
   );
 
   if (input.avoidCollisions) {
-    const candidateSides = [preferredSide, ...allowedSides.filter((value) => value !== preferredSide)];
-    let bestSide = side;
-    let bestPos = pos;
-    let bestOverflow = Number.POSITIVE_INFINITY;
+    const minX = viewport.x + input.collisionPadding;
+    const maxX = viewport.x + viewport.width - input.collisionPadding;
+    const minY = viewport.y + input.collisionPadding;
+    const maxY = viewport.y + viewport.height - input.collisionPadding;
+    const anchorOverlapsX = rectOverlapsViewportAxis(
+      input.anchorRect.left,
+      input.anchorRect.right,
+      viewport.x,
+      viewport.x + viewport.width
+    );
+    const anchorOverlapsY = rectOverlapsViewportAxis(
+      input.anchorRect.top,
+      input.anchorRect.bottom,
+      viewport.y,
+      viewport.y + viewport.height
+    );
+    const preferredMainAxisVisible = isVerticalSide(preferredSide) ? anchorOverlapsY : anchorOverlapsX;
 
-    for (const candidate of candidateSides) {
-      const candidatePos = computeBasePosition(
-        candidate,
-        input.align,
-        input.anchorRect,
-        input.contentRect,
-        input.sideOffset,
-        input.alignOffset
-      );
+    if (preferredMainAxisVisible) {
+      const candidateSides = [preferredSide, ...allowedSides.filter((value) => value !== preferredSide)];
+      let bestSide = side;
+      let bestPos = pos;
+      let bestOverflow = Number.POSITIVE_INFINITY;
 
-      const overflow = getMainAxisOverflow(
-        candidate,
-        candidatePos,
-        input.contentRect,
-        viewport,
-        input.collisionPadding
-      );
+      for (const candidate of candidateSides) {
+        const candidatePos = computeBasePosition(
+          candidate,
+          input.align,
+          input.anchorRect,
+          input.contentRect,
+          input.sideOffset,
+          input.alignOffset
+        );
 
-      if (overflow <= 0) {
-        bestSide = candidate;
-        bestPos = candidatePos;
-        bestOverflow = overflow;
-        break;
+        const overflow = getMainAxisOverflow(
+          candidate,
+          candidatePos,
+          input.contentRect,
+          viewport,
+          input.collisionPadding
+        );
+
+        if (overflow <= 0) {
+          bestSide = candidate;
+          bestPos = candidatePos;
+          bestOverflow = overflow;
+          break;
+        }
+
+        if (overflow < bestOverflow) {
+          bestSide = candidate;
+          bestPos = candidatePos;
+          bestOverflow = overflow;
+        }
       }
 
-      if (overflow < bestOverflow) {
-        bestSide = candidate;
-        bestPos = candidatePos;
-        bestOverflow = overflow;
-      }
+      side = bestSide;
+      pos = bestPos;
     }
 
-    side = bestSide;
-    pos = bestPos;
-
-    const minX = viewport.x + input.collisionPadding;
-    const maxX = viewport.x + viewport.width - input.contentRect.width - input.collisionPadding;
-    const minY = viewport.y + input.collisionPadding;
-    const maxY = viewport.y + viewport.height - input.contentRect.height - input.collisionPadding;
-    pos.x = clampCoord(pos.x, minX, maxX);
-    pos.y = clampCoord(pos.y, minY, maxY);
+    const maxClampedX = viewport.x + viewport.width - input.contentRect.width - input.collisionPadding;
+    const maxClampedY = viewport.y + viewport.height - input.contentRect.height - input.collisionPadding;
+    if (anchorOverlapsX) {
+      pos.x = clampCoord(pos.x, minX, maxClampedX);
+    }
+    if (anchorOverlapsY) {
+      pos.y = clampCoord(pos.y, minY, maxClampedY);
+    }
   }
 
   return { x: pos.x, y: pos.y, side, align: input.align };

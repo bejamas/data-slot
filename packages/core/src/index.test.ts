@@ -824,6 +824,46 @@ describe('core/popup', () => {
     expect(pos.side).toBe('right')
   })
 
+  it('computeFloatingPosition keeps the preferred vertical side when the anchor is fully below the viewport', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(100, 960, 60, 20),
+      contentRect: rect(0, 0, 120, 80),
+      side: 'bottom',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 8,
+      viewportWidth: 800,
+      viewportHeight: 700,
+      allowedSides: ['top', 'bottom'],
+    })
+
+    expect(pos.side).toBe('bottom')
+    expect(pos.x).toBe(100)
+    expect(pos.y).toBe(984)
+  })
+
+  it('computeFloatingPosition keeps the preferred vertical side when the anchor is fully above the viewport', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(100, -120, 60, 20),
+      contentRect: rect(0, 0, 120, 80),
+      side: 'top',
+      align: 'start',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 8,
+      viewportWidth: 800,
+      viewportHeight: 700,
+      allowedSides: ['top', 'bottom'],
+    })
+
+    expect(pos.side).toBe('top')
+    expect(pos.x).toBe(100)
+    expect(pos.y).toBe(-204)
+  })
+
   it('computeFloatingPosition uses visualViewport offsets while clamping', () => {
     const original = Object.getOwnPropertyDescriptor(window, 'visualViewport')
     const fakeVisualViewport = {

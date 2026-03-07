@@ -196,6 +196,7 @@ export function createCombobox(
   let currentValue: string | null = defaultValue;
   let highlightedIndex = -1;
   let keyboardMode = false;
+  let openRenderedSide: Side | null = null;
   const cleanups: Array<() => void> = [];
   const doc = root.ownerDocument ?? document;
   const win = doc.defaultView ?? window;
@@ -494,7 +495,7 @@ export function createCombobox(
   // Positioning
   const updatePosition = () => {
     const positioner = portal.container as HTMLElement;
-    const effectiveSide: Side = isMobileTouchEnvironment ? "bottom" : preferredSide;
+    const effectiveSide: Side = isMobileTouchEnvironment ? "bottom" : (openRenderedSide ?? preferredSide);
     const effectiveAvoidCollisions = isMobileTouchEnvironment ? false : avoidCollisions;
     // Anchor to root element (contains both input and trigger)
     const anchorRect = rootElement.getBoundingClientRect();
@@ -526,6 +527,9 @@ export function createCombobox(
     positioner.style.setProperty("--transform-origin", transformOrigin);
     positioner.style.willChange = "transform";
     positioner.style.margin = "0";
+    if (!isMobileTouchEnvironment && effectiveAvoidCollisions) {
+      openRenderedSide = pos.side as Side;
+    }
     content.setAttribute("data-side", pos.side);
     content.setAttribute("data-align", pos.align);
     if (positioner !== content) {
@@ -608,6 +612,7 @@ export function createCombobox(
 
     if (open) {
       isOpen = true;
+      openRenderedSide = null;
       setAria(input, "expanded", true);
       portal.mount();
       content.hidden = false;
@@ -643,6 +648,7 @@ export function createCombobox(
       });
     } else {
       isOpen = false;
+      openRenderedSide = null;
       setAria(input, "expanded", false);
       setDataState("closed");
       clearHighlight();

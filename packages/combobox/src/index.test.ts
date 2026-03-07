@@ -1642,6 +1642,54 @@ describe("Combobox", () => {
       controller.destroy();
     });
 
+    it("keeps the popup attached when the anchor scrolls below the viewport", async () => {
+      const { root, content, controller } = setup({ side: "bottom", avoidCollisions: true });
+
+      let anchorTop = 100;
+      const anchorLeft = 40;
+      const anchorWidth = 180;
+      const anchorHeight = 36;
+
+      (root as HTMLElement).getBoundingClientRect = () =>
+        ({
+          x: anchorLeft,
+          y: anchorTop,
+          top: anchorTop,
+          left: anchorLeft,
+          width: anchorWidth,
+          height: anchorHeight,
+          right: anchorLeft + anchorWidth,
+          bottom: anchorTop + anchorHeight,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 220,
+          height: 140,
+          right: 220,
+          bottom: 140,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      controller.open();
+      await waitForRaf();
+      await waitForRaf();
+
+      anchorTop = 1000;
+      window.dispatchEvent(new Event("scroll"));
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(content.getAttribute("data-side")).toBe("bottom");
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(1040);
+      controller.destroy();
+    });
+
     it("on touch environments, side option is hard-overridden to bottom", () => {
       const restoreMobile = mockMobileEnvironment();
       try {
@@ -1685,6 +1733,51 @@ describe("Combobox", () => {
 
       controller.open();
       expect(content.getAttribute("data-side")).toBe("top");
+      controller.destroy();
+    });
+
+    it("keeps a flipped top side sticky for the rest of the open session", async () => {
+      const { root, content, controller } = setup({ side: "bottom", avoidCollisions: true });
+
+      let anchorTop = 740;
+
+      (root as HTMLElement).getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: anchorTop,
+          top: anchorTop,
+          left: 0,
+          width: 200,
+          height: 32,
+          right: 200,
+          bottom: anchorTop + 32,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 220,
+          height: 140,
+          right: 220,
+          bottom: 140,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      controller.open();
+      expect(content.getAttribute("data-side")).toBe("top");
+
+      anchorTop = 400;
+      window.dispatchEvent(new Event("scroll"));
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(content.getAttribute("data-side")).toBe("top");
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(256);
+
       controller.destroy();
     });
 
