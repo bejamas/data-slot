@@ -5,11 +5,13 @@ description: Headless action menu component for vanilla JavaScript with keyboard
 
 import DemoRuntime from "../../../components/starlight/DemoRuntime.astro";
 import ComponentDocPage from "../../../components/docs/ComponentDocPage.astro";
+import DropdownMenuHero from "../../../components/heroes/DropdownMenuHero.astro";
 import DropdownMenu from "../../../components/examples/DropdownMenu.astro";
 import { componentDocs } from "../../../data/component-docs";
 
 <DemoRuntime />
 
 <ComponentDocPage doc={componentDocs["dropdown-menu"]}>
+  <DropdownMenuHero slot="hero" />
   <DropdownMenu />
 </ComponentDocPage>

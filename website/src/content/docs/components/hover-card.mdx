@@ -5,11 +5,13 @@ description: Headless hover and focus preview card for vanilla JavaScript.
 
 import DemoRuntime from "../../../components/starlight/DemoRuntime.astro";
 import ComponentDocPage from "../../../components/docs/ComponentDocPage.astro";
+import HoverCardHero from "../../../components/heroes/HoverCardHero.astro";
 import HoverCard from "../../../components/examples/HoverCard.astro";
 import { componentDocs } from "../../../data/component-docs";
 
 <DemoRuntime />
 
 <ComponentDocPage doc={componentDocs["hover-card"]}>
+  <HoverCardHero slot="hero" />
   <HoverCard />
 </ComponentDocPage>

@@ -1,0 +1,52 @@
+---
+import ComponentHero from "../docs/ComponentHero.astro";
+
+const cssCode = `<div data-slot="tooltip" class="tooltip-root">
+  <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Hover me</button>
+  <div data-slot="tooltip-content" data-side="top" class="tooltip-content">
+    Tooltip content
+  </div>
+</div>
+
+<style>
+  .tooltip-root { display: inline-block; }
+  .tooltip-trigger-btn {
+    padding: 0.5rem 1rem; background: none;
+    border: 1px dashed #ccc; cursor: help;
+  }
+  .tooltip-content {
+    position: absolute; background: #1a1a1a; color: #faf9f7;
+    padding: 0.5rem 0.75rem; font-size: 0.85rem;
+    white-space: nowrap; z-index: 50;
+    opacity: 0; visibility: hidden; pointer-events: none;
+  }
+  .tooltip-content[data-open] {
+    opacity: 1; visibility: visible; pointer-events: auto;
+  }
+</style>`;
+
+const tailwindCode = `<div data-slot="tooltip" class="inline-block">
+  <button data-slot="tooltip-trigger"
+          class="px-4 py-2 bg-transparent border border-dashed border-gray-300
+                 cursor-help underline decoration-dotted underline-offset-2">
+    Hover me
+  </button>
+  <div data-slot="tooltip-content" data-side="top"
+       class="absolute bg-gray-900 text-white px-3 py-2 text-sm
+              whitespace-nowrap z-50 opacity-0 pointer-events-none
+              data-[open]:opacity-100 data-[open]:pointer-events-auto">
+    Tooltip content
+  </div>
+</div>`;
+---
+
+<ComponentHero cssCode={cssCode} tailwindCode={tailwindCode}>
+  <div slot="preview-css" data-slot="tooltip" class="tooltip-root">
+    <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Hover me</button>
+    <div data-slot="tooltip-content" data-side="top" class="tooltip-content">Tooltip content</div>
+  </div>
+  <div slot="preview-tailwind" data-slot="tooltip" class="inline-block">
+    <button data-slot="tooltip-trigger" class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2">Hover me</button>
+    <div data-slot="tooltip-content" data-side="top" class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none data-[open]:opacity-100 data-[open]:pointer-events-auto">Tooltip content</div>
+  </div>
+</ComponentHero>

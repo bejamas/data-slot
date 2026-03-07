@@ -1,0 +1,81 @@
+---
+import ComponentHero from "../docs/ComponentHero.astro";
+
+const cssCode = `<div data-slot="tabs" data-default-value="overview">
+  <div data-slot="tabs-list" class="tabs-list">
+    <button data-slot="tabs-trigger" data-value="overview" class="tabs-trigger">Overview</button>
+    <button data-slot="tabs-trigger" data-value="usage" class="tabs-trigger">Usage</button>
+  </div>
+  <div data-slot="tabs-content" data-value="overview" class="tabs-content">
+    Tabs organize content into switchable panels.
+  </div>
+  <div data-slot="tabs-content" data-value="usage" class="tabs-content">
+    Add data-slot attributes and call createTabs().
+  </div>
+</div>
+
+<style>
+  .tabs-list { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 1rem; }
+  .tabs-trigger {
+    padding: 0.5rem 1rem; background: none; border: none;
+    border-bottom: 2px solid transparent; cursor: pointer; color: #666;
+  }
+  .tabs-trigger[data-state="active"] {
+    color: #1a1a1a; border-bottom-color: #1a1a1a; font-weight: 500;
+  }
+  .tabs-content { padding: 0.5rem 0; }
+  .tabs-content[hidden] { display: none; }
+</style>`;
+
+const tailwindCode = `<div data-slot="tabs" data-default-value="overview">
+  <div data-slot="tabs-list" class="flex border-b border-gray-300 mb-4">
+    <button
+      data-slot="tabs-trigger" data-value="overview"
+      class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer
+             data-[state=active]:text-gray-900 data-[state=active]:border-gray-900
+             data-[state=active]:font-medium"
+    >Overview</button>
+    <button
+      data-slot="tabs-trigger" data-value="usage"
+      class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer
+             data-[state=active]:text-gray-900 data-[state=active]:border-gray-900
+             data-[state=active]:font-medium"
+    >Usage</button>
+  </div>
+  <div data-slot="tabs-content" data-value="overview"
+       class="py-2 hidden data-[state=active]:block">
+    Tabs organize content into switchable panels.
+  </div>
+  <div data-slot="tabs-content" data-value="usage"
+       class="py-2 hidden data-[state=active]:block">
+    Add data-slot attributes and call createTabs().
+  </div>
+</div>`;
+---
+
+<ComponentHero cssCode={cssCode} tailwindCode={tailwindCode}>
+  <div slot="preview-css" data-slot="tabs" data-default-value="overview">
+    <div data-slot="tabs-list" class="tabs-list">
+      <button data-slot="tabs-trigger" data-value="overview" class="tabs-trigger">Overview</button>
+      <button data-slot="tabs-trigger" data-value="usage" class="tabs-trigger">Usage</button>
+    </div>
+    <div data-slot="tabs-content" data-value="overview" class="tabs-content">
+      Tabs organize content into switchable panels.
+    </div>
+    <div data-slot="tabs-content" data-value="usage" class="tabs-content">
+      Add data-slot attributes and call createTabs().
+    </div>
+  </div>
+  <div slot="preview-tailwind" data-slot="tabs" data-default-value="overview">
+    <div data-slot="tabs-list" class="flex border-b border-gray-300 mb-4">
+      <button data-slot="tabs-trigger" data-value="overview" class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer data-[state=active]:text-gray-900 data-[state=active]:border-gray-900 data-[state=active]:font-medium">Overview</button>
+      <button data-slot="tabs-trigger" data-value="usage" class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer data-[state=active]:text-gray-900 data-[state=active]:border-gray-900 data-[state=active]:font-medium">Usage</button>
+    </div>
+    <div data-slot="tabs-content" data-value="overview" class="py-2 hidden data-[state=active]:block">
+      Tabs organize content into switchable panels.
+    </div>
+    <div data-slot="tabs-content" data-value="usage" class="py-2 hidden data-[state=active]:block">
+      Add data-slot attributes and call createTabs().
+    </div>
+  </div>
+</ComponentHero>

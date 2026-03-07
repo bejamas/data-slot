@@ -5,11 +5,13 @@ description: Headless navigation menu component for building complex site menus 
 
 import DemoRuntime from "../../../components/starlight/DemoRuntime.astro";
 import ComponentDocPage from "../../../components/docs/ComponentDocPage.astro";
+import NavigationMenuHero from "../../../components/heroes/NavigationMenuHero.astro";
 import NavigationMenu from "../../../components/examples/NavigationMenu.astro";
 import { componentDocs } from "../../../data/component-docs";
 
 <DemoRuntime />
 
 <ComponentDocPage doc={componentDocs["navigation-menu"]}>
+  <NavigationMenuHero slot="hero" />
   <NavigationMenu />
 </ComponentDocPage>

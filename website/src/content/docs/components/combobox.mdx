@@ -5,11 +5,13 @@ description: Headless autocomplete input with filtering for vanilla JavaScript.
 
 import DemoRuntime from "../../../components/starlight/DemoRuntime.astro";
 import ComponentDocPage from "../../../components/docs/ComponentDocPage.astro";
+import ComboboxHero from "../../../components/heroes/ComboboxHero.astro";
 import Combobox from "../../../components/examples/Combobox.astro";
 import { componentDocs } from "../../../data/component-docs";
 
 <DemoRuntime />
 
 <ComponentDocPage doc={componentDocs["combobox"]}>
+  <ComboboxHero slot="hero" />
   <Combobox />
 </ComponentDocPage>

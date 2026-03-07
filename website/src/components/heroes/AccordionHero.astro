@@ -1,0 +1,129 @@
+---
+import ComponentHero from "../docs/ComponentHero.astro";
+
+const cssCode = `<div data-slot="accordion" data-default-value="what">
+  <div data-slot="accordion-item" data-value="what" class="accordion-item">
+    <button data-slot="accordion-trigger" class="accordion-trigger">
+      What is data-slot?
+    </button>
+    <div class="accordion-content-wrapper">
+      <div data-slot="accordion-content" class="accordion-content">
+        <div class="accordion-content-inner">
+          Headless UI components driven by HTML attributes.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div data-slot="accordion-item" data-value="how" class="accordion-item">
+    <button data-slot="accordion-trigger" class="accordion-trigger">
+      How does it work?
+    </button>
+    <div class="accordion-content-wrapper">
+      <div data-slot="accordion-content" class="accordion-content">
+        <div class="accordion-content-inner">
+          Add data-slot attributes, call create(), done.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .accordion-item { border-bottom: 1px dashed #ccc; }
+  .accordion-item:last-child { border-bottom: none; }
+  .accordion-trigger {
+    width: 100%; padding: 0.75rem 0; background: none; border: none;
+    text-align: left; cursor: pointer; display: flex;
+    justify-content: space-between; align-items: center;
+  }
+  .accordion-trigger::after { content: "+"; color: #666; transition: transform 0.25s; }
+  .accordion-trigger[aria-expanded="true"]::after { transform: rotate(45deg); }
+  .accordion-content-wrapper {
+    display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s;
+  }
+  .accordion-item[data-state="open"] .accordion-content-wrapper {
+    grid-template-rows: 1fr;
+  }
+  .accordion-content { overflow: hidden; min-height: 0; }
+  .accordion-content[hidden] { display: block !important; }
+  .accordion-content-inner { padding: 0 0 1rem; color: #666; }
+</style>`;
+
+const tailwindCode = `<div data-slot="accordion" data-default-value="what">
+  <div data-slot="accordion-item" data-value="what"
+       class="border-b border-dashed border-gray-300 last:border-b-0 group">
+    <button data-slot="accordion-trigger"
+            class="w-full py-3 bg-transparent border-none text-left cursor-pointer
+                   flex justify-between items-center after:content-['+']
+                   after:text-gray-500 after:transition-transform after:duration-300
+                   aria-expanded:after:rotate-45">
+      What is data-slot?
+    </button>
+    <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300
+                group-data-[state=open]:grid-rows-[1fr]">
+      <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+        <div class="pb-4 text-gray-500">
+          Headless UI components driven by HTML attributes.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div data-slot="accordion-item" data-value="how"
+       class="border-b border-dashed border-gray-300 last:border-b-0 group">
+    <button data-slot="accordion-trigger"
+            class="w-full py-3 bg-transparent border-none text-left cursor-pointer
+                   flex justify-between items-center after:content-['+']
+                   after:text-gray-500 after:transition-transform after:duration-300
+                   aria-expanded:after:rotate-45">
+      How does it work?
+    </button>
+    <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300
+                group-data-[state=open]:grid-rows-[1fr]">
+      <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+        <div class="pb-4 text-gray-500">
+          Add data-slot attributes, call create(), done.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+---
+
+<ComponentHero cssCode={cssCode} tailwindCode={tailwindCode}>
+  <div slot="preview-css" data-slot="accordion" id="hero-accordion-css" data-default-value="what">
+    <div data-slot="accordion-item" data-value="what" class="accordion-item">
+      <button data-slot="accordion-trigger" class="accordion-trigger">What is data-slot?</button>
+      <div class="accordion-content-wrapper">
+        <div data-slot="accordion-content" class="accordion-content">
+          <div class="accordion-content-inner">Headless UI components driven by HTML attributes.</div>
+        </div>
+      </div>
+    </div>
+    <div data-slot="accordion-item" data-value="how" class="accordion-item">
+      <button data-slot="accordion-trigger" class="accordion-trigger">How does it work?</button>
+      <div class="accordion-content-wrapper">
+        <div data-slot="accordion-content" class="accordion-content">
+          <div class="accordion-content-inner">Add data-slot attributes, call create(), done.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div slot="preview-tailwind" data-slot="accordion" id="hero-accordion-tw" data-default-value="what">
+    <div data-slot="accordion-item" data-value="what" class="border-b border-dashed border-gray-300 last:border-b-0 group">
+      <button data-slot="accordion-trigger" class="w-full py-3 bg-transparent border-none text-left cursor-pointer flex justify-between items-center after:content-['+'] after:text-gray-500 after:transition-transform after:duration-300 aria-expanded:after:rotate-45">What is data-slot?</button>
+      <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-data-[state=open]:grid-rows-[1fr]">
+        <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+          <div class="pb-4 text-gray-500">Headless UI components driven by HTML attributes.</div>
+        </div>
+      </div>
+    </div>
+    <div data-slot="accordion-item" data-value="how" class="border-b border-dashed border-gray-300 last:border-b-0 group">
+      <button data-slot="accordion-trigger" class="w-full py-3 bg-transparent border-none text-left cursor-pointer flex justify-between items-center after:content-['+'] after:text-gray-500 after:transition-transform after:duration-300 aria-expanded:after:rotate-45">How does it work?</button>
+      <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-data-[state=open]:grid-rows-[1fr]">
+        <div data-slot="accordion-content" class="overflow-hidden min-h-0">
+          <div class="pb-4 text-gray-500">Add data-slot attributes, call create(), done.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</ComponentHero>

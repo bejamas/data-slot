@@ -1,0 +1,102 @@
+---
+import ComponentHero from "../docs/ComponentHero.astro";
+
+const cssCode = `<div data-slot="carousel" data-loop data-drag class="carousel">
+  <div data-slot="carousel-content" class="carousel-content">
+    <div data-slot="carousel-item" class="carousel-item">01</div>
+    <div data-slot="carousel-item" class="carousel-item">02</div>
+    <div data-slot="carousel-item" class="carousel-item">03</div>
+  </div>
+  <button data-slot="carousel-previous" class="carousel-nav" aria-label="Previous">‹</button>
+  <button data-slot="carousel-next" class="carousel-nav" aria-label="Next">›</button>
+</div>
+
+<style>
+  .carousel { position: relative; width: 100%; }
+  .carousel-content {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    scrollbar-width: none; border-radius: 0.5rem; background: #f6f6f6;
+  }
+  .carousel-content::-webkit-scrollbar { display: none; }
+  .carousel-item {
+    flex: 0 0 100%; scroll-snap-align: start;
+    display: grid; place-items: center; min-height: 120px;
+    font-size: 1.5rem; font-weight: 700; color: #999;
+  }
+  .carousel-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: #faf9f7; border: 1px solid #ccc;
+    width: 2rem; height: 2rem; border-radius: 50%; cursor: pointer;
+    font-size: 1.25rem; display: grid; place-items: center;
+  }
+  .carousel-nav:first-of-type { left: 0.5rem; }
+  .carousel-nav:last-of-type { right: 0.5rem; }
+</style>`;
+
+const tailwindCode = `<div data-slot="carousel" data-loop data-drag class="relative w-full">
+  <div data-slot="carousel-content"
+       class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none
+              rounded-lg bg-gray-100">
+    <div data-slot="carousel-item"
+         class="flex-none w-full snap-start grid place-items-center
+                min-h-[120px] text-2xl font-bold text-gray-400">01</div>
+    <div data-slot="carousel-item"
+         class="flex-none w-full snap-start grid place-items-center
+                min-h-[120px] text-2xl font-bold text-gray-400">02</div>
+    <div data-slot="carousel-item"
+         class="flex-none w-full snap-start grid place-items-center
+                min-h-[120px] text-2xl font-bold text-gray-400">03</div>
+  </div>
+  <button data-slot="carousel-previous" aria-label="Previous"
+          class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8
+                 bg-white border border-gray-300 rounded-full cursor-pointer
+                 grid place-items-center text-lg">‹</button>
+  <button data-slot="carousel-next" aria-label="Next"
+          class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8
+                 bg-white border border-gray-300 rounded-full cursor-pointer
+                 grid place-items-center text-lg">›</button>
+</div>`;
+---
+
+<ComponentHero cssCode={cssCode} tailwindCode={tailwindCode}>
+  <div slot="preview-css" data-slot="carousel" data-loop data-drag class="hero-carousel">
+    <div data-slot="carousel-content" class="hero-carousel-content">
+      <div data-slot="carousel-item" class="hero-carousel-item">01</div>
+      <div data-slot="carousel-item" class="hero-carousel-item">02</div>
+      <div data-slot="carousel-item" class="hero-carousel-item">03</div>
+    </div>
+    <button data-slot="carousel-previous" class="hero-carousel-nav hero-carousel-prev" aria-label="Previous">‹</button>
+    <button data-slot="carousel-next" class="hero-carousel-nav hero-carousel-next" aria-label="Next">›</button>
+  </div>
+  <div slot="preview-tailwind" data-slot="carousel" data-loop data-drag class="relative w-full">
+    <div data-slot="carousel-content" class="flex overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [-webkit-overflow-scrolling:touch] rounded-lg bg-gray-100 [&::-webkit-scrollbar]:hidden">
+      <div data-slot="carousel-item" class="flex-none w-full snap-start grid place-items-center min-h-[120px] text-2xl font-bold text-gray-400">01</div>
+      <div data-slot="carousel-item" class="flex-none w-full snap-start grid place-items-center min-h-[120px] text-2xl font-bold text-gray-400">02</div>
+      <div data-slot="carousel-item" class="flex-none w-full snap-start grid place-items-center min-h-[120px] text-2xl font-bold text-gray-400">03</div>
+    </div>
+    <button data-slot="carousel-previous" aria-label="Previous" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-gray-300 rounded-full cursor-pointer grid place-items-center text-lg">‹</button>
+    <button data-slot="carousel-next" aria-label="Next" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-gray-300 rounded-full cursor-pointer grid place-items-center text-lg">›</button>
+  </div>
+</ComponentHero>
+
+<style>
+  .hero-carousel { position: relative; width: 100%; }
+  .hero-carousel-content {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    scrollbar-width: none; border-radius: 0.5rem; background: #f6f6f6;
+  }
+  .hero-carousel-content::-webkit-scrollbar { display: none; }
+  .hero-carousel-item {
+    flex: 0 0 100%; scroll-snap-align: start;
+    display: grid; place-items: center; min-height: 120px;
+    font-size: 1.5rem; font-weight: 700; color: #999;
+  }
+  .hero-carousel-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: #faf9f7; border: 1px solid #ccc;
+    width: 2rem; height: 2rem; border-radius: 50%; cursor: pointer;
+    font-size: 1.25rem; display: grid; place-items: center; font-family: inherit;
+  }
+  .hero-carousel-prev { left: 0.5rem; }
+  .hero-carousel-next { right: 0.5rem; }
+</style>

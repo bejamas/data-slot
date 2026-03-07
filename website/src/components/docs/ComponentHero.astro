@@ -1,0 +1,250 @@
+---
+import { Code } from "astro:components";
+
+interface Props {
+  cssCode: string;
+  tailwindCode: string;
+  filename?: string;
+}
+
+const { cssCode, tailwindCode, filename = "index.html" } = Astro.props;
+---
+
+<div class="component-hero not-content">
+  <div class="component-hero__preview">
+    <div class="preview-css">
+      <slot name="preview-css" />
+    </div>
+    <div class="preview-tailwind">
+      <slot name="preview-tailwind" />
+    </div>
+  </div>
+  <div class="component-hero__code">
+    <div class="component-hero__toolbar">
+      <span class="component-hero__filename">{filename}</span>
+      <select class="component-hero__mode-select" aria-label="Code style mode">
+        <option value="css">CSS</option>
+        <option value="tailwind">Tailwind</option>
+      </select>
+      <button class="component-hero__copy" type="button" aria-label="Copy code">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        <span class="component-hero__copy-label">Copy</span>
+      </button>
+    </div>
+    <div class="component-hero__code-body" data-collapsed>
+      <div class="code-css">
+        <Code code={cssCode} lang="html" theme="github-light" />
+      </div>
+      <div class="code-tailwind">
+        <Code code={tailwindCode} lang="html" theme="github-light" />
+      </div>
+    </div>
+    <button class="component-hero__toggle" type="button">
+      <span class="component-hero__toggle-show">Show code</span>
+      <span class="component-hero__toggle-hide">Hide code</span>
+    </button>
+  </div>
+</div>
+
+<script>
+  {
+    const heroes = document.querySelectorAll<HTMLElement>(".component-hero");
+
+    for (const hero of heroes) {
+      const codeBody = hero.querySelector<HTMLElement>(".component-hero__code-body");
+      const toggleBtn = hero.querySelector<HTMLElement>(".component-hero__toggle");
+      const copyBtn = hero.querySelector<HTMLElement>(".component-hero__copy");
+      const copyLabel = hero.querySelector<HTMLElement>(".component-hero__copy-label");
+      const modeSelect = hero.querySelector<HTMLSelectElement>(".component-hero__mode-select");
+
+      if (!codeBody || !toggleBtn) continue;
+
+      // Toggle show/hide
+      toggleBtn.addEventListener("click", () => {
+        const collapsed = codeBody.hasAttribute("data-collapsed");
+        if (collapsed) {
+          codeBody.removeAttribute("data-collapsed");
+        } else {
+          codeBody.setAttribute("data-collapsed", "");
+        }
+      });
+
+      // Copy to clipboard
+      if (copyBtn) {
+        copyBtn.addEventListener("click", () => {
+          const mode = document.documentElement.getAttribute("data-docs-demo-mode") || "css";
+          const codeEl = codeBody.querySelector<HTMLElement>(
+            mode === "tailwind" ? ".code-tailwind pre code" : ".code-css pre code"
+          );
+          const text = codeEl?.textContent ?? "";
+          navigator.clipboard.writeText(text).then(() => {
+            if (copyLabel) {
+              copyLabel.textContent = "Copied!";
+              setTimeout(() => { copyLabel.textContent = "Copy"; }, 1500);
+            }
+          });
+        });
+      }
+
+      // Mode select: sync select -> html attribute, and html attribute -> select
+      if (modeSelect) {
+        const syncSelectFromAttr = () => {
+          const mode = document.documentElement.getAttribute("data-docs-demo-mode") || "css";
+          modeSelect.value = mode;
+        };
+
+        syncSelectFromAttr();
+
+        modeSelect.addEventListener("change", () => {
+          document.documentElement.setAttribute("data-docs-demo-mode", modeSelect.value);
+        });
+
+        const observer = new MutationObserver(syncSelectFromAttr);
+        observer.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ["data-docs-demo-mode"],
+        });
+      }
+    }
+  }
+</script>
+
+<style>
+  .component-hero {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    margin-block: 1.5rem;
+    border: 1px solid var(--sl-color-gray-5);
+  }
+
+  .component-hero__preview {
+    padding: 2.5rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    background: var(--sl-color-gray-7, #f5f5f5);
+  }
+
+  .component-hero__code {
+    background: var(--sl-color-bg, #fff);
+    border-top: 1px solid var(--sl-color-gray-5);
+  }
+
+  .component-hero__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--sl-color-gray-5);
+    font-size: 0.75rem;
+    color: var(--sl-color-gray-2);
+  }
+
+  .component-hero__filename {
+    font-family: var(--sl-font-mono);
+  }
+
+  .component-hero__mode-select {
+    margin-left: auto;
+    padding: 0.15rem 0.35rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg, #fff);
+    color: var(--sl-color-gray-2);
+    font-size: 0.7rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .component-hero__mode-select:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 1px;
+  }
+
+  .component-hero__copy {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    background: none;
+    border: 1px solid var(--sl-color-gray-5);
+    color: var(--sl-color-gray-2);
+    cursor: pointer;
+    font-size: 0.7rem;
+    font-family: inherit;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .component-hero__copy:hover {
+    color: var(--sl-color-gray-1);
+    border-color: var(--sl-color-gray-4);
+  }
+
+  .component-hero__code-body {
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .component-hero__code-body[data-collapsed] {
+    max-height: 6rem;
+    position: relative;
+  }
+
+  .component-hero__code-body[data-collapsed]::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3rem;
+    background: linear-gradient(to bottom, transparent, var(--sl-color-bg, #fff));
+    pointer-events: none;
+  }
+
+  .component-hero__code-body :global(.astro-code) {
+    margin: 0;
+    padding: 1rem;
+    background: transparent !important;
+    font-size: 0.82rem;
+    border-radius: 0;
+  }
+
+  .component-hero__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.5rem;
+    background: none;
+    border: none;
+    border-top: 1px solid var(--sl-color-gray-5);
+    color: var(--sl-color-gray-3);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: inherit;
+    transition: color 0.15s;
+  }
+
+  .component-hero__toggle:hover {
+    color: var(--sl-color-gray-1);
+  }
+
+  .component-hero__code-body[data-collapsed] ~ .component-hero__toggle .component-hero__toggle-hide {
+    display: none;
+  }
+
+  .component-hero__code-body:not([data-collapsed]) ~ .component-hero__toggle .component-hero__toggle-show {
+    display: none;
+  }
+
+  @media (max-width: 50rem) {
+    .component-hero__preview {
+      padding: 1.5rem 1rem;
+    }
+  }
+</style>

@@ -1,0 +1,114 @@
+---
+title: Slots
+description: Learn why data-slot uses slot-based markup as the public contract between your HTML, styling, and behavior.
+---
+
+## What slots are
+
+In data-slot, a slot is a stable part name authored directly in your markup:
+
+```html
+<div data-slot="tabs">
+  <div data-slot="tabs-list">
+    <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+  </div>
+
+  <div data-slot="tabs-content" data-value="one">Content One</div>
+</div>
+```
+
+Those `data-slot` values are not just CSS selectors. They define the parts of a component: root, list, trigger, content, overlay, portal, indicator, and so on. The library reads those parts and wires behavior onto them.
+
+## Why data-slot uses slots
+
+The project is built around a simple split:
+
+- Keep markup and styling in your app.
+- Move interaction, accessibility, and keyboard behavior into a versioned dependency.
+
+That solves a real problem with copy-paste component systems. Copying HTML and CSS is useful because you keep ownership of structure and presentation. Copying focus management, roving tabindex logic, dismissal behavior, and ARIA wiring is much less useful, because every bug fix turns into manual re-copy work.
+
+Slots give data-slot a stable authored contract, so the behavior layer can upgrade independently from your templates.
+
+## The idea
+
+Slots let the library enhance static HTML instead of rendering UI for you.
+
+You author the structure:
+
+```html
+<div data-slot="tabs" data-default-value="one">
+  <div data-slot="tabs-list">
+    <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+    <button data-slot="tabs-trigger" data-value="two">Tab Two</button>
+  </div>
+
+  <div data-slot="tabs-content" data-value="one">Content One</div>
+  <div data-slot="tabs-content" data-value="two">Content Two</div>
+</div>
+```
+
+Then the controller layer enhances it:
+
+```ts
+import { create } from "@data-slot/tabs";
+
+const controllers = create();
+controllers[0]?.select("two");
+```
+
+The markup stays inspectable and portable. The behavior stays centralized, testable, and versioned.
+
+## Inspiration
+
+shadcn/ui popularized `data-slot` as a stable hook for styling and composition. data-slot takes that same idea and treats it as a behavior contract too.
+
+The broader inspiration is the primitives-layer model used by libraries like Radix and Base UI:
+
+- the authored markup should stay composable
+- the interaction logic should live upstream
+- fixes to accessibility and behavior should ship through package updates
+
+data-slot applies that model to the vanilla web. Instead of framework components defining the parts, your HTML does.
+
+## What slots are not
+
+- Slots are not styling presets. They tell the library what each part is, not how it should look.
+- Slots are not a runtime templating system. data-slot does not render component trees for you.
+- Slots are not all required. Many components have optional authored or generated slots such as indicators, portals, or positioners.
+- Slots are not interchangeable between components. Each package defines its own public slot names and expectations.
+
+## Authoring rules
+
+- Use the exact slot names documented on each component page.
+- Treat required slots as the minimum structure the controller expects.
+- Use optional slots only when you need that behavior or styling surface.
+- Check the component API reference for per-slot options, output attributes, and CSS variables.
+- Prefer component pages as the source of truth for slot semantics and constraints.
+
+## Relationship to styling
+
+Slots are the structural hook. Styling usually happens through the state and accessibility hooks the controller adds on top:
+
+- `data-state`
+- `data-disabled`
+- `hidden`
+- ARIA attributes and roles
+- component-specific CSS variables
+
+That means you can target both the part and its runtime state:
+
+```css
+[data-slot="tabs-trigger"][data-state="active"] {
+  border-bottom-color: currentColor;
+}
+```
+
+Read [Styling](/getting-started/styling/) for the shared styling model, then use each component page for the slot-specific hooks.
+
+## References
+
+- [DEV article: I built vanilla JS primitives for shadcn/ui data-slot markup](https://dev.to/thomkrupa/i-built-vanilla-js-primitives-for-shadcnui-data-slot-markup-2fdn)
+- [Getting Started / API Patterns](/getting-started/api-patterns/)
+- [Getting Started / Styling](/getting-started/styling/)
+- [Components overview](/components/)

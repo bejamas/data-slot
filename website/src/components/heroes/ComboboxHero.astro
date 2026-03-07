@@ -1,0 +1,129 @@
+---
+import ComponentHero from "../docs/ComponentHero.astro";
+
+const cssCode = `<div data-slot="combobox" data-placeholder="Search fruits..." class="combobox-root">
+  <div class="combobox-input-wrapper">
+    <input data-slot="combobox-input" class="combobox-input" />
+    <button data-slot="combobox-trigger" class="combobox-trigger-btn">▼</button>
+  </div>
+  <div data-slot="combobox-content" class="combobox-content" hidden>
+    <div data-slot="combobox-list">
+      <div data-slot="combobox-empty" class="combobox-empty" hidden>No results</div>
+      <div data-slot="combobox-item" data-value="apple" data-label="Apple" class="combobox-item">
+        Apple<span class="combobox-check">✓</span>
+      </div>
+      <div data-slot="combobox-item" data-value="banana" data-label="Banana" class="combobox-item">
+        Banana<span class="combobox-check">✓</span>
+      </div>
+      <div data-slot="combobox-item" data-value="orange" data-label="Orange" class="combobox-item">
+        Orange<span class="combobox-check">✓</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .combobox-root { display: inline-block; }
+  .combobox-input-wrapper { display: flex; border: 1px solid #ccc; }
+  .combobox-input {
+    padding: 0.5rem; border: none; outline: none;
+    min-width: 160px; font: inherit;
+  }
+  .combobox-trigger-btn {
+    padding: 0.5rem 0.75rem; background: none;
+    border: none; border-left: 1px solid #ccc; cursor: pointer;
+  }
+  .combobox-content {
+    background: #faf9f7; border: 1px solid #ccc;
+    min-width: 200px; padding: 0.25rem; z-index: 50;
+  }
+  .combobox-item {
+    display: flex; align-items: center; padding: 0.375rem 0.5rem;
+    cursor: pointer; font-size: 0.875rem;
+  }
+  .combobox-check { margin-left: auto; visibility: hidden; }
+  .combobox-item[data-selected] .combobox-check { visibility: visible; }
+  .combobox-item[data-highlighted] { background: #e5e5e5; }
+  .combobox-empty { padding: 0.5rem; color: #666; font-size: 0.875rem; }
+</style>`;
+
+const tailwindCode = `<div data-slot="combobox" data-placeholder="Search fruits..."
+     class="inline-block">
+  <div class="flex border border-gray-300 rounded">
+    <input data-slot="combobox-input"
+           class="px-2 py-2 border-none outline-none min-w-[160px]" />
+    <button data-slot="combobox-trigger"
+            class="px-3 py-2 bg-transparent border-none border-l border-gray-300
+                   cursor-pointer">▼</button>
+  </div>
+  <div data-slot="combobox-content"
+       class="bg-white border border-gray-300 min-w-[200px] p-1 z-50
+              rounded-lg shadow-lg"
+       hidden>
+    <div data-slot="combobox-list">
+      <div data-slot="combobox-empty" class="p-2 text-gray-500 text-sm" hidden>
+        No results
+      </div>
+      <div data-slot="combobox-item" data-value="apple" data-label="Apple"
+           class="group flex items-center px-2 py-1.5 text-sm rounded
+                  cursor-pointer data-[highlighted]:bg-gray-100">
+        Apple<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
+      <div data-slot="combobox-item" data-value="banana" data-label="Banana"
+           class="group flex items-center px-2 py-1.5 text-sm rounded
+                  cursor-pointer data-[highlighted]:bg-gray-100">
+        Banana<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
+      <div data-slot="combobox-item" data-value="orange" data-label="Orange"
+           class="group flex items-center px-2 py-1.5 text-sm rounded
+                  cursor-pointer data-[highlighted]:bg-gray-100">
+        Orange<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+      </div>
+    </div>
+  </div>
+</div>`;
+---
+
+<ComponentHero cssCode={cssCode} tailwindCode={tailwindCode}>
+  <div slot="preview-css" data-slot="combobox" data-placeholder="Search fruits..." class="hero-combobox-root">
+    <div class="hero-combobox-input-wrapper">
+      <input data-slot="combobox-input" class="hero-combobox-input" />
+      <button data-slot="combobox-trigger" class="hero-combobox-trigger-btn">▼</button>
+    </div>
+    <div data-slot="combobox-content" class="hero-combobox-content" hidden>
+      <div data-slot="combobox-list">
+        <div data-slot="combobox-empty" class="hero-combobox-empty" hidden>No results</div>
+        <div data-slot="combobox-item" data-value="apple" data-label="Apple" class="hero-combobox-item">Apple<span class="hero-combobox-check">✓</span></div>
+        <div data-slot="combobox-item" data-value="banana" data-label="Banana" class="hero-combobox-item">Banana<span class="hero-combobox-check">✓</span></div>
+        <div data-slot="combobox-item" data-value="orange" data-label="Orange" class="hero-combobox-item">Orange<span class="hero-combobox-check">✓</span></div>
+      </div>
+    </div>
+  </div>
+  <div slot="preview-tailwind" data-slot="combobox" data-placeholder="Search fruits..." class="inline-block">
+    <div class="flex border border-gray-300 rounded">
+      <input data-slot="combobox-input" class="px-2 py-2 border-none outline-none min-w-[160px]" />
+      <button data-slot="combobox-trigger" class="px-3 py-2 bg-transparent border-none border-l border-gray-300 cursor-pointer">▼</button>
+    </div>
+    <div data-slot="combobox-content" class="bg-white border border-gray-300 min-w-[200px] p-1 z-50 rounded-lg shadow-lg" hidden>
+      <div data-slot="combobox-list">
+        <div data-slot="combobox-empty" class="p-2 text-gray-500 text-sm" hidden>No results</div>
+        <div data-slot="combobox-item" data-value="apple" data-label="Apple" class="group flex items-center px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100">Apple<span class="ml-auto invisible group-data-[selected]:visible">✓</span></div>
+        <div data-slot="combobox-item" data-value="banana" data-label="Banana" class="group flex items-center px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100">Banana<span class="ml-auto invisible group-data-[selected]:visible">✓</span></div>
+        <div data-slot="combobox-item" data-value="orange" data-label="Orange" class="group flex items-center px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100">Orange<span class="ml-auto invisible group-data-[selected]:visible">✓</span></div>
+      </div>
+    </div>
+  </div>
+</ComponentHero>
+
+<style>
+  .hero-combobox-root { display: inline-block; }
+  .hero-combobox-input-wrapper { display: flex; border: 1px solid #ccc; }
+  .hero-combobox-input { padding: 0.5rem; border: none; outline: none; min-width: 160px; font: inherit; }
+  .hero-combobox-trigger-btn { padding: 0.5rem 0.75rem; background: none; border: none; border-left: 1px solid #ccc; cursor: pointer; font-family: inherit; }
+  .hero-combobox-content { background: #faf9f7; border: 1px solid #ccc; min-width: 200px; padding: 0.25rem; z-index: 50; }
+  .hero-combobox-item { display: flex; align-items: center; padding: 0.375rem 0.5rem; cursor: pointer; font-size: 0.875rem; }
+  .hero-combobox-check { margin-left: auto; visibility: hidden; }
+  .hero-combobox-item[data-selected] .hero-combobox-check { visibility: visible; }
+  .hero-combobox-item[data-highlighted] { background: #e5e5e5; }
+  .hero-combobox-empty { padding: 0.5rem; color: #666; font-size: 0.875rem; }
+</style>

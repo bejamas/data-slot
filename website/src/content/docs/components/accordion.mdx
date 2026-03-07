@@ -5,6 +5,7 @@ description: Headless accordion component for vanilla JavaScript with single and
 
 import DemoRuntime from "../../../components/starlight/DemoRuntime.astro";
 import ComponentDocPage from "../../../components/docs/ComponentDocPage.astro";
+import AccordionHero from "../../../components/heroes/AccordionHero.astro";
 import AccordionSingle from "../../../components/examples/AccordionSingle.astro";
 import AccordionMultiple from "../../../components/examples/AccordionMultiple.astro";
 import { componentDocs } from "../../../data/component-docs";
@@ -12,6 +13,7 @@ import { componentDocs } from "../../../data/component-docs";
 <DemoRuntime />
 
 <ComponentDocPage doc={componentDocs["accordion"]}>
+  <AccordionHero slot="hero" />
   <AccordionSingle />
   <AccordionMultiple />
 </ComponentDocPage>

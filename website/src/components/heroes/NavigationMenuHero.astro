@@ -1,0 +1,136 @@
+---
+import ComponentHero from "../docs/ComponentHero.astro";
+
+const cssCode = `<nav data-slot="navigation-menu" class="nav-menu">
+  <ul data-slot="navigation-menu-list" class="nav-menu-list">
+    <li data-slot="navigation-menu-item" data-value="products" class="nav-menu-item">
+      <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">
+        Products
+      </button>
+      <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
+        <div class="nav-menu-grid">
+          <a href="#" class="nav-menu-link">
+            <div class="nav-menu-link-title">Analytics</div>
+            <div class="nav-menu-link-desc">Real-time metrics</div>
+          </a>
+          <a href="#" class="nav-menu-link">
+            <div class="nav-menu-link-title">Integrations</div>
+            <div class="nav-menu-link-desc">Connect your tools</div>
+          </a>
+        </div>
+      </div>
+    </li>
+    <li data-slot="navigation-menu-item" class="nav-menu-item">
+      <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">Docs</a>
+    </li>
+    <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
+  </ul>
+  <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
+</nav>
+
+<style>
+  .nav-menu { position: relative; }
+  .nav-menu-list { display: flex; list-style: none; position: relative; }
+  .nav-menu-trigger {
+    padding: 0.6rem 1rem; background: none; border: none;
+    cursor: pointer; display: flex; align-items: center; gap: 0.35rem;
+    text-decoration: none; color: inherit;
+  }
+  .nav-menu-trigger::after { content: "▼"; font-size: 0.6rem; }
+  .nav-menu-trigger-plain::after { content: none; }
+  .nav-menu-viewport {
+    position: absolute; background: #faf9f7; border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    width: var(--viewport-width, 0); height: var(--viewport-height, 0);
+    transition: transform 0.25s, width 0.25s, height 0.25s;
+  }
+  .nav-menu-content { position: absolute; top: 0; }
+  .nav-menu-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem; width: 320px; padding: 0.75rem;
+  }
+  .nav-menu-link {
+    display: block; padding: 0.75rem; text-decoration: none;
+    color: inherit; border-radius: 4px;
+  }
+  .nav-menu-link:hover { background: #f0eeeb; }
+  .nav-menu-link-title { font-weight: 500; margin-bottom: 0.25rem; }
+  .nav-menu-link-desc { font-size: 0.85rem; color: #666; }
+</style>`;
+
+const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
+  <ul data-slot="navigation-menu-list" class="flex list-none relative">
+    <li data-slot="navigation-menu-item" data-value="products" class="static">
+      <button data-slot="navigation-menu-trigger"
+              class="px-4 py-2.5 bg-transparent border-none cursor-pointer
+                     flex items-center gap-1.5 text-inherit no-underline
+                     after:content-['▼'] after:text-[0.6rem]">
+        Products
+      </button>
+      <div data-slot="navigation-menu-content" hidden>
+        <div class="grid grid-cols-2 gap-3 w-80 p-3">
+          <a href="#" class="block p-3 no-underline text-inherit rounded
+                            hover:bg-gray-100">
+            <div class="font-medium mb-1">Analytics</div>
+            <div class="text-sm text-gray-500">Real-time metrics</div>
+          </a>
+          <a href="#" class="block p-3 no-underline text-inherit rounded
+                            hover:bg-gray-100">
+            <div class="font-medium mb-1">Integrations</div>
+            <div class="text-sm text-gray-500">Connect your tools</div>
+          </a>
+        </div>
+      </div>
+    </li>
+    <li data-slot="navigation-menu-item" class="static">
+      <a href="#" class="px-4 py-2.5 bg-transparent border-none cursor-pointer
+                         flex items-center text-inherit no-underline">Docs</a>
+    </li>
+    <div data-slot="navigation-menu-indicator"
+         class="absolute bg-gray-100 rounded-md transition-all duration-150
+                pointer-events-none z-0"></div>
+  </ul>
+  <div data-slot="navigation-menu-viewport"
+       class="absolute bg-white rounded-lg shadow-xl
+              transition-all duration-250 overflow-hidden"></div>
+</nav>`;
+---
+
+<ComponentHero cssCode={cssCode} tailwindCode={tailwindCode}>
+  <nav slot="preview-css" data-slot="navigation-menu" class="nav-menu">
+    <ul data-slot="navigation-menu-list" class="nav-menu-list">
+      <li data-slot="navigation-menu-item" data-value="products" class="nav-menu-item">
+        <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Products</button>
+        <div data-slot="navigation-menu-content" class="nav-menu-content" hidden>
+          <div class="nav-menu-grid" style="width: 320px">
+            <a href="#" class="nav-menu-link"><div class="nav-menu-link-title">Analytics</div><div class="nav-menu-link-desc">Real-time metrics</div></a>
+            <a href="#" class="nav-menu-link"><div class="nav-menu-link-title">Integrations</div><div class="nav-menu-link-desc">Connect your tools</div></a>
+          </div>
+        </div>
+      </li>
+      <li data-slot="navigation-menu-item" class="nav-menu-item">
+        <a href="#" class="nav-menu-trigger nav-menu-trigger-plain">Docs</a>
+      </li>
+      <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
+    </ul>
+    <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
+  </nav>
+  <nav slot="preview-tailwind" data-slot="navigation-menu" class="relative">
+    <ul data-slot="navigation-menu-list" class="flex list-none relative p-0 m-0">
+      <li data-slot="navigation-menu-item" data-value="products" class="static">
+        <button data-slot="navigation-menu-trigger" class="px-4 py-2.5 bg-transparent border-none cursor-pointer flex items-center gap-1.5 text-inherit no-underline after:content-['▼'] after:text-[0.6rem] font-[inherit]">Products</button>
+        <div data-slot="navigation-menu-content" hidden>
+          <div class="grid grid-cols-2 gap-3 w-80 p-3">
+            <a href="#" class="block p-3 no-underline text-inherit rounded hover:bg-gray-100"><div class="font-medium mb-1">Analytics</div><div class="text-sm text-gray-500">Real-time metrics</div></a>
+            <a href="#" class="block p-3 no-underline text-inherit rounded hover:bg-gray-100"><div class="font-medium mb-1">Integrations</div><div class="text-sm text-gray-500">Connect your tools</div></a>
+          </div>
+        </div>
+      </li>
+      <li data-slot="navigation-menu-item" class="static">
+        <a href="#" class="px-4 py-2.5 bg-transparent border-none cursor-pointer flex items-center text-inherit no-underline">Docs</a>
+      </li>
+      <div data-slot="navigation-menu-indicator" class="absolute bg-gray-100 rounded-md transition-all duration-150 pointer-events-none z-0"></div>
+    </ul>
+    <div data-slot="navigation-menu-viewport" class="absolute bg-white rounded-lg shadow-xl overflow-hidden"></div>
+  </nav>
+</ComponentHero>

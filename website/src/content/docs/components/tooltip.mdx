@@ -5,11 +5,13 @@ description: Headless tooltip component for vanilla JavaScript with hover and fo
 
 import DemoRuntime from "../../../components/starlight/DemoRuntime.astro";
 import ComponentDocPage from "../../../components/docs/ComponentDocPage.astro";
+import TooltipHero from "../../../components/heroes/TooltipHero.astro";
 import Tooltip from "../../../components/examples/Tooltip.astro";
 import { componentDocs } from "../../../data/component-docs";
 
 <DemoRuntime />
 
 <ComponentDocPage doc={componentDocs["tooltip"]}>
+  <TooltipHero slot="hero" />
   <Tooltip />
 </ComponentDocPage>

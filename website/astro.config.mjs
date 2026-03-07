@@ -42,6 +42,10 @@ export default defineConfig({
           ],
         },
         {
+          label: "Concepts",
+          items: ["concepts/slots"],
+        },
+        {
           label: "Packages",
           items: ["packages/ui", "packages/core"],
         },

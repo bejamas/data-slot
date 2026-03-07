@@ -5,11 +5,13 @@ description: Headless modal dialog for vanilla JavaScript with focus management 
 
 import DemoRuntime from "../../../components/starlight/DemoRuntime.astro";
 import ComponentDocPage from "../../../components/docs/ComponentDocPage.astro";
+import DialogHero from "../../../components/heroes/DialogHero.astro";
 import Dialog from "../../../components/examples/Dialog.astro";
 import { componentDocs } from "../../../data/component-docs";
 
 <DemoRuntime />
 
 <ComponentDocPage doc={componentDocs["dialog"]}>
+  <DialogHero slot="hero" />
   <Dialog />
 </ComponentDocPage>

@@ -1,0 +1,125 @@
+---
+import ComponentHero from "../docs/ComponentHero.astro";
+
+const cssCode = `<div data-slot="toggle-group" data-default-value="center" class="toggle-group">
+  <button data-slot="toggle-group-item" data-value="left"
+          class="toggle-group-btn" aria-label="Align left">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="15" y2="12"/>
+      <line x1="3" y1="18" x2="18" y2="18"/>
+    </svg>
+  </button>
+  <button data-slot="toggle-group-item" data-value="center"
+          class="toggle-group-btn" aria-label="Align center">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="6" y1="12" x2="18" y2="12"/>
+      <line x1="4" y1="18" x2="20" y2="18"/>
+    </svg>
+  </button>
+  <button data-slot="toggle-group-item" data-value="right"
+          class="toggle-group-btn" aria-label="Align right">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="9" y1="12" x2="21" y2="12"/>
+      <line x1="6" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+</div>
+
+<style>
+  .toggle-group { display: inline-flex; gap: 0.25rem; }
+  .toggle-group-btn {
+    padding: 0.5rem; background: transparent;
+    border: 1px solid #ccc; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .toggle-group-btn:hover { background: #f0eeeb; }
+  .toggle-group-btn[data-state="on"] {
+    background: #333; border-color: #333; color: white;
+  }
+</style>`;
+
+const tailwindCode = `<div data-slot="toggle-group" data-default-value="center" class="inline-flex gap-1">
+  <button data-slot="toggle-group-item" data-value="left"
+          class="p-2 bg-transparent border border-gray-300 cursor-pointer
+                 flex items-center justify-center transition-colors
+                 hover:bg-gray-100 data-[state=on]:bg-gray-800
+                 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+          aria-label="Align left">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="15" y2="12"/>
+      <line x1="3" y1="18" x2="18" y2="18"/>
+    </svg>
+  </button>
+  <button data-slot="toggle-group-item" data-value="center"
+          class="p-2 bg-transparent border border-gray-300 cursor-pointer
+                 flex items-center justify-center transition-colors
+                 hover:bg-gray-100 data-[state=on]:bg-gray-800
+                 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+          aria-label="Align center">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="6" y1="12" x2="18" y2="12"/>
+      <line x1="4" y1="18" x2="20" y2="18"/>
+    </svg>
+  </button>
+  <button data-slot="toggle-group-item" data-value="right"
+          class="p-2 bg-transparent border border-gray-300 cursor-pointer
+                 flex items-center justify-center transition-colors
+                 hover:bg-gray-100 data-[state=on]:bg-gray-800
+                 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+          aria-label="Align right">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="9" y1="12" x2="21" y2="12"/>
+      <line x1="6" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+</div>`;
+---
+
+<ComponentHero cssCode={cssCode} tailwindCode={tailwindCode}>
+  <div slot="preview-css" data-slot="toggle-group" data-default-value="center" class="hero-tg">
+    <button data-slot="toggle-group-item" data-value="left" class="hero-tg-btn" aria-label="Align left">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+    </button>
+    <button data-slot="toggle-group-item" data-value="center" class="hero-tg-btn" aria-label="Align center">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+    </button>
+    <button data-slot="toggle-group-item" data-value="right" class="hero-tg-btn" aria-label="Align right">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+  <div slot="preview-tailwind" data-slot="toggle-group" data-default-value="center" class="inline-flex gap-1">
+    <button data-slot="toggle-group-item" data-value="left" class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-gray-100 data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white" aria-label="Align left">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+    </button>
+    <button data-slot="toggle-group-item" data-value="center" class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-gray-100 data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white" aria-label="Align center">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+    </button>
+    <button data-slot="toggle-group-item" data-value="right" class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-gray-100 data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white" aria-label="Align right">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</ComponentHero>
+
+<style>
+  .hero-tg { display: inline-flex; gap: 0.25rem; }
+  .hero-tg-btn {
+    padding: 0.5rem; background: transparent; border: 1px solid #ccc;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s; font-family: inherit;
+  }
+  .hero-tg-btn:hover { background: #f0eeeb; }
+  .hero-tg-btn[data-state="on"] { background: #333; border-color: #333; color: white; }
+</style>

@@ -1,0 +1,88 @@
+---
+import ComponentHero from "../docs/ComponentHero.astro";
+
+const cssCode = `<div data-slot="toast" data-position="bottom-right" data-portal="true">
+  <template data-slot="toast-template">
+    <li data-slot="toast-item" class="toast-item" role="status" aria-atomic="true">
+      <div class="toast-copy">
+        <strong data-slot="toast-title"></strong>
+        <p data-slot="toast-description"></p>
+      </div>
+      <div class="toast-buttons">
+        <button data-slot="toast-action" type="button"></button>
+        <button data-slot="toast-close" type="button" aria-label="Close">x</button>
+      </div>
+    </li>
+  </template>
+  <ol data-slot="toast-viewport" aria-label="Notifications"></ol>
+</div>
+
+<script>
+  import { createToast } from "@data-slot/toast";
+  const toast = createToast(root);
+  toast.show({
+    title: "Changes saved",
+    description: "Everything is synced.",
+    type: "success",
+  });
+</script>`;
+
+const tailwindCode = `<div data-slot="toast" data-position="bottom-right" data-portal="true">
+  <template data-slot="toast-template">
+    <li data-slot="toast-item" role="status" aria-atomic="true"
+        class="absolute inset-x-0 flex justify-between gap-3
+               border border-[#2f2f2f] bg-[#1f1f1f] p-3 text-[#f8f8f8]
+               shadow-[0_10px_24px_rgba(0,0,0,0.22)]">
+      <div class="min-w-0">
+        <strong data-slot="toast-title" class="block text-[0.8rem]"></strong>
+        <p data-slot="toast-description"
+           class="m-0 mt-1 text-[0.73rem] text-[#b5b5b5]"></p>
+      </div>
+      <div class="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+        <button data-slot="toast-action" type="button"
+                class="inline-flex items-center border border-[#3b3b3b]
+                       bg-transparent px-1.5 py-1 text-[0.72rem] text-[#d9d9d9]">
+        </button>
+        <button data-slot="toast-close" type="button" aria-label="Close"
+                class="inline-flex items-center border border-[#3b3b3b]
+                       bg-transparent px-1.5 py-1 text-[0.8rem] text-[#d9d9d9]">
+          x
+        </button>
+      </div>
+    </li>
+  </template>
+  <ol data-slot="toast-viewport" aria-label="Notifications"
+      class="list-none p-0 m-0"></ol>
+</div>
+
+<script>
+  import { createToast } from "@data-slot/toast";
+  const toast = createToast(root);
+  toast.show({
+    title: "Changes saved",
+    description: "Everything is synced.",
+    type: "success",
+  });
+</script>`;
+---
+
+<ComponentHero cssCode={cssCode} tailwindCode={tailwindCode}>
+  <div slot="preview-css">
+    <button data-toast-demo-btn data-toast-demo-target="toast-css" data-toast-demo-kind="success" class="hero-toast-btn" type="button">Show toast</button>
+  </div>
+  <div slot="preview-tailwind">
+    <button data-toast-demo-btn data-toast-demo-target="toast-tw" data-toast-demo-kind="success" class="px-3 py-1.5 bg-gray-900 text-white border-none cursor-pointer text-sm" type="button">Show toast</button>
+  </div>
+</ComponentHero>
+
+<style>
+  .hero-toast-btn {
+    padding: 0.4rem 0.8rem;
+    background: #1a1a1a;
+    color: #faf9f7;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.85rem;
+  }
+</style>

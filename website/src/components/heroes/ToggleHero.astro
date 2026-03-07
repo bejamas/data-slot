@@ -1,0 +1,65 @@
+---
+import ComponentHero from "../docs/ComponentHero.astro";
+
+const cssCode = `<button data-slot="toggle" class="toggle-btn">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2.5">
+    <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+    <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+  </svg>
+  Bold
+</button>
+
+<style>
+  .toggle-btn {
+    padding: 0.5rem 0.75rem; background: transparent;
+    border: 1px solid #ccc; cursor: pointer;
+    display: flex; align-items: center; gap: 0.5rem;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .toggle-btn:hover { background: #f0eeeb; }
+  .toggle-btn[data-state="on"] {
+    background: #333; border-color: #333; color: white;
+  }
+</style>`;
+
+const tailwindCode = `<button data-slot="toggle"
+        class="px-3 py-2 bg-transparent border border-gray-300 cursor-pointer
+               flex items-center gap-2 transition-colors hover:bg-gray-100
+               data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800
+               data-[state=on]:text-white">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2.5">
+    <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+    <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+  </svg>
+  Bold
+</button>`;
+---
+
+<ComponentHero cssCode={cssCode} tailwindCode={tailwindCode}>
+  <button slot="preview-css" data-slot="toggle" class="hero-toggle-btn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+      <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+    </svg>
+    Bold
+  </button>
+  <button slot="preview-tailwind" data-slot="toggle" class="px-3 py-2 bg-transparent border border-gray-300 cursor-pointer flex items-center gap-2 transition-colors hover:bg-gray-100 data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+      <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+    </svg>
+    Bold
+  </button>
+</ComponentHero>
+
+<style>
+  .hero-toggle-btn {
+    padding: 0.5rem 0.75rem; background: transparent; border: 1px solid #ccc;
+    cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .hero-toggle-btn:hover { background: #f0eeeb; }
+  .hero-toggle-btn[data-state="on"] { background: #333; border-color: #333; color: white; }
+</style>

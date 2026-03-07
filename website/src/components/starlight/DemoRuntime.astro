@@ -35,6 +35,11 @@
     if (accordionSingleTw) createAccordion(accordionSingleTw);
     if (accordionMultipleTw) createAccordion(accordionMultipleTw, { multiple: true });
 
+    const heroAccordionCss = document.getElementById("hero-accordion-css");
+    const heroAccordionTw = document.getElementById("hero-accordion-tw");
+    if (heroAccordionCss) createAccordion(heroAccordionCss);
+    if (heroAccordionTw) createAccordion(heroAccordionTw);
+
     document
       .querySelectorAll<HTMLElement>('[data-slot="dialog"]')
       .forEach((el) => createDialog(el));
@@ -120,7 +125,11 @@
       updateDots(controller.index);
     });
 
-    const toastControllers = new Map<string, ReturnType<typeof createToast>>();
+    type ToastController = ReturnType<typeof createToast>;
+    type ToastShowOptions = Parameters<ToastController["show"]>[0];
+    type ToastUpdateOptions = Parameters<ToastController["update"]>[1];
+
+    const toastControllers = new Map<string, ToastController>();
     document.querySelectorAll<HTMLElement>('[data-slot="toast"]').forEach((el) => {
       const controller = createToast(el);
       if (el.id) {
@@ -135,7 +144,15 @@
       .querySelectorAll<HTMLElement>('[data-slot="toggle-group"]')
       .forEach((el) => createToggleGroup(el));
 
-    const toastMessageByKind = {
+    const getToastController = (targetId: string) => toastControllers.get(targetId) ?? null;
+
+    const showToastDemo = (targetId: string, options: ToastShowOptions) => {
+      const controller = getToastController(targetId);
+      if (!controller) return null;
+      return { controller, id: controller.show(options) };
+    };
+
+    const toastMessageByKind: Record<string, ToastShowOptions> = {
       success: {
         title: "Changes saved",
         description: "Everything is synced.",
@@ -158,27 +175,29 @@
       },
     };
 
+    const loadingSuccessPatch: ToastUpdateOptions = {
+      title: "Upload complete",
+      description: "All files synced successfully.",
+      type: "success",
+      duration: 3200,
+      action: undefined,
+    };
+
+    const defaultToastMessage: ToastShowOptions = {
+      title: "Heads up",
+      description: "This is a toast message.",
+      type: "default",
+      duration: 4000,
+    };
+
     document.querySelectorAll<HTMLElement>("[data-toast-demo-btn]").forEach((button) => {
       button.addEventListener("click", () => {
         const targetId = button.dataset.toastDemoTarget;
         if (!targetId) return;
 
-        const root = document.getElementById(targetId);
-        if (!root) return;
-
         const kind = button.dataset.toastDemoKind;
-        const selected =
-          kind && kind in toastMessageByKind
-            ? toastMessageByKind[kind as keyof typeof toastMessageByKind]
-            : {
-                title: "Heads up",
-                description: "This is a toast message.",
-                type: "default",
-                duration: 4000,
-              };
-
         if (kind === "promise") {
-          const controller = toastControllers.get(targetId);
+          const controller = getToastController(targetId);
           if (!controller) return;
 
           controller.promise(
@@ -207,8 +226,30 @@
           return;
         }
 
-        const controller = toastControllers.get(targetId);
-        controller?.show(selected.title, selected);
+        if (kind === "loading") {
+          const shown = showToastDemo(targetId, toastMessageByKind.loading);
+          if (!shown) return;
+
+          window.setTimeout(() => {
+            shown.controller.update(shown.id, loadingSuccessPatch);
+          }, 1200);
+          return;
+        }
+
+        const selected = kind && kind in toastMessageByKind
+          ? toastMessageByKind[kind]
+          : defaultToastMessage;
+        showToastDemo(targetId, selected);
+      });
+    });
+
+    document.querySelectorAll<HTMLElement>("[data-toast-demo-clear]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const targetId = button.dataset.toastDemoTarget;
+        if (!targetId) return;
+
+        const controller = getToastController(targetId);
+        controller?.dismissAll();
       });
     });
   }

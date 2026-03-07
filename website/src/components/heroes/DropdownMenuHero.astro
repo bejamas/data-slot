@@ -1,0 +1,96 @@
+---
+import ComponentHero from "../docs/ComponentHero.astro";
+
+const cssCode = `<div data-slot="dropdown-menu" class="dropdown-root">
+  <button data-slot="dropdown-menu-trigger" class="dropdown-trigger">
+    Actions ▼
+  </button>
+  <div data-slot="dropdown-menu-content" class="dropdown-content" hidden>
+    <button data-slot="dropdown-menu-item" data-value="edit" class="dropdown-item">Edit</button>
+    <button data-slot="dropdown-menu-item" data-value="copy" class="dropdown-item">Copy</button>
+    <div data-slot="dropdown-menu-separator" class="dropdown-separator"></div>
+    <button data-slot="dropdown-menu-item" data-value="delete" class="dropdown-item destructive">Delete</button>
+  </div>
+</div>
+
+<style>
+  .dropdown-root { position: relative; display: inline-block; }
+  .dropdown-trigger {
+    padding: 0.5rem 1rem; background: #1a1a1a; color: #faf9f7;
+    border: none; cursor: pointer;
+  }
+  .dropdown-content {
+    position: absolute; top: 100%; left: 0; margin-top: 0.25rem;
+    background: #faf9f7; border: 1px solid #ccc;
+    min-width: 160px; padding: 0.25rem; z-index: 50;
+  }
+  .dropdown-item {
+    display: block; width: 100%; padding: 0.375rem 0.75rem;
+    background: none; border: none; text-align: left;
+    cursor: pointer; font-size: 0.875rem;
+  }
+  .dropdown-item[data-highlighted] { background: #e5e5e5; }
+  .dropdown-item.destructive { color: #dc3545; }
+  .dropdown-separator { height: 1px; background: #ddd; margin: 0.25rem 0; }
+</style>`;
+
+const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-block">
+  <button data-slot="dropdown-menu-trigger"
+          class="px-4 py-2 bg-gray-900 text-white border-none cursor-pointer">
+    Actions ▼
+  </button>
+  <div data-slot="dropdown-menu-content"
+       class="absolute top-full left-0 mt-1 bg-white border border-gray-300
+              min-w-[160px] p-1 z-50 rounded-lg shadow-lg"
+       hidden>
+    <button data-slot="dropdown-menu-item" data-value="edit"
+            class="block w-full px-3 py-1.5 bg-transparent border-none text-left
+                   text-sm cursor-pointer rounded data-[highlighted]:bg-gray-100">
+      Edit
+    </button>
+    <button data-slot="dropdown-menu-item" data-value="copy"
+            class="block w-full px-3 py-1.5 bg-transparent border-none text-left
+                   text-sm cursor-pointer rounded data-[highlighted]:bg-gray-100">
+      Copy
+    </button>
+    <div data-slot="dropdown-menu-separator" class="my-1 h-px bg-gray-200"></div>
+    <button data-slot="dropdown-menu-item" data-value="delete"
+            class="block w-full px-3 py-1.5 bg-transparent border-none text-left
+                   text-sm cursor-pointer rounded text-red-600
+                   data-[highlighted]:bg-red-50">
+      Delete
+    </button>
+  </div>
+</div>`;
+---
+
+<ComponentHero cssCode={cssCode} tailwindCode={tailwindCode}>
+  <div slot="preview-css" data-slot="dropdown-menu" class="hero-dropdown-root">
+    <button data-slot="dropdown-menu-trigger" class="hero-dropdown-trigger">Actions ▼</button>
+    <div data-slot="dropdown-menu-content" class="hero-dropdown-content" hidden>
+      <button data-slot="dropdown-menu-item" data-value="edit" class="hero-dropdown-item">Edit</button>
+      <button data-slot="dropdown-menu-item" data-value="copy" class="hero-dropdown-item">Copy</button>
+      <div data-slot="dropdown-menu-separator" class="hero-dropdown-sep"></div>
+      <button data-slot="dropdown-menu-item" data-value="delete" class="hero-dropdown-item hero-dropdown-destructive">Delete</button>
+    </div>
+  </div>
+  <div slot="preview-tailwind" data-slot="dropdown-menu" class="relative inline-block">
+    <button data-slot="dropdown-menu-trigger" class="px-4 py-2 bg-gray-900 text-white border-none cursor-pointer">Actions ▼</button>
+    <div data-slot="dropdown-menu-content" class="absolute top-full left-0 mt-1 bg-white border border-gray-300 min-w-[160px] p-1 z-50 rounded-lg shadow-lg" hidden>
+      <button data-slot="dropdown-menu-item" data-value="edit" class="block w-full px-3 py-1.5 bg-transparent border-none text-left text-sm cursor-pointer rounded data-[highlighted]:bg-gray-100">Edit</button>
+      <button data-slot="dropdown-menu-item" data-value="copy" class="block w-full px-3 py-1.5 bg-transparent border-none text-left text-sm cursor-pointer rounded data-[highlighted]:bg-gray-100">Copy</button>
+      <div data-slot="dropdown-menu-separator" class="my-1 h-px bg-gray-200"></div>
+      <button data-slot="dropdown-menu-item" data-value="delete" class="block w-full px-3 py-1.5 bg-transparent border-none text-left text-sm cursor-pointer rounded text-red-600 data-[highlighted]:bg-red-50">Delete</button>
+    </div>
+  </div>
+</ComponentHero>
+
+<style>
+  .hero-dropdown-root { position: relative; display: inline-block; }
+  .hero-dropdown-trigger { padding: 0.5rem 1rem; background: #1a1a1a; color: #faf9f7; border: none; cursor: pointer; font-family: inherit; font-size: inherit; }
+  .hero-dropdown-content { position: absolute; top: 100%; left: 0; margin-top: 0.25rem; background: #faf9f7; border: 1px solid #ccc; min-width: 160px; padding: 0.25rem; z-index: 50; }
+  .hero-dropdown-item { display: block; width: 100%; padding: 0.375rem 0.75rem; background: none; border: none; text-align: left; cursor: pointer; font-size: 0.875rem; font-family: inherit; }
+  .hero-dropdown-item[data-highlighted] { background: #e5e5e5; }
+  .hero-dropdown-destructive { color: #dc3545; }
+  .hero-dropdown-sep { height: 1px; background: #ddd; margin: 0.25rem 0; }
+</style>

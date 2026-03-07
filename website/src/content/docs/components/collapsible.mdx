@@ -5,11 +5,13 @@ description: Headless show and hide primitive for vanilla JavaScript.
 
 import DemoRuntime from "../../../components/starlight/DemoRuntime.astro";
 import ComponentDocPage from "../../../components/docs/ComponentDocPage.astro";
+import CollapsibleHero from "../../../components/heroes/CollapsibleHero.astro";
 import Collapsible from "../../../components/examples/Collapsible.astro";
 import { componentDocs } from "../../../data/component-docs";
 
 <DemoRuntime />
 
 <ComponentDocPage doc={componentDocs["collapsible"]}>
+  <CollapsibleHero slot="hero" />
   <Collapsible />
 </ComponentDocPage>

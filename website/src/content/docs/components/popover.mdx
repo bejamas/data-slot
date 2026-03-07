@@ -5,11 +5,13 @@ description: Headless anchored floating content for vanilla JavaScript.
 
 import DemoRuntime from "../../../components/starlight/DemoRuntime.astro";
 import ComponentDocPage from "../../../components/docs/ComponentDocPage.astro";
+import PopoverHero from "../../../components/heroes/PopoverHero.astro";
 import Popover from "../../../components/examples/Popover.astro";
 import { componentDocs } from "../../../data/component-docs";
 
 <DemoRuntime />
 
 <ComponentDocPage doc={componentDocs["popover"]}>
+  <PopoverHero slot="hero" />
   <Popover />
 </ComponentDocPage>

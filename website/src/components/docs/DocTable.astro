@@ -1,0 +1,58 @@
+---
+interface Props {
+  fixed?: boolean;
+}
+
+const { fixed = false } = Astro.props;
+---
+
+<div class:list={["doc-table", { "doc-table-fixed": fixed }]}>
+  <slot />
+</div>
+
+<style>
+  .doc-table {
+    overflow-x: auto;
+    border: 1px solid var(--sl-color-gray-6);
+    border-radius: 0.85rem;
+    background: color-mix(in srgb, var(--sl-color-bg) 98%, var(--sl-color-gray-7) 2%);
+    font-family: var(--sl-font-mono);
+    font-size: var(--sl-text-sm);
+  }
+
+  .doc-table :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .doc-table-fixed :global(table) {
+    table-layout: fixed;
+  }
+
+  .doc-table :global(th),
+  .doc-table :global(td) {
+    padding: 0.85rem 0.95rem;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--sl-color-gray-6);
+  }
+
+  .doc-table :global(tbody tr:last-child td) {
+    border-bottom: 0;
+  }
+
+  .doc-table :global(th) {
+    font-family: var(--sl-font);
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, var(--sl-color-bg) 92%, var(--sl-color-accent-low) 8%);
+  }
+
+  @media (max-width: 50rem) {
+    .doc-table-fixed :global(table) {
+      min-width: 42rem;
+    }
+  }
+</style>
