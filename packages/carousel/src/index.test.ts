@@ -92,6 +92,48 @@ describe("Carousel", () => {
     }) as typeof content.scrollTo;
   };
 
+  const mockVerticalGeometry = (
+    content: HTMLElement,
+    items: HTMLElement[],
+    itemSize = 100,
+  ) => {
+    content.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        width: 120,
+        height: itemSize,
+        right: 120,
+        bottom: itemSize,
+        x: 0,
+        y: 0,
+        toJSON() {},
+      }) as DOMRect;
+
+    items.forEach((item, index) => {
+      item.getBoundingClientRect = () => {
+        const top = index * itemSize - content.scrollTop;
+
+        return ({
+          left: 0,
+          top,
+          width: 120,
+          height: itemSize,
+          right: 120,
+          bottom: top + itemSize,
+          x: 0,
+          y: top,
+          toJSON() {},
+        }) as DOMRect;
+      };
+    });
+
+    content.scrollTo = ((options: ScrollToOptions) => {
+      if (typeof options.left === "number") content.scrollLeft = options.left;
+      if (typeof options.top === "number") content.scrollTop = options.top;
+    }) as typeof content.scrollTo;
+  };
+
   const mockDynamicHorizontalGeometry = (
     content: HTMLElement,
     itemSize = 100,
@@ -151,6 +193,42 @@ describe("Carousel", () => {
     return calls;
   };
 
+  const setupWithGeometry = ({
+    attrs = "",
+    slideCount = 3,
+    options,
+  }: {
+    attrs?: string;
+    slideCount?: number;
+    options?: Parameters<typeof createCarousel>[1];
+  } = {}) => {
+    const slides = Array.from({ length: slideCount }, (_, index) => {
+      return `<div data-slot="carousel-item">Slide ${index + 1}</div>`;
+    }).join("\n");
+
+    document.body.innerHTML = `
+      <div data-slot="carousel" id="root" ${attrs}>
+        <div data-slot="carousel-content" id="content">${slides}</div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const content = document.getElementById("content") as HTMLElement;
+    const items = Array.from(
+      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
+    );
+
+    if (attrs.includes('data-orientation="vertical"')) {
+      mockVerticalGeometry(content, items, 100);
+    } else {
+      mockHorizontalGeometry(content, items, 100);
+    }
+
+    const controller = createCarousel(root, options ?? {});
+
+    return { root, content, items, controller };
+  };
+
   it("throws when carousel-content slot is missing", () => {
     document.body.innerHTML = `<div data-slot="carousel" id="root"></div>`;
     const root = document.getElementById("root")!;
@@ -197,6 +275,74 @@ describe("Carousel", () => {
     expect(controller.index).toBe(0);
 
     controller.destroy();
+  });
+
+  it("leaves pointer drag disabled by default", () => {
+    const { content, items, controller } = setup();
+    mockHorizontalGeometry(content, items, 100);
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 1,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 1,
+        clientX: 20,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 1,
+        clientX: 20,
+        clientY: 40,
+      }),
+    );
+
+    expect(content.style.touchAction).toBe("");
+    expect(content.scrollLeft).toBe(0);
+    expect(controller.index).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("enables pointer drag from the data-drag attribute", () => {
+    const { content, controller } = setup({ attrs: "data-drag" });
+
+    expect(content.style.touchAction).toBe("pan-y");
+
+    controller.destroy();
+  });
+
+  it("enables pointer drag from the JS option and restores touch-action on destroy", () => {
+    document.body.innerHTML = `
+      <div data-slot="carousel" id="root">
+        <div data-slot="carousel-content" id="content">
+          <div data-slot="carousel-item">Slide 1</div>
+          <div data-slot="carousel-item">Slide 2</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const content = document.getElementById("content") as HTMLElement;
+    content.style.touchAction = "manipulation";
+    const controller = createCarousel(root, { drag: true });
+
+    expect(content.style.touchAction).toBe("pan-y");
+
+    controller.destroy();
+
+    expect(content.style.touchAction).toBe("manipulation");
   });
 
   it("applies canScroll state and optional nav button disabled states", () => {
@@ -277,6 +423,702 @@ describe("Carousel", () => {
     const controller = createCarousel(root);
 
     field.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    expect(controller.index).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("drags horizontally and snaps to the nearest slide on release", () => {
+    const { root, content, controller } = setupWithGeometry({
+      options: { drag: true },
+    });
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 10,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 10,
+        clientX: 20,
+        clientY: 45,
+      }),
+    );
+
+    expect(root.getAttribute("data-dragging")).toBe("true");
+    expect(content.style.scrollSnapType).toBe("none");
+    expect(content.scrollLeft).toBe(160);
+    expect(controller.index).toBe(0);
+
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 10,
+        clientX: 20,
+        clientY: 45,
+      }),
+    );
+
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(content.style.scrollSnapType).toBe("");
+    expect(content.scrollLeft).toBe(200);
+    expect(controller.index).toBe(2);
+
+    controller.destroy();
+  });
+
+  it("drags vertically and snaps to the nearest slide on release", () => {
+    const { root, content, controller } = setupWithGeometry({
+      attrs: 'data-orientation="vertical"',
+      options: { drag: true },
+    });
+
+    expect(content.style.touchAction).toBe("pan-x");
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 11,
+        button: 0,
+        clientX: 40,
+        clientY: 180,
+      }),
+    );
+
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 11,
+        clientX: 45,
+        clientY: 20,
+      }),
+    );
+
+    expect(root.getAttribute("data-dragging")).toBe("true");
+    expect(content.scrollTop).toBe(160);
+
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 11,
+        clientX: 45,
+        clientY: 20,
+      }),
+    );
+
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(content.scrollTop).toBe(200);
+    expect(controller.index).toBe(2);
+
+    controller.destroy();
+  });
+
+  it("snaps back to the current slide when a drag does not pass the next snap point", () => {
+    const { root, content, items, controller } = setup({
+      options: { drag: true },
+    });
+    mockHorizontalGeometry(content, items, 100);
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 12,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 12,
+        clientX: 150,
+        clientY: 40,
+      }),
+    );
+
+    expect(root.getAttribute("data-dragging")).toBe("true");
+    expect(content.scrollLeft).toBe(30);
+
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 12,
+        clientX: 150,
+        clientY: 40,
+      }),
+    );
+
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(content.scrollLeft).toBe(0);
+    expect(controller.index).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("does not start drag gestures from nested interactive content", () => {
+    document.body.innerHTML = `
+      <div data-slot="carousel" id="root">
+        <div data-slot="carousel-content" id="content">
+          <div data-slot="carousel-item">
+            <button id="nested">Nested</button>
+          </div>
+          <div data-slot="carousel-item">Slide 2</div>
+          <div data-slot="carousel-item">Slide 3</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const content = document.getElementById("content") as HTMLElement;
+    const nested = document.getElementById("nested") as HTMLButtonElement;
+    const items = Array.from(
+      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
+    );
+    mockHorizontalGeometry(content, items, 100);
+    const controller = createCarousel(root, { drag: true });
+
+    nested.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 13,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 13,
+        clientX: 20,
+        clientY: 45,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 13,
+        clientX: 20,
+        clientY: 45,
+      }),
+    );
+
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(content.scrollLeft).toBe(0);
+    expect(controller.index).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("does not start drag gestures from SVG descendants of interactive content", () => {
+    document.body.innerHTML = `
+      <div data-slot="carousel" id="root">
+        <div data-slot="carousel-content" id="content">
+          <div data-slot="carousel-item">
+            <button id="nested">
+              <svg viewBox="0 0 10 10" aria-hidden="true">
+                <path id="nested-path" d="M0 0h10v10H0z"></path>
+              </svg>
+            </button>
+          </div>
+          <div data-slot="carousel-item">Slide 2</div>
+          <div data-slot="carousel-item">Slide 3</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const content = document.getElementById("content") as HTMLElement;
+    const nestedPath = document.getElementById("nested-path")!;
+    const items = Array.from(
+      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
+    );
+    mockHorizontalGeometry(content, items, 100);
+    const controller = createCarousel(root, { drag: true });
+
+    nestedPath.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 21,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 21,
+        clientX: 20,
+        clientY: 45,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 21,
+        clientX: 20,
+        clientY: 45,
+      }),
+    );
+
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(content.scrollLeft).toBe(0);
+    expect(controller.index).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("ignores opposite-axis gestures when drag is enabled", () => {
+    const { root, content, items, controller } = setup({
+      options: { drag: true },
+    });
+    mockHorizontalGeometry(content, items, 100);
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 14,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+
+    const moveEvent = new PointerEvent("pointermove", {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 14,
+      clientX: 190,
+      clientY: 170,
+    });
+    const dispatchResult = document.dispatchEvent(moveEvent);
+
+    expect(dispatchResult).toBe(true);
+    expect(moveEvent.defaultPrevented).toBe(false);
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(content.scrollLeft).toBe(0);
+
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 14,
+        clientX: 190,
+        clientY: 170,
+      }),
+    );
+
+    expect(controller.index).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("prevents default browser behavior during an active drag", () => {
+    const { root, content, items, controller } = setup({
+      options: { drag: true },
+    });
+    mockHorizontalGeometry(content, items, 100);
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 15,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+
+    const moveEvent = new PointerEvent("pointermove", {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 15,
+      clientX: 60,
+      clientY: 50,
+    });
+    const dispatchResult = document.dispatchEvent(moveEvent);
+
+    expect(dispatchResult).toBe(false);
+    expect(moveEvent.defaultPrevented).toBe(true);
+    expect(root.getAttribute("data-dragging")).toBe("true");
+    expect(content.scrollLeft).toBe(120);
+
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 15,
+        clientX: 60,
+        clientY: 50,
+      }),
+    );
+
+    controller.destroy();
+  });
+
+  it("uses smooth scrolling when snapping after a drag by default", () => {
+    const { content, controller } = setupWithGeometry({
+      options: { drag: true },
+    });
+    const calls = createScrollSpy(content);
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 19,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 19,
+        clientX: 20,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 19,
+        clientX: 20,
+        clientY: 40,
+      }),
+    );
+
+    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
+
+    controller.destroy();
+  });
+
+  it("restores authored scroll snapping after drag cleanup", () => {
+    document.body.innerHTML = `
+      <div data-slot="carousel" id="root">
+        <div data-slot="carousel-content" id="content">
+          <div data-slot="carousel-item">Slide 1</div>
+          <div data-slot="carousel-item">Slide 2</div>
+          <div data-slot="carousel-item">Slide 3</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const content = document.getElementById("content") as HTMLElement;
+    const items = Array.from(
+      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
+    );
+    content.style.scrollSnapType = "x mandatory";
+    mockHorizontalGeometry(content, items, 100);
+    const controller = createCarousel(root, { drag: true });
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 20,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 20,
+        clientX: 60,
+        clientY: 40,
+      }),
+    );
+
+    expect(content.style.scrollSnapType).toBe("none");
+
+    document.dispatchEvent(
+      new PointerEvent("pointercancel", {
+        bubbles: true,
+        pointerId: 20,
+      }),
+    );
+
+    expect(content.style.scrollSnapType).toBe("x mandatory");
+
+    controller.destroy();
+  });
+
+  it("ignores extra pointers while a drag is active", () => {
+    const { root, content, controller } = setupWithGeometry({
+      options: { drag: true },
+    });
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 22,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 22,
+        clientX: 60,
+        clientY: 40,
+      }),
+    );
+
+    expect(root.getAttribute("data-dragging")).toBe("true");
+    expect(content.style.scrollSnapType).toBe("none");
+    expect(content.scrollLeft).toBe(120);
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 23,
+        button: 0,
+        clientX: 20,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 23,
+        clientX: 200,
+        clientY: 40,
+      }),
+    );
+
+    expect(root.getAttribute("data-dragging")).toBe("true");
+    expect(content.scrollLeft).toBe(120);
+
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 22,
+        clientX: 60,
+        clientY: 40,
+      }),
+    );
+
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(content.style.scrollSnapType).toBe("");
+    expect(controller.index).toBe(1);
+
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 23,
+        clientX: 200,
+        clientY: 40,
+      }),
+    );
+
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(controller.index).toBe(1);
+
+    controller.destroy();
+  });
+
+  it("allows a new pointer to take over before drag activation", () => {
+    const { root, content, controller } = setupWithGeometry({
+      options: { drag: true },
+    });
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 24,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 25,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 25,
+        clientX: 60,
+        clientY: 40,
+      }),
+    );
+
+    expect(root.getAttribute("data-dragging")).toBe("true");
+    expect(content.scrollLeft).toBe(120);
+
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 25,
+        clientX: 60,
+        clientY: 40,
+      }),
+    );
+
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(controller.index).toBe(1);
+
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 24,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+
+    expect(controller.index).toBe(1);
+
+    controller.destroy();
+  });
+
+  it("cleans up active drag state on pointercancel", () => {
+    const { root, content, controller } = setupWithGeometry({
+      options: { drag: true },
+    });
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 16,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 16,
+        clientX: 60,
+        clientY: 40,
+      }),
+    );
+
+    expect(root.getAttribute("data-dragging")).toBe("true");
+
+    document.dispatchEvent(
+      new PointerEvent("pointercancel", {
+        bubbles: true,
+        pointerId: 16,
+      }),
+    );
+
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(controller.index).toBe(1);
+
+    controller.next();
+    expect(controller.index).toBe(2);
+
+    controller.destroy();
+  });
+
+  it("cleans up active drag state on lost pointer capture", () => {
+    const { root, content, controller } = setupWithGeometry({
+      options: { drag: true },
+    });
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 17,
+        button: 0,
+        clientX: 180,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 17,
+        clientX: 60,
+        clientY: 40,
+      }),
+    );
+
+    expect(root.getAttribute("data-dragging")).toBe("true");
+
+    content.dispatchEvent(
+      new PointerEvent("lostpointercapture", {
+        bubbles: true,
+        pointerId: 17,
+      }),
+    );
+
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(controller.index).toBe(1);
+
+    controller.next();
+    expect(controller.index).toBe(2);
+
+    controller.destroy();
+  });
+
+  it("does not wrap drag gestures when loop mode is enabled", () => {
+    const { content, items, controller } = setup({
+      options: { drag: true, loop: true },
+    });
+    mockHorizontalGeometry(content, items, 100);
+
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 18,
+        button: 0,
+        clientX: 100,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 18,
+        clientX: 260,
+        clientY: 40,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 18,
+        clientX: 260,
+        clientY: 40,
+      }),
+    );
+
+    expect(content.scrollLeft).toBe(0);
     expect(controller.index).toBe(0);
 
     controller.destroy();

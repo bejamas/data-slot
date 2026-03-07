@@ -192,7 +192,9 @@ The controller computes and writes stack tokens for animation styling:
 - `--toast-stack-size` (on viewport, active size; collapsed by default, expanded while `data-expanded`)
 - `--toast-collapsed-peek` (on viewport; collapsed stack step)
 - `--toast-stack-direction` (`1` for top stacks, `-1` for bottom stacks)
+- `--toast-swipe-movement-x` (item-level; live horizontal swipe offset for left/right stacks)
 - `--toast-swipe-movement-y` (item-level; live vertical swipe offset)
+- `--toast-swipe-end-x` / `--toast-swipe-end-y` (item-level; resolved swipe-out exit target)
 
 These are updated on show, dismiss, exit complete, and item resize.
 
@@ -291,6 +293,37 @@ root.dispatchEvent(new CustomEvent("toast:clear"));
   pointer-events: none;
 }
 
+[data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="true"] {
+  transform: translate3d(
+    var(--toast-swipe-end-x, 0px),
+    var(--toast-swipe-end-y, 0px),
+    0
+  );
+  opacity: 0;
+}
+
+[data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="true"] {
+  transform: translate3d(
+    var(--toast-swipe-end-x, 0px),
+    calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-swipe-end-y, 0px)),
+    0
+  );
+  opacity: 0;
+}
+
+[data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="false"] {
+  transform: translate3d(
+      var(--toast-swipe-end-x, 0px),
+      calc(
+        var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+          var(--toast-swipe-end-y, 0px)
+      ),
+      0
+    )
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
+  opacity: 0;
+}
+
 [data-slot="toast-item"][data-expanded="true"]::after {
   content: "";
   position: absolute;
@@ -300,12 +333,12 @@ root.dispatchEvent(new CustomEvent("toast:clear"));
   bottom: 100%;
 }
 
-[data-slot="toast-item"][data-removed="true"][data-front="true"][data-swipe-out="false"] {
+[data-slot="toast-item"][data-removed="true"][data-front="true"] {
   transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
   opacity: 0;
 }
 
-[data-slot="toast-item"][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="true"] {
+[data-slot="toast-item"][data-removed="true"][data-front="false"][data-expanded="true"] {
   transform: translate3d(
     0,
     calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-lift, -1) * -100%),
@@ -314,12 +347,44 @@ root.dispatchEvent(new CustomEvent("toast:clear"));
   opacity: 0;
 }
 
-[data-slot="toast-item"][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="false"] {
+[data-slot="toast-item"][data-removed="true"][data-front="false"][data-expanded="false"] {
   transform: translate3d(0, 40%, 0);
   opacity: 0;
   transition:
     transform 500ms ease,
     opacity 200ms ease;
+}
+
+[data-slot="toast-item"][data-swiping="true"] {
+  transition: none;
+}
+
+[data-slot="toast-item"][data-swiping="true"][data-front="true"] {
+  transform: translate3d(
+    var(--toast-swipe-movement-x, 0px),
+    var(--toast-swipe-movement-y, 0px),
+    0
+  );
+}
+
+[data-slot="toast-item"][data-swiping="true"][data-expanded="false"][data-front="false"] {
+  transform: translate3d(
+      var(--toast-swipe-movement-x, 0px),
+      calc(
+        var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+          var(--toast-swipe-movement-y, 0px)
+      ),
+      0
+    )
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
+}
+
+[data-slot="toast-item"][data-swiping="true"][data-expanded="true"] {
+  transform: translate3d(
+    var(--toast-swipe-movement-x, 0px),
+    calc(var(--toast-offset, 0px) * var(--toast-lift, -1) + var(--toast-swipe-movement-y, 0px)),
+    0
+  );
 }
 ```
 

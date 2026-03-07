@@ -53,6 +53,7 @@ import { createCarousel } from "@data-slot/carousel";
 const carousel = createCarousel(element, {
   defaultIndex: 1,
   orientation: "horizontal",
+  drag: true,
   loop: false,
   onIndexChange: (index) => console.log(index),
 });
@@ -64,6 +65,7 @@ const carousel = createCarousel(element, {
 |--------|------|---------|-------------|
 | `defaultIndex` | `number` | `0` | Initial active slide index |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Axis used for keyboard navigation and scrolling |
+| `drag` | `boolean` | `false` | Enable pointer drag/swipe navigation on the scroll container |
 | `loop` | `boolean` | `false` | Enable soft-wrap for `prev`/`next`/keyboard/API navigation |
 | `onIndexChange` | `(index: number) => void` | `undefined` | Called when active slide changes |
 
@@ -91,6 +93,8 @@ Carousel navigation uses native smooth scrolling by default for:
 
 When the user prefers reduced motion (`prefers-reduced-motion: reduce`), navigation falls back to instant scroll behavior.
 
+When `drag` is enabled, the carousel also supports pointer drag/swipe gestures and snaps to the nearest slide on release.
+
 ## Data Attributes
 
 JS options take precedence over data attributes.
@@ -99,6 +103,7 @@ JS options take precedence over data attributes.
 |-----------|------|---------|-------------|
 | `data-default-index` | number | `0` | Initial active index |
 | `data-orientation` | `horizontal \| vertical` | `horizontal` | Carousel orientation |
+| `data-drag` | boolean | `false` | Enable pointer drag/swipe navigation |
 | `data-loop` | boolean | `false` | Enable soft-wrap loop navigation |
 
 ## Events
@@ -153,6 +158,10 @@ The component is unstyled and relies on CSS hooks:
   scroll-snap-type: x mandatory;
 }
 
+[data-slot="carousel"][data-dragging="true"] {
+  cursor: grabbing;
+}
+
 [data-slot="carousel-item"] {
   flex: 0 0 100%;
   scroll-snap-align: start;
@@ -176,6 +185,7 @@ The controller automatically sets:
 - root: `role="region"`, `aria-roledescription="carousel"`
 - item: `role="group"`, `aria-roledescription="slide"`
 - item state: `data-state`, `aria-hidden`
+- root drag state: `data-dragging="true"` during an active pointer drag
 - nav controls: `disabled` / `aria-disabled` synced to scrollability
 
 ## License

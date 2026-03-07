@@ -12,9 +12,23 @@ import {
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
 const PROGRAMMATIC_SCROLL_LOCK_MS = 1200;
+const DRAG_AXIS_LOCK_THRESHOLD = 12;
 const FOCUSABLE_CANDIDATES =
   'a[href],button,input,select,textarea,[contenteditable]:not([contenteditable="false"]),[tabindex]';
+const DRAG_BLOCKING_CANDIDATES =
+  'a[href],button,input,select,textarea,summary,[contenteditable=""],[contenteditable="true"],[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="radio"],[role="switch"],[role="textbox"]';
 type CarouselSetDetail = { index?: number; action?: "next" | "prev" };
+
+interface DragState {
+  pointerId: number;
+  startX: number;
+  currentX: number;
+  startY: number;
+  currentY: number;
+  startPosition: number;
+  axis: "x" | "y" | null;
+  active: boolean;
+}
 
 export interface CarouselOptions {
   /** Initial slide index */
@@ -23,6 +37,8 @@ export interface CarouselOptions {
   orientation?: "horizontal" | "vertical";
   /** Enable soft-wrap looping for keyboard/button/API navigation */
   loop?: boolean;
+  /** Enable pointer drag/swipe navigation */
+  drag?: boolean;
   /** Callback when active index changes */
   onIndexChange?: (index: number) => void;
 }
@@ -91,6 +107,12 @@ const setInert = (el: HTMLElement, inert: boolean) => {
   }
 };
 
+const isDragBlockingTarget = (target: EventTarget | null): boolean => {
+  if (!target || typeof (target as Element).closest !== "function") return false;
+
+  return !!(target as Element).closest(DRAG_BLOCKING_CANDIDATES);
+};
+
 /**
  * Create a carousel controller for a root element.
  *
@@ -138,6 +160,7 @@ export function createCarousel(
     getDataEnum(root, "orientation", ORIENTATIONS) ??
     "horizontal";
   const loop = options.loop ?? getDataBool(root, "loop") ?? false;
+  const drag = options.drag ?? getDataBool(root, "drag") ?? false;
   const defaultIndex =
     options.defaultIndex ?? getDataNumber(root, "defaultIndex") ?? 0;
   const onIndexChange = options.onIndexChange;
@@ -151,6 +174,7 @@ export function createCarousel(
     HTMLElement,
     Array<{ element: HTMLElement; tabindex: string | null }>
   >();
+  const doc = root.ownerDocument ?? document;
   const win = root.ownerDocument?.defaultView ?? window;
   const matchesMediaQuery = (query: string): boolean => {
     if (typeof win.matchMedia !== "function") return false;
@@ -167,6 +191,9 @@ export function createCarousel(
   let scrollRafId: number | null = null;
   let pendingProgrammaticIndex: number | null = null;
   let programmaticUnlockTimeoutId: number | null = null;
+  let dragState: DragState | null = null;
+  let previousTouchAction: string | null = null;
+  let previousScrollSnapType: string | null = null;
 
   let resizeObserver: ResizeObserver | null = null;
   let mutationObserver: MutationObserver | null = null;
@@ -191,6 +218,15 @@ export function createCarousel(
   };
 
   const getAxisPosition = () => (isHorizontal ? content.scrollLeft : content.scrollTop);
+  const setAxisPosition = (position: number) => {
+    if (isHorizontal) {
+      content.scrollLeft = position;
+      return;
+    }
+
+    content.scrollTop = position;
+  };
+  const activeDragAxis = isHorizontal ? "x" : "y";
 
   const getSnapPointForItem = (item: HTMLElement): number => {
     const contentRect = content.getBoundingClientRect();
@@ -218,6 +254,35 @@ export function createCarousel(
     }
 
     return nearest;
+  };
+
+  const resolveDragAxis = (deltaX: number, deltaY: number): "x" | "y" | null => {
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (Math.max(absX, absY) < DRAG_AXIS_LOCK_THRESHOLD) {
+      return null;
+    }
+
+    if (absX === absY) {
+      return activeDragAxis;
+    }
+
+    return absX > absY ? "x" : "y";
+  };
+
+  const disableDragScrollSnap = () => {
+    if (previousScrollSnapType !== null) return;
+
+    previousScrollSnapType = content.style.scrollSnapType;
+    content.style.scrollSnapType = "none";
+  };
+
+  const restoreDragScrollSnap = () => {
+    if (previousScrollSnapType === null) return;
+
+    content.style.scrollSnapType = previousScrollSnapType;
+    previousScrollSnapType = null;
   };
 
   const canScrollPrev = () => {
@@ -424,10 +489,12 @@ export function createCarousel(
   };
 
   const onScroll = () => {
+    if (dragState?.active) return;
     if (scrollRafId !== null) return;
 
     scrollRafId = win.requestAnimationFrame(() => {
       scrollRafId = null;
+      if (dragState?.active) return;
       if (items.length === 0) return;
 
       const nearest = getNearestIndex(getAxisPosition());
@@ -492,14 +559,123 @@ export function createCarousel(
     }
   };
 
+  const stopDragging = (
+    pointerId: number | null,
+    shouldSnap: boolean,
+  ) => {
+    const current = dragState;
+    if (!current) return;
+    if (pointerId !== null && current.pointerId !== pointerId) return;
+
+    dragState = null;
+    root.removeAttribute("data-dragging");
+
+    if ("releasePointerCapture" in content) {
+      try {
+        content.releasePointerCapture(current.pointerId);
+      } catch {
+        // Ignore if pointer capture was not active.
+      }
+    }
+
+    if (!shouldSnap || items.length === 0) {
+      restoreDragScrollSnap();
+      return;
+    }
+
+    const nearest = getNearestIndex(getAxisPosition());
+    setIndex(nearest, true, true, navigationBehavior);
+    restoreDragScrollSnap();
+  };
+
+  const onPointerDown = (event: PointerEvent) => {
+    if (!drag) return;
+    if (dragState?.pointerId === event.pointerId) return;
+    if (dragState?.active) return;
+    if (event.button !== 0) return;
+    if (isDragBlockingTarget(event.target)) return;
+
+    dragState = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      currentX: event.clientX,
+      startY: event.clientY,
+      currentY: event.clientY,
+      startPosition: getAxisPosition(),
+      axis: null,
+      active: false,
+    };
+
+    if ("setPointerCapture" in content) {
+      try {
+        content.setPointerCapture(event.pointerId);
+      } catch {
+        // Ignore if pointer capture is unsupported for this target.
+      }
+    }
+  };
+
+  const onPointerMove = (event: PointerEvent) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+
+    dragState.currentX = event.clientX;
+    dragState.currentY = event.clientY;
+
+    const deltaX = dragState.currentX - dragState.startX;
+    const deltaY = dragState.currentY - dragState.startY;
+    const axis = dragState.axis ?? resolveDragAxis(deltaX, deltaY);
+    dragState.axis = axis;
+
+    if (axis !== activeDragAxis) return;
+
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+
+    if (!dragState.active) {
+      dragState.active = true;
+      root.setAttribute("data-dragging", "true");
+      clearProgrammaticScrollLock();
+      disableDragScrollSnap();
+    }
+
+    const delta = isHorizontal ? deltaX : deltaY;
+    setAxisPosition(dragState.startPosition - delta);
+  };
+
+  const onPointerUp = (event: PointerEvent) => {
+    stopDragging(event.pointerId, true);
+  };
+
+  const onPointerCancel = (event: PointerEvent) => {
+    stopDragging(event.pointerId, true);
+  };
+
+  const onLostPointerCapture = (event: PointerEvent) => {
+    stopDragging(event.pointerId, true);
+  };
+
   measureSnapPoints();
   updateStaticA11y();
   scrollToCurrent();
   updateStates(false);
 
+  if (drag) {
+    previousTouchAction = content.style.touchAction;
+    content.style.touchAction = isHorizontal ? "pan-y" : "pan-x";
+  }
+
   cleanups.push(on(content, "scroll", onScroll));
   cleanups.push(on(root, "keydown", onKeyDown));
   cleanups.push(on(root, "carousel:set", onSet));
+
+  if (drag) {
+    cleanups.push(on(content, "pointerdown", onPointerDown));
+    cleanups.push(on(doc, "pointermove", onPointerMove));
+    cleanups.push(on(doc, "pointerup", onPointerUp));
+    cleanups.push(on(doc, "pointercancel", onPointerCancel));
+    cleanups.push(on(content, "lostpointercapture", onLostPointerCapture));
+  }
 
   for (const control of previousControls) {
     if (control.tagName === "BUTTON" && !control.hasAttribute("type")) {
@@ -549,6 +725,13 @@ export function createCarousel(
       }
 
       clearProgrammaticScrollLock();
+      stopDragging(null, false);
+
+      if (drag) {
+        content.style.touchAction = previousTouchAction ?? "";
+        previousTouchAction = null;
+      }
+      restoreDragScrollSnap();
       resizeObserver?.disconnect();
       mutationObserver?.disconnect();
       cleanups.forEach((fn) => fn());

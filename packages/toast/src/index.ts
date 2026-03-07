@@ -35,7 +35,9 @@ const DEFAULT_DURATION = 5000;
 const DEFAULT_POSITION: ToastPosition = "bottom-right";
 const DEFAULT_GAP = 8;
 const DEFAULT_COLLAPSED_PEEK = 14;
-const DEFAULT_SWIPE_THRESHOLD = 80;
+const DEFAULT_SWIPE_THRESHOLD = 40;
+const SWIPE_RESISTANCE = 0.2;
+const SWIPE_AXIS_LOCK_THRESHOLD = 12;
 const FOCUSABLE_SELECTOR = [
   "a[href]",
   "area[href]",
@@ -72,6 +74,10 @@ const RUNTIME_MEASUREMENT_STYLE_PROPS = [
   "--toast-offset-y",
   "--toast-lift",
   "--toast-stack-direction",
+  "--toast-swipe-movement-x",
+  "--toast-swipe-movement-y",
+  "--toast-swipe-end-x",
+  "--toast-swipe-end-y",
 ] as const;
 
 export type ToastPosition = (typeof POSITIONS)[number];
@@ -208,8 +214,11 @@ interface ToastActionDetail {
 interface SwipeState {
   id: string;
   pointerId: number;
+  startX: number;
+  currentX: number;
   startY: number;
   currentY: number;
+  axis: "x" | "y" | null;
 }
 
 const isFiniteNumber = (value: unknown): value is number =>
@@ -231,6 +240,35 @@ const normalizeDuration = (value: number | undefined, fallback: number): number 
 
 const getStackDirection = (position: ToastPosition): number =>
   position.startsWith("top") ? 1 : -1;
+
+const getInlineSwipeDirection = (position: ToastPosition): number => {
+  if (position.endsWith("left")) return -1;
+  if (position.endsWith("right")) return 1;
+  return 0;
+};
+
+const adjustSwipeDelta = (delta: number, outwardDirection: number): number => {
+  if (outwardDirection === 0) return 0;
+  return delta * outwardDirection < 0 ? delta * SWIPE_RESISTANCE : delta;
+};
+
+const resolveSwipeAxis = (
+  deltaX: number,
+  deltaY: number,
+  inlineDirection: number,
+): "x" | "y" | null => {
+  if (inlineDirection === 0) {
+    return Math.abs(deltaY) >= SWIPE_AXIS_LOCK_THRESHOLD ? "y" : null;
+  }
+
+  const absX = Math.abs(deltaX);
+  const absY = Math.abs(deltaY);
+  if (Math.max(absX, absY) < SWIPE_AXIS_LOCK_THRESHOLD) {
+    return null;
+  }
+
+  return absX > absY ? "x" : "y";
+};
 
 const getCssGap = (viewport: HTMLElement): number => {
   const raw = getComputedStyle(viewport).getPropertyValue("--toast-gap").trim();
@@ -546,6 +584,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const onAction = options.onAction;
 
   const stackDirection = getStackDirection(position);
+  const inlineSwipeDirection = getInlineSwipeDirection(position);
 
   root.setAttribute("data-position", position);
   viewport.setAttribute("data-position", position);
@@ -1119,7 +1158,10 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     setBooleanDataAttribute(item, "data-swipe-out", false);
     item.style.setProperty("--toast-enter-direction", String(stackDirection));
     item.style.setProperty("--toast-exit-direction", String(stackDirection));
+    item.style.setProperty("--toast-swipe-movement-x", "0px");
     item.style.setProperty("--toast-swipe-movement-y", "0px");
+    item.style.setProperty("--toast-swipe-end-x", "0px");
+    item.style.setProperty("--toast-swipe-end-y", "0px");
     item.style.setProperty("--toast-lift", String(stackDirection));
     setOpenState(item, "open");
 
@@ -1399,7 +1441,17 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const clearSwipeStyles = (entry: ToastEntry) => {
     setBooleanDataAttribute(entry.element, "data-swiping", false);
     setBooleanDataAttribute(entry.element, "data-swipe-out", false);
+    entry.element.style.removeProperty("--toast-swipe-movement-x");
     entry.element.style.removeProperty("--toast-swipe-movement-y");
+    entry.element.style.removeProperty("--toast-swipe-end-x");
+    entry.element.style.removeProperty("--toast-swipe-end-y");
+  };
+
+  const startSwipeOut = (entry: ToastEntry, endX: number, endY: number) => {
+    setBooleanDataAttribute(entry.element, "data-swiping", false);
+    setBooleanDataAttribute(entry.element, "data-swipe-out", true);
+    entry.element.style.setProperty("--toast-swipe-end-x", `${endX}px`);
+    entry.element.style.setProperty("--toast-swipe-end-y", `${endY}px`);
   };
 
   const beginSwipe = (event: PointerEvent) => {
@@ -1420,11 +1472,15 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     swipeState = {
       id,
       pointerId: event.pointerId,
+      startX: event.clientX,
+      currentX: event.clientX,
       startY: event.clientY,
       currentY: event.clientY,
+      axis: null,
     };
 
     setBooleanDataAttribute(entry.element, "data-swiping", true);
+    entry.element.style.setProperty("--toast-swipe-movement-x", "0px");
     entry.element.style.setProperty("--toast-swipe-movement-y", "0px");
     if ("setPointerCapture" in entry.element) {
       try {
@@ -1443,10 +1499,23 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       return;
     }
 
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+
+    swipeState.currentX = event.clientX;
     swipeState.currentY = event.clientY;
+    const rawDeltaX = swipeState.currentX - swipeState.startX;
     const rawDeltaY = swipeState.currentY - swipeState.startY;
-    const directedDelta = rawDeltaY * -stackDirection;
-    const adjustedDeltaY = directedDelta < 0 ? rawDeltaY * 0.2 : rawDeltaY;
+    const axis =
+      swipeState.axis ?? resolveSwipeAxis(rawDeltaX, rawDeltaY, inlineSwipeDirection);
+    swipeState.axis = axis;
+
+    const adjustedDeltaX =
+      axis === "x" ? adjustSwipeDelta(rawDeltaX, inlineSwipeDirection) : 0;
+    const adjustedDeltaY =
+      axis === "y" ? adjustSwipeDelta(rawDeltaY, -stackDirection) : 0;
+    entry.element.style.setProperty("--toast-swipe-movement-x", `${adjustedDeltaX}px`);
     entry.element.style.setProperty("--toast-swipe-movement-y", `${adjustedDeltaY}px`);
     setBooleanDataAttribute(entry.element, "data-swiping", true);
   };
@@ -1468,16 +1537,47 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       }
     }
 
+    const rawDeltaX = current.currentX - current.startX;
     const rawDeltaY = current.currentY - current.startY;
-    const directedDelta = rawDeltaY * -stackDirection;
-    const threshold = Math.max(DEFAULT_SWIPE_THRESHOLD, entry.element.offsetHeight * 0.45);
-    const shouldDismiss = !cancelled && directedDelta >= threshold;
+    const axis =
+      current.axis ?? resolveSwipeAxis(rawDeltaX, rawDeltaY, inlineSwipeDirection);
+    const horizontalProgress =
+      inlineSwipeDirection === 0
+        ? Number.NEGATIVE_INFINITY
+        : (rawDeltaX * inlineSwipeDirection) / DEFAULT_SWIPE_THRESHOLD;
+    const verticalProgress =
+      (rawDeltaY * -stackDirection) / DEFAULT_SWIPE_THRESHOLD;
+    const dismissAxis =
+      !cancelled && axis === "x" && horizontalProgress >= 1
+        ? "x"
+        : !cancelled && axis === "y" && verticalProgress >= 1
+          ? "y"
+          : null;
+
+    if (dismissAxis) {
+      const endX =
+        dismissAxis === "x"
+          ? inlineSwipeDirection *
+            Math.max(
+              Math.abs(rawDeltaX),
+              entry.element.offsetWidth + DEFAULT_GAP * 2,
+            )
+          : 0;
+      const endY =
+        dismissAxis === "y"
+          ? -stackDirection *
+            Math.max(
+              Math.abs(rawDeltaY),
+              entry.element.offsetHeight + DEFAULT_GAP * 2,
+            )
+          : 0;
+
+      startSwipeOut(entry, endX, endY);
+      dismiss(entry.id);
+      return;
+    }
 
     clearSwipeStyles(entry);
-    if (shouldDismiss) {
-      setBooleanDataAttribute(entry.element, "data-swipe-out", true);
-      dismiss(entry.id);
-    }
   };
 
   cleanups.push(
