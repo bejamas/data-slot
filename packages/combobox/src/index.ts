@@ -365,6 +365,20 @@ export function createCombobox(
 
   const filterFn = customFilter ?? defaultFilter;
 
+  const syncItemSelectedState = (item: HTMLElement, selected: boolean) => {
+    setAria(item, "selected", selected);
+    if (selected) {
+      item.setAttribute("data-selected", "");
+    } else {
+      item.removeAttribute("data-selected");
+    }
+
+    const indicators = getParts<HTMLElement>(item, "combobox-item-indicator");
+    for (const indicator of indicators) {
+      indicator.hidden = !selected;
+    }
+  };
+
   // Cache items from content
   const cacheItems = () => {
     const container = list ?? content;
@@ -381,13 +395,7 @@ export function createCombobox(
 
       // Mark selected
       const itemValue = getItemValue(item);
-      if (itemValue === currentValue) {
-        setAria(item, "selected", true);
-        item.setAttribute("data-selected", "");
-      } else {
-        setAria(item, "selected", false);
-        item.removeAttribute("data-selected");
-      }
+      syncItemSelectedState(item, itemValue === currentValue);
     }
 
     // Set groups' ARIA
@@ -493,6 +501,35 @@ export function createCombobox(
   };
 
   // Positioning
+  const syncPositionCssVars = (positioner: HTMLElement, anchorRect: DOMRectReadOnly, side: Side) => {
+    const visualViewport = win.visualViewport;
+    const viewportY = visualViewport?.offsetTop ?? 0;
+    const viewportWidth = visualViewport?.width ?? win.innerWidth;
+    const viewportHeight = visualViewport?.height ?? win.innerHeight;
+    const availableWidth = Math.max(0, viewportWidth - (collisionPadding * 2));
+    const availableHeight =
+      side === "top"
+        ? Math.max(0, anchorRect.top - viewportY - collisionPadding - sideOffset)
+        : Math.max(0, (viewportY + viewportHeight) - anchorRect.bottom - collisionPadding - sideOffset);
+
+    // Snap anchor dimensions to device pixels so popup sizing matches the anchor visually.
+    const dpr = win.devicePixelRatio || 1;
+    const anchorWidth = (Math.round((anchorRect.x + anchorRect.width) * dpr) - Math.round(anchorRect.x * dpr)) / dpr;
+    const anchorHeight = (Math.round((anchorRect.y + anchorRect.height) * dpr) - Math.round(anchorRect.y * dpr)) / dpr;
+
+    const applyVars = (element: HTMLElement) => {
+      element.style.setProperty("--available-width", `${availableWidth}px`);
+      element.style.setProperty("--available-height", `${availableHeight}px`);
+      element.style.setProperty("--anchor-width", `${anchorWidth}px`);
+      element.style.setProperty("--anchor-height", `${anchorHeight}px`);
+    };
+
+    applyVars(content);
+    if (positioner !== content) {
+      applyVars(positioner);
+    }
+  };
+
   const updatePosition = () => {
     const positioner = portal.container as HTMLElement;
     const effectiveSide: Side = isMobileTouchEnvironment ? "bottom" : (openRenderedSide ?? preferredSide);
@@ -527,6 +564,7 @@ export function createCombobox(
     positioner.style.setProperty("--transform-origin", transformOrigin);
     positioner.style.willChange = "transform";
     positioner.style.margin = "0";
+    syncPositionCssVars(positioner, anchorRect, pos.side as Side);
     if (!isMobileTouchEnvironment && effectiveAvoidCollisions) {
       openRenderedSide = pos.side as Side;
     }
@@ -698,13 +736,7 @@ export function createCombobox(
     const items = allItems.length > 0 ? allItems : getParts<HTMLElement>(container, "combobox-item");
     for (const item of items) {
       const itemValue = getItemValue(item);
-      if (itemValue === value) {
-        setAria(item, "selected", true);
-        item.setAttribute("data-selected", "");
-      } else {
-        setAria(item, "selected", false);
-        item.removeAttribute("data-selected");
-      }
+      syncItemSelectedState(item, itemValue === value);
     }
 
     const resolvedLabel = getLabelForValue(value);

@@ -21,8 +21,14 @@ npm install @data-slot/combobox
       <div data-slot="combobox-empty">No results found</div>
       <div data-slot="combobox-group">
         <div data-slot="combobox-label">Fruits</div>
-        <div data-slot="combobox-item" data-value="apple">Apple</div>
-        <div data-slot="combobox-item" data-value="banana">Banana</div>
+        <div data-slot="combobox-item" data-value="apple">
+          Apple
+          <span data-slot="combobox-item-indicator">✓</span>
+        </div>
+        <div data-slot="combobox-item" data-value="banana">
+          Banana
+          <span data-slot="combobox-item-indicator">✓</span>
+        </div>
       </div>
       <div data-slot="combobox-separator"></div>
       <div data-slot="combobox-item" data-value="other">Other</div>
@@ -69,6 +75,7 @@ controller.destroy();
 | `combobox-content` | Popup container |
 | `combobox-list` | Scrollable list wrapper |
 | `combobox-item` | Individual selectable option |
+| `combobox-item-indicator` | Optional selected-state indicator inside `combobox-item`; hidden automatically for unselected items |
 | `combobox-group` | Groups related items |
 | `combobox-label` | Group label (inside a `combobox-group`) |
 | `combobox-separator` | Visual divider between items/groups |
@@ -179,7 +186,15 @@ Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align
 3. `combobox-positioner`
 4. `combobox` root (fallback)
 
-The positioned element (`combobox-positioner`, or `combobox-content` when no positioner is used) receives `--transform-origin`, so animations can use `transform-origin: var(--transform-origin, center)`.
+The positioned element (`combobox-positioner`, or `combobox-content` when no positioner is used) receives these CSS variables for styling:
+
+- `--transform-origin`
+- `--available-width`
+- `--available-height`
+- `--anchor-width`
+- `--anchor-height`
+
+When a separate `combobox-positioner` is present, the same values are also mirrored onto `combobox-content` so copied style packs can branch from either element.
 
 ### Mobile Behavior
 

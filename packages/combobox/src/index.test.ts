@@ -916,6 +916,44 @@ describe("Combobox", () => {
       controller.destroy();
     });
 
+    it("shows combobox-item-indicator only for the selected item", () => {
+      const { root, items, controller } = setup(
+        { defaultValue: "apple" },
+        `
+        <div data-slot="combobox" id="root">
+          <input data-slot="combobox-input" />
+          <div data-slot="combobox-content" hidden>
+            <div data-slot="combobox-list">
+              <div data-slot="combobox-item" data-value="apple">
+                Apple
+                <span data-slot="combobox-item-indicator">✓</span>
+              </div>
+              <div data-slot="combobox-item" data-value="banana">
+                Banana
+                <span data-slot="combobox-item-indicator">✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+      );
+      const indicators = root.querySelectorAll('[data-slot="combobox-item-indicator"]') as NodeListOf<HTMLElement>;
+
+      expect(indicators[0]?.hidden).toBe(false);
+      expect(indicators[1]?.hidden).toBe(true);
+
+      controller.select("banana");
+
+      expect(indicators[0]?.hidden).toBe(true);
+      expect(indicators[1]?.hidden).toBe(false);
+
+      controller.clear();
+      expect(indicators[0]?.hidden).toBe(true);
+      expect(indicators[1]?.hidden).toBe(true);
+
+      controller.destroy();
+    });
+
     it("sets data-value on root", () => {
       const { root, items, controller } = setup();
       controller.open();
@@ -1514,6 +1552,70 @@ describe("Combobox", () => {
 
       controller.destroy();
     });
+
+    it("mirrors size CSS vars to an authored positioner", () => {
+      document.body.innerHTML = `
+        <div data-slot="combobox" id="root">
+          <input data-slot="combobox-input" />
+          <div data-slot="combobox-portal">
+            <div data-slot="combobox-positioner" id="positioner">
+              <div data-slot="combobox-content" hidden>
+                <div data-slot="combobox-list">
+                  <div data-slot="combobox-item" data-value="apple">Apple</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="combobox-content"]') as HTMLElement;
+      const positioner = document.getElementById("positioner") as HTMLElement;
+      const controller = createCombobox(root, { avoidCollisions: false });
+
+      (root as HTMLElement).getBoundingClientRect = () =>
+        ({
+          x: 40,
+          y: 50,
+          top: 50,
+          left: 40,
+          width: 120,
+          height: 32,
+          right: 160,
+          bottom: 82,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 140,
+          height: 60,
+          right: 140,
+          bottom: 60,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      controller.open();
+
+      expect(positioner.style.getPropertyValue("--available-width")).toBe(
+        content.style.getPropertyValue("--available-width")
+      );
+      expect(positioner.style.getPropertyValue("--available-height")).toBe(
+        content.style.getPropertyValue("--available-height")
+      );
+      expect(positioner.style.getPropertyValue("--anchor-width")).toBe(
+        content.style.getPropertyValue("--anchor-width")
+      );
+      expect(positioner.style.getPropertyValue("--anchor-height")).toBe(
+        content.style.getPropertyValue("--anchor-height")
+      );
+
+      controller.destroy();
+    });
   });
 
   describe("content positioning", () => {
@@ -1529,6 +1631,89 @@ describe("Combobox", () => {
       controller.open();
       expect(content.getAttribute("data-side")).toBe("bottom");
       expect(content.getAttribute("data-align")).toBe("start");
+      expect(content.style.getPropertyValue("--available-width")).toMatch(/px$/);
+      expect(content.style.getPropertyValue("--available-height")).toMatch(/px$/);
+      expect(content.style.getPropertyValue("--anchor-width")).toMatch(/px$/);
+      expect(content.style.getPropertyValue("--anchor-height")).toMatch(/px$/);
+      controller.destroy();
+    });
+
+    it("sets Base UI-style size CSS vars when open", () => {
+      const { root, content, controller } = setup({ avoidCollisions: false, sideOffset: 6 });
+
+      (root as HTMLElement).getBoundingClientRect = () =>
+        ({
+          x: 100,
+          y: 100,
+          top: 100,
+          left: 100,
+          width: 80,
+          height: 20,
+          right: 180,
+          bottom: 120,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 100,
+          height: 40,
+          right: 100,
+          bottom: 40,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      controller.open();
+
+      const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const viewportY = window.visualViewport?.offsetTop ?? 0;
+      expect(content.style.getPropertyValue("--available-width")).toBe(`${viewportWidth - 16}px`);
+      expect(content.style.getPropertyValue("--available-height")).toBe(`${viewportY + viewportHeight - 120 - 8 - 6}px`);
+      expect(content.style.getPropertyValue("--anchor-width")).toBe("80px");
+      expect(content.style.getPropertyValue("--anchor-height")).toBe("20px");
+
+      controller.destroy();
+    });
+
+    it("subtracts sideOffset from available height on both bottom and top placements", () => {
+      const { root, content, controller } = setup({ avoidCollisions: false, side: "top", sideOffset: 12 });
+
+      (root as HTMLElement).getBoundingClientRect = () =>
+        ({
+          x: 100,
+          y: 200,
+          top: 200,
+          left: 100,
+          width: 80,
+          height: 20,
+          right: 180,
+          bottom: 220,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      content.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          width: 100,
+          height: 40,
+          right: 100,
+          bottom: 40,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      controller.open();
+
+      const viewportY = window.visualViewport?.offsetTop ?? 0;
+      expect(content.style.getPropertyValue("--available-height")).toBe(`${200 - viewportY - 8 - 12}px`);
+
       controller.destroy();
     });
 
