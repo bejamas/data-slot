@@ -19,14 +19,16 @@ npm install @data-slot/select
     <!-- Add your own chevron icon -->
   </button>
   <div data-slot="select-content" hidden>
-    <div data-slot="select-group">
-      <div data-slot="select-label">Fruits</div>
-      <div data-slot="select-item" data-value="apple">Apple</div>
-      <div data-slot="select-item" data-value="banana">Banana</div>
-      <div data-slot="select-item" data-value="orange">Orange</div>
+    <div data-slot="select-viewport">
+      <div data-slot="select-group">
+        <div data-slot="select-label">Fruits</div>
+        <div data-slot="select-item" data-value="apple">Apple</div>
+        <div data-slot="select-item" data-value="banana">Banana</div>
+        <div data-slot="select-item" data-value="orange">Orange</div>
+      </div>
+      <div data-slot="select-separator"></div>
+      <div data-slot="select-item" data-value="other">Other</div>
     </div>
-    <div data-slot="select-separator"></div>
-    <div data-slot="select-item" data-value="other">Other</div>
   </div>
 </div>
 ```
@@ -64,6 +66,7 @@ controller.destroy();
 | `select-trigger` | Button that opens the popup |
 | `select-value` | Displays selected value (inside trigger) |
 | `select-content` | Popup container for options |
+| `select-viewport` | Optional scroll container inside `select-content`; used for item-aligned scrolling when present |
 | `select-item` | Individual selectable option |
 | `select-group` | Groups related items |
 | `select-label` | Group label (inside a `select-group`) |
@@ -141,6 +144,14 @@ Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, 
 
 Both positioning modes set `--transform-origin` on the positioned element (`select-positioner`, or `select-content` when no positioner is used), so content animations can use `transform-origin: var(--transform-origin, center)`.
 
+The controller also mirrors the resolved positioning mode onto the DOM for styling:
+
+- `data-position="item-aligned" | "popper"` on `select-content`
+- `data-position="item-aligned" | "popper"` on `select-viewport` when present
+- `data-align-trigger="true" | "false"` on `select-content`
+
+Consumers can style against these attributes directly and do not need to author them manually.
+
 ### Callbacks
 
 | Callback | Type | Description |
@@ -196,6 +207,8 @@ The component sets these attributes to reflect state:
 | Attribute | Element | Values | Description |
 |-----------|---------|--------|-------------|
 | `data-state` | root, trigger, content | `"open" \| "closed"` | Open state |
+| `data-position` | content, viewport | `"item-aligned" \| "popper"` | Resolved positioning mode authored by the controller |
+| `data-align-trigger` | content | `"true" \| "false"` | Whether the current mode aligns the selected item to the trigger |
 | `data-value` | root | `string` | Current selected value |
 | `data-selected` | item | (presence) | Selected item |
 | `data-highlighted` | item | (presence) | Keyboard-focused item |

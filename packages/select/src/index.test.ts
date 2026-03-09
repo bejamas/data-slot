@@ -974,6 +974,8 @@ describe("Select", () => {
       const { trigger, content, controller } = setup();
 
       trigger.click();
+      expect(content.getAttribute("data-position")).toBe("item-aligned");
+      expect(content.getAttribute("data-align-trigger")).toBe("true");
       // Item-aligned mode sets align to "center"
       expect(content.getAttribute("data-align")).toBe("center");
       // Side depends on position relative to trigger
@@ -986,6 +988,8 @@ describe("Select", () => {
       const { trigger, content, controller } = setup({ position: "popper" });
 
       trigger.click();
+      expect(content.getAttribute("data-position")).toBe("popper");
+      expect(content.getAttribute("data-align-trigger")).toBe("false");
       expect(content.getAttribute("data-side")).toBe("bottom");
       expect(content.getAttribute("data-align")).toBe("start");
 
@@ -1695,6 +1699,54 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("authors resolved data-position and data-align-trigger on content during initialization", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="root">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="apple">Apple</div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
+      const controller = createSelect(root);
+
+      expect(content.getAttribute("data-position")).toBe("item-aligned");
+      expect(content.getAttribute("data-align-trigger")).toBe("true");
+      expect(content.getAttribute("data-state")).toBe("closed");
+      expect(content.hasAttribute("data-closed")).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("authors resolved data-position on select-viewport during initialization", () => {
+      document.body.innerHTML = `
+        <div data-slot="select" id="root" data-position="popper">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-viewport">
+              <div data-slot="select-item" data-value="apple">Apple</div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
+      const viewport = root.querySelector('[data-slot="select-viewport"]') as HTMLElement;
+      const controller = createSelect(root);
+
+      expect(content.getAttribute("data-position")).toBe("popper");
+      expect(content.getAttribute("data-align-trigger")).toBe("false");
+      expect(viewport.getAttribute("data-position")).toBe("popper");
+
+      controller.destroy();
+    });
+
     it("reads data-position from content", () => {
       document.body.innerHTML = `
         <div data-slot="select" id="root">
@@ -1710,6 +1762,8 @@ describe("Select", () => {
       const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
       const controller = createSelect(root);
 
+      expect(content.getAttribute("data-position")).toBe("popper");
+      expect(content.getAttribute("data-align-trigger")).toBe("false");
       controller.open();
       expect(content.getAttribute("data-side")).toBe("top");
       expect(content.getAttribute("data-align")).toBe("start");
@@ -1736,6 +1790,8 @@ describe("Select", () => {
       const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
       const controller = createSelect(root);
 
+      expect(content.getAttribute("data-position")).toBe("popper");
+      expect(content.getAttribute("data-align-trigger")).toBe("false");
       controller.open();
       expect(content.getAttribute("data-side")).toBe("top");
       expect(content.getAttribute("data-align")).toBe("start");
@@ -1829,6 +1885,8 @@ describe("Select", () => {
       const content = root.querySelector('[data-slot="select-content"]') as HTMLElement;
       const controller = createSelect(root);
 
+      expect(content.getAttribute("data-position")).toBe("popper");
+      expect(content.getAttribute("data-align-trigger")).toBe("false");
       controller.open();
       // In popper mode, default is bottom/start
       expect(content.getAttribute("data-side")).toBe("bottom");

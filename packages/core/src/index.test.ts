@@ -725,6 +725,7 @@ describe('core/popup', () => {
     }) as DOMRect
 
   const waitForRaf = () => new Promise((resolve) => setTimeout(resolve, 20))
+  const waitForTask = () => new Promise((resolve) => setTimeout(resolve, 0))
 
   beforeEach(() => {
     document.body.innerHTML = ''
@@ -1189,6 +1190,94 @@ describe('core/popup', () => {
     cleanup()
   })
 
+  it('createDismissLayer dismisses when focus moves into an outside iframe', async () => {
+    document.body.innerHTML = `
+      <div id="root"></div>
+      <iframe id="outside-frame"></iframe>
+    `
+    const root = document.getElementById('root')!
+    const outsideFrame = document.getElementById('outside-frame') as HTMLIFrameElement
+
+    let open = true
+    let dismissed = 0
+    const cleanup = createDismissLayer({
+      root,
+      isOpen: () => open,
+      onDismiss: () => {
+        dismissed += 1
+        open = false
+      },
+      closeOnEscape: false,
+    })
+
+    outsideFrame.focus()
+    window.dispatchEvent(new Event('blur'))
+    await waitForTask()
+
+    expect(dismissed).toBe(1)
+
+    cleanup()
+  })
+
+  it('createDismissLayer does not dismiss when focus moves into an iframe inside the layer', async () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <iframe id="inside-frame"></iframe>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const insideFrame = document.getElementById('inside-frame') as HTMLIFrameElement
+
+    let open = true
+    let dismissed = 0
+    const cleanup = createDismissLayer({
+      root,
+      isOpen: () => open,
+      onDismiss: () => {
+        dismissed += 1
+        open = false
+      },
+      closeOnEscape: false,
+    })
+
+    insideFrame.focus()
+    window.dispatchEvent(new Event('blur'))
+    await waitForTask()
+
+    expect(dismissed).toBe(0)
+
+    cleanup()
+  })
+
+  it('createDismissLayer ignores generic window blur without iframe focus', async () => {
+    document.body.innerHTML = `
+      <div id="root"></div>
+      <button id="outside">Outside</button>
+    `
+    const root = document.getElementById('root')!
+    const outside = document.getElementById('outside') as HTMLButtonElement
+
+    let open = true
+    let dismissed = 0
+    const cleanup = createDismissLayer({
+      root,
+      isOpen: () => open,
+      onDismiss: () => {
+        dismissed += 1
+        open = false
+      },
+      closeOnEscape: false,
+    })
+
+    outside.focus()
+    window.dispatchEvent(new Event('blur'))
+    await waitForTask()
+
+    expect(dismissed).toBe(0)
+
+    cleanup()
+  })
+
   it('createDismissLayer clears pending touch dismissal on pointercancel', () => {
     document.body.innerHTML = `
       <div id="root"></div>
@@ -1390,6 +1479,55 @@ describe('core/popup', () => {
     expect(outerDismissed).toBe(0)
 
     outside.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(innerDismissed).toBe(1)
+    expect(outerDismissed).toBe(0)
+
+    cleanupInner()
+    cleanupOuter()
+  })
+
+  it('createDismissLayer dismisses only the topmost layer when focus moves into an outside iframe', async () => {
+    document.body.innerHTML = `
+      <div id="outer">
+        <div id="inner"></div>
+      </div>
+      <iframe id="outside-frame"></iframe>
+    `
+    const outer = document.getElementById('outer')!
+    const inner = document.getElementById('inner')!
+    const outsideFrame = document.getElementById('outside-frame') as HTMLIFrameElement
+
+    let outerOpen = true
+    let innerOpen = true
+    let outerDismissed = 0
+    let innerDismissed = 0
+
+    const cleanupOuter = createDismissLayer({
+      root: outer,
+      isOpen: () => outerOpen,
+      onDismiss: () => {
+        outerDismissed += 1
+        outerOpen = false
+      },
+      closeOnClickOutside: true,
+      closeOnEscape: false,
+    })
+
+    const cleanupInner = createDismissLayer({
+      root: inner,
+      isOpen: () => innerOpen,
+      onDismiss: () => {
+        innerDismissed += 1
+        innerOpen = false
+      },
+      closeOnClickOutside: true,
+      closeOnEscape: false,
+    })
+
+    outsideFrame.focus()
+    window.dispatchEvent(new Event('blur'))
+    await waitForTask()
+
     expect(innerDismissed).toBe(1)
     expect(outerDismissed).toBe(0)
 

@@ -653,6 +653,7 @@ interface DismissLayerStore {
   layers: DismissLayerEntry[];
   openSequence: number;
   pendingTouchOutside: boolean;
+  pendingIframeBlur: ReturnType<Window["setTimeout"]> | null;
   cleanup: () => void;
 }
 
@@ -685,11 +686,19 @@ const getTopmostOpenLayer = (
 };
 
 const createDismissLayerStore = (doc: Document): DismissLayerStore => {
+  const win = doc.defaultView ?? window;
   const store: DismissLayerStore = {
     layers: [],
     openSequence: 0,
     pendingTouchOutside: false,
+    pendingIframeBlur: null,
     cleanup: () => {},
+  };
+
+  const clearPendingIframeBlur = () => {
+    if (store.pendingIframeBlur == null) return;
+    win.clearTimeout(store.pendingIframeBlur);
+    store.pendingIframeBlur = null;
   };
 
   const pointerCleanup = on(doc, "pointerdown", (event) => {
@@ -724,6 +733,27 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
     store.pendingTouchOutside = false;
   });
 
+  const blurCleanup = on(win, "blur", () => {
+    const topmost = getTopmostOpenLayer(store, (layer) => layer.closeOnClickOutside);
+    if (!topmost) return;
+
+    store.pendingTouchOutside = false;
+    clearPendingIframeBlur();
+    store.pendingIframeBlur = win.setTimeout(() => {
+      store.pendingIframeBlur = null;
+
+      const refreshedTopmost = getTopmostOpenLayer(store, (layer) => layer.closeOnClickOutside);
+      if (!refreshedTopmost) return;
+
+      const iframeCtor = win.HTMLIFrameElement;
+      const activeElement = doc.activeElement;
+      if (!iframeCtor || !(activeElement instanceof iframeCtor)) return;
+      if (refreshedTopmost.isInside(activeElement)) return;
+
+      refreshedTopmost.onDismiss();
+    }, 0);
+  });
+
   const keydownCleanup = on(doc, "keydown", (event) => {
     if (event.key !== "Escape") return;
     // If a focused control already handled Escape (e.g. select/combobox),
@@ -748,7 +778,9 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
     pointerCleanup();
     clickCleanup();
     pointerCancelCleanup();
+    blurCleanup();
     keydownCleanup();
+    clearPendingIframeBlur();
     store.pendingTouchOutside = false;
     store.layers.length = 0;
   };

@@ -39,6 +39,11 @@ describe("DropdownMenu", () => {
       requestAnimationFrame(() => resolve());
     });
 
+  const waitForTask = () =>
+    new Promise<void>((resolve) => {
+      setTimeout(() => resolve(), 0);
+    });
+
   const waitForClose = async () => {
     await waitForRaf();
     await waitForRaf();
@@ -257,6 +262,23 @@ describe("DropdownMenu", () => {
         new PointerEvent("pointerdown", { bubbles: true })
       );
       expect(controller.isOpen).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("closes when focus moves into an outside iframe", async () => {
+      const { trigger, controller } = setup();
+      document.body.insertAdjacentHTML("beforeend", '<iframe id="outside-frame"></iframe>');
+      const outsideFrame = document.getElementById("outside-frame") as HTMLIFrameElement;
+
+      trigger.click();
+      expect(controller.isOpen).toBe(true);
+
+      outsideFrame.focus();
+      window.dispatchEvent(new Event("blur"));
+      await waitForTask();
+
+      expect(controller.isOpen).toBe(false);
 
       controller.destroy();
     });

@@ -327,8 +327,21 @@ export function createSelect(
     }
   };
 
+  const getViewport = () =>
+    getPart<HTMLElement>(content, "select-viewport");
+
   const getScrollContainer = () =>
-    getPart<HTMLElement>(content, "select-viewport") ?? content;
+    getViewport() ?? content;
+
+  const syncResolvedPositionAttributes = () => {
+    content.setAttribute("data-position", position);
+    content.setAttribute("data-align-trigger", position === "item-aligned" ? "true" : "false");
+
+    const viewport = getViewport();
+    if (viewport) {
+      viewport.setAttribute("data-position", position);
+    }
+  };
 
   type ContentRect = Pick<DOMRectReadOnly, "top" | "width" | "height">;
 
@@ -486,6 +499,7 @@ export function createSelect(
     positioner.style.setProperty("--transform-origin", transformOrigin);
     positioner.style.willChange = "transform";
     positioner.style.margin = "0";
+    syncResolvedPositionAttributes();
     content.setAttribute("data-side", side);
     content.setAttribute("data-align", resolvedAlign);
     if (positioner !== content) {
@@ -812,6 +826,7 @@ export function createSelect(
   // Initialize
   setAria(trigger, "expanded", false);
   content.hidden = true;
+  syncResolvedPositionAttributes();
   setDataState("closed");
 
   // Initial value display
