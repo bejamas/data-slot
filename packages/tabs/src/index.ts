@@ -137,6 +137,7 @@ export function createTabs(
     requestedItem && !requestedItem.disabled ? requestedValue : firstValue;
 
   const cleanups: Array<() => void> = [];
+  let indicatorFrame: number | null = null;
 
   // Setup ARIA for list
   list.setAttribute("role", "tablist");
@@ -174,30 +175,72 @@ export function createTabs(
     }
   }
 
+  const getPositionWithinList = (
+    trigger: HTMLElement
+  ): { left: number; top: number; width: number; height: number } | null => {
+    let left = 0;
+    let top = 0;
+    let current: HTMLElement | null = trigger;
+
+    while (current && current !== list) {
+      left += current.offsetLeft;
+      top += current.offsetTop;
+
+      const parent = current.offsetParent;
+      if (!(parent instanceof HTMLElement)) {
+        return null;
+      }
+
+      if (parent !== list) {
+        left -= parent.scrollLeft;
+        top -= parent.scrollTop;
+      }
+
+      current = parent;
+    }
+
+    if (current !== list) return null;
+
+    return {
+      left,
+      top,
+      width: trigger.offsetWidth,
+      height: trigger.offsetHeight,
+    };
+  };
+
+  const getRectRelativeToList = (trigger: HTMLElement) => {
+    const listRect = list.getBoundingClientRect();
+    const triggerRect = trigger.getBoundingClientRect();
+
+    return {
+      left: triggerRect.left - listRect.left - list.clientLeft + list.scrollLeft,
+      top: triggerRect.top - listRect.top - list.clientTop + list.scrollTop,
+      width: triggerRect.width,
+      height: triggerRect.height,
+    };
+  };
+
   // Update indicator position (CSS variables for smooth animation)
   const updateIndicator = () => {
     if (!indicator) return;
     const item = itemByValue.get(currentValue);
     if (!item) return;
 
-    const listRect = list.getBoundingClientRect();
-    const triggerRect = item.el.getBoundingClientRect();
+    const position = getPositionWithinList(item.el) ?? getRectRelativeToList(item.el);
 
-    const scrollLeft = list.scrollLeft;
-    const scrollTop = list.scrollTop;
-    indicator.style.setProperty(
-      "--active-tab-left",
-      `${triggerRect.left - listRect.left - list.clientLeft + scrollLeft}px`
-    );
-    indicator.style.setProperty("--active-tab-width", `${triggerRect.width}px`);
-    indicator.style.setProperty(
-      "--active-tab-top",
-      `${triggerRect.top - listRect.top - list.clientTop + scrollTop}px`
-    );
-    indicator.style.setProperty(
-      "--active-tab-height",
-      `${triggerRect.height}px`
-    );
+    indicator.style.setProperty("--active-tab-left", `${position.left}px`);
+    indicator.style.setProperty("--active-tab-width", `${position.width}px`);
+    indicator.style.setProperty("--active-tab-top", `${position.top}px`);
+    indicator.style.setProperty("--active-tab-height", `${position.height}px`);
+  };
+
+  const scheduleIndicatorUpdate = () => {
+    if (!indicator || indicatorFrame !== null) return;
+    indicatorFrame = requestAnimationFrame(() => {
+      indicatorFrame = null;
+      updateIndicator();
+    });
   };
 
   // Unified state application
@@ -256,7 +299,7 @@ export function createTabs(
     }
 
     root.setAttribute("data-value", value);
-    if (indicator) updateIndicator();
+    scheduleIndicatorUpdate();
 
     if (changed && !init) {
       emit(root, "tabs:change", { value });
@@ -269,12 +312,18 @@ export function createTabs(
 
   // Keep indicator in sync with layout changes (only if indicator exists)
   if (indicator) {
-    const indicatorTick = () => requestAnimationFrame(updateIndicator);
+    const indicatorTick = () => scheduleIndicatorUpdate();
     cleanups.push(on(window, "resize", indicatorTick));
     cleanups.push(on(list, "scroll", indicatorTick));
     const ro = new ResizeObserver(indicatorTick);
     ro.observe(list);
     cleanups.push(() => ro.disconnect());
+    cleanups.push(() => {
+      if (indicatorFrame !== null) {
+        cancelAnimationFrame(indicatorFrame);
+        indicatorFrame = null;
+      }
+    });
   }
 
   // Delegated click handler on list

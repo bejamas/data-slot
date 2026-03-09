@@ -2,6 +2,11 @@ import { describe, expect, it } from 'bun:test'
 import { createTabs, create } from './index'
 
 describe('Tabs', () => {
+  const waitForFrame = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve())
+    })
+
   const setup = (defaultValue?: string) => {
     document.body.innerHTML = `
       <div data-slot="tabs" id="root">
@@ -131,6 +136,124 @@ describe('Tabs', () => {
     const scrolledLeft = indicator.style.getPropertyValue('--active-tab-left')
 
     expect(scrolledLeft).toBe(initialLeft)
+
+    controller.destroy()
+  })
+
+  it('defers automatic indicator updates until the next animation frame', async () => {
+    document.body.innerHTML = `
+      <div data-slot="tabs" id="root">
+        <div data-slot="tabs-list">
+          <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+          <button data-slot="tabs-trigger" data-value="two">Tab Two</button>
+          <div data-slot="tabs-indicator"></div>
+        </div>
+        <div data-slot="tabs-content" data-value="one">Content One</div>
+        <div data-slot="tabs-content" data-value="two">Content Two</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const list = root.querySelector('[data-slot="tabs-list"]') as HTMLElement
+    const triggers = [...root.querySelectorAll('[data-slot="tabs-trigger"]')] as HTMLElement[]
+    const indicator = root.querySelector('[data-slot="tabs-indicator"]') as HTMLElement
+
+    const setTriggerBox = (el: HTMLElement, left: number, width: number) => {
+      Object.defineProperty(el, 'offsetParent', {
+        configurable: true,
+        get: () => list,
+      })
+      Object.defineProperty(el, 'offsetLeft', {
+        configurable: true,
+        get: () => left,
+      })
+      Object.defineProperty(el, 'offsetTop', {
+        configurable: true,
+        get: () => 4,
+      })
+      Object.defineProperty(el, 'offsetWidth', {
+        configurable: true,
+        get: () => width,
+      })
+      Object.defineProperty(el, 'offsetHeight', {
+        configurable: true,
+        get: () => 28,
+      })
+    }
+
+    setTriggerBox(triggers[0]!, 12, 48)
+    setTriggerBox(triggers[1]!, 80, 60)
+
+    const controller = createTabs(root)
+    controller.updateIndicator()
+
+    expect(indicator.style.getPropertyValue('--active-tab-left')).toBe('12px')
+    expect(indicator.style.getPropertyValue('--active-tab-width')).toBe('48px')
+
+    controller.select('two')
+
+    expect(indicator.style.getPropertyValue('--active-tab-left')).toBe('12px')
+    expect(indicator.style.getPropertyValue('--active-tab-width')).toBe('48px')
+
+    await waitForFrame()
+
+    expect(indicator.style.getPropertyValue('--active-tab-left')).toBe('80px')
+    expect(indicator.style.getPropertyValue('--active-tab-width')).toBe('60px')
+
+    controller.destroy()
+  })
+
+  it('uses list-relative layout geometry for the indicator inside transformed containers', () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog-content" id="dialog">
+        <div data-slot="tabs" id="root">
+          <div data-slot="tabs-list">
+            <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+            <button data-slot="tabs-trigger" data-value="two">Tab Two</button>
+            <div data-slot="tabs-indicator"></div>
+          </div>
+          <div data-slot="tabs-content" data-value="one">Content One</div>
+          <div data-slot="tabs-content" data-value="two">Content Two</div>
+        </div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const list = root.querySelector('[data-slot="tabs-list"]') as HTMLElement
+    const trigger = root.querySelector('[data-slot="tabs-trigger"]') as HTMLElement
+    const indicator = root.querySelector('[data-slot="tabs-indicator"]') as HTMLElement
+
+    list.getBoundingClientRect = () =>
+      ({ left: 100, top: 40, width: 300, height: 80, right: 400, bottom: 120, x: 100, y: 40, toJSON() {} } as DOMRect)
+    trigger.getBoundingClientRect = () =>
+      ({ left: 160, top: 52, width: 120, height: 64, right: 280, bottom: 116, x: 160, y: 52, toJSON() {} } as DOMRect)
+
+    Object.defineProperty(trigger, 'offsetParent', {
+      configurable: true,
+      get: () => list,
+    })
+    Object.defineProperty(trigger, 'offsetLeft', {
+      configurable: true,
+      get: () => 30,
+    })
+    Object.defineProperty(trigger, 'offsetTop', {
+      configurable: true,
+      get: () => 6,
+    })
+    Object.defineProperty(trigger, 'offsetWidth', {
+      configurable: true,
+      get: () => 60,
+    })
+    Object.defineProperty(trigger, 'offsetHeight', {
+      configurable: true,
+      get: () => 32,
+    })
+
+    const controller = createTabs(root)
+    controller.updateIndicator()
+
+    expect(indicator.style.getPropertyValue('--active-tab-left')).toBe('30px')
+    expect(indicator.style.getPropertyValue('--active-tab-width')).toBe('60px')
+    expect(indicator.style.getPropertyValue('--active-tab-top')).toBe('6px')
+    expect(indicator.style.getPropertyValue('--active-tab-height')).toBe('32px')
 
     controller.destroy()
   })
@@ -438,4 +561,3 @@ describe('Tabs', () => {
     })
   })
 })
-
