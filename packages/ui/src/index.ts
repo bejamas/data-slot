@@ -54,3 +54,10 @@ export type {
   ComboboxOptions,
   ComboboxController,
 } from "@data-slot/combobox";
+
+export { createCommand } from "@data-slot/command";
+export type {
+  CommandOptions,
+  CommandController,
+  CommandFilter,
+} from "@data-slot/command";

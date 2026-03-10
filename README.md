@@ -64,17 +64,18 @@ bun add @data-slot/tabs @data-slot/dialog
 
 All packages are independently installable. Each package includes its own README with detailed documentation.
 
-| Package                      | Size   | Description                | Documentation                                |
-| ---------------------------- | ------ | -------------------------- | -------------------------------------------- |
-| `@data-slot/navigation-menu` | 2.7 KB | Dropdown navigation menus  | [README](packages/navigation-menu/README.md) |
-| `@data-slot/tabs`            | 1.7 KB | Tabbed interfaces, kbd nav | [README](packages/tabs/README.md)            |
-| `@data-slot/dialog`          | 1.4 KB | Modal dialogs, focus trap  | [README](packages/dialog/README.md)          |
-| `@data-slot/accordion`       | 1.2 KB | Collapsible sections       | [README](packages/accordion/README.md)       |
-| `@data-slot/tooltip`         | 821 B  | Hover/focus tooltips       | [README](packages/tooltip/README.md)         |
-| `@data-slot/popover`         | 806 B  | Anchored floating content  | [README](packages/popover/README.md)         |
-| `@data-slot/hover-card`      | 2.1 KB | Hover/focus preview cards | [README](packages/hover-card/README.md)      |
-| `@data-slot/collapsible`     | 629 B  | Simple show/hide toggle    | [README](packages/collapsible/README.md)     |
-| `@data-slot/core`            | 409 B  | Shared utilities           | [README](packages/core/README.md)            |
+| Package                      | Size   | Description                 | Documentation                                |
+| ---------------------------- | ------ | --------------------------- | -------------------------------------------- |
+| `@data-slot/navigation-menu` | 2.7 KB | Dropdown navigation menus   | [README](packages/navigation-menu/README.md) |
+| `@data-slot/command`         | 4.6 KB | Command palette with search | [README](packages/command/README.md)         |
+| `@data-slot/tabs`            | 1.7 KB | Tabbed interfaces, kbd nav  | [README](packages/tabs/README.md)            |
+| `@data-slot/dialog`          | 1.4 KB | Modal dialogs, focus trap   | [README](packages/dialog/README.md)          |
+| `@data-slot/accordion`       | 1.2 KB | Collapsible sections        | [README](packages/accordion/README.md)       |
+| `@data-slot/tooltip`         | 821 B  | Hover/focus tooltips        | [README](packages/tooltip/README.md)         |
+| `@data-slot/popover`         | 806 B  | Anchored floating content   | [README](packages/popover/README.md)         |
+| `@data-slot/hover-card`      | 2.1 KB | Hover/focus preview cards   | [README](packages/hover-card/README.md)      |
+| `@data-slot/collapsible`     | 629 B  | Simple show/hide toggle     | [README](packages/collapsible/README.md)     |
+| `@data-slot/core`            | 409 B  | Shared utilities            | [README](packages/core/README.md)            |
 
 ## API
 
@@ -119,11 +120,13 @@ import { createDialog } from "@data-slot/dialog";
 import { createAccordion } from "@data-slot/accordion";
 import { createPopover } from "@data-slot/popover";
 import { createHoverCard } from "@data-slot/hover-card";
+import { createCommand } from "@data-slot/command";
 
 const dialog = createDialog(element);
 const accordion = createAccordion(element);
 const popover = createPopover(element);
 const hoverCard = createHoverCard(element);
+const command = createCommand(element);
 ```
 
 ## Styling

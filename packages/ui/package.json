@@ -97,6 +97,12 @@
       "import": "./dist/combobox.js",
       "require": "./dist/combobox.cjs",
       "default": "./dist/combobox.js"
+    },
+    "./command": {
+      "types": "./dist/command.d.ts",
+      "import": "./dist/command.js",
+      "require": "./dist/command.cjs",
+      "default": "./dist/command.js"
     }
   },
   "files": [
@@ -119,7 +125,8 @@
     "@data-slot/toggle": "workspace:*",
     "@data-slot/toggle-group": "workspace:*",
     "@data-slot/select": "workspace:*",
-    "@data-slot/combobox": "workspace:*"
+    "@data-slot/combobox": "workspace:*",
+    "@data-slot/command": "workspace:*"
   },
   "keywords": [
     "headless",

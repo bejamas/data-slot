@@ -18,6 +18,7 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 |---------|------|-------------|
 | `@data-slot/navigation-menu` | 6.2 KB | Dropdown navigation menus |
 | `@data-slot/core` | 4.5 KB | Shared utilities |
+| `@data-slot/command` | 4.6 KB | Command palette with ranked search |
 | `@data-slot/combobox` | 3.7 KB | Autocomplete input with filtering |
 | `@data-slot/select` | 3.7 KB | Select input with keyboard navigation |
 | `@data-slot/dropdown-menu` | 2.4 KB | Action menus with keyboard navigation |
@@ -57,6 +58,7 @@ Available subpaths:
 - `@data-slot/ui/toggle-group`
 - `@data-slot/ui/select`
 - `@data-slot/ui/combobox`
+- `@data-slot/ui/command`
 
 ### Direct Package Imports
 
@@ -158,6 +160,7 @@ With Tailwind:
 | `createCollapsible` | @data-slot/collapsible |
 | `createNavigationMenu` | @data-slot/navigation-menu |
 | `createCombobox` | @data-slot/combobox |
+| `createCommand` | @data-slot/command |
 
 ### Types
 
@@ -172,6 +175,7 @@ With Tailwind:
 | `CollapsibleOptions`, `CollapsibleController` | @data-slot/collapsible |
 | `NavigationMenuOptions`, `NavigationMenuController` | @data-slot/navigation-menu |
 | `ComboboxOptions`, `ComboboxController` | @data-slot/combobox |
+| `CommandOptions`, `CommandController`, `CommandFilter` | @data-slot/command |
 
 ### Core Utilities
 

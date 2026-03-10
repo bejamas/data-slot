@@ -17,6 +17,7 @@ export default defineConfig({
     "src/toggle-group.ts",
     "src/select.ts",
     "src/combobox.ts",
+    "src/command.ts",
   ],
   format: ["esm", "cjs"],
   dts: true,
