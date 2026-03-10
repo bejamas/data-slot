@@ -5,6 +5,10 @@ import {
   getDataBool,
   getDataNumber,
   getDataEnum,
+  getRootBinding,
+  setRootBinding,
+  clearRootBinding,
+  warnRootBindingOnce,
   setAria,
   ensureId,
   on,
@@ -102,17 +106,9 @@ export interface DropdownMenuController {
   destroy(): void;
 }
 
-const controllersByRoot = new WeakMap<Element, DropdownMenuController>();
-const warnedDuplicateRoots = new WeakSet<Element>();
-
-const warnDuplicateBinding = (root: Element) => {
-  if (typeof process !== "undefined" && process.env?.NODE_ENV === "production") return;
-  if (warnedDuplicateRoots.has(root)) return;
-  warnedDuplicateRoots.add(root);
-  console.warn(
-    "[@data-slot/dropdown-menu] createDropdownMenu() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options."
-  );
-};
+const ROOT_BINDING_KEY = "@data-slot/dropdown-menu";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/dropdown-menu] createDropdownMenu() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
 /**
  * Create a dropdown menu controller for a root element.
@@ -135,9 +131,9 @@ export function createDropdownMenu(
   root: Element,
   options: DropdownMenuOptions = {}
 ): DropdownMenuController {
-  const existingController = controllersByRoot.get(root);
+  const existingController = getRootBinding<DropdownMenuController>(root, ROOT_BINDING_KEY);
   if (existingController) {
-    warnDuplicateBinding(root);
+    warnRootBindingOnce(root, ROOT_BINDING_KEY, DUPLICATE_BINDING_WARNING);
     return existingController;
   }
 
@@ -597,11 +593,11 @@ export function createDropdownMenu(
       }
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
-      controllersByRoot.delete(root);
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
 
-  controllersByRoot.set(root, controller);
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
 
   if (defaultOpen) updateState(true);
 
@@ -615,7 +611,7 @@ export function createDropdownMenu(
 export function create(scope: ParentNode = document): DropdownMenuController[] {
   const controllers: DropdownMenuController[] = [];
   for (const root of getRoots(scope, "dropdown-menu")) {
-    if (controllersByRoot.has(root)) continue;
+    if (getRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createDropdownMenu(root));
   }
   return controllers;

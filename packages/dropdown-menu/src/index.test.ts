@@ -1,8 +1,11 @@
 import { describe, expect, it, beforeEach } from "bun:test";
 import { createDropdownMenu, create } from "./index";
+import { clearRootBinding, setRootBinding } from "../../core/src/index";
 import { resetScrollLock } from "../../core/src/scroll";
 
 describe("DropdownMenu", () => {
+  const ROOT_BINDING_KEY = "@data-slot/dropdown-menu";
+
   const setup = (
     options: Parameters<typeof createDropdownMenu>[1] = {},
     html?: string
@@ -215,6 +218,38 @@ describe("DropdownMenu", () => {
 
       controller.toggle();
       expect(controller.isOpen).toBe(false);
+
+      controller.destroy();
+    });
+
+    it("stays open when reopened after trigger close and outside close", async () => {
+      const { trigger, content, controller } = setup();
+
+      trigger.click();
+      expect(controller.isOpen).toBe(true);
+
+      trigger.click();
+      await waitForClose();
+      expect(controller.isOpen).toBe(false);
+
+      trigger.click();
+      expect(controller.isOpen).toBe(true);
+
+      document.body.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerType: "mouse" })
+      );
+      await waitForClose();
+      expect(controller.isOpen).toBe(false);
+
+      trigger.click();
+      expect(controller.isOpen).toBe(true);
+      expect(content.getAttribute("data-state")).toBe("open");
+      expect(content.hidden).toBe(false);
+
+      await waitForClose();
+      expect(controller.isOpen).toBe(true);
+      expect(content.getAttribute("data-state")).toBe("open");
+      expect(content.hidden).toBe(false);
 
       controller.destroy();
     });
@@ -881,6 +916,29 @@ describe("DropdownMenu", () => {
       first.destroy();
     });
 
+    it("reuses a controller bound by another module copy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      const foreignController = {
+        open() {},
+        close() {},
+        toggle() {},
+        get isOpen() {
+          return false;
+        },
+        destroy() {
+          clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+        },
+      };
+
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
+
+      expect(createDropdownMenu(root)).toBe(foreignController);
+
+      foreignController.destroy();
+    });
+
     it("create() skips roots already bound directly", () => {
       const { root, controller } = setup();
 
@@ -891,6 +949,29 @@ describe("DropdownMenu", () => {
       expect(auto).toHaveLength(0);
 
       manual.destroy();
+    });
+
+    it("create() skips roots bound by another module copy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      const foreignController = {
+        open() {},
+        close() {},
+        toggle() {},
+        get isOpen() {
+          return false;
+        },
+        destroy() {
+          clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+        },
+      };
+
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
+
+      expect(create()).toHaveLength(0);
+
+      foreignController.destroy();
     });
 
     it("allows rebinding after destroy", () => {
@@ -1487,6 +1568,28 @@ describe("DropdownMenu", () => {
       expect(document.documentElement.style.overflow).toBe("hidden");
 
       controller.close();
+      expect(document.documentElement.style.overflow).toBe("");
+
+      controller.destroy();
+    });
+
+    it("restores scroll lock after outside close in the reopen sequence", async () => {
+      const { trigger, controller } = setup();
+
+      trigger.click();
+      expect(document.documentElement.style.overflow).toBe("hidden");
+
+      trigger.click();
+      await waitForClose();
+      expect(document.documentElement.style.overflow).toBe("");
+
+      trigger.click();
+      expect(document.documentElement.style.overflow).toBe("hidden");
+
+      document.body.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerType: "mouse" })
+      );
+      await waitForClose();
       expect(document.documentElement.style.overflow).toBe("");
 
       controller.destroy();

@@ -22,6 +22,62 @@ export const getRoots = <T extends Element = Element>(
   slot: string
 ): T[] => [...scope.querySelectorAll<T>(`[data-slot="${slot}"]`)];
 
+const ROOT_BINDINGS_SYMBOL = Symbol.for("data-slot.root-bindings");
+const ROOT_BINDING_WARNINGS_SYMBOL = Symbol.for("data-slot.root-binding-warnings");
+
+type RootBoundElement = Element & {
+  [ROOT_BINDINGS_SYMBOL]?: Map<string, unknown>;
+  [ROOT_BINDING_WARNINGS_SYMBOL]?: Set<string>;
+};
+
+const getRootBindings = (root: Element, create = false): Map<string, unknown> | undefined => {
+  const taggedRoot = root as RootBoundElement;
+  let bindings = taggedRoot[ROOT_BINDINGS_SYMBOL];
+  if (!bindings && create) {
+    bindings = new Map<string, unknown>();
+    taggedRoot[ROOT_BINDINGS_SYMBOL] = bindings;
+  }
+  return bindings;
+};
+
+const getRootBindingWarnings = (root: Element, create = false): Set<string> | undefined => {
+  const taggedRoot = root as RootBoundElement;
+  let warnings = taggedRoot[ROOT_BINDING_WARNINGS_SYMBOL];
+  if (!warnings && create) {
+    warnings = new Set<string>();
+    taggedRoot[ROOT_BINDING_WARNINGS_SYMBOL] = warnings;
+  }
+  return warnings;
+};
+
+export function getRootBinding<T>(root: Element, key: string): T | undefined {
+  return getRootBindings(root)?.get(key) as T | undefined;
+}
+
+export function setRootBinding<T>(root: Element, key: string, value: T): T {
+  getRootBindings(root, true)!.set(key, value);
+  return value;
+}
+
+export function clearRootBinding<T>(root: Element, key: string, value?: T): boolean {
+  const bindings = getRootBindings(root);
+  if (!bindings?.has(key)) return false;
+  if (arguments.length >= 3 && bindings.get(key) !== value) return false;
+  bindings.delete(key);
+  if (bindings.size === 0) {
+    delete (root as RootBoundElement)[ROOT_BINDINGS_SYMBOL];
+  }
+  return true;
+}
+
+export function warnRootBindingOnce(root: Element, key: string, message: string): void {
+  if (typeof process !== "undefined" && process.env?.NODE_ENV === "production") return;
+  const warnings = getRootBindingWarnings(root, true)!;
+  if (warnings.has(key)) return;
+  warnings.add(key);
+  console.warn(message);
+}
+
 // ============================================================================
 // Data Attribute Helpers
 // ============================================================================

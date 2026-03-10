@@ -1,4 +1,16 @@
-import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataString, getDataEnum } from "@data-slot/core";
+import {
+  getPart,
+  getParts,
+  getRoots,
+  getRootBinding,
+  setRootBinding,
+  clearRootBinding,
+  warnRootBindingOnce,
+  getDataBool,
+  getDataNumber,
+  getDataString,
+  getDataEnum,
+} from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
@@ -112,17 +124,9 @@ export interface SelectController {
   destroy(): void;
 }
 
-const controllersByRoot = new WeakMap<Element, SelectController>();
-const warnedDuplicateRoots = new WeakSet<Element>();
-
-const warnDuplicateBinding = (root: Element) => {
-  if (typeof process !== "undefined" && process.env?.NODE_ENV === "production") return;
-  if (warnedDuplicateRoots.has(root)) return;
-  warnedDuplicateRoots.add(root);
-  console.warn(
-    "[@data-slot/select] createSelect() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options."
-  );
-};
+const ROOT_BINDING_KEY = "@data-slot/select";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/select] createSelect() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
 /**
  * Create a select controller for a root element.
@@ -147,9 +151,9 @@ export function createSelect(
   root: Element,
   options: SelectOptions = {}
 ): SelectController {
-  const existingController = controllersByRoot.get(root);
+  const existingController = getRootBinding<SelectController>(root, ROOT_BINDING_KEY);
   if (existingController) {
-    warnDuplicateBinding(root);
+    warnRootBindingOnce(root, ROOT_BINDING_KEY, DUPLICATE_BINDING_WARNING);
     return existingController;
   }
 
@@ -962,11 +966,11 @@ export function createSelect(
       if (hiddenInput && hiddenInput.parentNode) {
         hiddenInput.parentNode.removeChild(hiddenInput);
       }
-      controllersByRoot.delete(root);
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
 
-  controllersByRoot.set(root, controller);
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
 
   if (defaultOpen) updateOpenState(true);
 
@@ -980,7 +984,7 @@ export function createSelect(
 export function create(scope: ParentNode = document): SelectController[] {
   const controllers: SelectController[] = [];
   for (const root of getRoots(scope, "select")) {
-    if (controllersByRoot.has(root)) continue;
+    if (getRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createSelect(root));
   }
   return controllers;

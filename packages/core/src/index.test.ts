@@ -1,5 +1,17 @@
 import { describe, expect, it, beforeEach } from 'bun:test'
-import { getPart, getParts, getRoots, getDataBool, getDataNumber, getDataString, getDataEnum } from './index'
+import {
+  getPart,
+  getParts,
+  getRoots,
+  getRootBinding,
+  setRootBinding,
+  clearRootBinding,
+  warnRootBindingOnce,
+  getDataBool,
+  getDataNumber,
+  getDataString,
+  getDataEnum,
+} from './index'
 import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
@@ -60,6 +72,47 @@ describe('core/parts', () => {
     `
     const dialogs = getRoots(document, 'dialog')
     expect(dialogs).toHaveLength(2)
+  })
+
+  it('stores and returns root bindings', () => {
+    const root = document.createElement('div')
+    const controller = { destroy() {} }
+
+    expect(getRootBinding(root, 'test')).toBeUndefined()
+    expect(setRootBinding(root, 'test', controller)).toBe(controller)
+    expect(getRootBinding(root, 'test')).toBe(controller)
+  })
+
+  it('clears a root binding only when the same controller owns it', () => {
+    const root = document.createElement('div')
+    const first = { destroy() {} }
+    const second = { destroy() {} }
+
+    setRootBinding(root, 'test', first)
+
+    expect(clearRootBinding(root, 'test', second)).toBe(false)
+    expect(getRootBinding(root, 'test')).toBe(first)
+    expect(clearRootBinding(root, 'test', first)).toBe(true)
+    expect(getRootBinding(root, 'test')).toBeUndefined()
+  })
+
+  it('warns once per root binding key', () => {
+    const root = document.createElement('div')
+    const warnings: string[] = []
+    const originalWarn = console.warn
+    console.warn = (message?: unknown) => {
+      warnings.push(String(message))
+    }
+
+    try {
+      warnRootBindingOnce(root, 'test', 'first warning')
+      warnRootBindingOnce(root, 'test', 'second warning')
+      warnRootBindingOnce(root, 'other', 'third warning')
+    } finally {
+      console.warn = originalWarn
+    }
+
+    expect(warnings).toEqual(['first warning', 'third warning'])
   })
 })
 
