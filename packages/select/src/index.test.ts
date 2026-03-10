@@ -1706,6 +1706,52 @@ describe("Select", () => {
 
       controllers1.forEach((c) => c.destroy());
     });
+
+    it("reuses the existing controller for duplicate direct binds", async () => {
+      const { root, trigger, content } = setup();
+
+      const first = createSelect(root);
+      const second = createSelect(root);
+
+      expect(second).toBe(first);
+
+      trigger.click();
+      expect(content.hidden).toBe(false);
+      expect(document.body.querySelectorAll('[data-slot="select-positioner"]')).toHaveLength(1);
+
+      first.close();
+      await waitForClose();
+      expect(document.body.querySelectorAll('[data-slot="select-positioner"]')).toHaveLength(0);
+
+      trigger.click();
+      expect(content.hidden).toBe(false);
+      expect(document.body.querySelectorAll('[data-slot="select-positioner"]')).toHaveLength(1);
+
+      first.destroy();
+    });
+
+    it("create() skips roots already bound directly", () => {
+      const { root, controller } = setup();
+
+      const manual = createSelect(root);
+      const auto = create();
+
+      expect(manual).toBe(controller);
+      expect(auto).toHaveLength(0);
+
+      manual.destroy();
+    });
+
+    it("allows rebinding after destroy", () => {
+      const { root, controller } = setup();
+
+      controller.destroy();
+
+      const rebound = createSelect(root);
+      expect(rebound).not.toBe(controller);
+
+      rebound.destroy();
+    });
   });
 
   describe("data attributes", () => {

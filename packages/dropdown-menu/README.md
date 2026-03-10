@@ -52,6 +52,8 @@ controller.toggle();
 controller.destroy();
 ```
 
+`createDropdownMenu(root)` is idempotent per root. Calling it again for the same element returns the existing controller; destroy it first if you need to rebind with different options.
+
 ## Slots
 
 | Slot | Description |

@@ -112,6 +112,18 @@ export interface SelectController {
   destroy(): void;
 }
 
+const controllersByRoot = new WeakMap<Element, SelectController>();
+const warnedDuplicateRoots = new WeakSet<Element>();
+
+const warnDuplicateBinding = (root: Element) => {
+  if (typeof process !== "undefined" && process.env?.NODE_ENV === "production") return;
+  if (warnedDuplicateRoots.has(root)) return;
+  warnedDuplicateRoots.add(root);
+  console.warn(
+    "[@data-slot/select] createSelect() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options."
+  );
+};
+
 /**
  * Create a select controller for a root element.
  *
@@ -135,6 +147,12 @@ export function createSelect(
   root: Element,
   options: SelectOptions = {}
 ): SelectController {
+  const existingController = controllersByRoot.get(root);
+  if (existingController) {
+    warnDuplicateBinding(root);
+    return existingController;
+  }
+
   const trigger = getPart<HTMLElement>(root, "select-trigger");
   const content = getPart<HTMLElement>(root, "select-content");
   const valueSlot = getPart<HTMLElement>(root, "select-value");
@@ -944,17 +962,16 @@ export function createSelect(
       if (hiddenInput && hiddenInput.parentNode) {
         hiddenInput.parentNode.removeChild(hiddenInput);
       }
-      bound.delete(root);
+      controllersByRoot.delete(root);
     },
   };
+
+  controllersByRoot.set(root, controller);
 
   if (defaultOpen) updateOpenState(true);
 
   return controller;
 }
-
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
 
 /**
  * Find and bind all select components in a scope
@@ -963,8 +980,7 @@ const bound = new WeakSet<Element>();
 export function create(scope: ParentNode = document): SelectController[] {
   const controllers: SelectController[] = [];
   for (const root of getRoots(scope, "select")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (controllersByRoot.has(root)) continue;
     controllers.push(createSelect(root));
   }
   return controllers;

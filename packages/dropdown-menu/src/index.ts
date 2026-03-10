@@ -102,6 +102,18 @@ export interface DropdownMenuController {
   destroy(): void;
 }
 
+const controllersByRoot = new WeakMap<Element, DropdownMenuController>();
+const warnedDuplicateRoots = new WeakSet<Element>();
+
+const warnDuplicateBinding = (root: Element) => {
+  if (typeof process !== "undefined" && process.env?.NODE_ENV === "production") return;
+  if (warnedDuplicateRoots.has(root)) return;
+  warnedDuplicateRoots.add(root);
+  console.warn(
+    "[@data-slot/dropdown-menu] createDropdownMenu() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options."
+  );
+};
+
 /**
  * Create a dropdown menu controller for a root element.
  *
@@ -123,6 +135,12 @@ export function createDropdownMenu(
   root: Element,
   options: DropdownMenuOptions = {}
 ): DropdownMenuController {
+  const existingController = controllersByRoot.get(root);
+  if (existingController) {
+    warnDuplicateBinding(root);
+    return existingController;
+  }
+
   const trigger = getPart<HTMLElement>(root, "dropdown-menu-trigger");
   const content = getPart<HTMLElement>(root, "dropdown-menu-content");
   const authoredPositionerCandidate = getPart<HTMLElement>(root, "dropdown-menu-positioner");
@@ -579,17 +597,16 @@ export function createDropdownMenu(
       }
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
-      bound.delete(root);
+      controllersByRoot.delete(root);
     },
   };
+
+  controllersByRoot.set(root, controller);
 
   if (defaultOpen) updateState(true);
 
   return controller;
 }
-
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
 
 /**
  * Find and bind all dropdown menu components in a scope
@@ -598,8 +615,7 @@ const bound = new WeakSet<Element>();
 export function create(scope: ParentNode = document): DropdownMenuController[] {
   const controllers: DropdownMenuController[] = [];
   for (const root of getRoots(scope, "dropdown-menu")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (controllersByRoot.has(root)) continue;
     controllers.push(createDropdownMenu(root));
   }
   return controllers;
