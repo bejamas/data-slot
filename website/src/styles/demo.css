@@ -212,50 +212,53 @@ html {
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 100;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.dialog-overlay[data-open] {
   opacity: 1;
-  transition:
-    opacity 0.2s ease-out,
-    display 0.2s ease-out allow-discrete;
+}
+
+.dialog-overlay[data-starting-style],
+.dialog-overlay[data-ending-style] {
+  opacity: 0;
 }
 
 .dialog-overlay[hidden] {
   display: none;
-  opacity: 0;
 }
 
 .dialog-panel {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(0.95);
   background: var(--bg);
   padding: 2rem;
   max-width: 400px;
   width: calc(100% - 2rem);
   border: 1px solid var(--border);
   z-index: 101;
-  opacity: 1;
+  opacity: 0;
   transition:
     opacity 0.2s ease-out,
-    transform 0.2s ease-out,
-    display 0.2s ease-out allow-discrete;
+    transform 0.2s ease-out;
 }
 
-.dialog-panel[hidden] {
-  display: none;
+.dialog-panel[data-open] {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.dialog-panel[data-starting-style],
+.dialog-panel[data-ending-style] {
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.95);
 }
 
-/* Entry animation for dialog */
-@starting-style {
-  .dialog-overlay:not([hidden]) {
-    opacity: 0;
-  }
-  .dialog-panel:not([hidden]) {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.95);
-  }
+.dialog-panel[hidden] {
+  display: none;
 }
 
 .dialog-title {
@@ -1009,28 +1012,6 @@ html:not(.mode-tailwind) .preview-tailwind {
 
 html.mode-tailwind .preview-css {
   display: none;
-}
-
-/* ============================================
-   Tailwind Preview: Override hidden for animations
-   ============================================ */
-
-/* Dialog: allow transitions with hidden attribute */
-/* .preview-tailwind [data-slot="dialog-overlay"][hidden],
-.preview-tailwind [data-slot="dialog-content"][hidden] {
-  display: block !important;
-  pointer-events: none;
-} */
-
-/* Dialog: entry animation using @starting-style */
-@starting-style {
-  .preview-tailwind [data-slot="dialog-overlay"]:not([hidden]) {
-    opacity: 0;
-  }
-  .preview-tailwind [data-slot="dialog-content"]:not([hidden]) {
-    opacity: 0;
-    transform: scale(0.95);
-  }
 }
 
 /* Tooltip: allow fade transitions */

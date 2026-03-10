@@ -128,31 +128,50 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
 
 ## Styling
 
-Use `data-state` attributes for CSS styling:
+Dialog exposes both `data-state="open|closed"` and popup-style animation hooks:
+
+- `data-open` / `data-closed` on `dialog`, `dialog-portal`, `dialog-overlay`, and `dialog-content`
+- `data-starting-style` while opening
+- `data-ending-style` while closing
+
+Use `data-open` / `data-closed` with `data-starting-style` / `data-ending-style` for animations:
 
 ```css
-/* Backdrop/overlay */
-[data-slot="dialog-content"] {
+/* Backdrop */
+[data-slot="dialog-overlay"] {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
   background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-/* Closed state */
-[data-slot="dialog"][data-state="closed"] [data-slot="dialog-content"] {
-  display: none;
+[data-slot="dialog-overlay"][data-open] {
+  opacity: 1;
 }
 
-/* Animation */
 [data-slot="dialog-content"] {
   opacity: 0;
-  transition: opacity 0.2s;
+  transform: translate(-50%, -50%) scale(0.95);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
-[data-slot="dialog"][data-state="open"] [data-slot="dialog-content"] {
+[data-slot="dialog-content"][data-open] {
   opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+[data-slot="dialog-overlay"][data-starting-style],
+[data-slot="dialog-overlay"][data-ending-style] {
+  opacity: 0;
+}
+
+[data-slot="dialog-content"][data-starting-style],
+[data-slot="dialog-content"][data-ending-style] {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.95);
 }
 ```
 
@@ -167,10 +186,15 @@ When multiple dialogs are open, `data-stack-index` and CSS variables are exposed
 With Tailwind:
 
 ```html
-<div data-slot="dialog-content" class="fixed inset-0 grid place-items-center bg-black/50 data-[state=closed]:hidden">
-  <div class="bg-white rounded-lg p-6 max-w-md">
-    <!-- Dialog content -->
-  </div>
+<div
+  data-slot="dialog-overlay"
+  class="fixed inset-0 bg-black/50 opacity-0 transition-opacity duration-200 data-[open]:opacity-100 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0"
+></div>
+<div
+  data-slot="dialog-content"
+  class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 opacity-0 scale-95 transition-all duration-200 data-[open]:opacity-100 data-[open]:scale-100 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95"
+>
+  <!-- Dialog content -->
 </div>
 ```
 

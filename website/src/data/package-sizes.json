@@ -1,25 +1,25 @@
 [
   {
     "name": "@data-slot/navigation-menu",
-    "size": 6378,
-    "sizeFormatted": "6.2 KB",
+    "size": 7262,
+    "sizeFormatted": "7.1 KB",
     "description": "Dropdown navigation menus"
   },
   {
     "name": "@data-slot/core",
-    "size": 4809,
-    "sizeFormatted": "4.7 KB",
+    "size": 4977,
+    "sizeFormatted": "4.9 KB",
     "description": "Shared utilities"
   },
   {
     "name": "@data-slot/combobox",
-    "size": 3898,
-    "sizeFormatted": "3.8 KB",
+    "size": 4495,
+    "sizeFormatted": "4.4 KB",
     "description": "Autocomplete input"
   },
   {
     "name": "@data-slot/select",
-    "size": 3847,
+    "size": 3912,
     "sizeFormatted": "3.8 KB",
     "description": "Dropdown select, form-ready"
   },
@@ -37,7 +37,7 @@
   },
   {
     "name": "@data-slot/tooltip",
-    "size": 2130,
+    "size": 2154,
     "sizeFormatted": "2.1 KB",
     "description": "Hover/focus tooltips"
   },

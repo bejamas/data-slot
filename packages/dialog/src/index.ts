@@ -10,7 +10,12 @@ import {
 import { setAria, ensureId, linkLabelledBy } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
-import { createPortalLifecycle, createDismissLayer, focusElement } from "@data-slot/core";
+import {
+  createPortalLifecycle,
+  createDismissLayer,
+  createPresenceLifecycle,
+  focusElement,
+} from "@data-slot/core";
 
 export interface DialogOptions {
   /** Initial open state */
@@ -160,6 +165,7 @@ export function createDialog(
   }
 
   let isOpen = false;
+  let isDestroyed = false;
   let previousActiveElement: HTMLElement | null = null;
   const cleanups: Array<() => void> = [];
 
@@ -219,12 +225,46 @@ export function createDialog(
     portalLifecycle?.mount();
   };
 
-  // Helper to set data-state on all relevant elements
+  const restoreFocus = () => {
+    requestAnimationFrame(() => {
+      if (
+        previousActiveElement &&
+        document.contains(previousActiveElement) &&
+        typeof previousActiveElement.focus === "function"
+      ) {
+        focusElement(previousActiveElement);
+      } else if (trigger && document.contains(trigger)) {
+        focusElement(trigger);
+      }
+      previousActiveElement = null;
+    });
+  };
+
   const setDataState = (state: "open" | "closed") => {
     root.setAttribute("data-state", state);
     if (portal) portal.setAttribute("data-state", state);
     overlay.setAttribute("data-state", state);
     content.setAttribute("data-state", state);
+    if (state === "open") {
+      root.setAttribute("data-open", "");
+      portal?.setAttribute("data-open", "");
+      overlay.setAttribute("data-open", "");
+      content.setAttribute("data-open", "");
+      root.removeAttribute("data-closed");
+      portal?.removeAttribute("data-closed");
+      overlay.removeAttribute("data-closed");
+      content.removeAttribute("data-closed");
+      return;
+    }
+
+    root.setAttribute("data-closed", "");
+    portal?.setAttribute("data-closed", "");
+    overlay.setAttribute("data-closed", "");
+    content.setAttribute("data-closed", "");
+    root.removeAttribute("data-open");
+    portal?.removeAttribute("data-open");
+    overlay.removeAttribute("data-open");
+    content.removeAttribute("data-open");
   };
 
   // Clear stack metadata on close
@@ -237,10 +277,48 @@ export function createDialog(
     content.style.removeProperty("--dialog-content-stack-index");
   };
 
+  const removeFromStack = () => {
+    const idx = dialogStack.indexOf(controller);
+    if (idx !== -1) dialogStack.splice(idx, 1);
+    clearStackMetadata();
+    reindexStack();
+    teardownGlobalKeydownHandler();
+  };
+
+  let currentExitEpoch = 0;
+  let pendingExitCount = 0;
+  let overlayExitEpoch = 0;
+  let contentExitEpoch = 0;
+
+  const finishClosePart = (element: HTMLElement, epoch: number) => {
+    if (isDestroyed || isOpen || epoch !== currentExitEpoch) return;
+
+    element.hidden = true;
+    pendingExitCount = Math.max(0, pendingExitCount - 1);
+
+    if (pendingExitCount === 0) {
+      cleanupContentFocusable();
+      restoreFocus();
+    }
+  };
+
+  const overlayPresence = createPresenceLifecycle({
+    element: overlay,
+    onExitComplete: () => finishClosePart(overlay, overlayExitEpoch),
+  });
+
+  const contentPresence = createPresenceLifecycle({
+    element: content,
+    onExitComplete: () => finishClosePart(content, contentExitEpoch),
+  });
+
   const updateState = (open: boolean, force = false) => {
     if (isOpen === open && !force) return;
 
     if (open) {
+      currentExitEpoch += 1;
+      pendingExitCount = 0;
+
       // Move portal to body on first open
       mountPortal();
 
@@ -262,50 +340,36 @@ export function createDialog(
         didLockScroll = true;
       }
     } else {
-      // Remove from dialog stack
-      const idx = dialogStack.indexOf(controller);
-      if (idx !== -1) dialogStack.splice(idx, 1);
+      currentExitEpoch += 1;
+      pendingExitCount = 2;
+      overlayExitEpoch = currentExitEpoch;
+      contentExitEpoch = currentExitEpoch;
 
-      // Teardown global handler if no dialogs left
-      teardownGlobalKeydownHandler();
-
-      // Clear stack metadata and reindex remaining dialogs
-      clearStackMetadata();
-      reindexStack();
+      removeFromStack();
 
       // Unlock scroll (only if we locked it)
       if (didLockScroll) {
         unlockScroll();
         didLockScroll = false;
       }
-
-      // Clean up tabindex we may have added
-      cleanupContentFocusable();
-
-      // Restore focus with fallback to trigger
-      const elementToFocus = previousActiveElement;
-      previousActiveElement = null;
-      requestAnimationFrame(() => {
-        if (
-          elementToFocus &&
-          document.contains(elementToFocus) &&
-          typeof elementToFocus.focus === "function"
-        ) {
-          focusElement(elementToFocus);
-        } else if (trigger && document.contains(trigger)) {
-          focusElement(trigger);
-        }
-        // If neither available, let focus remain where it is
-      });
     }
 
     isOpen = open;
-    content.hidden = !isOpen;
-    overlay.hidden = !isOpen;
     if (trigger) {
       setAria(trigger, "expanded", isOpen);
     }
-    setDataState(isOpen ? "open" : "closed");
+
+    if (open) {
+      overlay.hidden = false;
+      content.hidden = false;
+      setDataState("open");
+      overlayPresence.enter();
+      contentPresence.enter();
+    } else {
+      setDataState("closed");
+      overlayPresence.exit();
+      contentPresence.exit();
+    }
 
     emit(root, "dialog:change", { open: isOpen });
     onOpenChange?.(isOpen);
@@ -362,20 +426,9 @@ export function createDialog(
   };
 
   // Initialize visual state (before controller is defined)
-  if (defaultOpen) {
-    mountPortal();
-    content.hidden = false;
-    overlay.hidden = false;
-    setDataState("open");
-    isOpen = true;
-    if (trigger) {
-      setAria(trigger, "expanded", true);
-    }
-  } else {
-    content.hidden = true;
-    overlay.hidden = true;
-    setDataState("closed");
-  }
+  content.hidden = true;
+  overlay.hidden = true;
+  setDataState("closed");
 
   // Trigger click - toggle behavior
   if (trigger) {
@@ -427,20 +480,27 @@ export function createDialog(
       return isOpen;
     },
     destroy: () => {
-      if (isOpen) {
-        // handles stack removal + reindex + teardown + scroll unlock + focus restore
-        updateState(false, true);
-      } else {
-        // Safety: ensure removed from stack even if already closed
-        const idx = dialogStack.indexOf(controller);
-        if (idx !== -1) {
-          dialogStack.splice(idx, 1);
-          reindexStack();
-          teardownGlobalKeydownHandler();
-        }
+      isDestroyed = true;
+      removeFromStack();
+      currentExitEpoch += 1;
+      pendingExitCount = 0;
+      overlayPresence.cleanup();
+      contentPresence.cleanup();
+      isOpen = false;
+      setDataState("closed");
+      overlay.hidden = true;
+      content.hidden = true;
+      if (trigger) {
+        setAria(trigger, "expanded", false);
       }
-
+      if (didLockScroll) {
+        unlockScroll();
+        didLockScroll = false;
+      }
       cleanupContentFocusable();
+      if (previousActiveElement !== null) {
+        restoreFocus();
+      }
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
 
@@ -471,22 +531,7 @@ export function createDialog(
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
 
-  // Handle defaultOpen: push to stack and setup global state after controller is defined
-  if (defaultOpen) {
-    previousActiveElement = document.activeElement as HTMLElement;
-    dialogStack.push(controller);
-    setupGlobalKeydownHandler();
-    reindexStack();
-
-    if (lockScrollOption && !didLockScroll) {
-      lockScroll();
-      didLockScroll = true;
-    }
-
-    emit(root, "dialog:change", { open: true });
-    onOpenChange?.(true);
-    requestAnimationFrame(focusFirst);
-  }
+  if (defaultOpen) updateState(true);
 
   return controller;
 }

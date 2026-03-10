@@ -7,6 +7,16 @@ import { createHoverCard } from "../../hover-card/src/index";
 describe("Dialog", () => {
   const ROOT_BINDING_KEY = "@data-slot/dialog";
 
+  const waitForRaf = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+  const waitForPresence = async () => {
+    await waitForRaf();
+    await waitForRaf();
+  };
+
   const setup = (options: Parameters<typeof createDialog>[1] = {}) => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="root">
@@ -80,13 +90,16 @@ describe("Dialog", () => {
     controller.destroy();
   });
 
-  it("closes on close button click", () => {
+  it("closes on close button click", async () => {
     const { trigger, content, closeBtn, controller } = setup();
 
     trigger.click();
     expect(content.hidden).toBe(false);
 
     closeBtn.click();
+    expect(controller.isOpen).toBe(false);
+    expect(content.hidden).toBe(false);
+    await waitForPresence();
     expect(content.hidden).toBe(true);
 
     controller.destroy();
@@ -211,6 +224,121 @@ describe("Dialog", () => {
     controller.destroy();
   });
 
+  it("sets data-open/data-closed on root, portal, overlay, and content", async () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog" id="root">
+        <button data-slot="dialog-trigger">Open</button>
+        <div data-slot="dialog-portal" id="portal">
+          <div data-slot="dialog-overlay" id="overlay"></div>
+          <div data-slot="dialog-content" id="content">Content</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const portal = document.getElementById("portal") as HTMLElement;
+    const overlay = document.getElementById("overlay") as HTMLElement;
+    const content = document.getElementById("content") as HTMLElement;
+    const controller = createDialog(root);
+
+    expect(root.hasAttribute("data-closed")).toBe(true);
+    expect(portal.hasAttribute("data-closed")).toBe(true);
+    expect(overlay.hasAttribute("data-closed")).toBe(true);
+    expect(content.hasAttribute("data-closed")).toBe(true);
+
+    controller.open();
+
+    expect(root.hasAttribute("data-open")).toBe(true);
+    expect(portal.hasAttribute("data-open")).toBe(true);
+    expect(overlay.hasAttribute("data-open")).toBe(true);
+    expect(content.hasAttribute("data-open")).toBe(true);
+    expect(root.hasAttribute("data-closed")).toBe(false);
+
+    controller.close();
+
+    expect(root.hasAttribute("data-closed")).toBe(true);
+    expect(portal.hasAttribute("data-closed")).toBe(true);
+    expect(overlay.hasAttribute("data-closed")).toBe(true);
+    expect(content.hasAttribute("data-closed")).toBe(true);
+    expect(root.hasAttribute("data-open")).toBe(false);
+
+    await waitForPresence();
+    controller.destroy();
+  });
+
+  it("applies starting-style markers when opening", async () => {
+    const { content, controller } = setup();
+    const overlay = document.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
+
+    controller.open();
+
+    expect(overlay.hasAttribute("data-starting-style")).toBe(true);
+    expect(content.hasAttribute("data-starting-style")).toBe(true);
+
+    await waitForPresence();
+
+    expect(overlay.hasAttribute("data-starting-style")).toBe(false);
+    expect(content.hasAttribute("data-starting-style")).toBe(false);
+
+    controller.destroy();
+  });
+
+  it("keeps overlay and content mounted until exit animation completes", async () => {
+    const { content, controller } = setup();
+    const overlay = document.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
+
+    overlay.style.transitionDuration = "200ms";
+    overlay.style.transitionProperty = "opacity";
+    content.style.transitionDuration = "200ms";
+    content.style.transitionProperty = "opacity";
+
+    controller.open();
+    await waitForPresence();
+
+    controller.close();
+
+    expect(overlay.hidden).toBe(false);
+    expect(content.hidden).toBe(false);
+    expect(overlay.hasAttribute("data-ending-style")).toBe(true);
+    expect(content.hasAttribute("data-ending-style")).toBe(true);
+
+    overlay.dispatchEvent(new Event("transitionend", { bubbles: true }));
+    expect(overlay.hidden).toBe(true);
+    expect(content.hidden).toBe(false);
+
+    content.dispatchEvent(new Event("transitionend", { bubbles: true }));
+    expect(content.hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("defaultOpen uses the animated enter path", async () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog" id="root" data-default-open>
+        <div data-slot="dialog-overlay"></div>
+        <div data-slot="dialog-content">Content</div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const overlay = root.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
+    const content = root.querySelector('[data-slot="dialog-content"]') as HTMLElement;
+    const controller = createDialog(root);
+
+    expect(controller.isOpen).toBe(true);
+    expect(overlay.hidden).toBe(false);
+    expect(content.hidden).toBe(false);
+    expect(overlay.hasAttribute("data-starting-style")).toBe(true);
+    expect(content.hasAttribute("data-starting-style")).toBe(true);
+
+    await waitForPresence();
+
+    expect(overlay.hasAttribute("data-starting-style")).toBe(false);
+    expect(content.hasAttribute("data-starting-style")).toBe(false);
+
+    controller.destroy();
+  });
+
   it("locks scroll when open", () => {
     const { controller } = setup({ lockScroll: true });
 
@@ -312,7 +440,7 @@ describe("Dialog", () => {
     controller.destroy();
   });
 
-  it("create binds all dialog components and returns controllers", () => {
+  it("create binds all dialog components and returns controllers", async () => {
     document.body.innerHTML = `
       <div data-slot="dialog">
         <button data-slot="dialog-trigger">Open</button>
@@ -337,6 +465,8 @@ describe("Dialog", () => {
 
     // Can control programmatically
     controllers[0]?.close();
+    expect(content.hidden).toBe(false);
+    await waitForPresence();
     expect(content.hidden).toBe(true);
 
     controllers.forEach((c) => c.destroy());
@@ -785,6 +915,43 @@ describe("Dialog", () => {
 
     expect(overlay.getAttribute("role")).toBe("presentation");
     expect(overlay.getAttribute("aria-hidden")).toBe("true");
+
+    controller.destroy();
+  });
+
+  it("restores focus after exit completes", async () => {
+    document.body.innerHTML = `
+      <button id="outside-btn">Outside</button>
+      <div data-slot="dialog" id="root">
+        <div data-slot="dialog-overlay"></div>
+        <div data-slot="dialog-content" style="transition-duration: 200ms; transition-property: opacity">
+          <button>Inside</button>
+        </div>
+      </div>
+    `;
+    const outsideBtn = document.getElementById("outside-btn") as HTMLButtonElement;
+    const root = document.getElementById("root")!;
+    const overlay = root.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
+    const content = root.querySelector('[data-slot="dialog-content"]') as HTMLElement;
+
+    overlay.style.transitionDuration = "200ms";
+    overlay.style.transitionProperty = "opacity";
+    outsideBtn.focus();
+
+    const controller = createDialog(root);
+    controller.open();
+    await waitForRaf();
+
+    controller.close();
+    expect(document.activeElement).not.toBe(outsideBtn);
+
+    overlay.dispatchEvent(new Event("transitionend", { bubbles: true }));
+    expect(document.activeElement).not.toBe(outsideBtn);
+
+    content.dispatchEvent(new Event("transitionend", { bubbles: true }));
+    await waitForRaf();
+
+    expect(document.activeElement).toBe(outsideBtn);
 
     controller.destroy();
   });
