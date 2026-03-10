@@ -3,8 +3,11 @@ import { createDropdownMenu, create } from "./index";
 import { resetScrollLock } from "../../core/src/scroll";
 
 describe("DropdownMenu", () => {
-  const setup = (options: Parameters<typeof createDropdownMenu>[1] = {}) => {
-    document.body.innerHTML = `
+  const setup = (
+    options: Parameters<typeof createDropdownMenu>[1] = {},
+    html?: string
+  ) => {
+    document.body.innerHTML = html ?? `
       <div data-slot="dropdown-menu" id="root">
         <button data-slot="dropdown-menu-trigger">Options</button>
         <div data-slot="dropdown-menu-content">
@@ -628,30 +631,139 @@ describe("DropdownMenu", () => {
   });
 
   describe("pointer interaction", () => {
-    it("highlights item on pointer move", () => {
+    it("highlights and focuses an item on pointer move", () => {
       const { trigger, items, controller } = setup();
 
       trigger.click();
 
-      // Move pointer to second item
       items[1]?.dispatchEvent(
-        new PointerEvent("pointermove", { bubbles: true })
+        new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })
       );
       expect(items[1]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(document.activeElement).toBe(items[1]!);
 
       controller.destroy();
     });
 
-    it("does not highlight disabled items on pointer move", () => {
-      const { trigger, items, controller } = setup();
+    it("clears hover highlight and refocuses content on disabled items", () => {
+      const { trigger, content, items, controller } = setup();
 
       trigger.click();
 
-      // Move pointer to disabled item
+      items[1]?.dispatchEvent(
+        new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })
+      );
+      expect(document.activeElement).toBe(items[1]!);
+
       items[3]?.dispatchEvent(
-        new PointerEvent("pointermove", { bubbles: true })
+        new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })
       );
       expect(items[3]?.hasAttribute("data-highlighted")).toBe(false);
+      expect(items[1]?.hasAttribute("data-highlighted")).toBe(false);
+      expect(document.activeElement).toBe(content);
+
+      controller.destroy();
+    });
+
+    it("clears highlight on pointer leave and refocuses content", () => {
+      const { trigger, content, items, controller } = setup();
+
+      trigger.click();
+
+      items[1]?.dispatchEvent(
+        new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })
+      );
+      expect(items[1]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(document.activeElement).toBe(items[1]!);
+
+      content.dispatchEvent(
+        new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse" })
+      );
+      expect(items[1]?.hasAttribute("data-highlighted")).toBe(false);
+      expect(document.activeElement).toBe(content);
+
+      controller.destroy();
+    });
+
+    it("does not highlight or focus items on touch pointer move", () => {
+      const { trigger, content, items, controller } = setup();
+
+      trigger.click();
+
+      items[1]?.dispatchEvent(
+        new PointerEvent("pointermove", { bubbles: true, pointerType: "touch" })
+      );
+      expect(items[1]?.hasAttribute("data-highlighted")).toBe(false);
+      expect(document.activeElement).toBe(content);
+
+      controller.destroy();
+    });
+
+    it("does not highlight items on pointer move when highlightItemOnHover is false", () => {
+      const { trigger, content, items, controller } = setup({
+        highlightItemOnHover: false,
+      });
+
+      trigger.click();
+
+      items[1]?.dispatchEvent(
+        new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })
+      );
+      expect(items[1]?.hasAttribute("data-highlighted")).toBe(false);
+      expect(document.activeElement).toBe(content);
+
+      controller.destroy();
+    });
+
+    it("respects data-highlight-item-on-hover on the root", () => {
+      const { trigger, content, items, controller } = setup(
+        {},
+        `
+        <div data-slot="dropdown-menu" id="root" data-highlight-item-on-hover="false">
+          <button data-slot="dropdown-menu-trigger">Options</button>
+          <div data-slot="dropdown-menu-content">
+            <div data-slot="dropdown-menu-group">
+              <div data-slot="dropdown-menu-label">Actions</div>
+              <button data-slot="dropdown-menu-item" data-value="edit">Edit</button>
+              <button data-slot="dropdown-menu-item" data-value="copy">Copy</button>
+            </div>
+            <div data-slot="dropdown-menu-separator"></div>
+            <button data-slot="dropdown-menu-item" data-value="delete" data-variant="destructive">Delete</button>
+            <button data-slot="dropdown-menu-item" data-value="disabled" data-disabled>Disabled</button>
+          </div>
+        </div>
+      `
+      );
+
+      trigger.click();
+
+      items[1]?.dispatchEvent(
+        new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })
+      );
+      expect(items[1]?.hasAttribute("data-highlighted")).toBe(false);
+      expect(document.activeElement).toBe(content);
+
+      controller.destroy();
+    });
+
+    it("preserves keyboard highlight on pointer leave when highlightItemOnHover is false", () => {
+      const { trigger, content, items, controller } = setup({
+        highlightItemOnHover: false,
+      });
+
+      trigger.click();
+
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
+      expect(items[0]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(document.activeElement).toBe(items[0]!);
+
+      content.dispatchEvent(
+        new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse" })
+      );
+      expect(items[0]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(document.activeElement).toBe(items[0]!);
 
       controller.destroy();
     });

@@ -90,7 +90,7 @@ controller.destroy();
 | `data-variant` | `default`, `destructive` | Item variant for styling |
 | `data-inset` | - | Adds left padding for alignment |
 | `data-disabled` | - | Disables the item |
-| `data-highlighted` | - | Currently focused item |
+| `data-highlighted` | - | Focused/highlighted item |
 | `data-value` | string | Optional value for item selection |
 
 ## Keyboard Navigation
@@ -161,6 +161,8 @@ interface DropdownMenuOptions {
   closeOnEscape?: boolean;
   /** Close when an item is selected (default: true) */
   closeOnSelect?: boolean;
+  /** Highlight and focus items on pointer hover (default: true) */
+  highlightItemOnHover?: boolean;
 
   // Positioning options (Radix-compatible)
   /** Preferred side of trigger: "top" | "right" | "bottom" | "left" (default: "bottom") */
@@ -195,6 +197,7 @@ Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align
 | `data-close-on-click-outside` | boolean | `true` | Close when clicking outside |
 | `data-close-on-escape` | boolean | `true` | Close when pressing Escape |
 | `data-close-on-select` | boolean | `true` | Close when an item is selected |
+| `data-highlight-item-on-hover` | boolean | `true` | Highlight and focus items on pointer hover |
 | `data-side` | string | `"bottom"` | Preferred side: top, right, bottom, left |
 | `data-align` | string | `"start"` | Alignment: start, center, end |
 | `data-side-offset` | number | `4` | Distance from trigger in px |

@@ -90,6 +90,11 @@ export interface SelectOptions {
    * @default true
    */
   lockScroll?: boolean;
+  /**
+   * Whether moving the pointer over items should highlight and focus them.
+   * @default true
+   */
+  highlightItemOnHover?: boolean;
 }
 
 export interface SelectController {
@@ -205,6 +210,8 @@ export function createSelect(
     getPlacementNumber("collisionPadding") ??
     8;
   const lockScrollOption = options.lockScroll ?? getDataBool(root, "lockScroll") ?? true;
+  const highlightItemOnHover =
+    options.highlightItemOnHover ?? getDataBool(root, "highlightItemOnHover") ?? true;
 
   let isOpen = false;
   let currentValue: string | null = defaultValue;
@@ -215,6 +222,7 @@ export function createSelect(
   let keyboardMode = false;
   let lastPointerX = 0;
   let lastPointerY = 0;
+  let lastPointerType = "";
   let pendingPointerOpen = false;
   const cleanups: Array<() => void> = [];
 
@@ -242,6 +250,7 @@ export function createSelect(
 
   const isItemDisabled = (el: HTMLElement) =>
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
+  const isHoverPointer = (e: PointerEvent) => e.pointerType !== "touch";
 
   // ARIA setup
   const triggerId = ensureId(trigger, "select-trigger");
@@ -537,6 +546,10 @@ export function createSelect(
     for (const el of items) el.removeAttribute("data-highlighted");
     highlightedIndex = -1;
   };
+  const clearHighlightAndFocusContent = () => {
+    clearHighlight();
+    focusElement(content);
+  };
 
   const setDataState = (state: "open" | "closed") => {
     root.setAttribute("data-state", state);
@@ -645,13 +658,18 @@ export function createSelect(
         positionSync.update();
 
         // Highlight item under cursor if pointer opened the select
-        if (openedByPointer && (lastPointerX !== 0 || lastPointerY !== 0)) {
+        if (
+          openedByPointer &&
+          highlightItemOnHover &&
+          lastPointerType !== "touch" &&
+          (lastPointerX !== 0 || lastPointerY !== 0)
+        ) {
           const el = document.elementFromPoint(lastPointerX, lastPointerY);
           const item = el?.closest?.('[data-slot="select-item"]') as HTMLElement | null;
           if (item && !isItemDisabled(item) && content.contains(item)) {
             const index = itemToIndex.get(item);
             if (index !== undefined) {
-              updateHighlight(index, false, false);
+              updateHighlight(index, true, false);
             }
           }
         }
@@ -663,6 +681,7 @@ export function createSelect(
       pendingPointerOpen = false;
       lastPointerX = 0;
       lastPointerY = 0;
+      lastPointerType = "";
       setAria(trigger, "expanded", false);
       setDataState("closed");
       clearHighlight();
@@ -838,6 +857,7 @@ export function createSelect(
     on(trigger, "pointerdown", (e) => {
       lastPointerX = e.clientX;
       lastPointerY = e.clientY;
+      lastPointerType = e.pointerType;
       pendingPointerOpen = true;
     }),
     on(trigger, "click", () => {
@@ -854,6 +874,8 @@ export function createSelect(
       if (item) selectItem(item);
     }),
     on(content, "pointermove", (e) => {
+      if (!highlightItemOnHover || !isHoverPointer(e)) return;
+
       const item = (e.target as HTMLElement).closest?.('[data-slot="select-item"]') as HTMLElement | null;
 
       if (keyboardMode) {
@@ -864,15 +886,16 @@ export function createSelect(
       if (item && !isItemDisabled(item)) {
         const index = itemToIndex.get(item);
         if (index !== undefined && index !== highlightedIndex) {
-          updateHighlight(index, false);
+          updateHighlight(index, true);
         }
       } else {
         // Clear highlight when moving to label, separator, or disabled item
-        clearHighlight();
+        clearHighlightAndFocusContent();
       }
     }),
-    on(content, "pointerleave", () => {
-      if (!keyboardMode) clearHighlight();
+    on(content, "pointerleave", (e) => {
+      if (!highlightItemOnHover || !isHoverPointer(e) || keyboardMode) return;
+      clearHighlightAndFocusContent();
     })
   );
 

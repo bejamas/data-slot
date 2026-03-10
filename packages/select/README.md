@@ -128,6 +128,7 @@ Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, 
 | `position` | `data-position` | `"item-aligned" \| "popper"` | `"item-aligned"` | Positioning mode (see below) |
 | `avoidCollisions` | `data-avoid-collisions` | `boolean` | `true` | Adjust to stay in viewport |
 | `collisionPadding` | `data-collision-padding` | `number` | `8` | Viewport edge padding (px) |
+| `highlightItemOnHover` | `data-highlight-item-on-hover` | `boolean` | `true` | Highlight and focus items on pointer hover |
 
 ### Positioning Modes
 
@@ -211,7 +212,7 @@ The component sets these attributes to reflect state:
 | `data-align-trigger` | content | `"true" \| "false"` | Whether the current mode aligns the selected item to the trigger |
 | `data-value` | root | `string` | Current selected value |
 | `data-selected` | item | (presence) | Selected item |
-| `data-highlighted` | item | (presence) | Keyboard-focused item |
+| `data-highlighted` | item | (presence) | Focused/highlighted item |
 | `data-placeholder` | trigger | (presence) | When showing placeholder |
 | `data-label` | item | `string` | Display text for trigger (optional, falls back to textContent) |
 

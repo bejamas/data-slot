@@ -82,6 +82,11 @@ export interface DropdownMenuOptions {
    * @default true
    */
   lockScroll?: boolean;
+  /**
+   * Whether moving the pointer over items should highlight and focus them.
+   * @default true
+   */
+  highlightItemOnHover?: boolean;
 }
 
 export interface DropdownMenuController {
@@ -184,6 +189,8 @@ export function createDropdownMenu(
     getPlacementNumber("collisionPadding") ??
     8;
   const lockScrollOption = options.lockScroll ?? getDataBool(root, "lockScroll") ?? true;
+  const highlightItemOnHover =
+    options.highlightItemOnHover ?? getDataBool(root, "highlightItemOnHover") ?? true;
 
   let isOpen = false;
   let previousActiveElement: HTMLElement | null = null;
@@ -213,6 +220,7 @@ export function createDropdownMenu(
 
   const isDisabled = (el: HTMLElement) =>
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
+  const isHoverPointer = (e: PointerEvent) => e.pointerType !== "touch";
 
   // ARIA setup (minimal - just essential attributes)
   const triggerId = ensureId(trigger, "dropdown-menu-trigger");
@@ -310,6 +318,10 @@ export function createDropdownMenu(
   const clearHighlight = () => {
     for (const el of items) el.removeAttribute("data-highlighted");
     highlightedIndex = -1;
+  };
+  const clearHighlightAndFocusContent = () => {
+    clearHighlight();
+    focusElement(content);
   };
 
   const setDataState = (state: "open" | "closed") => {
@@ -497,6 +509,8 @@ export function createDropdownMenu(
       if (item) selectItem(item);
     }),
     on(content, "pointermove", (e) => {
+      if (!highlightItemOnHover || !isHoverPointer(e)) return;
+
       const item = (e.target as HTMLElement).closest?.('[data-slot="dropdown-menu-item"]') as HTMLElement | null;
 
       if (keyboardMode) {
@@ -508,15 +522,16 @@ export function createDropdownMenu(
       if (item && !isDisabled(item)) {
         const index = itemToIndex.get(item);
         if (index !== undefined && index !== highlightedIndex) {
-          updateHighlight(index, false);
+          updateHighlight(index, true);
         }
       } else {
         // Clear highlight when moving to label, separator, or disabled item
-        clearHighlight();
+        clearHighlightAndFocusContent();
       }
     }),
-    on(content, "pointerleave", () => {
-      if (!keyboardMode) clearHighlight();
+    on(content, "pointerleave", (e) => {
+      if (!highlightItemOnHover || !isHoverPointer(e) || keyboardMode) return;
+      clearHighlightAndFocusContent();
     })
   );
 
