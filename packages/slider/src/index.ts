@@ -6,6 +6,10 @@ import {
   getDataString,
   getDataEnum,
   getDataBool,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -47,6 +51,10 @@ export interface SliderController {
   /** Cleanup all event listeners */
   destroy(): void;
 }
+
+const ROOT_BINDING_KEY = "@data-slot/slider";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/slider] createSlider() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
 type SliderValue = number | [number, number];
 
@@ -137,6 +145,13 @@ export function createSlider(
   root: Element,
   options: SliderOptions = {},
 ): SliderController {
+  const existingController = reuseRootBinding<SliderController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
+  if (existingController) return existingController;
+
   const track = getPart<HTMLElement>(root, "slider-track");
   const thumbs = getParts<HTMLElement>(root, "slider-thumb");
   const range = getPart<HTMLElement>(root, "slider-range");
@@ -681,14 +696,13 @@ export function createSlider(
     destroy: () => {
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
 
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
 }
-
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
 
 /**
  * Find and bind all slider components in a scope
@@ -698,8 +712,7 @@ export function create(scope: ParentNode = document): SliderController[] {
   const controllers: SliderController[] = [];
 
   for (const root of getRoots(scope, "slider")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createSlider(root));
   }
 

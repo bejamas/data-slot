@@ -1,7 +1,10 @@
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { createTooltip, create } from './index'
+import { clearRootBinding, setRootBinding } from '../../core/src/index'
 
 describe('Tooltip', () => {
+  const ROOT_BINDING_KEY = '@data-slot/tooltip'
+
   const setup = (
     options: Parameters<typeof createTooltip>[1] = {},
     html?: string
@@ -1002,6 +1005,50 @@ describe('Tooltip', () => {
       expect(controller.isOpen).toBe(true)
 
       controller.destroy()
+    })
+  })
+
+  describe('root binding', () => {
+    it('reuses the existing controller for duplicate direct binds', () => {
+      const { root, controller } = setup()
+
+      expect(createTooltip(root)).toBe(controller)
+
+      controller.destroy()
+    })
+
+    it('reuses a controller bound by another module copy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createTooltip>
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
+
+      expect(createTooltip(root)).toBe(foreignController)
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
+    })
+
+    it('create() skips roots bound by another module copy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createTooltip>
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
+
+      expect(create()).toHaveLength(0)
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
+    })
+
+    it('allows rebinding after destroy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const rebound = createTooltip(root)
+      expect(rebound).not.toBe(controller)
+
+      rebound.destroy()
     })
   })
 })

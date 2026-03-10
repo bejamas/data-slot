@@ -1,7 +1,10 @@
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { createHoverCard, create } from './index'
+import { clearRootBinding, setRootBinding } from '../../core/src/index'
 
 describe('HoverCard', () => {
+  const ROOT_BINDING_KEY = '@data-slot/hover-card'
+
   const setup = (options: Parameters<typeof createHoverCard>[1] = {}) => {
     document.body.innerHTML = `
       <div data-slot="hover-card" id="root">
@@ -1042,5 +1045,49 @@ describe('HoverCard', () => {
     expect(controllers[0]?.isOpen).toBe(true)
 
     controllers.forEach((controller) => controller.destroy())
+  })
+
+  describe('root binding', () => {
+    it('reuses the existing controller for duplicate direct binds', () => {
+      const { root, controller } = setup()
+
+      expect(createHoverCard(root)).toBe(controller)
+
+      controller.destroy()
+    })
+
+    it('reuses a controller bound by another module copy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createHoverCard>
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
+
+      expect(createHoverCard(root)).toBe(foreignController)
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
+    })
+
+    it('create() skips roots bound by another module copy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createHoverCard>
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
+
+      expect(create()).toHaveLength(0)
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
+    })
+
+    it('allows rebinding after destroy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const rebound = createHoverCard(root)
+      expect(rebound).not.toBe(controller)
+
+      rebound.destroy()
+    })
   })
 })

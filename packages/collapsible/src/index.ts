@@ -2,6 +2,10 @@ import {
   getPart,
   getRoots,
   getDataBool,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
   setAria,
   ensureId,
   on,
@@ -37,8 +41,9 @@ export interface CollapsibleController {
   destroy(): void;
 }
 
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
+const ROOT_BINDING_KEY = "@data-slot/collapsible";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/collapsible] createCollapsible() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
 const parseTimingToMs = (value: string): number => {
   const trimmed = value.trim();
@@ -92,6 +97,13 @@ export function createCollapsible(
   root: Element,
   options: CollapsibleOptions = {}
 ): CollapsibleController {
+  const existingController = reuseRootBinding<CollapsibleController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
+  if (existingController) return existingController;
+
   // Resolve options with explicit precedence: JS > data-* > default
   const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
   const hiddenUntilFound =
@@ -347,10 +359,11 @@ export function createCollapsible(
       sizeObserver = null;
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
-      bound.delete(root);
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
 
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
 }
 
@@ -362,8 +375,7 @@ export function create(scope: ParentNode = document): CollapsibleController[] {
   const controllers: CollapsibleController[] = [];
 
   for (const root of getRoots(scope, "collapsible")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createCollapsible(root));
   }
 

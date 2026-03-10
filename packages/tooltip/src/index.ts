@@ -4,6 +4,10 @@ import {
   getDataBool,
   getDataNumber,
   getDataEnum,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
   createDismissLayer,
   computeFloatingPosition,
   computeFloatingTransformOrigin,
@@ -14,6 +18,10 @@ import {
 } from "@data-slot/core";
 import { ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+
+const ROOT_BINDING_KEY = "@data-slot/tooltip";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/tooltip] createTooltip() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
 // Global state for "warm-up" behavior across tooltip instances
 let globalWarmUntil = 0;
@@ -108,6 +116,13 @@ export function createTooltip(
   root: Element,
   options: TooltipOptions = {}
 ): TooltipController {
+  const existingController = reuseRootBinding<TooltipController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
+  if (existingController) return existingController;
+
   const trigger = getPart<HTMLElement>(root, "tooltip-trigger");
   const content = getPart<HTMLElement>(root, "tooltip-content");
   const authoredPositionerCandidate = getPart<HTMLElement>(root, "tooltip-positioner");
@@ -524,14 +539,13 @@ export function createTooltip(
       portal.cleanup();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
 
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
 }
-
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
 
 /**
  * Find and bind all tooltip components in a scope
@@ -541,8 +555,7 @@ export function create(scope: ParentNode = document): TooltipController[] {
   const controllers: TooltipController[] = [];
 
   for (const root of getRoots(scope, "tooltip")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createTooltip(root));
   }
 

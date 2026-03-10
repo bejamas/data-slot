@@ -1,4 +1,14 @@
-import { getRoots, getDataBool, setAria, on, emit } from "@data-slot/core";
+import {
+  getRoots,
+  getDataBool,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
+  setAria,
+  on,
+  emit,
+} from "@data-slot/core";
 
 export interface ToggleOptions {
   /** Initial pressed state */
@@ -22,10 +32,21 @@ export interface ToggleController {
   destroy(): void;
 }
 
+const ROOT_BINDING_KEY = "@data-slot/toggle";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/toggle] createToggle() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
+
 export function createToggle(
   root: HTMLElement,
   options: ToggleOptions = {}
 ): ToggleController {
+  const existingController = reuseRootBinding<ToggleController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
+  if (existingController) return existingController;
+
   // Options: JS > data-* > defaults
   const defaultPressed =
     options.defaultPressed ?? getDataBool(root, "defaultPressed") ?? false;
@@ -100,7 +121,7 @@ export function createToggle(
 
   // Controller methods are NOT blocked by disabled state.
   // When you have the controller, you have explicit programmatic control.
-  return {
+  const controller: ToggleController = {
     toggle: () => applyState(!currentPressed),
     press: () => applyState(true),
     release: () => applyState(false),
@@ -110,14 +131,13 @@ export function createToggle(
     destroy: () => {
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
-      // Remove from bound set so create() can re-discover after destroy
-      bound.delete(root);
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
-}
 
-// WeakSet to track bound elements (used by create() for auto-discovery)
-const bound = new WeakSet<Element>();
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
+  return controller;
+}
 
 /**
  * Find and bind all toggle instances in a scope
@@ -126,8 +146,7 @@ const bound = new WeakSet<Element>();
 export function create(scope: ParentNode = document): ToggleController[] {
   const controllers: ToggleController[] = [];
   for (const root of getRoots(scope, "toggle")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createToggle(root as HTMLElement));
   }
   return controllers;

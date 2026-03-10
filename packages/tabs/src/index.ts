@@ -1,4 +1,14 @@
-import { getPart, getParts, getRoots, getDataString, getDataEnum } from "@data-slot/core";
+import {
+  getPart,
+  getParts,
+  getRoots,
+  getDataString,
+  getDataEnum,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
+} from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 
@@ -30,6 +40,10 @@ export interface TabsController {
   /** Cleanup all event listeners */
   destroy(): void;
 }
+
+const ROOT_BINDING_KEY = "@data-slot/tabs";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/tabs] createTabs() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
 // Focusable selector constant (shared with other components)
 const FOCUSABLE =
@@ -76,6 +90,13 @@ export function createTabs(
   root: Element,
   options: TabsOptions = {}
 ): TabsController {
+  const existingController = reuseRootBinding<TabsController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
+  if (existingController) return existingController;
+
   const list = getPart<HTMLElement>(root, "tabs-list");
   const triggers = getParts<HTMLElement>(root, "tabs-trigger");
   const panels = getParts<HTMLElement>(root, "tabs-content");
@@ -441,15 +462,13 @@ export function createTabs(
     destroy: () => {
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
-      bound.delete(root);
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
 
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
 }
-
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
 
 /**
  * Find and bind all tabs components in a scope
@@ -459,8 +478,7 @@ export function create(scope: ParentNode = document): TabsController[] {
   const controllers: TabsController[] = [];
 
   for (const root of getRoots(scope, "tabs")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createTabs(root));
   }
 

@@ -6,6 +6,10 @@ import {
   getDataNumber,
   getDataEnum,
   containsWithPortals,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
   computeFloatingPosition,
   createPortalLifecycle,
   createPresenceLifecycle,
@@ -105,6 +109,10 @@ export interface NavigationMenuController {
   destroy(): void;
 }
 
+const ROOT_BINDING_KEY = "@data-slot/navigation-menu";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/navigation-menu] createNavigationMenu() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
+
 /**
  * Create a navigation menu controller for a root element
  *
@@ -127,6 +135,13 @@ export function createNavigationMenu(
   root: Element,
   options: NavigationMenuOptions = {},
 ): NavigationMenuController {
+  const existingController = reuseRootBinding<NavigationMenuController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
+  if (existingController) return existingController;
+
   // Resolve options with explicit precedence: JS > data-* > default
   const delayOpen =
     options.delayOpen ?? getDataNumber(root, "delayOpen") ?? 0;
@@ -1989,14 +2004,13 @@ export function createNavigationMenu(
       clearTimers();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
 
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
 }
-
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
 
 /**
  * Find and bind all navigation menu components in a scope
@@ -2008,8 +2022,7 @@ export function create(
   const controllers: NavigationMenuController[] = [];
 
   for (const root of getRoots(scope, "navigation-menu")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createNavigationMenu(root));
   }
 

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import { createCollapsible, create } from './index'
+import { clearRootBinding, setRootBinding } from '../../core/src/index'
 
 describe('Collapsible', () => {
+  const ROOT_BINDING_KEY = '@data-slot/collapsible'
+
   const setup = (defaultOpen = false) => {
     document.body.innerHTML = `
       <div data-slot="collapsible" id="root">
@@ -562,6 +565,50 @@ describe('Collapsible', () => {
       expect(content.getAttribute('hidden')).not.toBe('until-found')
 
       controller.destroy()
+    })
+  })
+
+  describe('root binding', () => {
+    it('reuses the existing controller for duplicate direct binds', () => {
+      const { root, controller } = setup()
+
+      expect(createCollapsible(root)).toBe(controller)
+
+      controller.destroy()
+    })
+
+    it('reuses a controller bound by another module copy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createCollapsible>
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
+
+      expect(createCollapsible(root)).toBe(foreignController)
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
+    })
+
+    it('create() skips roots bound by another module copy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createCollapsible>
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
+
+      expect(create()).toHaveLength(0)
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
+    })
+
+    it('allows rebinding after destroy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const rebound = createCollapsible(root)
+      expect(rebound).not.toBe(controller)
+
+      rebound.destroy()
     })
   })
 })

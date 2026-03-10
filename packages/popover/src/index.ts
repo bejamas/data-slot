@@ -4,6 +4,10 @@ import {
   getDataBool,
   getDataEnum,
   getDataNumber,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
   createDismissLayer,
   computeFloatingPosition,
   computeFloatingTransformOrigin,
@@ -74,6 +78,10 @@ export interface PopoverController {
   destroy(): void;
 }
 
+const ROOT_BINDING_KEY = "@data-slot/popover";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/popover] createPopover() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
+
 /**
  * Create a popover controller for a root element
  *
@@ -92,6 +100,13 @@ export function createPopover(
   root: Element,
   options: PopoverOptions = {}
 ): PopoverController {
+  const existingController = reuseRootBinding<PopoverController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
+  if (existingController) return existingController;
+
   const trigger = getPart<HTMLElement>(root, "popover-trigger");
   const content = getPart<HTMLElement>(root, "popover-content");
   const closeBtn = getPart<HTMLElement>(root, "popover-close");
@@ -414,14 +429,13 @@ export function createPopover(
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       cleanupContentFocusable();
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
 
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
 }
-
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
 
 /**
  * Find and bind all popover components in a scope
@@ -431,8 +445,7 @@ export function create(scope: ParentNode = document): PopoverController[] {
   const controllers: PopoverController[] = [];
 
   for (const root of getRoots(scope, "popover")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createPopover(root));
   }
 

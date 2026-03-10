@@ -1,4 +1,14 @@
-import { getParts, getRoots, getPart, getDataBool, getDataString } from "@data-slot/core";
+import {
+  getParts,
+  getRoots,
+  getPart,
+  getDataBool,
+  getDataString,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
+} from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 
@@ -26,6 +36,10 @@ export interface AccordionController {
   destroy(): void;
 }
 
+const ROOT_BINDING_KEY = "@data-slot/accordion";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/accordion] createAccordion() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
+
 /**
  * Create an accordion controller for a root element
  *
@@ -47,6 +61,13 @@ export function createAccordion(
   root: Element,
   options: AccordionOptions = {}
 ): AccordionController {
+  const existingController = reuseRootBinding<AccordionController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
+  if (existingController) return existingController;
+
   const items = getParts<HTMLElement>(root, "accordion-item");
 
   if (items.length === 0) {
@@ -304,14 +325,13 @@ export function createAccordion(
           (content as any)._accordionTimeout = null;
         }
       });
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
 
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
 }
-
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
 
 /**
  * Find and bind all accordion components in a scope
@@ -321,8 +341,7 @@ export function create(scope: ParentNode = document): AccordionController[] {
   const controllers: AccordionController[] = [];
 
   for (const root of getRoots(scope, "accordion")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createAccordion(root));
   }
 

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import { createTabs, create } from './index'
+import { clearRootBinding, setRootBinding } from '../../core/src/index'
 
 describe('Tabs', () => {
+  const ROOT_BINDING_KEY = '@data-slot/tabs'
+
   const waitForFrame = () =>
     new Promise<void>((resolve) => {
       requestAnimationFrame(() => resolve())
@@ -558,6 +561,50 @@ describe('Tabs', () => {
       expect(list.hasAttribute('aria-orientation')).toBe(false)
 
       controller.destroy()
+    })
+  })
+
+  describe('root binding', () => {
+    it('reuses the existing controller for duplicate direct binds', () => {
+      const { root, controller } = setup()
+
+      expect(createTabs(root)).toBe(controller)
+
+      controller.destroy()
+    })
+
+    it('reuses a controller bound by another module copy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createTabs>
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
+
+      expect(createTabs(root)).toBe(foreignController)
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
+    })
+
+    it('create() skips roots bound by another module copy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createTabs>
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
+
+      expect(create()).toHaveLength(0)
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
+    })
+
+    it('allows rebinding after destroy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const rebound = createTabs(root)
+      expect(rebound).not.toBe(controller)
+
+      rebound.destroy()
     })
   })
 })

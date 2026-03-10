@@ -1,10 +1,13 @@
 import { describe, expect, it, beforeEach } from "bun:test";
 import { createCombobox, create } from "./index";
+import { clearRootBinding, setRootBinding } from "../../core/src/index";
 import { createDialog } from "../../dialog/src/index";
 import { runComboboxParityScenario } from "./parity/runner";
 import { comboboxParityScenarios } from "./parity/scenarios";
 
 describe("Combobox", () => {
+  const ROOT_BINDING_KEY = "@data-slot/combobox";
+
   const setup = (options: Parameters<typeof createCombobox>[1] = {}, html?: string) => {
     document.body.innerHTML = html ?? `
       <div data-slot="combobox" id="root">
@@ -2088,6 +2091,86 @@ describe("Combobox", () => {
       expect(controllers1).toHaveLength(1);
       expect(controllers2).toHaveLength(0);
       controllers1.forEach((c) => c.destroy());
+    });
+
+    it("reuses the existing controller for duplicate direct binds", () => {
+      const { root, controller } = setup();
+
+      expect(createCombobox(root)).toBe(controller);
+
+      controller.destroy();
+    });
+
+    it("reuses a controller bound by another module copy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      const foreignController: ReturnType<typeof createCombobox> = {
+        get value() {
+          return null;
+        },
+        get inputValue() {
+          return "";
+        },
+        get isOpen() {
+          return false;
+        },
+        select() {},
+        clear() {},
+        open() {},
+        close() {},
+        setItemToStringValue() {},
+        destroy() {
+          clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+        },
+      };
+
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
+
+      expect(createCombobox(root)).toBe(foreignController);
+
+      foreignController.destroy();
+    });
+
+    it("create() skips roots bound by another module copy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      const foreignController: ReturnType<typeof createCombobox> = {
+        get value() {
+          return null;
+        },
+        get inputValue() {
+          return "";
+        },
+        get isOpen() {
+          return false;
+        },
+        select() {},
+        clear() {},
+        open() {},
+        close() {},
+        setItemToStringValue() {},
+        destroy() {
+          clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+        },
+      };
+
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
+
+      expect(create()).toHaveLength(0);
+
+      foreignController.destroy();
+    });
+
+    it("allows rebinding after destroy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      const rebound = createCombobox(root);
+      expect(rebound).not.toBe(controller);
+
+      rebound.destroy();
     });
   });
 

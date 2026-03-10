@@ -1,7 +1,10 @@
 import { describe, expect, it, beforeEach } from "bun:test";
 import { createToggleGroup, create } from "./index";
+import { clearRootBinding, setRootBinding } from "../../core/src/index";
 
 describe("ToggleGroup", () => {
+  const ROOT_BINDING_KEY = "@data-slot/toggle-group";
+
   beforeEach(() => {
     document.body.innerHTML = "";
   });
@@ -662,6 +665,48 @@ describe("ToggleGroup", () => {
 
       expect(first).toHaveLength(1);
       expect(second).toHaveLength(0);
+    });
+
+    it("reuses the existing controller for duplicate direct binds", () => {
+      const { root, controller } = setup();
+
+      expect(createToggleGroup(root)).toBe(controller);
+
+      controller.destroy();
+    });
+
+    it("reuses a controller bound by another module copy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createToggleGroup>;
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
+
+      expect(createToggleGroup(root)).toBe(foreignController);
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+    });
+
+    it("create() skips roots bound by another module copy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createToggleGroup>;
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
+
+      expect(create()).toHaveLength(0);
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+    });
+
+    it("allows rebinding after destroy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      const rebound = createToggleGroup(root);
+      expect(rebound).not.toBe(controller);
+
+      rebound.destroy();
     });
   });
 

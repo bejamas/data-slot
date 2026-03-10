@@ -4,6 +4,8 @@ import {
   getParts,
   getRoots,
   getRootBinding,
+  hasRootBinding,
+  reuseRootBinding,
   setRootBinding,
   clearRootBinding,
   warnRootBindingOnce,
@@ -79,8 +81,10 @@ describe('core/parts', () => {
     const controller = { destroy() {} }
 
     expect(getRootBinding(root, 'test')).toBeUndefined()
+    expect(hasRootBinding(root, 'test')).toBe(false)
     expect(setRootBinding(root, 'test', controller)).toBe(controller)
     expect(getRootBinding(root, 'test')).toBe(controller)
+    expect(hasRootBinding(root, 'test')).toBe(true)
   })
 
   it('clears a root binding only when the same controller owns it', () => {
@@ -94,6 +98,7 @@ describe('core/parts', () => {
     expect(getRootBinding(root, 'test')).toBe(first)
     expect(clearRootBinding(root, 'test', first)).toBe(true)
     expect(getRootBinding(root, 'test')).toBeUndefined()
+    expect(hasRootBinding(root, 'test')).toBe(false)
   })
 
   it('warns once per root binding key', () => {
@@ -113,6 +118,26 @@ describe('core/parts', () => {
     }
 
     expect(warnings).toEqual(['first warning', 'third warning'])
+  })
+
+  it('reuses an existing root binding and warns once', () => {
+    const root = document.createElement('div')
+    const controller = { destroy() {} }
+    const warnings: string[] = []
+    const originalWarn = console.warn
+    console.warn = (message?: unknown) => {
+      warnings.push(String(message))
+    }
+
+    try {
+      setRootBinding(root, 'test', controller)
+      expect(reuseRootBinding(root, 'test', 'duplicate')).toBe(controller)
+      expect(reuseRootBinding(root, 'test', 'duplicate')).toBe(controller)
+    } finally {
+      console.warn = originalWarn
+    }
+
+    expect(warnings).toEqual(['duplicate'])
   })
 })
 

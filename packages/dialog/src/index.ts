@@ -1,4 +1,12 @@
-import { getPart, getRoots, getDataBool } from "@data-slot/core";
+import {
+  getPart,
+  getRoots,
+  getDataBool,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
+} from "@data-slot/core";
 import { setAria, ensureId, linkLabelledBy } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
@@ -37,6 +45,10 @@ export interface DialogController {
   /** Internal: overlay element for stack metadata */
   _overlay?: HTMLElement;
 }
+
+const ROOT_BINDING_KEY = "@data-slot/dialog";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/dialog] createDialog() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
 // Focusable element selector
 const FOCUSABLE =
@@ -118,6 +130,13 @@ export function createDialog(
   root: Element,
   options: DialogOptions = {}
 ): DialogController {
+  const existingController = reuseRootBinding<DialogController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
+  if (existingController) return existingController;
+
   // Resolve options with explicit precedence: JS > data-* > default
   const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
   const onOpenChange = options.onOpenChange;
@@ -426,6 +445,7 @@ export function createDialog(
       cleanups.length = 0;
 
       portalLifecycle?.cleanup();
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
     // Internal properties for global handler
     _handleKeydown: handleKeydown,
@@ -449,6 +469,8 @@ export function createDialog(
     })
   );
 
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
+
   // Handle defaultOpen: push to stack and setup global state after controller is defined
   if (defaultOpen) {
     previousActiveElement = document.activeElement as HTMLElement;
@@ -469,9 +491,6 @@ export function createDialog(
   return controller;
 }
 
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
-
 /**
  * Find and bind all dialog components in a scope
  * Returns array of controllers for programmatic access
@@ -480,8 +499,7 @@ export function create(scope: ParentNode = document): DialogController[] {
   const controllers: DialogController[] = [];
 
   for (const root of getRoots(scope, "dialog")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createDialog(root));
   }
 

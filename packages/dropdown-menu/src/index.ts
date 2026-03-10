@@ -5,10 +5,10 @@ import {
   getDataBool,
   getDataNumber,
   getDataEnum,
-  getRootBinding,
+  hasRootBinding,
+  reuseRootBinding,
   setRootBinding,
   clearRootBinding,
-  warnRootBindingOnce,
   setAria,
   ensureId,
   on,
@@ -131,9 +131,12 @@ export function createDropdownMenu(
   root: Element,
   options: DropdownMenuOptions = {}
 ): DropdownMenuController {
-  const existingController = getRootBinding<DropdownMenuController>(root, ROOT_BINDING_KEY);
+  const existingController = reuseRootBinding<DropdownMenuController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
   if (existingController) {
-    warnRootBindingOnce(root, ROOT_BINDING_KEY, DUPLICATE_BINDING_WARNING);
     return existingController;
   }
 
@@ -611,7 +614,7 @@ export function createDropdownMenu(
 export function create(scope: ParentNode = document): DropdownMenuController[] {
   const controllers: DropdownMenuController[] = [];
   for (const root of getRoots(scope, "dropdown-menu")) {
-    if (getRootBinding(root, ROOT_BINDING_KEY)) continue;
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createDropdownMenu(root));
   }
   return controllers;

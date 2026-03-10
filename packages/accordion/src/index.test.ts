@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import { createAccordion, create } from './index'
+import { clearRootBinding, setRootBinding } from '../../core/src/index'
 
 describe('Accordion', () => {
+  const ROOT_BINDING_KEY = '@data-slot/accordion'
+
   const setup = (options: Parameters<typeof createAccordion>[1] = {}) => {
     document.body.innerHTML = `
       <div data-slot="accordion" id="root">
@@ -392,5 +395,48 @@ describe('Accordion', () => {
       controller.destroy()
     })
   })
-})
 
+  describe('root binding', () => {
+    it('reuses the existing controller for duplicate direct binds', () => {
+      const { root, controller } = setup()
+
+      expect(createAccordion(root)).toBe(controller)
+
+      controller.destroy()
+    })
+
+    it('reuses a controller bound by another module copy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createAccordion>
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
+
+      expect(createAccordion(root)).toBe(foreignController)
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
+    })
+
+    it('create() skips roots bound by another module copy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createAccordion>
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
+
+      expect(create()).toHaveLength(0)
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
+    })
+
+    it('allows rebinding after destroy', () => {
+      const { root, controller } = setup()
+      controller.destroy()
+
+      const rebound = createAccordion(root)
+      expect(rebound).not.toBe(controller)
+
+      rebound.destroy()
+    })
+  })
+})

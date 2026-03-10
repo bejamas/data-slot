@@ -54,6 +54,10 @@ export function getRootBinding<T>(root: Element, key: string): T | undefined {
   return getRootBindings(root)?.get(key) as T | undefined;
 }
 
+export function hasRootBinding(root: Element, key: string): boolean {
+  return getRootBindings(root)?.has(key) ?? false;
+}
+
 export function setRootBinding<T>(root: Element, key: string, value: T): T {
   getRootBindings(root, true)!.set(key, value);
   return value;
@@ -76,6 +80,18 @@ export function warnRootBindingOnce(root: Element, key: string, message: string)
   if (warnings.has(key)) return;
   warnings.add(key);
   console.warn(message);
+}
+
+export function reuseRootBinding<T>(
+  root: Element,
+  key: string,
+  message: string
+): T | undefined {
+  const binding = getRootBinding<T>(root, key);
+  if (binding !== undefined) {
+    warnRootBindingOnce(root, key, message);
+  }
+  return binding;
 }
 
 // ============================================================================

@@ -2,10 +2,10 @@ import {
   getPart,
   getParts,
   getRoots,
-  getRootBinding,
+  hasRootBinding,
+  reuseRootBinding,
   setRootBinding,
   clearRootBinding,
-  warnRootBindingOnce,
   getDataBool,
   getDataNumber,
   getDataString,
@@ -151,9 +151,12 @@ export function createSelect(
   root: Element,
   options: SelectOptions = {}
 ): SelectController {
-  const existingController = getRootBinding<SelectController>(root, ROOT_BINDING_KEY);
+  const existingController = reuseRootBinding<SelectController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
   if (existingController) {
-    warnRootBindingOnce(root, ROOT_BINDING_KEY, DUPLICATE_BINDING_WARNING);
     return existingController;
   }
 
@@ -984,7 +987,7 @@ export function createSelect(
 export function create(scope: ParentNode = document): SelectController[] {
   const controllers: SelectController[] = [];
   for (const root of getRoots(scope, "select")) {
-    if (getRootBinding(root, ROOT_BINDING_KEY)) continue;
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createSelect(root));
   }
   return controllers;

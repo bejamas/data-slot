@@ -7,6 +7,10 @@ import {
   getDataNumber,
   getDataString,
   getDataEnum,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
   setAria,
   ensureId,
   on,
@@ -95,6 +99,10 @@ export interface ComboboxController {
   destroy(): void;
 }
 
+const ROOT_BINDING_KEY = "@data-slot/combobox";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/combobox] createCombobox() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
+
 /**
  * Create a combobox controller for a root element.
  *
@@ -112,6 +120,13 @@ export function createCombobox(
   root: Element,
   options: ComboboxOptions = {}
 ): ComboboxController {
+  const existingController = reuseRootBinding<ComboboxController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING
+  );
+  if (existingController) return existingController;
+
   const input = getPart<HTMLInputElement>(root, "combobox-input");
   const content = getPart<HTMLElement>(root, "combobox-content");
   const list = getPart<HTMLElement>(root, "combobox-list") ?? getPart<HTMLElement>(content ?? root, "combobox-list");
@@ -1075,17 +1090,15 @@ export function createCombobox(
       if (hiddenInput && hiddenInput.parentNode) {
         hiddenInput.parentNode.removeChild(hiddenInput);
       }
-      bound.delete(root);
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
 
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
   if (defaultOpen) updateOpenState(true);
 
   return controller;
 }
-
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
 
 /**
  * Find and bind all combobox components in a scope
@@ -1094,8 +1107,7 @@ const bound = new WeakSet<Element>();
 export function create(scope: ParentNode = document): ComboboxController[] {
   const controllers: ComboboxController[] = [];
   for (const root of getRoots(scope, "combobox")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createCombobox(root));
   }
   return controllers;

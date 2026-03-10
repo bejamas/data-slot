@@ -3,6 +3,8 @@ export {
   getParts,
   getRoots,
   getRootBinding,
+  hasRootBinding,
+  reuseRootBinding,
   setRootBinding,
   clearRootBinding,
   warnRootBindingOnce,

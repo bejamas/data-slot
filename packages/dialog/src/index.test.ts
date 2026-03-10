@@ -1,9 +1,12 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import { createDialog, create } from "./index";
+import { clearRootBinding, setRootBinding } from "../../core/src/index";
 import { createPopover } from "../../popover/src/index";
 import { createHoverCard } from "../../hover-card/src/index";
 
 describe("Dialog", () => {
+  const ROOT_BINDING_KEY = "@data-slot/dialog";
+
   const setup = (options: Parameters<typeof createDialog>[1] = {}) => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="root">
@@ -1023,6 +1026,50 @@ describe("Dialog", () => {
 
       controller1.destroy();
       controller2.destroy();
+    });
+  });
+
+  describe("root binding", () => {
+    it("reuses the existing controller for duplicate direct binds", () => {
+      const { root, controller } = setup();
+
+      expect(createDialog(root)).toBe(controller);
+
+      controller.destroy();
+    });
+
+    it("reuses a controller bound by another module copy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createDialog>;
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
+
+      expect(createDialog(root)).toBe(foreignController);
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+    });
+
+    it("create() skips roots bound by another module copy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createDialog>;
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
+
+      expect(create()).toHaveLength(0);
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+    });
+
+    it("allows rebinding after destroy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      const rebound = createDialog(root);
+      expect(rebound).not.toBe(controller);
+
+      rebound.destroy();
     });
   });
 });

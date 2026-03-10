@@ -1,7 +1,10 @@
 import { describe, expect, it, beforeEach } from "bun:test";
 import { createSlider, create } from "./index";
+import { clearRootBinding, setRootBinding } from "../../core/src/index";
 
 describe("Slider", () => {
+  const ROOT_BINDING_KEY = "@data-slot/slider";
+
   beforeEach(() => {
     document.body.innerHTML = "";
   });
@@ -889,7 +892,7 @@ describe("Slider", () => {
       first.forEach((c) => c.destroy());
     });
 
-    it("manual createSlider + create can double-bind (same as popover)", () => {
+    it("manual createSlider + create does not double-bind", () => {
       document.body.innerHTML = `
         <div data-slot="slider" id="slider1" data-default-value="25">
           <div class="slider-control">
@@ -902,15 +905,54 @@ describe("Slider", () => {
       `;
       const root = document.getElementById("slider1")!;
 
-      // Manual bind first
       const manual = createSlider(root);
 
-      // create() will also bind (double-bind footgun, same as popover)
       const auto = create();
-      expect(auto).toHaveLength(1);
+      expect(auto).toHaveLength(0);
 
       manual.destroy();
-      auto.forEach((c) => c.destroy());
+    });
+
+    it("reuses the existing controller for duplicate direct binds", () => {
+      const { root, controller } = setupSingle();
+
+      expect(createSlider(root)).toBe(controller);
+
+      controller.destroy();
+    });
+
+    it("reuses a controller bound by another module copy", () => {
+      const { root, controller } = setupSingle();
+      controller.destroy();
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createSlider>;
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
+
+      expect(createSlider(root)).toBe(foreignController);
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+    });
+
+    it("create() skips roots bound by another module copy", () => {
+      const { root, controller } = setupSingle();
+      controller.destroy();
+
+      const foreignController = { destroy() {} } as ReturnType<typeof createSlider>;
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
+
+      expect(create()).toHaveLength(0);
+
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+    });
+
+    it("allows rebinding after destroy", () => {
+      const { root, controller } = setupSingle();
+      controller.destroy();
+
+      const rebound = createSlider(root);
+      expect(rebound).not.toBe(controller);
+
+      rebound.destroy();
     });
   });
 
