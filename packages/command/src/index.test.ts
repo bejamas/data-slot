@@ -64,6 +64,31 @@ describe("Command", () => {
       })
       .map((child) => child.getAttribute("data-value") ?? child.textContent?.replace(/\s+/g, " ").trim() ?? "");
 
+  const rect = (top: number, height: number) =>
+    ({
+      x: 0,
+      y: top,
+      top,
+      left: 0,
+      width: 200,
+      height,
+      right: 200,
+      bottom: top + height,
+      toJSON: () => ({}),
+    }) as DOMRect;
+
+  const mockScrollableList = (list: HTMLElement, items: HTMLElement[], itemHeight = 40, clientHeight = 120) => {
+    Object.defineProperty(list, "clientHeight", { configurable: true, value: clientHeight });
+    Object.defineProperty(list, "scrollHeight", {
+      configurable: true,
+      value: Math.max(items.length * itemHeight + clientHeight, clientHeight),
+    });
+    list.getBoundingClientRect = () => rect(0, clientHeight);
+    items.forEach((item, index) => {
+      item.getBoundingClientRect = () => rect((index * itemHeight) - list.scrollTop, itemHeight);
+    });
+  };
+
   beforeEach(() => {
     document.body.innerHTML = "";
   });
@@ -400,6 +425,133 @@ describe("Command", () => {
 
     expect(getTopLevelRankableOrder(list)).toEqual(["one", "Actions", "beta"]);
     expect(getDirectSlotOrder(group, "command-item")).toEqual(["project", "settings"]);
+
+    controller.destroy();
+  });
+
+  it("scrolls selected items into view during downward keyboard navigation", () => {
+    document.body.innerHTML = `
+      <div data-slot="command" id="root">
+        <input data-slot="command-input" />
+        <div data-slot="command-list">
+          <div data-slot="command-item" data-value="item-1">Item 1</div>
+          <div data-slot="command-item" data-value="item-2">Item 2</div>
+          <div data-slot="command-item" data-value="item-3">Item 3</div>
+          <div data-slot="command-item" data-value="item-4">Item 4</div>
+          <div data-slot="command-item" data-value="item-5">Item 5</div>
+          <div data-slot="command-item" data-value="item-6">Item 6</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const input = root.querySelector('[data-slot="command-input"]') as HTMLInputElement;
+    const list = root.querySelector('[data-slot="command-list"]') as HTMLElement;
+    const items = Array.from(root.querySelectorAll('[data-slot="command-item"]')) as HTMLElement[];
+
+    mockScrollableList(list, items);
+
+    const controller = createCommand(root);
+
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+
+    expect(controller.value).toBe("item-6");
+    expect(list.scrollTop).toBe(124);
+
+    controller.destroy();
+  });
+
+  it("scrolls selected items into view during upward keyboard navigation", () => {
+    document.body.innerHTML = `
+      <div data-slot="command" id="root">
+        <input data-slot="command-input" />
+        <div data-slot="command-list">
+          <div data-slot="command-item" data-value="item-1">Item 1</div>
+          <div data-slot="command-item" data-value="item-2">Item 2</div>
+          <div data-slot="command-item" data-value="item-3">Item 3</div>
+          <div data-slot="command-item" data-value="item-4">Item 4</div>
+          <div data-slot="command-item" data-value="item-5">Item 5</div>
+          <div data-slot="command-item" data-value="item-6">Item 6</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const input = root.querySelector('[data-slot="command-input"]') as HTMLInputElement;
+    const list = root.querySelector('[data-slot="command-list"]') as HTMLElement;
+    const items = Array.from(root.querySelectorAll('[data-slot="command-item"]')) as HTMLElement[];
+
+    mockScrollableList(list, items);
+    list.scrollTop = 124;
+
+    const controller = createCommand(root, { defaultValue: "item-6" });
+
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+
+    expect(controller.value).toBe("item-1");
+    expect(list.scrollTop).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("scrolls auto-selected search results into view", () => {
+    document.body.innerHTML = `
+      <div data-slot="command" id="root">
+        <input data-slot="command-input" />
+        <div data-slot="command-list">
+          <div data-slot="command-item" data-value="item-1">Item 1</div>
+          <div data-slot="command-item" data-value="item-2">Item 2</div>
+          <div data-slot="command-item" data-value="item-3">Item 3</div>
+          <div data-slot="command-item" data-value="item-4">Item 4</div>
+          <div data-slot="command-item" data-value="item-5">Item 5</div>
+          <div data-slot="command-item" data-value="item-6" data-keywords="omega">Item 6</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const input = root.querySelector('[data-slot="command-input"]') as HTMLInputElement;
+    const list = root.querySelector('[data-slot="command-list"]') as HTMLElement;
+    const items = Array.from(root.querySelectorAll('[data-slot="command-item"]')) as HTMLElement[];
+
+    mockScrollableList(list, items);
+
+    const controller = createCommand(root);
+
+    input.value = "omega";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+
+    expect(controller.value).toBe("item-6");
+    expect(list.scrollTop).toBe(124);
+
+    controller.destroy();
+  });
+
+  it("does not scroll on initial default-search selection below the fold", () => {
+    document.body.innerHTML = `
+      <div data-slot="command" id="root">
+        <input data-slot="command-input" />
+        <div data-slot="command-list">
+          <div data-slot="command-item" data-value="item-1">Item 1</div>
+          <div data-slot="command-item" data-value="item-2">Item 2</div>
+          <div data-slot="command-item" data-value="item-3">Item 3</div>
+          <div data-slot="command-item" data-value="item-4">Item 4</div>
+          <div data-slot="command-item" data-value="item-5">Item 5</div>
+          <div data-slot="command-item" data-value="item-6" data-keywords="omega">Item 6</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const list = root.querySelector('[data-slot="command-list"]') as HTMLElement;
+    const items = Array.from(root.querySelectorAll('[data-slot="command-item"]')) as HTMLElement[];
+
+    mockScrollableList(list, items);
+
+    const controller = createCommand(root, { defaultSearch: "omega" });
+
+    expect(controller.value).toBe("item-6");
+    expect(list.scrollTop).toBe(0);
 
     controller.destroy();
   });

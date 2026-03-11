@@ -11,6 +11,7 @@ import {
   setAria,
   on,
   emit,
+  ensureItemVisibleInContainer,
 } from "@data-slot/core";
 import { commandScore } from "./command-score";
 
@@ -70,6 +71,11 @@ interface ItemMeta {
   forceMount: boolean;
   rank: number;
   group: GroupMeta | null;
+}
+
+interface SetValueOptions {
+  emit?: boolean;
+  ensureVisible?: boolean;
 }
 
 const ROOT_BINDING_KEY = "@data-slot/command";
@@ -508,12 +514,23 @@ export function createCommand(
     onValueChange?.(nextValue);
   };
 
-  const setValue = (nextValue: string | null, shouldEmit = true): boolean => {
+  const scrollSelectedItemIntoView = () => {
+    const selectedVisible = getSelectedVisibleItem();
+    if (!selectedVisible) return;
+    ensureItemVisibleInContainer(selectedVisible, list);
+  };
+
+  const setValue = (nextValue: string | null, options: SetValueOptions = {}): boolean => {
     const normalized = normalizeValue(nextValue);
     const previousValue = currentValue;
+    const shouldEmit = options.emit ?? true;
+    const shouldEnsureVisible = options.ensureVisible ?? false;
     currentValue = normalized;
     syncSelectionState();
     syncRootState();
+    if (shouldEnsureVisible) {
+      scrollSelectedItemIntoView();
+    }
     if (document.activeElement === input || document.activeElement === rootEl) {
       focusInput();
     }
@@ -755,9 +772,9 @@ export function createCommand(
     syncResizeObserver();
   };
 
-  const selectFirstVisibleItem = (shouldEmit = true) => {
+  const selectFirstVisibleItem = (shouldEmit = true, ensureVisible = false) => {
     const nextValue = getEnabledVisibleItemsInDomOrder()[0]?.value ?? null;
-    setValue(nextValue, shouldEmit);
+    setValue(nextValue, { emit: shouldEmit, ensureVisible });
   };
 
   const setSearchValue = (nextSearch: string, shouldEmit = true, syncFirstVisible = true) => {
@@ -766,7 +783,7 @@ export function createCommand(
     input.value = nextSearch;
     refreshDisplay();
     if (syncFirstVisible) {
-      selectFirstVisibleItem(shouldEmit);
+      selectFirstVisibleItem(shouldEmit, true);
     }
     if (shouldEmit) {
       emit(rootEl, "command:search-change", { search: currentSearch });
@@ -776,7 +793,7 @@ export function createCommand(
 
   const triggerSelection = (meta: ItemMeta) => {
     if (meta.value === null || meta.disabled) return;
-    setValue(meta.value, true);
+    setValue(meta.value, { emit: true });
     emit(rootEl, "command:select", { value: meta.value });
     onSelect?.(meta.value);
   };
@@ -793,7 +810,7 @@ export function createCommand(
     const items = getEnabledVisibleItemsInDomOrder();
     const meta = items[index];
     if (meta) {
-      setValue(meta.value, true);
+      setValue(meta.value, { emit: true, ensureVisible: true });
     }
   };
 
@@ -814,7 +831,7 @@ export function createCommand(
     }
 
     if (nextMeta) {
-      setValue(nextMeta.value, true);
+      setValue(nextMeta.value, { emit: true, ensureVisible: true });
     }
   };
 
@@ -840,7 +857,7 @@ export function createCommand(
         .find((meta): meta is ItemMeta => meta !== null && !meta.disabled && !meta.el.hidden);
 
       if (nextMeta) {
-        setValue(nextMeta.value, true);
+        setValue(nextMeta.value, { emit: true, ensureVisible: true });
         return;
       }
 
@@ -935,19 +952,19 @@ export function createCommand(
         !nextSelectedMeta.el.hidden &&
         !(nextSelectedMeta.group?.el.hidden ?? false)
       ) {
-        setValue(nextSelectedMeta.value, true);
+        setValue(nextSelectedMeta.value, { emit: true });
         return;
       }
 
       if (currentValue !== null) {
         const currentMatch = getEnabledVisibleItemsInDomOrder().find((meta) => meta.value === currentValue) ?? null;
         if (currentMatch) {
-          setValue(currentMatch.value, true);
+          setValue(currentMatch.value, { emit: true });
           return;
         }
       }
 
-      setValue(getEnabledVisibleItemsInDomOrder()[0]?.value ?? null, true);
+      setValue(getEnabledVisibleItemsInDomOrder()[0]?.value ?? null, { emit: true });
     });
   };
 
@@ -995,7 +1012,7 @@ export function createCommand(
       if (!(item instanceof HTMLElement)) return;
       const meta = getLiveItemMeta(item);
       if (!meta || meta.disabled || item.hidden || meta.group?.el.hidden) return;
-      setValue(meta.value, true);
+      setValue(meta.value, { emit: true });
     })
   );
 
@@ -1021,7 +1038,7 @@ export function createCommand(
         setSearchValue(String(detail.search), true, detail.value === undefined);
       }
       if (detail.value !== undefined) {
-        setValue(detail.value, true);
+        setValue(detail.value, { emit: true, ensureVisible: true });
       }
     })
   );
@@ -1034,7 +1051,7 @@ export function createCommand(
       return currentSearch;
     },
     select(value: string | null) {
-      setValue(value, true);
+      setValue(value, { emit: true, ensureVisible: true });
     },
     setSearch(search: string) {
       setSearchValue(search, true, true);
