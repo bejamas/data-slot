@@ -1,6 +1,6 @@
 {
   "name": "@data-slot/toggle",
-  "version": "0.2.128",
+  "version": "0.2.129",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
