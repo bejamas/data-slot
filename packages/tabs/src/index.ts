@@ -223,8 +223,8 @@ export function createTabs(
     if (current !== list) return null;
 
     return {
-      left,
-      top,
+      left: left - list.clientLeft,
+      top: top - list.clientTop,
       width: trigger.offsetWidth,
       height: trigger.offsetHeight,
     };

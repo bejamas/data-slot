@@ -261,6 +261,62 @@ describe('Tabs', () => {
     controller.destroy()
   })
 
+  it('positions the indicator relative to the list padding box in the offset path', () => {
+    document.body.innerHTML = `
+      <div data-slot="tabs" id="root">
+        <div data-slot="tabs-list">
+          <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+          <div data-slot="tabs-indicator"></div>
+        </div>
+        <div data-slot="tabs-content" data-value="one">Content One</div>
+      </div>
+    `
+
+    const root = document.getElementById('root')!
+    const list = root.querySelector('[data-slot="tabs-list"]') as HTMLElement
+    const trigger = root.querySelector('[data-slot="tabs-trigger"]') as HTMLElement
+    const indicator = root.querySelector('[data-slot="tabs-indicator"]') as HTMLElement
+
+    Object.defineProperty(trigger, 'offsetParent', {
+      configurable: true,
+      get: () => list,
+    })
+    Object.defineProperty(trigger, 'offsetLeft', {
+      configurable: true,
+      get: () => 13,
+    })
+    Object.defineProperty(trigger, 'offsetTop', {
+      configurable: true,
+      get: () => 4,
+    })
+    Object.defineProperty(trigger, 'offsetWidth', {
+      configurable: true,
+      get: () => 60,
+    })
+    Object.defineProperty(trigger, 'offsetHeight', {
+      configurable: true,
+      get: () => 29,
+    })
+    Object.defineProperty(list, 'clientLeft', {
+      configurable: true,
+      get: () => 1,
+    })
+    Object.defineProperty(list, 'clientTop', {
+      configurable: true,
+      get: () => 1,
+    })
+
+    const controller = createTabs(root)
+    controller.updateIndicator()
+
+    expect(indicator.style.getPropertyValue('--active-tab-left')).toBe('12px')
+    expect(indicator.style.getPropertyValue('--active-tab-top')).toBe('3px')
+    expect(indicator.style.getPropertyValue('--active-tab-width')).toBe('60px')
+    expect(indicator.style.getPropertyValue('--active-tab-height')).toBe('29px')
+
+    controller.destroy()
+  })
+
   it('links tabs to panels via aria-controls', () => {
     const { triggers, panels, controller } = setup()
 
