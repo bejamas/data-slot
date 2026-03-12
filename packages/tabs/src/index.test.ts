@@ -317,6 +317,67 @@ describe('Tabs', () => {
     controller.destroy()
   })
 
+  it('uses rect geometry for horizontal indicator top when offsetTop rounds up', () => {
+    document.body.innerHTML = `
+      <div data-slot="tabs" id="root">
+        <div data-slot="tabs-list">
+          <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+          <div data-slot="tabs-indicator"></div>
+        </div>
+        <div data-slot="tabs-content" data-value="one">Content One</div>
+      </div>
+    `
+
+    const root = document.getElementById('root')!
+    const list = root.querySelector('[data-slot="tabs-list"]') as HTMLElement
+    const trigger = root.querySelector('[data-slot="tabs-trigger"]') as HTMLElement
+    const indicator = root.querySelector('[data-slot="tabs-indicator"]') as HTMLElement
+
+    list.getBoundingClientRect = () =>
+      ({ left: 100, top: 200, width: 160, height: 32, right: 260, bottom: 232, x: 100, y: 200, toJSON() {} } as DOMRect)
+    trigger.getBoundingClientRect = () =>
+      ({ left: 103, top: 203.5, width: 65, height: 25, right: 168, bottom: 228.5, x: 103, y: 203.5, toJSON() {} } as DOMRect)
+
+    Object.defineProperty(trigger, 'offsetParent', {
+      configurable: true,
+      get: () => list,
+    })
+    Object.defineProperty(trigger, 'offsetLeft', {
+      configurable: true,
+      get: () => 3,
+    })
+    Object.defineProperty(trigger, 'offsetTop', {
+      configurable: true,
+      get: () => 4,
+    })
+    Object.defineProperty(trigger, 'offsetWidth', {
+      configurable: true,
+      get: () => 65,
+    })
+    Object.defineProperty(trigger, 'offsetHeight', {
+      configurable: true,
+      get: () => 25,
+    })
+    Object.defineProperty(list, 'clientLeft', {
+      configurable: true,
+      get: () => 0,
+    })
+    Object.defineProperty(list, 'clientTop', {
+      configurable: true,
+      get: () => 0,
+    })
+
+    const controller = createTabs(root)
+    controller.updateIndicator()
+
+    expect(indicator.style.getPropertyValue('--active-tab-left')).toBe('3px')
+    expect(indicator.style.getPropertyValue('--active-tab-top')).toBe('3px')
+    expect(indicator.style.getPropertyValue('--active-tab-width')).toBe('65px')
+    expect(indicator.style.getPropertyValue('--active-tab-height')).toBe('25px')
+
+    controller.destroy()
+  })
+
   it('links tabs to panels via aria-controls', () => {
     const { triggers, panels, controller } = setup()
 

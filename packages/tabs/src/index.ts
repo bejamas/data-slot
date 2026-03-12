@@ -222,23 +222,49 @@ export function createTabs(
 
     if (current !== list) return null;
 
-    return {
+    const position = {
       left: left - list.clientLeft,
       top: top - list.clientTop,
       width: trigger.offsetWidth,
       height: trigger.offsetHeight,
     };
+
+    const normalizedRectPosition = getRectRelativeToList(trigger);
+    if (normalizedRectPosition) {
+      if (orientation === "horizontal") {
+        position.top = Math.floor(normalizedRectPosition.top);
+      } else {
+        position.left = Math.floor(normalizedRectPosition.left);
+      }
+    }
+
+    return position;
   };
 
   const getRectRelativeToList = (trigger: HTMLElement) => {
     const listRect = list.getBoundingClientRect();
     const triggerRect = trigger.getBoundingClientRect();
+    if (
+      (listRect.width === 0 && listRect.height === 0) ||
+      (triggerRect.width === 0 && triggerRect.height === 0)
+    ) {
+      return null;
+    }
+
+    const normalizeScale = (rectSize: number, offsetSize: number): number => {
+      if (offsetSize <= 0) return 1;
+      const scale = rectSize / offsetSize;
+      return Math.abs(scale - 1) < 0.05 ? 1 : scale;
+    };
+
+    const scaleX = normalizeScale(triggerRect.width, trigger.offsetWidth);
+    const scaleY = normalizeScale(triggerRect.height, trigger.offsetHeight);
 
     return {
-      left: triggerRect.left - listRect.left - list.clientLeft + list.scrollLeft,
-      top: triggerRect.top - listRect.top - list.clientTop + list.scrollTop,
-      width: triggerRect.width,
-      height: triggerRect.height,
+      left: (triggerRect.left - listRect.left - list.clientLeft + list.scrollLeft) / scaleX,
+      top: (triggerRect.top - listRect.top - list.clientTop + list.scrollTop) / scaleY,
+      width: trigger.offsetWidth,
+      height: trigger.offsetHeight,
     };
   };
 
