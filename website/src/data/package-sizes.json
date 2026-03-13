@@ -7,14 +7,14 @@
   },
   {
     "name": "@data-slot/core",
-    "size": 5342,
-    "sizeFormatted": "5.2 KB",
+    "size": 5678,
+    "sizeFormatted": "5.5 KB",
     "description": "Shared utilities"
   },
   {
     "name": "@data-slot/command",
-    "size": 4719,
-    "sizeFormatted": "4.6 KB",
+    "size": 4811,
+    "sizeFormatted": "4.7 KB",
     "description": "Command palette, ranked search"
   },
   {
@@ -42,28 +42,34 @@
     "description": "Single/range value sliders"
   },
   {
+    "name": "@data-slot/tabs",
+    "size": 2324,
+    "sizeFormatted": "2.3 KB",
+    "description": "Tabbed interfaces, kbd nav"
+  },
+  {
     "name": "@data-slot/tooltip",
     "size": 2296,
     "sizeFormatted": "2.2 KB",
     "description": "Hover/focus tooltips"
   },
   {
-    "name": "@data-slot/tabs",
-    "size": 2217,
-    "sizeFormatted": "2.2 KB",
-    "description": "Tabbed interfaces, kbd nav"
-  },
-  {
-    "name": "@data-slot/dialog",
-    "size": 2128,
-    "sizeFormatted": "2.1 KB",
-    "description": "Modal dialogs, focus trap"
-  },
-  {
     "name": "@data-slot/popover",
     "size": 2064,
     "sizeFormatted": "2.0 KB",
     "description": "Anchored floating content"
+  },
+  {
+    "name": "@data-slot/dialog",
+    "size": 1911,
+    "sizeFormatted": "1.9 KB",
+    "description": "Modal dialogs, focus trap"
+  },
+  {
+    "name": "@data-slot/alert-dialog",
+    "size": 1858,
+    "sizeFormatted": "1.8 KB",
+    "description": "Blocking confirmation dialogs"
   },
   {
     "name": "@data-slot/collapsible",

@@ -19,6 +19,7 @@ interface PackageInfo {
 // Package descriptions
 const descriptions: Record<string, string> = {
   dialog: "Modal dialogs, focus trap",
+  "alert-dialog": "Blocking confirmation dialogs",
   tabs: "Tabbed interfaces, kbd nav",
   accordion: "Collapsible sections",
   popover: "Anchored floating content",
@@ -38,6 +39,7 @@ const packageNames = [
   "core",
   "accordion",
   "dialog",
+  "alert-dialog",
   "command",
   "collapsible",
   "dropdown-menu",

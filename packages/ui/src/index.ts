@@ -37,6 +37,12 @@ export type { TooltipOptions, TooltipController } from "@data-slot/tooltip";
 export { createDialog } from "@data-slot/dialog";
 export type { DialogOptions, DialogController } from "@data-slot/dialog";
 
+export { createAlertDialog } from "@data-slot/alert-dialog";
+export type {
+  AlertDialogOptions,
+  AlertDialogController,
+} from "@data-slot/alert-dialog";
+
 export { createNavigationMenu } from "@data-slot/navigation-menu";
 export type {
   NavigationMenuOptions,

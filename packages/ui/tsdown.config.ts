@@ -6,6 +6,7 @@ export default defineConfig({
     "src/core.ts",
     "src/tabs.ts",
     "src/dialog.ts",
+    "src/alert-dialog.ts",
     "src/accordion.ts",
     "src/popover.ts",
     "src/hover-card.ts",

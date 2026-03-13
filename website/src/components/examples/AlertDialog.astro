@@ -1,0 +1,316 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div data-slot="alert-dialog" class="alert-dialog-root">
+  <button data-slot="alert-dialog-trigger" class="alert-dialog-trigger">
+    Delete Project
+  </button>
+
+  <div data-slot="alert-dialog-portal">
+    <div data-slot="alert-dialog-overlay" class="alert-dialog-overlay" hidden></div>
+    <div data-slot="alert-dialog-content" class="alert-dialog-panel" hidden>
+      <div data-slot="alert-dialog-header" class="alert-dialog-header">
+        <div data-slot="alert-dialog-media" class="alert-dialog-media">!</div>
+        <h2 data-slot="alert-dialog-title" class="alert-dialog-title">Delete project?</h2>
+        <p data-slot="alert-dialog-description" class="alert-dialog-description">
+          This will permanently remove your production config and API keys.
+        </p>
+      </div>
+
+      <div data-slot="alert-dialog-footer" class="alert-dialog-footer">
+        <button data-slot="alert-dialog-cancel" class="alert-dialog-cancel">Cancel</button>
+        <button
+          data-slot="alert-dialog-action"
+          data-demo-alert-confirm
+          class="alert-dialog-action"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { createAlertDialog } from "@data-slot/alert-dialog";
+
+  const root = document.querySelector('[data-slot="alert-dialog"]');
+  const alertDialog = createAlertDialog(root);
+
+  root.querySelector('[data-demo-alert-confirm]')?.addEventListener("click", () => {
+    // Run the destructive action, then close explicitly.
+    alertDialog.close();
+  });
+</script>
+
+<style>
+  .alert-dialog-trigger {
+    padding: 0.5rem 1rem;
+    background: #1a1a1a;
+    color: #faf9f7;
+    border: none;
+    cursor: pointer;
+  }
+  .alert-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .alert-dialog-overlay[data-open] { opacity: 1; }
+  .alert-dialog-overlay[data-starting-style],
+  .alert-dialog-overlay[data-ending-style] { opacity: 0; }
+  .alert-dialog-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background: #faf9f7;
+    padding: 2rem;
+    max-width: 400px;
+    width: calc(100% - 2rem);
+    border: 1px solid #ccc;
+    border-radius: 0.5rem;
+    z-index: 101;
+    opacity: 0;
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
+  .alert-dialog-panel[data-open] {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .alert-dialog-panel[data-starting-style],
+  .alert-dialog-panel[data-ending-style] {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  .alert-dialog-header {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  .alert-dialog-media {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f0eeeb;
+    border: 1px solid #ccc;
+    color: #1a1a1a;
+    font-weight: 700;
+  }
+  .alert-dialog-title {
+    margin: 0;
+    font-weight: 700;
+  }
+  .alert-dialog-description {
+    margin: 0;
+    color: #666;
+    line-height: 1.5;
+  }
+  .alert-dialog-footer {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+  .alert-dialog-cancel,
+  .alert-dialog-action {
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+  }
+  .alert-dialog-cancel {
+    background: none;
+    border: 1px solid #ccc;
+  }
+  .alert-dialog-action {
+    background: #1a1a1a;
+    color: #faf9f7;
+    border: none;
+  }
+  @media (min-width: 640px) {
+    .alert-dialog-footer {
+      flex-direction: row;
+      justify-content: flex-end;
+    }
+  }
+</style>`;
+
+const tailwindCode = `<div data-slot="alert-dialog">
+  <button
+    data-slot="alert-dialog-trigger"
+    class="px-4 py-2 bg-gray-900 text-white border-none cursor-pointer
+           hover:opacity-90 transition-opacity"
+  >
+    Delete Project
+  </button>
+
+  <div data-slot="alert-dialog-portal">
+    <div
+      data-slot="alert-dialog-overlay"
+      class="fixed inset-0 bg-black/50 z-50 opacity-0 transition-opacity duration-200
+             data-[open]:opacity-100
+             data-[starting-style]:opacity-0
+             data-[ending-style]:opacity-0"
+      hidden
+    ></div>
+    <div
+      data-slot="alert-dialog-content"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+             bg-white p-8 max-w-md w-[calc(100%-2rem)] border border-gray-300 rounded-lg z-50
+             opacity-0 scale-95 transition-all duration-200
+             data-[open]:opacity-100
+             data-[open]:scale-100
+             data-[starting-style]:opacity-0
+             data-[starting-style]:scale-95
+             data-[ending-style]:opacity-0
+             data-[ending-style]:scale-95"
+      hidden
+    >
+      <div
+        data-slot="alert-dialog-header"
+        class="grid justify-items-center gap-2 text-center mb-6"
+      >
+        <div
+          data-slot="alert-dialog-media"
+          class="inline-flex size-8 items-center justify-center rounded-full border border-gray-300 bg-[#f0eeeb] font-bold text-[#1a1a1a]"
+        >
+          !
+        </div>
+        <h2 data-slot="alert-dialog-title" class="font-bold mt-0 mb-0">
+          Delete project?
+        </h2>
+        <p data-slot="alert-dialog-description" class="text-gray-500 m-0">
+          This will permanently remove your production config and API keys.
+        </p>
+      </div>
+
+      <div
+        data-slot="alert-dialog-footer"
+        class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+      >
+        <button
+          data-slot="alert-dialog-cancel"
+          class="px-3 py-1.5 bg-transparent border border-gray-300 cursor-pointer hover:bg-code-bg transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          data-slot="alert-dialog-action"
+          data-demo-alert-confirm
+          class="px-3 py-1.5 bg-gray-900 text-white border-none cursor-pointer hover:opacity-90 transition-opacity"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>`;
+---
+
+<ExampleBlock>
+  <div slot="preview-css" data-slot="alert-dialog" class="alert-dialog-root">
+    <button data-slot="alert-dialog-trigger" class="alert-dialog-trigger">
+      Delete Project
+    </button>
+
+    <div data-slot="alert-dialog-portal">
+      <div data-slot="alert-dialog-overlay" class="alert-dialog-overlay" hidden></div>
+      <div data-slot="alert-dialog-content" class="alert-dialog-panel" hidden>
+        <div data-slot="alert-dialog-header" class="alert-dialog-header">
+          <div data-slot="alert-dialog-media" class="alert-dialog-media">!</div>
+          <h2 data-slot="alert-dialog-title" class="alert-dialog-title">Delete project?</h2>
+          <p data-slot="alert-dialog-description" class="alert-dialog-description">
+            This will permanently remove your production config and API keys.
+          </p>
+        </div>
+
+        <div data-slot="alert-dialog-footer" class="alert-dialog-footer">
+          <button data-slot="alert-dialog-cancel" class="alert-dialog-cancel">Cancel</button>
+          <button
+            data-slot="alert-dialog-action"
+            data-demo-alert-confirm
+            class="alert-dialog-action"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="preview-tailwind" data-slot="alert-dialog">
+    <button
+      data-slot="alert-dialog-trigger"
+      class="px-4 py-2 bg-gray-900 text-white border-none cursor-pointer hover:opacity-90 transition-opacity"
+    >
+      Delete Project
+    </button>
+
+    <div data-slot="alert-dialog-portal">
+      <div
+        data-slot="alert-dialog-overlay"
+        class="fixed inset-0 bg-black/50 z-50 opacity-0 transition-opacity duration-200 data-[open]:opacity-100 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0"
+        hidden
+      ></div>
+      <div
+        data-slot="alert-dialog-content"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-8 max-w-md w-[calc(100%-2rem)] border border-gray-300 rounded-lg z-50 opacity-0 scale-95 transition-all duration-200 data-[open]:opacity-100 data-[open]:scale-100 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95"
+        hidden
+      >
+        <div
+          data-slot="alert-dialog-header"
+          class="grid justify-items-center gap-2 text-center mb-6"
+        >
+          <div
+            data-slot="alert-dialog-media"
+            class="inline-flex size-8 items-center justify-center rounded-full border border-gray-300 bg-[#f0eeeb] font-bold text-[#1a1a1a]"
+          >
+            !
+          </div>
+          <h2 data-slot="alert-dialog-title" class="font-bold mt-0 mb-0">
+            Delete project?
+          </h2>
+          <p data-slot="alert-dialog-description" class="text-gray-500 m-0">
+            This will permanently remove your production config and API keys.
+          </p>
+        </div>
+
+        <div
+          data-slot="alert-dialog-footer"
+          class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+        >
+          <button
+            data-slot="alert-dialog-cancel"
+            class="px-3 py-1.5 bg-transparent border border-gray-300 cursor-pointer hover:bg-code-bg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            data-slot="alert-dialog-action"
+            data-demo-alert-confirm
+            class="px-3 py-1.5 bg-gray-900 text-white border-none cursor-pointer hover:opacity-90 transition-opacity"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p slot="note" class="mt-4 text-sm text-[#666]">
+    <code class="bg-[#f0eeeb] px-1.5 py-0.5">alert-dialog-action</code> is just a styled slot. This
+    demo closes after confirm with custom JavaScript.
+  </p>
+
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>

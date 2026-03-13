@@ -178,6 +178,166 @@ export const focusElement = (el: HTMLElement | null | undefined): void => {
   }
 };
 
+export interface ModalStackItemOptions {
+  content: HTMLElement;
+  overlay?: HTMLElement | null;
+  onTabKeydown?: (event: KeyboardEvent) => void;
+  cssVarPrefix: string;
+}
+
+export interface ModalStackItemController {
+  open(): void;
+  close(): void;
+  destroy(): void;
+}
+
+interface ModalStackEntry extends ModalStackItemOptions {}
+
+interface ModalStackStore {
+  entries: ModalStackEntry[];
+  cleanup: () => void;
+}
+
+const modalStackStores = new WeakMap<Document, ModalStackStore>();
+
+const applyStackMetadata = (
+  entry: ModalStackEntry,
+  index: number
+): void => {
+  const stackIndex = String(index);
+
+  if (entry.overlay) {
+    entry.overlay.setAttribute("data-stack-index", stackIndex);
+    entry.overlay.style.setProperty(`--${entry.cssVarPrefix}-stack-index`, stackIndex);
+    entry.overlay.style.setProperty(
+      `--${entry.cssVarPrefix}-overlay-stack-index`,
+      stackIndex
+    );
+  }
+
+  entry.content.setAttribute("data-stack-index", stackIndex);
+  entry.content.style.setProperty(`--${entry.cssVarPrefix}-stack-index`, stackIndex);
+  entry.content.style.setProperty(
+    `--${entry.cssVarPrefix}-content-stack-index`,
+    stackIndex
+  );
+};
+
+const clearStackMetadata = (entry: ModalStackEntry): void => {
+  if (entry.overlay) {
+    entry.overlay.removeAttribute("data-stack-index");
+    entry.overlay.style.removeProperty(`--${entry.cssVarPrefix}-stack-index`);
+    entry.overlay.style.removeProperty(`--${entry.cssVarPrefix}-overlay-stack-index`);
+  }
+
+  entry.content.removeAttribute("data-stack-index");
+  entry.content.style.removeProperty(`--${entry.cssVarPrefix}-stack-index`);
+  entry.content.style.removeProperty(`--${entry.cssVarPrefix}-content-stack-index`);
+};
+
+const reindexModalStack = (store: ModalStackStore): void => {
+  store.entries.forEach((entry, index) => applyStackMetadata(entry, index));
+};
+
+const createModalStackStore = (doc: Document): ModalStackStore => {
+  const store: ModalStackStore = {
+    entries: [],
+    cleanup: () => {},
+  };
+
+  const keydownCleanup = on(doc, "keydown", (event) => {
+    if (event.key !== "Tab") return;
+
+    const topmost = store.entries[store.entries.length - 1];
+    if (!topmost) return;
+
+    topmost.onTabKeydown?.(event);
+  });
+
+  store.cleanup = () => {
+    keydownCleanup();
+    store.entries.length = 0;
+  };
+
+  return store;
+};
+
+const getModalStackStore = (doc: Document): ModalStackStore => {
+  const existing = modalStackStores.get(doc);
+  if (existing) return existing;
+
+  const created = createModalStackStore(doc);
+  modalStackStores.set(doc, created);
+  return created;
+};
+
+export function createModalStackItem(
+  options: ModalStackItemOptions
+): ModalStackItemController {
+  const doc = options.content.ownerDocument ?? document;
+  const entry: ModalStackEntry = {
+    content: options.content,
+    overlay: options.overlay ?? null,
+    onTabKeydown: options.onTabKeydown,
+    cssVarPrefix: options.cssVarPrefix,
+  };
+  let destroyed = false;
+  let activeStore: ModalStackStore | null = null;
+
+  const getEntryStore = (): ModalStackStore | null => {
+    if (activeStore?.entries.includes(entry)) return activeStore;
+
+    const currentStore = modalStackStores.get(doc) ?? null;
+    if (currentStore?.entries.includes(entry)) {
+      activeStore = currentStore;
+      return currentStore;
+    }
+
+    activeStore = null;
+    return null;
+  };
+
+  const close = () => {
+    const store = getEntryStore();
+    if (!store) return;
+
+    const index = store.entries.indexOf(entry);
+    if (index === -1) {
+      if (activeStore === store) activeStore = null;
+      return;
+    }
+
+    store.entries.splice(index, 1);
+    clearStackMetadata(entry);
+    reindexModalStack(store);
+    if (activeStore === store) {
+      activeStore = null;
+    }
+
+    if (store.entries.length === 0) {
+      store.cleanup();
+      modalStackStores.delete(doc);
+    }
+  };
+
+  return {
+    open: () => {
+      if (destroyed) return;
+      const store = getEntryStore() ?? getModalStackStore(doc);
+      if (store.entries.includes(entry)) return;
+      store.entries.push(entry);
+      activeStore = store;
+      reindexModalStack(store);
+    },
+    close,
+    destroy: () => {
+      if (destroyed) return;
+      destroyed = true;
+      close();
+    },
+  };
+}
+
 const getMainAxisOverflow = (
   side: PopupSide,
   pos: { x: number; y: number },
@@ -229,9 +389,7 @@ export function computeFloatingPosition(input: ComputeFloatingPositionInput): Fl
 
   if (input.avoidCollisions) {
     const minX = viewport.x + input.collisionPadding;
-    const maxX = viewport.x + viewport.width - input.collisionPadding;
     const minY = viewport.y + input.collisionPadding;
-    const maxY = viewport.y + viewport.height - input.collisionPadding;
     const anchorOverlapsX = rectOverlapsViewportAxis(
       input.anchorRect.left,
       input.anchorRect.right,

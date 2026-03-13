@@ -14,7 +14,7 @@ Headless UI components for vanilla JavaScript. Tiny, accessible, unstyled.
 - **Zero dependencies** - No npm package dependencies, works everywhere
 - **Tree-shakeable** - Import only what you use, keep bundles small
 - **Accessible** - WAI-ARIA compliant with keyboard navigation built-in
-- **Tiny** - Individual components range from 409 B to 2.7 KB
+- **Small bundles** - Packages stay compact and tree-shake cleanly
 - **Framework-agnostic** - Works with vanilla JavaScript, no framework required
 - **TypeScript** - Full TypeScript support with type definitions included
 
@@ -48,16 +48,16 @@ Install individual packages as needed:
 
 ```bash
 # npm
-npm install @data-slot/tabs @data-slot/dialog
+npm install @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
 
 # pnpm
-pnpm add @data-slot/tabs @data-slot/dialog
+pnpm add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
 
 # yarn
-yarn add @data-slot/tabs @data-slot/dialog
+yarn add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
 
 # bun
-bun add @data-slot/tabs @data-slot/dialog
+bun add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
 ```
 
 ## Packages
@@ -66,16 +66,17 @@ All packages are independently installable. Each package includes its own README
 
 | Package                      | Size   | Description                 | Documentation                                |
 | ---------------------------- | ------ | --------------------------- | -------------------------------------------- |
-| `@data-slot/navigation-menu` | 2.7 KB | Dropdown navigation menus   | [README](packages/navigation-menu/README.md) |
-| `@data-slot/command`         | 4.6 KB | Command palette with search | [README](packages/command/README.md)         |
-| `@data-slot/tabs`            | 1.7 KB | Tabbed interfaces, kbd nav  | [README](packages/tabs/README.md)            |
-| `@data-slot/dialog`          | 1.4 KB | Modal dialogs, focus trap   | [README](packages/dialog/README.md)          |
-| `@data-slot/accordion`       | 1.2 KB | Collapsible sections        | [README](packages/accordion/README.md)       |
-| `@data-slot/tooltip`         | 821 B  | Hover/focus tooltips        | [README](packages/tooltip/README.md)         |
-| `@data-slot/popover`         | 806 B  | Anchored floating content   | [README](packages/popover/README.md)         |
-| `@data-slot/hover-card`      | 2.1 KB | Hover/focus preview cards   | [README](packages/hover-card/README.md)      |
-| `@data-slot/collapsible`     | 629 B  | Simple show/hide toggle     | [README](packages/collapsible/README.md)     |
-| `@data-slot/core`            | 409 B  | Shared utilities            | [README](packages/core/README.md)            |
+| `@data-slot/navigation-menu` | 7.2 KB | Dropdown navigation menus   | [README](packages/navigation-menu/README.md) |
+| `@data-slot/core`            | 5.5 KB | Shared utilities            | [README](packages/core/README.md)            |
+| `@data-slot/command`         | 4.7 KB | Command palette with search | [README](packages/command/README.md)         |
+| `@data-slot/hover-card`      | 2.6 KB | Hover/focus preview cards   | [README](packages/hover-card/README.md)      |
+| `@data-slot/tabs`            | 2.3 KB | Tabbed interfaces, kbd nav  | [README](packages/tabs/README.md)            |
+| `@data-slot/tooltip`         | 2.2 KB | Hover/focus tooltips        | [README](packages/tooltip/README.md)         |
+| `@data-slot/popover`         | 2.0 KB | Anchored floating content   | [README](packages/popover/README.md)         |
+| `@data-slot/dialog`          | 1.9 KB | Modal dialogs, focus trap   | [README](packages/dialog/README.md)          |
+| `@data-slot/alert-dialog`    | 1.8 KB | Blocking confirmation dialogs | [README](packages/alert-dialog/README.md)  |
+| `@data-slot/collapsible`     | 1.6 KB | Simple show/hide toggle     | [README](packages/collapsible/README.md)     |
+| `@data-slot/accordion`       | 1.4 KB | Collapsible sections        | [README](packages/accordion/README.md)       |
 
 ## API
 
@@ -117,12 +118,14 @@ The same pattern applies to all components:
 
 ```typescript
 import { createDialog } from "@data-slot/dialog";
+import { createAlertDialog } from "@data-slot/alert-dialog";
 import { createAccordion } from "@data-slot/accordion";
 import { createPopover } from "@data-slot/popover";
 import { createHoverCard } from "@data-slot/hover-card";
 import { createCommand } from "@data-slot/command";
 
 const dialog = createDialog(element);
+const alertDialog = createAlertDialog(element);
 const accordion = createAccordion(element);
 const popover = createPopover(element);
 const hoverCard = createHoverCard(element);

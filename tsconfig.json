@@ -22,6 +22,7 @@
       "@data-slot/core": ["./packages/core/src/index.ts"],
       "@data-slot/tabs": ["./packages/tabs/src/index.ts"],
       "@data-slot/dialog": ["./packages/dialog/src/index.ts"],
+      "@data-slot/alert-dialog": ["./packages/alert-dialog/src/index.ts"],
       "@data-slot/accordion": ["./packages/accordion/src/index.ts"],
       "@data-slot/popover": ["./packages/popover/src/index.ts"],
       "@data-slot/hover-card": ["./packages/hover-card/src/index.ts"],

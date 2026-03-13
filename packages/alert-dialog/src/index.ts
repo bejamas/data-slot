@@ -18,7 +18,7 @@ import {
   focusElement,
 } from "@data-slot/core";
 
-export interface DialogOptions {
+export interface AlertDialogOptions {
   /** Initial open state */
   defaultOpen?: boolean;
   /** Callback when open state changes */
@@ -29,89 +29,58 @@ export interface DialogOptions {
   closeOnEscape?: boolean;
   /** Lock body scroll when open */
   lockScroll?: boolean;
-  /** Use alertdialog role for blocking confirmations */
-  alertDialog?: boolean;
 }
 
-export interface DialogController {
-  /** Open the dialog */
+export interface AlertDialogController {
+  /** Open the alert dialog */
   open(): void;
-  /** Close the dialog */
+  /** Close the alert dialog */
   close(): void;
-  /** Toggle the dialog */
+  /** Toggle the alert dialog */
   toggle(): void;
   /** Current open state */
   readonly isOpen: boolean;
   /** Cleanup all event listeners */
   destroy(): void;
-  /** Internal: handle keydown for focus trap (used by global handler) */
-  _handleKeydown?(e: KeyboardEvent): void;
-  /** Internal: content element for focus trap */
-  _content?: HTMLElement;
-  /** Internal: overlay element for stack metadata */
-  _overlay?: HTMLElement;
 }
 
-const ROOT_BINDING_KEY = "@data-slot/dialog";
+const ROOT_BINDING_KEY = "@data-slot/alert-dialog";
 const DUPLICATE_BINDING_WARNING =
-  "[@data-slot/dialog] createDialog() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
+  "[@data-slot/alert-dialog] createAlertDialog() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
-// Focusable element selector
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-/**
- * Create a dialog controller for a root element
- *
- * Expected markup:
- * ```html
- * <div data-slot="dialog">
- *   <button data-slot="dialog-trigger">Open</button>
- *   <div data-slot="dialog-portal">
- *     <div data-slot="dialog-overlay"></div>
- *     <div data-slot="dialog-content">
- *       <h2 data-slot="dialog-title">Title</h2>
- *       <p data-slot="dialog-description">Description</p>
- *       <button data-slot="dialog-close">Close</button>
- *     </div>
- *   </div>
- * </div>
- * ```
- *
- * Note: Overlay is required. The optional dialog-portal slot will be
- * automatically moved to document.body to escape stacking context issues.
- */
-export function createDialog(
+export function createAlertDialog(
   root: Element,
-  options: DialogOptions = {}
-): DialogController {
-  const existingController = reuseRootBinding<DialogController>(
+  options: AlertDialogOptions = {}
+): AlertDialogController {
+  const existingController = reuseRootBinding<AlertDialogController>(
     root,
     ROOT_BINDING_KEY,
     DUPLICATE_BINDING_WARNING
   );
   if (existingController) return existingController;
 
-  // Resolve options with explicit precedence: JS > data-* > default
   const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
   const onOpenChange = options.onOpenChange;
-  const closeOnClickOutside = options.closeOnClickOutside ?? getDataBool(root, "closeOnClickOutside") ?? true;
+  const closeOnClickOutside =
+    options.closeOnClickOutside ?? getDataBool(root, "closeOnClickOutside") ?? false;
   const closeOnEscape = options.closeOnEscape ?? getDataBool(root, "closeOnEscape") ?? true;
   const lockScrollOption = options.lockScroll ?? getDataBool(root, "lockScroll") ?? true;
-  const alertDialog = options.alertDialog ?? getDataBool(root, "alertDialog") ?? false;
 
-  const trigger = getPart<HTMLElement>(root, "dialog-trigger");
-  const portal = getPart<HTMLElement>(root, "dialog-portal");
-  const overlay = getPart<HTMLElement>(root, "dialog-overlay");
-  const content = getPart<HTMLElement>(root, "dialog-content");
-  const title = getPart<HTMLElement>(root, "dialog-title");
-  const description = getPart<HTMLElement>(root, "dialog-description");
+  const trigger = getPart<HTMLElement>(root, "alert-dialog-trigger");
+  const portal = getPart<HTMLElement>(root, "alert-dialog-portal");
+  const overlay = getPart<HTMLElement>(root, "alert-dialog-overlay");
+  const content = getPart<HTMLElement>(root, "alert-dialog-content");
+  const title = getPart<HTMLElement>(root, "alert-dialog-title");
+  const description = getPart<HTMLElement>(root, "alert-dialog-description");
 
   if (!content) {
-    throw new Error("Dialog requires dialog-content slot");
+    throw new Error("Alert dialog requires alert-dialog-content slot");
   }
   if (!overlay) {
-    throw new Error("Dialog requires dialog-overlay slot");
+    throw new Error("Alert dialog requires alert-dialog-overlay slot");
   }
 
   let isOpen = false;
@@ -123,16 +92,13 @@ export function createDialog(
     ? createPortalLifecycle({ content: portal, root })
     : null;
 
-  // Track if this dialog locked scroll (prevent underflow)
   let didLockScroll = false;
 
-  // ARIA setup
-  ensureId(content, "dialog-content");
-  content.setAttribute("role", alertDialog ? "alertdialog" : "dialog");
+  ensureId(content, "alert-dialog-content");
+  content.setAttribute("role", "alertdialog");
   setAria(content, "modal", true);
   linkLabelledBy(content, title, description);
 
-  // Overlay is purely presentational
   overlay.setAttribute("role", "presentation");
   overlay.setAttribute("aria-hidden", "true");
   overlay.tabIndex = -1;
@@ -143,7 +109,6 @@ export function createDialog(
     setAria(trigger, "expanded", false);
   }
 
-  // Track if we added tabindex (so we can clean it up)
   let addedTabIndex = false;
 
   const ensureContentFocusable = () => {
@@ -171,10 +136,6 @@ export function createDialog(
     content.focus();
   };
 
-  const mountPortal = () => {
-    portalLifecycle?.mount();
-  };
-
   const restoreFocus = () => {
     requestAnimationFrame(() => {
       if (
@@ -192,9 +153,10 @@ export function createDialog(
 
   const setDataState = (state: "open" | "closed") => {
     root.setAttribute("data-state", state);
-    if (portal) portal.setAttribute("data-state", state);
+    portal?.setAttribute("data-state", state);
     overlay.setAttribute("data-state", state);
     content.setAttribute("data-state", state);
+
     if (state === "open") {
       root.setAttribute("data-open", "");
       portal?.setAttribute("data-open", "");
@@ -244,6 +206,51 @@ export function createDialog(
     onExitComplete: () => finishClosePart(content, contentExitEpoch),
   });
 
+  const handleKeydown = (e: KeyboardEvent) => {
+    if (e.key !== "Tab") return;
+
+    const focusables = content.querySelectorAll<HTMLElement>(FOCUSABLE);
+
+    if (focusables.length === 0) {
+      e.preventDefault();
+      ensureContentFocusable();
+      content.focus();
+      return;
+    }
+
+    const first = focusables[0]!;
+    const last = focusables[focusables.length - 1]!;
+    const active = document.activeElement;
+
+    if (!content.contains(active)) {
+      e.preventDefault();
+      first.focus();
+      return;
+    }
+
+    if (first === last) {
+      e.preventDefault();
+      return;
+    }
+
+    if (e.shiftKey) {
+      if (active === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else if (active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  const modalStack = createModalStackItem({
+    content,
+    overlay,
+    onTabKeydown: handleKeydown,
+    cssVarPrefix: "alert-dialog",
+  });
+
   const updateState = (open: boolean, force = false) => {
     if (isOpen === open && !force) return;
 
@@ -251,15 +258,10 @@ export function createDialog(
       currentExitEpoch += 1;
       pendingExitCount = 0;
 
-      // Move portal to body on first open
-      mountPortal();
-
-      // Store current focus
+      portalLifecycle?.mount();
       previousActiveElement = document.activeElement as HTMLElement;
-
       modalStack.open();
 
-      // Lock scroll
       if (lockScrollOption && !didLockScroll) {
         lockScroll();
         didLockScroll = true;
@@ -269,10 +271,8 @@ export function createDialog(
       pendingExitCount = 2;
       overlayExitEpoch = currentExitEpoch;
       contentExitEpoch = currentExitEpoch;
-
       modalStack.close();
 
-      // Unlock scroll (only if we locked it)
       if (didLockScroll) {
         unlockScroll();
         didLockScroll = false;
@@ -296,7 +296,7 @@ export function createDialog(
       contentPresence.exit();
     }
 
-    emit(root, "dialog:change", { open: isOpen });
+    emit(root, "alert-dialog:change", { open: isOpen });
     onOpenChange?.(isOpen);
 
     if (open) {
@@ -304,83 +304,26 @@ export function createDialog(
     }
   };
 
-  // Focus trap handler (called by global keydown handler)
-  const handleKeydown = (e: KeyboardEvent) => {
-    if (e.key !== "Tab") return;
-
-    const focusables = content.querySelectorAll<HTMLElement>(FOCUSABLE);
-
-    // If no focusables, prevent Tab from escaping
-    if (focusables.length === 0) {
-      e.preventDefault();
-      ensureContentFocusable();
-      content.focus();
-      return;
-    }
-
-    const first = focusables[0]!;
-    const last = focusables[focusables.length - 1]!;
-    const active = document.activeElement;
-
-    // If focus is outside the dialog, bring it back
-    if (!content.contains(active)) {
-      e.preventDefault();
-      first.focus();
-      return;
-    }
-
-    // Handle single focusable element
-    if (first === last) {
-      e.preventDefault();
-      return;
-    }
-
-    if (e.shiftKey) {
-      // Shift+Tab: if on first element, wrap to last
-      if (active === first) {
-        e.preventDefault();
-        last.focus();
-      }
-    } else {
-      // Tab: if on last element, wrap to first
-      if (active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-  };
-
-  const modalStack = createModalStackItem({
-    content,
-    overlay,
-    onTabKeydown: handleKeydown,
-    cssVarPrefix: "dialog",
-  });
-
-  // Initialize visual state (before controller is defined)
   content.hidden = true;
   overlay.hidden = true;
   setDataState("closed");
 
-  // Trigger click - toggle behavior
   if (trigger) {
     cleanups.push(on(trigger, "click", () => updateState(!isOpen)));
   }
 
-  // Delegated close button click - handles all [data-slot="dialog-close"] descendants
   cleanups.push(
     on(content, "click", (e) => {
       const target = e.target as Element | null;
       if (!target) return;
 
-      const closeEl = target.closest?.('[data-slot="dialog-close"]');
-      if (closeEl && content.contains(closeEl)) {
+      const cancelEl = target.closest?.('[data-slot="alert-dialog-cancel"]');
+      if (cancelEl && content.contains(cancelEl)) {
         updateState(false);
       }
     })
   );
 
-  // Click on overlay to close
   if (closeOnClickOutside) {
     cleanups.push(
       on(overlay, "click", (e) => {
@@ -392,8 +335,6 @@ export function createDialog(
     );
   }
 
-  // Escape dismissal is routed via global dismiss-layer stack so nested
-  // popups/selects/comboboxes close before the dialog.
   cleanups.push(
     createDismissLayer({
       root,
@@ -404,7 +345,7 @@ export function createDialog(
     })
   );
 
-  const controller: DialogController = {
+  const controller: AlertDialogController = {
     open: () => updateState(true),
     close: () => updateState(false),
     toggle: () => updateState(!isOpen),
@@ -439,25 +380,14 @@ export function createDialog(
       portalLifecycle?.cleanup();
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
-    // Internal properties for global handler
-    _handleKeydown: handleKeydown,
-    _content: content,
-    _overlay: overlay,
   };
 
-  // Inbound event
   cleanups.push(
-    on(root, "dialog:set", (e) => {
+    on(root, "alert-dialog:set", (e) => {
       const detail = (e as CustomEvent).detail;
-      // Preferred: { open: boolean }
-      // Deprecated: { value: boolean }
-      let open: boolean | undefined;
-      if (detail?.open !== undefined) {
-        open = detail.open;
-      } else if (detail?.value !== undefined) {
-        open = detail.value;
+      if (typeof detail?.open === "boolean") {
+        updateState(detail.open);
       }
-      if (typeof open === "boolean") updateState(open);
     })
   );
 
@@ -468,16 +398,12 @@ export function createDialog(
   return controller;
 }
 
-/**
- * Find and bind all dialog components in a scope
- * Returns array of controllers for programmatic access
- */
-export function create(scope: ParentNode = document): DialogController[] {
-  const controllers: DialogController[] = [];
+export function create(scope: ParentNode = document): AlertDialogController[] {
+  const controllers: AlertDialogController[] = [];
 
-  for (const root of getRoots(scope, "dialog")) {
+  for (const root of getRoots(scope, "alert-dialog")) {
     if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
-    controllers.push(createDialog(root));
+    controllers.push(createAlertDialog(root));
   }
 
   return controllers;

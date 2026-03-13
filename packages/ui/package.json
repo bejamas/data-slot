@@ -32,6 +32,12 @@
       "require": "./dist/dialog.cjs",
       "default": "./dist/dialog.js"
     },
+    "./alert-dialog": {
+      "types": "./dist/alert-dialog.d.ts",
+      "import": "./dist/alert-dialog.js",
+      "require": "./dist/alert-dialog.cjs",
+      "default": "./dist/alert-dialog.js"
+    },
     "./accordion": {
       "types": "./dist/accordion.d.ts",
       "import": "./dist/accordion.js",
@@ -115,6 +121,7 @@
     "@data-slot/core": "workspace:*",
     "@data-slot/tabs": "workspace:*",
     "@data-slot/dialog": "workspace:*",
+    "@data-slot/alert-dialog": "workspace:*",
     "@data-slot/accordion": "workspace:*",
     "@data-slot/popover": "workspace:*",
     "@data-slot/hover-card": "workspace:*",

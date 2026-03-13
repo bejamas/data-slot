@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Simple version management script
- * 
+ *
  * Usage:
  *   bun run scripts/version.ts patch   # 0.1.0 -> 0.1.1
  *   bun run scripts/version.ts minor   # 0.1.0 -> 0.2.0
@@ -15,12 +15,19 @@ import { spawnSync } from "child_process";
 
 const repoRoot = join(import.meta.dir, "..");
 const packagesDir = join(import.meta.dir, "..", "packages");
-const websiteSettingsPath = join(import.meta.dir, "..", "website", "src", "components", "SettingsPanel.astro");
+const websiteSettingsPath = join(
+  import.meta.dir,
+  "..",
+  "website",
+  "src",
+  "components",
+  "SettingsPanel.astro",
+);
 
 function getPackages(): string[] {
   return readdirSync(packagesDir, { withFileTypes: true })
-    .filter(d => d.isDirectory())
-    .map(d => d.name);
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
 }
 
 function readPackageJson(pkgName: string): { path: string; json: any } {
@@ -35,7 +42,7 @@ function writePackageJson(path: string, json: any) {
 
 function bumpVersion(current: string, type: string): string {
   const [major, minor, patch] = current.split(".").map(Number);
-  
+
   switch (type) {
     case "patch":
       return `${major}.${minor}.${patch + 1}`;
@@ -48,7 +55,9 @@ function bumpVersion(current: string, type: string): string {
       if (/^\d+\.\d+\.\d+/.test(type)) {
         return type;
       }
-      throw new Error(`Invalid version type: ${type}. Use patch, minor, major, or an exact version like 0.2.0`);
+      throw new Error(
+        `Invalid version type: ${type}. Use patch, minor, major, or an exact version like 0.2.0`,
+      );
   }
 }
 
@@ -57,7 +66,7 @@ function updateWebsiteVersion(version: string) {
     let content = readFileSync(websiteSettingsPath, "utf-8");
     content = content.replace(
       /const version = "[^"]+"/,
-      `const version = "${version}"`
+      `const version = "${version}"`,
     );
     writeFileSync(websiteSettingsPath, content);
     console.log(`  Updated website settings panel`);
@@ -74,20 +83,22 @@ function refreshLockfile() {
   });
 
   if (result.status !== 0) {
-    throw new Error("Failed to refresh bun.lock. Please run `bun install --lockfile-only` and retry.");
+    throw new Error(
+      "Failed to refresh bun.lock. Please run `bun install --lockfile-only` and retry.",
+    );
   }
 }
 
 function main() {
   const type = process.argv[2];
-  
+
   if (!type) {
     console.log("Usage: bun run scripts/version.ts <patch|minor|major|x.y.z>");
     process.exit(1);
   }
 
   const packages = getPackages();
-  
+
   // Get current version from first package
   const firstPkg = readPackageJson(packages[0]);
   const currentVersion = firstPkg.json.version;
@@ -99,7 +110,7 @@ function main() {
   for (const pkgName of packages) {
     const { path, json } = readPackageJson(pkgName);
     json.version = newVersion;
-    
+
     // Also update workspace dependencies to use the new version
     if (json.dependencies) {
       for (const [dep, ver] of Object.entries(json.dependencies)) {
@@ -109,7 +120,7 @@ function main() {
         }
       }
     }
-    
+
     writePackageJson(path, json);
     console.log(`  Updated ${json.name} to ${newVersion}`);
   }
@@ -120,7 +131,7 @@ function main() {
 
   console.log(`
 Done! Next steps:
-  1. Commit: git add -A && git commit -m "chore: bump version to ${newVersion}"
+  1. Commit: git add '**/package.json' website/src/components/SettingsPanel.astro && git commit -m "chore: bump version to ${newVersion}"
   2. Tag:    git tag v${newVersion}
   3. Push:   git push && git push --tags
 

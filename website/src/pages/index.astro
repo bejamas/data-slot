@@ -11,6 +11,7 @@ import TabsIndicator from "../components/examples/TabsIndicator.astro";
 import AccordionSingle from "../components/examples/AccordionSingle.astro";
 import AccordionMultiple from "../components/examples/AccordionMultiple.astro";
 import Dialog from "../components/examples/Dialog.astro";
+import AlertDialog from "../components/examples/AlertDialog.astro";
 import Collapsible from "../components/examples/Collapsible.astro";
 import Tooltip from "../components/examples/Tooltip.astro";
 import Popover from "../components/examples/Popover.astro";
@@ -125,6 +126,10 @@ bun add @data-slot/dialog`}
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Dialog</h3>
   <Dialog />
 
+  <!-- Alert Dialog -->
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Alert Dialog</h3>
+  <AlertDialog />
+
   <!-- Collapsible -->
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Collapsible</h3>
   <Collapsible />
@@ -216,6 +221,7 @@ bun add @data-slot/dialog`}
   import { createTabs } from "../../../packages/tabs/dist/index.js";
   import { createAccordion } from "../../../packages/accordion/dist/index.js";
   import { createDialog } from "../../../packages/dialog/dist/index.js";
+  import { createAlertDialog } from "../../../packages/alert-dialog/dist/index.js";
   import { createCollapsible } from "../../../packages/collapsible/dist/index.js";
   import { createTooltip } from "../../../packages/tooltip/dist/index.js";
   import { createPopover } from "../../../packages/popover/dist/index.js";
@@ -248,6 +254,12 @@ bun add @data-slot/dialog`}
   document.querySelectorAll('[data-slot="dialog"]').forEach((el) =>
     createDialog(el as HTMLElement)
   );
+  document.querySelectorAll('[data-slot="alert-dialog"]').forEach((el) => {
+    const controller = createAlertDialog(el as HTMLElement);
+    el.querySelectorAll("[data-demo-alert-confirm]").forEach((button) => {
+      button.addEventListener("click", () => controller.close());
+    });
+  });
 
   // Other components
   document.querySelectorAll('[data-slot="collapsible"]').forEach((el) =>
