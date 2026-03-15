@@ -367,6 +367,27 @@ export function createSelect(
   const getScrollContainer = () =>
     getViewport() ?? content;
 
+  const getItemText = (item: HTMLElement) =>
+    getPart<HTMLElement>(item, "select-item-text");
+
+  const getTrimmedText = (element: HTMLElement | null | undefined) => {
+    const text = element?.textContent?.trim();
+    return text ? text : undefined;
+  };
+
+  const getItemLabelText = (
+    item: HTMLElement | null | undefined,
+    fallback = ""
+  ) => {
+    if (!item) return fallback;
+    return (
+      (item.dataset["label"]?.trim() || undefined) ??
+      getTrimmedText(getItemText(item)) ??
+      getTrimmedText(item) ??
+      fallback
+    );
+  };
+
   const syncResolvedPositionAttributes = () => {
     content.setAttribute("data-position", position);
     content.setAttribute("data-align-trigger", position === "item-aligned" ? "true" : "false");
@@ -378,6 +399,27 @@ export function createSelect(
   };
 
   type ContentRect = Pick<DOMRectReadOnly, "top" | "width" | "height">;
+  type AnchorRect = Pick<DOMRectReadOnly, "top" | "left" | "right" | "bottom" | "width" | "height">;
+
+  const getMeasuredRect = (element: HTMLElement | null): DOMRect | null => {
+    if (!element) return null;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 || rect.height > 0 ? rect : null;
+  };
+
+  const getTriggerAlignmentRect = (triggerRect: DOMRect): AnchorRect => {
+    const valueRect = getMeasuredRect(valueSlot);
+    if (!valueRect) return triggerRect;
+
+    return {
+      top: valueRect.top,
+      bottom: valueRect.bottom,
+      height: valueRect.height,
+      left: triggerRect.left,
+      right: triggerRect.right,
+      width: triggerRect.width,
+    };
+  };
 
   const getItemTopInAncestorPaddingBox = (
     item: HTMLElement,
@@ -412,12 +454,21 @@ export function createSelect(
   const getItemTopInContent = (item: HTMLElement, cr: ContentRect, scrollContainer: HTMLElement) =>
     getItemTopInAncestorPaddingBox(item, content, cr.top, scrollContainer.scrollTop);
 
+  const getItemAlignmentAnchor = (item: HTMLElement): HTMLElement => {
+    const itemText = getItemText(item);
+    if (getMeasuredRect(itemText)) {
+      return itemText!;
+    }
+    return item;
+  };
+
   // Compute base position data for item-aligned mode
   const computeItemAlignedPos = (tr: DOMRect, cr: ContentRect, scrollContainer: HTMLElement) => {
     // Prefer selected item for stable anchoring, then highlighted, then first enabled item.
     const highlightedItem = highlightedIndex >= 0 ? enabledItems[highlightedIndex] : undefined;
     const selectedItem = items.find((item) => item.dataset["value"] === currentValue);
     const alignItem = selectedItem ?? highlightedItem ?? enabledItems[0];
+    const triggerAlignmentRect = getTriggerAlignmentRect(tr);
 
     // Calculate x position (align left edges, match trigger width)
     let x = tr.left;
@@ -425,21 +476,32 @@ export function createSelect(
     // Calculate y position so aligned item is at trigger's vertical center.
     // This is the base (unclamped) y when content scrollTop is 0.
     let y: number;
-    let itemTopInContent = 0;
-    let itemHeight = tr.height;
+    let anchorTopInContent = 0;
+    let anchorHeight = triggerAlignmentRect.height;
 
     if (alignItem) {
-      itemTopInContent = getItemTopInContent(alignItem, cr, scrollContainer);
-      itemHeight = alignItem.getBoundingClientRect().height || alignItem.offsetHeight || tr.height;
+      const alignAnchor = getItemAlignmentAnchor(alignItem);
+      anchorTopInContent = getItemTopInContent(alignAnchor, cr, scrollContainer);
+      anchorHeight =
+        alignAnchor.getBoundingClientRect().height ||
+        alignAnchor.offsetHeight ||
+        alignItem.getBoundingClientRect().height ||
+        alignItem.offsetHeight ||
+        triggerAlignmentRect.height;
 
       // Position content so the item's center aligns from the content padding box.
-      y = tr.top + (tr.height / 2) - content.clientTop - itemTopInContent - (itemHeight / 2);
+      y =
+        triggerAlignmentRect.top +
+        (triggerAlignmentRect.height / 2) -
+        content.clientTop -
+        anchorTopInContent -
+        (anchorHeight / 2);
     } else {
       // No items at all - align top of content with trigger
       y = tr.top;
     }
 
-    return { x, y, alignItem, itemTopInContent, itemHeight };
+    return { x, y, alignItem, anchorTopInContent, anchorHeight, triggerAlignmentRect };
   };
 
   const updatePosition = () => {
@@ -456,11 +518,14 @@ export function createSelect(
 
     let pos: { x: number; y: number };
     let side: Side = "bottom";
+    let transformAnchorRect: AnchorRect = tr;
 
     if (position === "item-aligned") {
       const aligned = computeItemAlignedPos(tr, cr, scrollContainer);
+      transformAnchorRect = aligned.triggerAlignmentRect;
       pos = { x: aligned.x, y: aligned.y };
-      const triggerCenterY = tr.top + (tr.height / 2);
+      const triggerCenterY =
+        aligned.triggerAlignmentRect.top + (aligned.triggerAlignmentRect.height / 2);
       const minY = collisionPadding;
       const maxY = win.innerHeight - cr.height - collisionPadding;
       const clampY = (value: number) =>
@@ -481,7 +546,7 @@ export function createSelect(
         const getTriggerCenterInContent = (currentY: number) =>
           triggerCenterY - (currentY + content.clientTop);
         const getDesiredScrollTop = (currentY: number) =>
-          aligned.itemTopInContent + (aligned.itemHeight / 2) - getTriggerCenterInContent(currentY);
+          aligned.anchorTopInContent + (aligned.anchorHeight / 2) - getTriggerCenterInContent(currentY);
         if (maxScrollTop > 0) {
           // Keep popup near the trigger and use internal scroll to align.
           pos.y = clampY(triggerCenterY - (cr.height / 2));
@@ -490,18 +555,18 @@ export function createSelect(
           pos.y = clampY(
             triggerCenterY -
               (content.clientTop +
-                aligned.itemTopInContent -
+                aligned.anchorTopInContent -
                 scrollTop +
-                (aligned.itemHeight / 2))
+                (aligned.anchorHeight / 2))
           );
           scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
           scrollContainer.scrollTop = scrollTop;
           pos.y = clampY(
             triggerCenterY -
               (content.clientTop +
-                aligned.itemTopInContent -
+                aligned.anchorTopInContent -
                 scrollTop +
-                (aligned.itemHeight / 2))
+                (aligned.anchorHeight / 2))
           );
         } else {
           // No internal scrolling: align directly from item geometry.
@@ -535,7 +600,7 @@ export function createSelect(
     const transformOrigin = computeFloatingTransformOrigin({
       side,
       align: resolvedAlign,
-      anchorRect: tr,
+      anchorRect: transformAnchorRect,
       popupX: pos.x,
       popupY: pos.y,
     });
@@ -652,10 +717,8 @@ export function createSelect(
       valueSlot.textContent = placeholder;
       trigger.setAttribute("data-placeholder", "");
     } else {
-      // Find the item with this value and get its text
-      // Prefer data-label attribute over textContent (useful when item has icons/indicators)
       const selectedItem = items.find((item) => item.dataset["value"] === currentValue);
-      const label = selectedItem?.dataset["label"] ?? selectedItem?.textContent?.trim() ?? currentValue;
+      const label = getItemLabelText(selectedItem, currentValue);
       valueSlot.textContent = label;
       trigger.removeAttribute("data-placeholder");
     }
@@ -865,14 +928,14 @@ export function createSelect(
     typeaheadBuffer += char;
 
     let matchIndex = enabledItems.findIndex((el) =>
-      (el.textContent?.trim().toLowerCase() || "").startsWith(typeaheadBuffer)
+      getItemLabelText(el).toLowerCase().startsWith(typeaheadBuffer)
     );
 
     if (matchIndex === -1 && typeaheadBuffer.length === 1) {
       const start = highlightedIndex + 1;
       for (let i = 0; i < enabledItems.length; i++) {
         const idx = (start + i) % enabledItems.length;
-        if ((enabledItems[idx]!.textContent?.trim().toLowerCase() || "").startsWith(char)) {
+        if (getItemLabelText(enabledItems[idx]!).toLowerCase().startsWith(char)) {
           matchIndex = idx;
           break;
         }

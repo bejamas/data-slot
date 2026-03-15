@@ -22,12 +22,20 @@ npm install @data-slot/select
     <div data-slot="select-viewport">
       <div data-slot="select-group">
         <div data-slot="select-label">Fruits</div>
-        <div data-slot="select-item" data-value="apple">Apple</div>
-        <div data-slot="select-item" data-value="banana">Banana</div>
-        <div data-slot="select-item" data-value="orange">Orange</div>
+        <div data-slot="select-item" data-value="apple">
+          <span data-slot="select-item-text">Apple</span>
+        </div>
+        <div data-slot="select-item" data-value="banana">
+          <span data-slot="select-item-text">Banana</span>
+        </div>
+        <div data-slot="select-item" data-value="orange">
+          <span data-slot="select-item-text">Orange</span>
+        </div>
       </div>
       <div data-slot="select-separator"></div>
-      <div data-slot="select-item" data-value="other">Other</div>
+      <div data-slot="select-item" data-value="other">
+        <span data-slot="select-item-text">Other</span>
+      </div>
     </div>
   </div>
 </div>
@@ -70,6 +78,7 @@ controller.destroy();
 | `select-content` | Popup container for options |
 | `select-viewport` | Optional scroll container inside `select-content`; used for item-aligned scrolling when present |
 | `select-item` | Individual selectable option |
+| `select-item-text` | Optional text anchor inside `select-item`; preferred for exact item-aligned parity with Base/shadcn styles |
 | `select-group` | Groups related items |
 | `select-label` | Group label (inside a `select-group`) |
 | `select-separator` | Visual divider between items/groups |
@@ -135,6 +144,8 @@ Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, 
 ### Positioning Modes
 
 **`item-aligned` (default)**: The popup positions itself so the selected item aligns with the trigger, similar to native `<select>` elements. The popup width matches the trigger width.
+
+For the closest Base/shadcn visual parity, wrap the visible label inside each item with `data-slot="select-item-text"`. When absent, the controller falls back to the whole `select-item` box for alignment, trigger display, and typeahead.
 
 **`popper`**: The popup appears below or above the trigger like a dropdown menu. Additional options apply:
 

@@ -12,53 +12,53 @@ const cssCode = `<label for="fruit-select" class="select-field-label">Fruit</lab
     <div data-slot="select-group">
       <div data-slot="select-label" class="select-label">Fruits</div>
       <div data-slot="select-item" data-value="apple" data-label="Apple" class="select-item">
-        Apple<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Apple</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="banana" data-label="Banana" class="select-item">
-        Banana<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Banana</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="orange" data-label="Orange" class="select-item">
-        Orange<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Orange</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="mango" data-label="Mango" class="select-item">
-        Mango<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Mango</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="grape" data-label="Grape" class="select-item">
-        Grape<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Grape</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="pear" data-label="Pear" class="select-item">
-        Pear<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Pear</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="peach" data-label="Peach" class="select-item">
-        Peach<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Peach</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="pineapple" data-label="Pineapple" class="select-item">
-        Pineapple<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Pineapple</span><span class="select-check">✓</span>
       </div>
     </div>
     <div data-slot="select-separator" class="select-separator"></div>
     <div data-slot="select-group">
       <div data-slot="select-label" class="select-label">Vegetables</div>
       <div data-slot="select-item" data-value="carrot" data-label="Carrot" class="select-item">
-        Carrot<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Carrot</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="broccoli" data-label="Broccoli" class="select-item">
-        Broccoli<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Broccoli</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="cucumber" data-label="Cucumber" class="select-item">
-        Cucumber<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Cucumber</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="tomato" data-label="Tomato" class="select-item">
-        Tomato<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Tomato</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="pepper" data-label="Bell Pepper" class="select-item">
-        Bell Pepper<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Bell Pepper</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="zucchini" data-label="Zucchini" class="select-item">
-        Zucchini<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Zucchini</span><span class="select-check">✓</span>
       </div>
       <div data-slot="select-item" data-value="spinach" data-label="Spinach" data-disabled class="select-item disabled">
-        Spinach (out of stock)<span class="select-check">✓</span>
+        <span data-slot="select-item-text">Spinach (out of stock)</span><span class="select-check">✓</span>
       </div>
     </div>
   </div>
@@ -163,7 +163,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Apple<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Apple</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -172,7 +172,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Banana<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Banana</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -181,7 +181,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Orange<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Orange</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -190,7 +190,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Mango<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Mango</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -199,7 +199,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Grape<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Grape</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -208,7 +208,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Pear<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Pear</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -217,7 +217,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Peach<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Peach</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -226,7 +226,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Pineapple<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Pineapple</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
     </div>
     <div data-slot="select-separator" class="my-1 h-px bg-gray-200"></div>
@@ -241,7 +241,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Carrot<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Carrot</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -250,7 +250,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Broccoli<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Broccoli</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -259,7 +259,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Cucumber<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Cucumber</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -268,7 +268,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Tomato<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Tomato</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -277,7 +277,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Bell Pepper<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Bell Pepper</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -286,7 +286,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
                data-[highlighted]:bg-gray-100"
       >
-        Zucchini<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Zucchini</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
       <div
         data-slot="select-item"
@@ -295,7 +295,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
         data-disabled
         class="flex items-center px-2 py-1.5 w-full text-sm text-gray-300 rounded cursor-not-allowed group"
       >
-        Spinach (out of stock)<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+        <span data-slot="select-item-text">Spinach (out of stock)</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
       </div>
     </div>
   </div>
@@ -314,53 +314,53 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
       <div data-slot="select-group">
         <div data-slot="select-label" class="select-label">Fruits</div>
         <div data-slot="select-item" data-value="apple" data-label="Apple" class="select-item">
-          Apple<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Apple</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="banana" data-label="Banana" class="select-item">
-          Banana<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Banana</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="orange" data-label="Orange" class="select-item">
-          Orange<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Orange</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="mango" data-label="Mango" class="select-item">
-          Mango<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Mango</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="grape" data-label="Grape" class="select-item">
-          Grape<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Grape</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="pear" data-label="Pear" class="select-item">
-          Pear<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Pear</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="peach" data-label="Peach" class="select-item">
-          Peach<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Peach</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="pineapple" data-label="Pineapple" class="select-item">
-          Pineapple<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Pineapple</span><span class="select-check">✓</span>
         </div>
       </div>
       <div data-slot="select-separator" class="select-separator"></div>
       <div data-slot="select-group">
         <div data-slot="select-label" class="select-label">Vegetables</div>
         <div data-slot="select-item" data-value="carrot" data-label="Carrot" class="select-item">
-          Carrot<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Carrot</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="broccoli" data-label="Broccoli" class="select-item">
-          Broccoli<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Broccoli</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="cucumber" data-label="Cucumber" class="select-item">
-          Cucumber<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Cucumber</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="tomato" data-label="Tomato" class="select-item">
-          Tomato<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Tomato</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="pepper" data-label="Bell Pepper" class="select-item">
-          Bell Pepper<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Bell Pepper</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="zucchini" data-label="Zucchini" class="select-item">
-          Zucchini<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Zucchini</span><span class="select-check">✓</span>
         </div>
         <div data-slot="select-item" data-value="spinach" data-label="Spinach" data-disabled class="select-item disabled">
-          Spinach (out of stock)<span class="select-check">✓</span>
+          <span data-slot="select-item-text">Spinach (out of stock)</span><span class="select-check">✓</span>
         </div>
       </div>
     </div>
@@ -388,7 +388,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Apple"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Apple<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Apple</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -396,7 +396,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Banana"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Banana<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Banana</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -404,7 +404,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Orange"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Orange<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Orange</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -412,7 +412,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Mango"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Mango<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Mango</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -420,7 +420,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Grape"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Grape<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Grape</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -428,7 +428,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Pear"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Pear<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Pear</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -436,7 +436,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Peach"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Peach<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Peach</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -444,7 +444,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Pineapple"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Pineapple<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Pineapple</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
       </div>
       <div data-slot="select-separator" class="my-1 h-px bg-gray-200"></div>
@@ -456,7 +456,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Carrot"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Carrot<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Carrot</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -464,7 +464,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Broccoli"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Broccoli<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Broccoli</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -472,7 +472,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Cucumber"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Cucumber<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Cucumber</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -480,7 +480,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Tomato"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Tomato<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Tomato</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -488,7 +488,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Bell Pepper"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Bell Pepper<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Bell Pepper</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -496,7 +496,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-label="Zucchini"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
         >
-          Zucchini<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Zucchini</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
         <div
           data-slot="select-item"
@@ -505,7 +505,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
           data-disabled
           class="flex items-center px-2 py-1.5 w-full text-sm text-gray-300 rounded cursor-not-allowed group"
         >
-          Spinach (out of stock)<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          <span data-slot="select-item-text">Spinach (out of stock)</span><span class="ml-auto invisible group-data-[selected]:visible">✓</span>
         </div>
       </div>
     </div>

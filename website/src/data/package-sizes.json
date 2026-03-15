@@ -1,14 +1,14 @@
 [
   {
     "name": "@data-slot/navigation-menu",
-    "size": 7406,
-    "sizeFormatted": "7.2 KB",
+    "size": 7628,
+    "sizeFormatted": "7.4 KB",
     "description": "Dropdown navigation menus"
   },
   {
     "name": "@data-slot/core",
-    "size": 5678,
-    "sizeFormatted": "5.5 KB",
+    "size": 5770,
+    "sizeFormatted": "5.6 KB",
     "description": "Shared utilities"
   },
   {
@@ -25,8 +25,8 @@
   },
   {
     "name": "@data-slot/select",
-    "size": 4115,
-    "sizeFormatted": "4.0 KB",
+    "size": 4226,
+    "sizeFormatted": "4.1 KB",
     "description": "Dropdown select, form-ready"
   },
   {
