@@ -46,6 +46,7 @@ type TopLevelNavigable =
   | {
       kind: "submenu";
       element: HTMLElement;
+      item: HTMLElement;
       value: string;
       trigger: HTMLElement;
     }
@@ -511,11 +512,13 @@ export function createNavigationMenu(
       const entry: TopLevelNavigable = {
         kind: "submenu",
         element: managed.trigger,
+        item: managed.item,
         value: managed.value,
         trigger: managed.trigger,
       };
       topLevelNavigables.push(entry);
       navigableByElement.set(entry.element, entry);
+      navigableByElement.set(entry.item, entry);
       return;
     }
 
@@ -549,6 +552,47 @@ export function createNavigationMenu(
   ): Extract<TopLevelNavigable, { kind: "plain" }> | null => {
     const navigable = getNavigableByTarget(target);
     return navigable?.kind === "plain" ? navigable : null;
+  };
+
+  const getSubmenuNavigableByTarget = (
+    target: EventTarget | null,
+  ): Extract<TopLevelNavigable, { kind: "submenu" }> | null => {
+    const navigable = getNavigableByTarget(target);
+    return navigable?.kind === "submenu" ? navigable : null;
+  };
+
+  const supportsHoverInteractions = (): boolean => {
+    const view = root.ownerDocument.defaultView;
+    if (!view?.matchMedia) return true;
+
+    try {
+      return view.matchMedia("(any-hover: hover)").matches;
+    } catch {
+      return true;
+    }
+  };
+
+  const matchesHover = (element: Element): boolean => {
+    try {
+      return element.matches(":hover");
+    } catch {
+      return false;
+    }
+  };
+
+  const getInitiallyHoveredNavigable = (): TopLevelNavigable | null => {
+    for (const navigable of topLevelNavigables) {
+      if (navigable.kind === "submenu") {
+        if (matchesHover(navigable.item) || matchesHover(navigable.trigger)) {
+          return navigable;
+        }
+        continue;
+      }
+
+      if (matchesHover(navigable.element)) return navigable;
+    }
+
+    return null;
   };
 
   interface TopLevelFocusOptions {
@@ -1700,8 +1744,24 @@ export function createNavigationMenu(
     on(list, "pointerover", (e) => {
       const event = e as PointerEvent;
       if (event.pointerType === "touch") return;
+      const submenuNavigable = getSubmenuNavigableByTarget(event.target);
+      if (submenuNavigable) {
+        isRootHovered = true;
+        if (clickLocked) return;
+        if (
+          currentValue !== submenuNavigable.value &&
+          isPointerInsideSafetyCorridor(event)
+        ) {
+          return;
+        }
+        updateIndicator(submenuNavigable.trigger);
+        updateState(submenuNavigable.value);
+        return;
+      }
+
       const plainNavigable = getPlainNavigableByTarget(event.target);
       if (plainNavigable) {
+        isRootHovered = true;
         if (currentValue !== null) {
           if (clickLocked) return;
           closeMenuAndUnlock();
@@ -1755,6 +1815,25 @@ export function createNavigationMenu(
       resetPendingInteraction();
     }),
   );
+
+  const syncInitialHoverState = () => {
+    if (!supportsHoverInteractions()) return;
+    if (currentValue !== null || pendingValue !== null || clickLocked) return;
+
+    const hoveredNavigable = getInitiallyHoveredNavigable();
+    isRootHovered =
+      hoveredNavigable !== null ||
+      (root instanceof HTMLElement && matchesHover(root));
+
+    if (!hoveredNavigable) return;
+
+    if (hoveredNavigable.kind === "submenu") {
+      updateState(hoveredNavigable.value, true);
+      return;
+    }
+
+    updateIndicator(hoveredNavigable.element);
+  };
 
   // Handle viewport hover to keep menu open + recompute size after transitions
   if (viewport) {
@@ -2023,6 +2102,7 @@ export function createNavigationMenu(
     },
   };
 
+  syncInitialHoverState();
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
 }

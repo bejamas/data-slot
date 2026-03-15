@@ -176,6 +176,62 @@ describe("NavigationMenu", () => {
     return parent;
   };
 
+  const mockHoverEnvironment = (hoveredElements: Element[] = []) => {
+    const hovered = new Set(hoveredElements);
+    const matchMediaDescriptor = Object.getOwnPropertyDescriptor(
+      window,
+      "matchMedia",
+    );
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: ((query: string): MediaQueryList => ({
+        matches: query === "(any-hover: hover)",
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      })) as Window["matchMedia"],
+    });
+
+    const matchesDescriptor = Object.getOwnPropertyDescriptor(
+      Element.prototype,
+      "matches",
+    );
+    const originalMatches = Element.prototype.matches;
+    Object.defineProperty(Element.prototype, "matches", {
+      configurable: true,
+      value(this: Element, selector: string) {
+        if (selector === ":hover") {
+          return hovered.has(this);
+        }
+        return originalMatches.call(this, selector);
+      },
+    });
+
+    return () => {
+      if (matchMediaDescriptor) {
+        Object.defineProperty(window, "matchMedia", matchMediaDescriptor);
+      } else {
+        Reflect.deleteProperty(
+          window as Window & Record<string, unknown>,
+          "matchMedia",
+        );
+      }
+
+      if (matchesDescriptor) {
+        Object.defineProperty(Element.prototype, "matches", matchesDescriptor);
+      } else {
+        Reflect.deleteProperty(
+          Element.prototype as typeof Element.prototype & Record<string, unknown>,
+          "matches",
+        );
+      }
+    };
+  };
+
   it("initializes with all content hidden", () => {
     const { contents, controller } = setup();
 
@@ -492,6 +548,117 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("opens immediately when JS initializes while a submenu trigger is already hovered", () => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+          <li data-slot="navigation-menu-item" data-value="solutions">
+            <button data-slot="navigation-menu-trigger">Solutions</button>
+            <div data-slot="navigation-menu-content">Solutions content</div>
+          </li>
+          <div data-slot="navigation-menu-indicator"></div>
+        </ul>
+        <div data-slot="navigation-menu-viewport"></div>
+      </nav>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const trigger = root.querySelector(
+      '[data-slot="navigation-menu-trigger"]',
+    ) as HTMLElement;
+    const indicator = root.querySelector(
+      '[data-slot="navigation-menu-indicator"]',
+    ) as HTMLElement;
+    const restoreHoverEnvironment = mockHoverEnvironment([root, trigger]);
+
+    try {
+      const controller = createNavigationMenu(root, {
+        delayOpen: 20,
+        delayClose: 0,
+      });
+
+      expect(controller.value).toBe("products");
+      expect(root.getAttribute("data-state")).toBe("open");
+      expect(trigger.getAttribute("data-state")).toBe("open");
+      expect(indicator.getAttribute("data-state")).toBe("visible");
+
+      controller.destroy();
+    } finally {
+      restoreHoverEnvironment();
+    }
+  });
+
+  it("shows the plain-link indicator when JS initializes while a plain top-level link is already hovered", () => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+          <li data-slot="navigation-menu-item">
+            <a href="#" class="plain-link">Pricing</a>
+          </li>
+          <div data-slot="navigation-menu-indicator"></div>
+        </ul>
+        <div data-slot="navigation-menu-viewport"></div>
+      </nav>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const list = root.querySelector(
+      '[data-slot="navigation-menu-list"]',
+    ) as HTMLElement;
+    const trigger = root.querySelector(
+      '[data-slot="navigation-menu-trigger"]',
+    ) as HTMLElement;
+    const plainLink = root.querySelector(".plain-link") as HTMLElement;
+    const indicator = root.querySelector(
+      '[data-slot="navigation-menu-indicator"]',
+    ) as HTMLElement;
+
+    const rect = (
+      left: number,
+      top: number,
+      width: number,
+      height: number,
+    ): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    list.getBoundingClientRect = () => rect(100, 100, 500, 40);
+    trigger.getBoundingClientRect = () => rect(120, 100, 120, 40);
+    plainLink.getBoundingClientRect = () => rect(260, 100, 100, 40);
+
+    const restoreHoverEnvironment = mockHoverEnvironment([root, plainLink]);
+
+    try {
+      const controller = createNavigationMenu(root);
+
+      expect(controller.value).toBe(null);
+      expect(root.getAttribute("data-state")).toBe("closed");
+      expect(indicator.getAttribute("data-state")).toBe("visible");
+      expect(indicator.style.getPropertyValue("--indicator-left")).toBe("160px");
+
+      controller.destroy();
+    } finally {
+      restoreHoverEnvironment();
+    }
+  });
+
   it("hovering plain top-level link closes unlocked submenu and moves indicator to plain link", () => {
     const { root, list, triggers, plainLink, indicator, controller } =
       setupMixedWithIndicator();
@@ -535,6 +702,26 @@ describe("NavigationMenu", () => {
     expect(root.getAttribute("data-state")).toBe("closed");
     expect(indicator.getAttribute("data-state")).toBe("visible");
     expect(indicator.style.getPropertyValue("--indicator-left")).toBe("160px");
+
+    controller.destroy();
+  });
+
+  it("recovers submenu hover from delegated pointerover when the initial pointerenter was missed", async () => {
+    const { root, controller } = setup({ delayOpen: 0, delayClose: 0 });
+    const item = root.querySelector(
+      '[data-slot="navigation-menu-item"][data-value="products"]',
+    ) as HTMLElement;
+
+    item.dispatchEvent(
+      new PointerEvent("pointerover", {
+        bubbles: true,
+        pointerType: "mouse",
+      } as PointerEventInit),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(controller.value).toBe("products");
+    expect(root.getAttribute("data-state")).toBe("open");
 
     controller.destroy();
   });
