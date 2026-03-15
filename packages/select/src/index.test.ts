@@ -1291,6 +1291,152 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("falls back to trigger-aligned placement when item-aligned text anchoring is too close to the viewport edge", () => {
+      const { trigger, content, valueSlot, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="item-3">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="item-1"><span data-slot="select-item-text">Item 1</span></div>
+            <div data-slot="select-item" data-value="item-2"><span data-slot="select-item-text">Item 2</span></div>
+            <div data-slot="select-item" data-value="item-3"><span data-slot="select-item-text">Item 3</span></div>
+          </div>
+        </div>
+      `
+      );
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-3"]'
+      ) as HTMLElement;
+      const selectedItemText = selectedItem.querySelector(
+        '[data-slot="select-item-text"]'
+      ) as HTMLElement;
+      const innerHeightDescriptor = Object.getOwnPropertyDescriptor(window, "innerHeight");
+      const innerWidthDescriptor = Object.getOwnPropertyDescriptor(window, "innerWidth");
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      try {
+        Object.defineProperty(window, "innerHeight", { configurable: true, value: 240 });
+        Object.defineProperty(window, "innerWidth", { configurable: true, value: 400 });
+
+        trigger.getBoundingClientRect = () => rect(12, 80, 180, 32);
+        valueSlot.getBoundingClientRect = () => rect(22, 96, 72, 12);
+        content.getBoundingClientRect = () => rect(0, 80, 180, 120);
+        selectedItemText.getBoundingClientRect = () => rect(75, 112, 56, 12);
+
+        Object.defineProperty(content, "clientHeight", { configurable: true, value: 120 });
+        Object.defineProperty(content, "scrollHeight", { configurable: true, value: 120 });
+        Object.defineProperty(selectedItemText, "offsetParent", { configurable: true, value: null });
+        content.scrollTop = 0;
+
+        controller.open();
+
+        expect(content.getAttribute("data-align-trigger")).toBe("false");
+        expect(content.getAttribute("data-side")).toBe("bottom");
+        expect(content.getAttribute("data-align")).toBe("start");
+        expect(getTranslate3dXY(getPositioner(content).style.transform)).toEqual([80, 48]);
+      } finally {
+        if (innerHeightDescriptor) {
+          Object.defineProperty(window, "innerHeight", innerHeightDescriptor);
+        } else {
+          delete (window as { innerHeight?: number }).innerHeight;
+        }
+        if (innerWidthDescriptor) {
+          Object.defineProperty(window, "innerWidth", innerWidthDescriptor);
+        } else {
+          delete (window as { innerWidth?: number }).innerWidth;
+        }
+      }
+
+      controller.destroy();
+    });
+
+    it("falls back to trigger-aligned placement when the aligned popup cannot satisfy min-height constraints", () => {
+      const { trigger, content, valueSlot, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="item-3">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content" style="min-height: 260px;">
+            <div data-slot="select-item" data-value="item-1"><span data-slot="select-item-text">Item 1</span></div>
+            <div data-slot="select-item" data-value="item-2"><span data-slot="select-item-text">Item 2</span></div>
+            <div data-slot="select-item" data-value="item-3"><span data-slot="select-item-text">Item 3</span></div>
+          </div>
+        </div>
+      `
+      );
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-3"]'
+      ) as HTMLElement;
+      const selectedItemText = selectedItem.querySelector(
+        '[data-slot="select-item-text"]'
+      ) as HTMLElement;
+      const innerHeightDescriptor = Object.getOwnPropertyDescriptor(window, "innerHeight");
+      const innerWidthDescriptor = Object.getOwnPropertyDescriptor(window, "innerWidth");
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      try {
+        Object.defineProperty(window, "innerHeight", { configurable: true, value: 220 });
+        Object.defineProperty(window, "innerWidth", { configurable: true, value: 400 });
+
+        trigger.getBoundingClientRect = () => rect(90, 80, 180, 32);
+        valueSlot.getBoundingClientRect = () => rect(100, 96, 72, 12);
+        content.getBoundingClientRect = () => rect(0, 80, 180, 180);
+        selectedItemText.getBoundingClientRect = () => rect(75, 112, 56, 12);
+
+        Object.defineProperty(content, "clientHeight", { configurable: true, value: 140 });
+        Object.defineProperty(content, "scrollHeight", { configurable: true, value: 280 });
+        Object.defineProperty(selectedItemText, "offsetParent", { configurable: true, value: null });
+        content.scrollTop = 0;
+
+        controller.open();
+
+        expect(content.getAttribute("data-align-trigger")).toBe("false");
+        expect(content.getAttribute("data-side")).toBe("bottom");
+        expect(content.getAttribute("data-align")).toBe("start");
+        expect(getTranslate3dXY(getPositioner(content).style.transform)).toEqual([80, 32]);
+      } finally {
+        if (innerHeightDescriptor) {
+          Object.defineProperty(window, "innerHeight", innerHeightDescriptor);
+        } else {
+          delete (window as { innerHeight?: number }).innerHeight;
+        }
+        if (innerWidthDescriptor) {
+          Object.defineProperty(window, "innerWidth", innerWidthDescriptor);
+        } else {
+          delete (window as { innerWidth?: number }).innerWidth;
+        }
+      }
+
+      controller.destroy();
+    });
+
     it("sets data-side and data-align attributes when open (popper)", () => {
       const { trigger, content, controller } = setup({ position: "popper" });
 
@@ -1473,7 +1619,7 @@ describe("Select", () => {
 
       controller.open();
 
-      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(335);
+      expect(getTranslate3dXY(getPositioner(content).style.transform)).toEqual([64, 335]);
       expect(content.scrollTop).toBe(0);
 
       controller.destroy();
@@ -1650,7 +1796,7 @@ describe("Select", () => {
 
       controller.open();
 
-      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(335);
+      expect(getTranslate3dXY(getPositioner(content).style.transform)).toEqual([64, 335]);
       expect(content.scrollTop).toBe(0);
 
       controller.destroy();
@@ -1954,7 +2100,7 @@ describe("Select", () => {
 
       controller.open();
 
-      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(430);
+      expect(getTranslate3dXY(getPositioner(content).style.transform)).toEqual([80, 430]);
       expect(viewport.scrollTop).toBe(597);
       expect(content.scrollTop).toBe(0);
 
