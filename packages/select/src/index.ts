@@ -608,18 +608,20 @@ export function createSelect(
     });
   };
 
+  const finishClose = () => {
+    if (isDestroyed) return;
+    portal.restore();
+    content.hidden = true;
+    if (shouldRestoreFocusOnClose) {
+      restoreFocus();
+    } else {
+      previousActiveElement = null;
+    }
+  };
+
   const presence = createPresenceLifecycle({
     element: content,
-    onExitComplete: () => {
-      if (isDestroyed) return;
-      portal.restore();
-      content.hidden = true;
-      if (shouldRestoreFocusOnClose) {
-        restoreFocus();
-      } else {
-        previousActiveElement = null;
-      }
-    },
+    onExitComplete: finishClose,
   });
 
   const updateValueDisplay = () => {
@@ -638,7 +640,12 @@ export function createSelect(
     }
   };
 
-  const updateOpenState = (open: boolean, skipFocusRestore = false) => {
+  const updateOpenState = (
+    open: boolean,
+    options: { skipFocusRestore?: boolean; immediate?: boolean } = {}
+  ) => {
+    const { skipFocusRestore = false, immediate = false } = options;
+
     if (isOpen === open) return;
     if (disabled && open) return;
 
@@ -721,7 +728,12 @@ export function createSelect(
       }
 
       positionSync.stop();
-      presence.exit();
+      if (immediate) {
+        presence.cleanup();
+        finishClose();
+      } else {
+        presence.exit();
+      }
     }
 
     emit(root, "select:open-change", { open: isOpen });
@@ -772,7 +784,7 @@ export function createSelect(
     if (value === undefined) return;
 
     updateValue(value);
-    updateOpenState(false);
+    updateOpenState(false, { immediate: true });
   };
 
   const handleKeydown = (e: KeyboardEvent) => {
@@ -811,7 +823,7 @@ export function createSelect(
         break;
       case "Tab":
         // Skip focus restore to allow normal tab navigation
-        updateOpenState(false, true);
+        updateOpenState(false, { skipFocusRestore: true });
         break;
       case "Escape":
         e.preventDefault();

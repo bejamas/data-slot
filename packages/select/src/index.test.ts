@@ -312,6 +312,24 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("hides content immediately when selecting on click", () => {
+      const { root, trigger, content, items, controller } = setup();
+
+      trigger.click();
+      const positioner = getPositioner(content);
+      expect(positioner.parentElement).toBe(document.body);
+
+      items[0]?.click();
+
+      expect(controller.isOpen).toBe(false);
+      expect(content.hidden).toBe(true);
+      expect(content.parentElement).toBe(root);
+      expect(content.getAttribute("data-state")).toBe("closed");
+      expect(content.hasAttribute("data-ending-style")).toBe(false);
+
+      controller.destroy();
+    });
+
     it("marks selected item with data-selected and aria-selected", () => {
       const { trigger, items, controller } = setup();
 
@@ -599,6 +617,25 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("hides content immediately when selecting with Enter", () => {
+      const { root, trigger, content, controller } = setup();
+
+      trigger.click();
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+      );
+
+      expect(controller.isOpen).toBe(false);
+      expect(content.hidden).toBe(true);
+      expect(content.parentElement).toBe(root);
+      expect(content.hasAttribute("data-ending-style")).toBe(false);
+
+      controller.destroy();
+    });
+
     it("selects item with Space", () => {
       const { trigger, content, controller } = setup();
 
@@ -614,6 +651,25 @@ describe("Select", () => {
       );
 
       expect(controller.value).toBe("apple");
+
+      controller.destroy();
+    });
+
+    it("hides content immediately when selecting with Space", () => {
+      const { root, trigger, content, controller } = setup();
+
+      trigger.click();
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      );
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: " ", bubbles: true })
+      );
+
+      expect(controller.isOpen).toBe(false);
+      expect(content.hidden).toBe(true);
+      expect(content.parentElement).toBe(root);
+      expect(content.hasAttribute("data-ending-style")).toBe(false);
 
       controller.destroy();
     });
@@ -765,6 +821,62 @@ describe("Select", () => {
       const itemBottomInContent = itemRect.bottom - contentRect.top + initialScrollTop;
       const expectedScrollTop = itemBottomInContent - content.clientHeight + 4;
       expect(content.scrollTop).toBe(expectedScrollTop);
+      controller.destroy();
+    });
+
+    it("keeps animated close behavior for controller.close()", async () => {
+      const { trigger, content, controller } = setup();
+
+      trigger.click();
+      controller.close();
+
+      expect(controller.isOpen).toBe(false);
+      expect(content.hidden).toBe(false);
+      expect(content.hasAttribute("data-ending-style")).toBe(true);
+
+      await waitForClose();
+
+      expect(content.hidden).toBe(true);
+      expect(content.hasAttribute("data-ending-style")).toBe(false);
+
+      controller.destroy();
+    });
+
+    it("keeps animated close behavior for trigger toggle", async () => {
+      const { trigger, content, controller } = setup();
+
+      trigger.click();
+      trigger.click();
+
+      expect(controller.isOpen).toBe(false);
+      expect(content.hidden).toBe(false);
+      expect(content.hasAttribute("data-ending-style")).toBe(true);
+
+      await waitForClose();
+
+      expect(content.hidden).toBe(true);
+      expect(content.hasAttribute("data-ending-style")).toBe(false);
+
+      controller.destroy();
+    });
+
+    it("keeps animated close behavior for Escape", async () => {
+      const { trigger, content, controller } = setup();
+
+      trigger.click();
+      content.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+
+      expect(controller.isOpen).toBe(false);
+      expect(content.hidden).toBe(false);
+      expect(content.hasAttribute("data-ending-style")).toBe(true);
+
+      await waitForClose();
+
+      expect(content.hidden).toBe(true);
+      expect(content.hasAttribute("data-ending-style")).toBe(false);
+
       controller.destroy();
     });
   });
