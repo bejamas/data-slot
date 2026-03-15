@@ -379,27 +379,38 @@ export function createSelect(
 
   type ContentRect = Pick<DOMRectReadOnly, "top" | "width" | "height">;
 
-  const getItemTopInContent = (item: HTMLElement, cr: ContentRect, scrollContainer: HTMLElement) => {
-    // Prefer offset-parent traversal when content is in the chain, and
+  const getItemTopInAncestorPaddingBox = (
+    item: HTMLElement,
+    ancestor: HTMLElement,
+    ancestorTop: number,
+    scrollOffset: number
+  ) => {
+    // Prefer offset-parent traversal when the ancestor is in the chain, and
     // fall back to rect math otherwise (e.g. before final layout settles).
     let top = 0;
     let node: HTMLElement | null = item;
-    while (node && node !== content) {
+    while (node && node !== ancestor) {
       top += node.offsetTop;
       const offsetParent: Element | null = node.offsetParent;
       if (!(offsetParent instanceof HTMLElement)) {
         top = Number.NaN;
         break;
       }
+      if (offsetParent !== ancestor) {
+        top += offsetParent.clientTop;
+      }
       node = offsetParent;
     }
-    if (node === content && Number.isFinite(top)) {
+    if (node === ancestor && Number.isFinite(top)) {
       return top;
     }
 
     const itemRect = item.getBoundingClientRect();
-    return itemRect.top - cr.top + scrollContainer.scrollTop;
+    return itemRect.top - ancestorTop - ancestor.clientTop + scrollOffset;
   };
+
+  const getItemTopInContent = (item: HTMLElement, cr: ContentRect, scrollContainer: HTMLElement) =>
+    getItemTopInAncestorPaddingBox(item, content, cr.top, scrollContainer.scrollTop);
 
   // Compute base position data for item-aligned mode
   const computeItemAlignedPos = (tr: DOMRect, cr: ContentRect, scrollContainer: HTMLElement) => {
@@ -421,8 +432,8 @@ export function createSelect(
       itemTopInContent = getItemTopInContent(alignItem, cr, scrollContainer);
       itemHeight = alignItem.getBoundingClientRect().height || alignItem.offsetHeight || tr.height;
 
-      // Position content so item is at trigger's vertical center.
-      y = tr.top + (tr.height / 2) - (itemHeight / 2) - itemTopInContent;
+      // Position content so the item's center aligns from the content padding box.
+      y = tr.top + (tr.height / 2) - content.clientTop - itemTopInContent - (itemHeight / 2);
     } else {
       // No items at all - align top of content with trigger
       y = tr.top;
@@ -467,20 +478,30 @@ export function createSelect(
 
       if (aligned.alignItem) {
         const maxScrollTop = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight);
+        const getTriggerCenterInContent = (currentY: number) =>
+          triggerCenterY - (currentY + content.clientTop);
         const getDesiredScrollTop = (currentY: number) =>
-          aligned.itemTopInContent + (aligned.itemHeight / 2) - (triggerCenterY - currentY);
+          aligned.itemTopInContent + (aligned.itemHeight / 2) - getTriggerCenterInContent(currentY);
         if (maxScrollTop > 0) {
           // Keep popup near the trigger and use internal scroll to align.
           pos.y = clampY(triggerCenterY - (cr.height / 2));
           let scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
           scrollContainer.scrollTop = scrollTop;
           pos.y = clampY(
-            triggerCenterY - (aligned.itemTopInContent - scrollTop + (aligned.itemHeight / 2))
+            triggerCenterY -
+              (content.clientTop +
+                aligned.itemTopInContent -
+                scrollTop +
+                (aligned.itemHeight / 2))
           );
           scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
           scrollContainer.scrollTop = scrollTop;
           pos.y = clampY(
-            triggerCenterY - (aligned.itemTopInContent - scrollTop + (aligned.itemHeight / 2))
+            triggerCenterY -
+              (content.clientTop +
+                aligned.itemTopInContent -
+                scrollTop +
+                (aligned.itemHeight / 2))
           );
         } else {
           // No internal scrolling: align directly from item geometry.

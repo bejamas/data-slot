@@ -1354,6 +1354,113 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("keeps rect-fallback item-aligned positioning correct when select-content has a border", () => {
+      const { trigger, content, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="item-3">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-item" data-value="item-1">Item 1</div>
+            <div data-slot="select-item" data-value="item-2">Item 2</div>
+            <div data-slot="select-item" data-value="item-3">Item 3</div>
+          </div>
+        </div>
+      `
+      );
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-3"]'
+      ) as HTMLElement;
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(400, 80, 180, 40);
+      content.getBoundingClientRect = () => rect(0, 80, 180, 120);
+      selectedItem.getBoundingClientRect = () => rect(65, 80, 180, 32);
+
+      Object.defineProperty(content, "clientTop", { configurable: true, value: 1 });
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 120 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 120 });
+      Object.defineProperty(selectedItem, "offsetParent", { configurable: true, value: null });
+      content.scrollTop = 0;
+
+      controller.open();
+
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(339);
+      expect(content.scrollTop).toBe(0);
+
+      controller.destroy();
+    });
+
+    it("adds intermediate group borders when item-aligned positioning uses offset-parent traversal", () => {
+      const { trigger, content, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="beef">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-group">
+              <div data-slot="select-label">Proteins</div>
+              <div data-slot="select-item" data-value="tofu">Tofu</div>
+              <div data-slot="select-item" data-value="chicken">Chicken</div>
+              <div data-slot="select-item" data-value="beef">Beef</div>
+            </div>
+          </div>
+        </div>
+      `
+      );
+      const group = content.querySelector('[data-slot="select-group"]') as HTMLElement;
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="beef"]'
+      ) as HTMLElement;
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(400, 80, 180, 40);
+      content.getBoundingClientRect = () => rect(0, 80, 180, 160);
+      selectedItem.getBoundingClientRect = () => rect(0, 80, 180, 32);
+
+      Object.defineProperty(content, "clientHeight", { configurable: true, value: 160 });
+      Object.defineProperty(content, "scrollHeight", { configurable: true, value: 160 });
+      Object.defineProperty(group, "offsetParent", { configurable: true, value: content });
+      Object.defineProperty(group, "offsetTop", { configurable: true, value: 24 });
+      Object.defineProperty(group, "clientTop", { configurable: true, value: 1 });
+      Object.defineProperty(selectedItem, "offsetParent", { configurable: true, value: group });
+      Object.defineProperty(selectedItem, "offsetTop", { configurable: true, value: 40 });
+      content.scrollTop = 0;
+
+      controller.open();
+
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(339);
+      expect(content.scrollTop).toBe(0);
+
+      controller.destroy();
+    });
+
     it("keeps selected item anchoring even when pointer highlights another item on open", async () => {
       const { trigger, content, controller } = setup(
         {},
@@ -1589,6 +1696,71 @@ describe("Select", () => {
 
       expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(430);
       expect(viewport.scrollTop).toBe(596);
+      expect(content.scrollTop).toBe(0);
+
+      controller.destroy();
+    });
+
+    it("keeps viewport scroll alignment correct when bordered content uses item-aligned positioning", () => {
+      const { trigger, content, controller } = setup(
+        {},
+        `
+        <div data-slot="select" id="root" data-default-value="item-9">
+          <button data-slot="select-trigger">
+            <span data-slot="select-value"></span>
+          </button>
+          <div data-slot="select-content">
+            <div data-slot="select-viewport">
+              <div data-slot="select-item" data-value="item-1">Item 1</div>
+              <div data-slot="select-item" data-value="item-2">Item 2</div>
+              <div data-slot="select-item" data-value="item-3">Item 3</div>
+              <div data-slot="select-item" data-value="item-4">Item 4</div>
+              <div data-slot="select-item" data-value="item-5">Item 5</div>
+              <div data-slot="select-item" data-value="item-6">Item 6</div>
+              <div data-slot="select-item" data-value="item-7">Item 7</div>
+              <div data-slot="select-item" data-value="item-8">Item 8</div>
+              <div data-slot="select-item" data-value="item-9">Item 9</div>
+              <div data-slot="select-item" data-value="item-10">Item 10</div>
+            </div>
+          </div>
+        </div>
+      `
+      );
+      const viewport = content.querySelector('[data-slot="select-viewport"]') as HTMLElement;
+      const selectedItem = content.querySelector(
+        '[data-slot="select-item"][data-value="item-9"]'
+      ) as HTMLElement;
+      const rect = (top: number, left: number, width: number, height: number) =>
+        ({
+          x: left,
+          y: top,
+          top,
+          left,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      trigger.getBoundingClientRect = () => rect(520, 80, 180, 40);
+      content.getBoundingClientRect = () => rect(0, 80, 180, 220);
+      selectedItem.getBoundingClientRect = () => rect(0, 80, 180, 32);
+
+      Object.defineProperty(content, "clientTop", { configurable: true, value: 1 });
+      Object.defineProperty(viewport, "clientHeight", { configurable: true, value: 220 });
+      Object.defineProperty(viewport, "scrollHeight", { configurable: true, value: 840 });
+      Object.defineProperty(viewport, "offsetParent", { configurable: true, value: content });
+      Object.defineProperty(viewport, "offsetTop", { configurable: true, value: 0 });
+      Object.defineProperty(selectedItem, "offsetParent", { configurable: true, value: viewport });
+      Object.defineProperty(selectedItem, "offsetTop", { configurable: true, value: 690 });
+      viewport.scrollTop = 0;
+      content.scrollTop = 0;
+
+      controller.open();
+
+      expect(getTranslate3dY(getPositioner(content).style.transform)).toBe(430);
+      expect(viewport.scrollTop).toBe(597);
       expect(content.scrollTop).toBe(0);
 
       controller.destroy();
