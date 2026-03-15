@@ -143,6 +143,115 @@ describe('Tabs', () => {
     controller.destroy()
   })
 
+  it('does not throw when indicator geometry is unavailable and resets indicator vars', async () => {
+    document.body.innerHTML = `
+      <div data-slot="tabs" id="root">
+        <div data-slot="tabs-list">
+          <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+          <div data-slot="tabs-indicator"></div>
+        </div>
+        <div data-slot="tabs-content" data-value="one">Content One</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const list = root.querySelector('[data-slot="tabs-list"]') as HTMLElement
+    const trigger = root.querySelector('[data-slot="tabs-trigger"]') as HTMLElement
+    const indicator = root.querySelector('[data-slot="tabs-indicator"]') as HTMLElement
+
+    list.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON() {} } as DOMRect)
+    trigger.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON() {} } as DOMRect)
+
+    Object.defineProperty(trigger, 'offsetParent', {
+      configurable: true,
+      get: () => null,
+    })
+    Object.defineProperty(trigger, 'offsetWidth', {
+      configurable: true,
+      get: () => 0,
+    })
+    Object.defineProperty(trigger, 'offsetHeight', {
+      configurable: true,
+      get: () => 0,
+    })
+
+    const controller = createTabs(root)
+
+    expect(() => controller.updateIndicator()).not.toThrow()
+    await waitForFrame()
+
+    expect(indicator.style.getPropertyValue('--active-tab-left')).toBe('0px')
+    expect(indicator.style.getPropertyValue('--active-tab-top')).toBe('0px')
+    expect(indicator.style.getPropertyValue('--active-tab-width')).toBe('0px')
+    expect(indicator.style.getPropertyValue('--active-tab-height')).toBe('0px')
+
+    controller.destroy()
+  })
+
+  it('recovers indicator position once geometry becomes available', () => {
+    document.body.innerHTML = `
+      <div data-slot="tabs" id="root">
+        <div data-slot="tabs-list">
+          <button data-slot="tabs-trigger" data-value="one">Tab One</button>
+          <div data-slot="tabs-indicator"></div>
+        </div>
+        <div data-slot="tabs-content" data-value="one">Content One</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const list = root.querySelector('[data-slot="tabs-list"]') as HTMLElement
+    const trigger = root.querySelector('[data-slot="tabs-trigger"]') as HTMLElement
+    const indicator = root.querySelector('[data-slot="tabs-indicator"]') as HTMLElement
+
+    let geometryAvailable = false
+    list.getBoundingClientRect = () =>
+      geometryAvailable
+        ? ({ left: 100, top: 40, width: 300, height: 80, right: 400, bottom: 120, x: 100, y: 40, toJSON() {} } as DOMRect)
+        : ({ left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON() {} } as DOMRect)
+    trigger.getBoundingClientRect = () =>
+      geometryAvailable
+        ? ({ left: 160, top: 52, width: 120, height: 64, right: 280, bottom: 116, x: 160, y: 52, toJSON() {} } as DOMRect)
+        : ({ left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON() {} } as DOMRect)
+
+    Object.defineProperty(trigger, 'offsetParent', {
+      configurable: true,
+      get: () => (geometryAvailable ? list : null),
+    })
+    Object.defineProperty(trigger, 'offsetLeft', {
+      configurable: true,
+      get: () => 30,
+    })
+    Object.defineProperty(trigger, 'offsetTop', {
+      configurable: true,
+      get: () => 6,
+    })
+    Object.defineProperty(trigger, 'offsetWidth', {
+      configurable: true,
+      get: () => (geometryAvailable ? 60 : 0),
+    })
+    Object.defineProperty(trigger, 'offsetHeight', {
+      configurable: true,
+      get: () => (geometryAvailable ? 32 : 0),
+    })
+
+    const controller = createTabs(root)
+    controller.updateIndicator()
+
+    expect(indicator.style.getPropertyValue('--active-tab-left')).toBe('0px')
+    expect(indicator.style.getPropertyValue('--active-tab-width')).toBe('0px')
+
+    geometryAvailable = true
+    controller.updateIndicator()
+
+    expect(indicator.style.getPropertyValue('--active-tab-left')).toBe('30px')
+    expect(indicator.style.getPropertyValue('--active-tab-width')).toBe('60px')
+    expect(indicator.style.getPropertyValue('--active-tab-top')).toBe('6px')
+    expect(indicator.style.getPropertyValue('--active-tab-height')).toBe('32px')
+
+    controller.destroy()
+  })
+
   it('defers automatic indicator updates until the next animation frame', async () => {
     document.body.innerHTML = `
       <div data-slot="tabs" id="root">

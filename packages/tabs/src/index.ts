@@ -56,6 +56,13 @@ interface TabItem {
   panel?: HTMLElement;
 }
 
+interface IndicatorPosition {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 /**
  * Create a tabs controller for a root element
  *
@@ -196,9 +203,17 @@ export function createTabs(
     }
   }
 
+  const resetIndicator = () => {
+    if (!indicator) return;
+    indicator.style.setProperty("--active-tab-left", "0px");
+    indicator.style.setProperty("--active-tab-width", "0px");
+    indicator.style.setProperty("--active-tab-top", "0px");
+    indicator.style.setProperty("--active-tab-height", "0px");
+  };
+
   const getPositionWithinList = (
     trigger: HTMLElement
-  ): { left: number; top: number; width: number; height: number } | null => {
+  ): IndicatorPosition | null => {
     let left = 0;
     let top = 0;
     let current: HTMLElement | null = trigger;
@@ -272,9 +287,16 @@ export function createTabs(
   const updateIndicator = () => {
     if (!indicator) return;
     const item = itemByValue.get(currentValue);
-    if (!item) return;
+    if (!item) {
+      resetIndicator();
+      return;
+    }
 
     const position = getPositionWithinList(item.el) ?? getRectRelativeToList(item.el);
+    if (!position) {
+      resetIndicator();
+      return;
+    }
 
     indicator.style.setProperty("--active-tab-left", `${position.left}px`);
     indicator.style.setProperty("--active-tab-width", `${position.width}px`);
