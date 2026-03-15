@@ -223,6 +223,29 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  it("reopens on hover after controller.close() unlocks a click-opened menu", async () => {
+    const { triggers, controller } = setup();
+    const trigger = triggers[0]!;
+
+    trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(controller.value).toBe("products");
+
+    controller.close();
+    expect(controller.value).toBe(null);
+
+    trigger.dispatchEvent(
+      new PointerEvent("pointerenter", {
+        bubbles: true,
+        pointerType: "mouse",
+      } as PointerEventInit),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(controller.value).toBe("products");
+
+    controller.destroy();
+  });
+
   it("switches between items", async () => {
     const { contents, controller } = setup();
     const originalFirstParent = contents[0]?.parentElement;
@@ -2609,6 +2632,73 @@ describe("NavigationMenu", () => {
 
       // Just verify it initializes without error
       expect(controller.value).toBe(null);
+
+      controller.destroy();
+    });
+
+    it("reopens after a canceled delayed hover on the same trigger", async () => {
+      const { root, triggers, controller } = setup({
+        delayOpen: 20,
+        delayClose: 0,
+      });
+      const trigger = triggers[0]!;
+
+      trigger.dispatchEvent(
+        new PointerEvent("pointerenter", {
+          bubbles: true,
+          pointerType: "mouse",
+        } as PointerEventInit),
+      );
+
+      root.dispatchEvent(
+        new PointerEvent("pointerleave", {
+          bubbles: true,
+          relatedTarget: document.body,
+          pointerType: "mouse",
+        } as PointerEventInit),
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(controller.value).toBe(null);
+
+      trigger.dispatchEvent(
+        new PointerEvent("pointerenter", {
+          bubbles: true,
+          pointerType: "mouse",
+        } as PointerEventInit),
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(controller.value).toBe("products");
+
+      controller.destroy();
+    });
+
+    it("keeps the original delayed hover open when the same trigger is entered again", async () => {
+      const { triggers, controller } = setup({
+        delayOpen: 20,
+        delayClose: 0,
+      });
+      const trigger = triggers[0]!;
+
+      trigger.dispatchEvent(
+        new PointerEvent("pointerenter", {
+          bubbles: true,
+          pointerType: "mouse",
+        } as PointerEventInit),
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+
+      trigger.dispatchEvent(
+        new PointerEvent("pointerenter", {
+          bubbles: true,
+          pointerType: "mouse",
+        } as PointerEventInit),
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(controller.value).toBe("products");
 
       controller.destroy();
     });

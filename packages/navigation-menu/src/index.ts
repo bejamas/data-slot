@@ -714,6 +714,16 @@ export function createNavigationMenu(
     }
   };
 
+  const resetPendingInteraction = () => {
+    clearTimers();
+    pendingValue = null;
+  };
+
+  const resetPointerIntent = () => {
+    suppressFocusOpenForTrigger = null;
+    pointerActivationTrigger = null;
+  };
+
   const clearIndicatorInstantRaf = () => {
     if (indicatorInstantRaf !== null) {
       cancelAnimationFrame(indicatorInstantRaf);
@@ -1379,12 +1389,15 @@ export function createNavigationMenu(
     clearHoverSafetyState();
     // Skip if value hasn't changed
     if (value === currentValue) {
-      clearTimers();
+      if (value === null) {
+        resetPendingInteraction();
+      } else {
+        clearTimers();
+      }
       return;
     }
     // Skip if we're already in the process of opening this specific value
-    if (value !== null && value === pendingValue) {
-      clearTimers();
+    if (!immediate && value !== null && value === pendingValue) {
       return;
     }
 
@@ -1611,8 +1624,7 @@ export function createNavigationMenu(
     cleanups.push(
       on(item, "pointerleave", (e) => {
         if (pendingValue === value && currentValue === null) {
-          clearTimers();
-          pendingValue = null;
+          resetPendingInteraction();
         }
         if (currentValue === value && !clickLocked) {
           const next = (e as PointerEvent).relatedTarget as Node | null;
@@ -1655,7 +1667,7 @@ export function createNavigationMenu(
         const isPointerActivation = pointerActivationTrigger === trigger;
         pointerActivationTrigger = null;
         suppressFocusOpenForTrigger = null;
-        clearTimers(); // Cancel any pending open/close timers
+        resetPendingInteraction(); // Cancel any pending open/close timers
 
         // Check against the ACTUAL current value, not what focus might have changed
         if (currentValue === value && clickLocked) {
@@ -1740,7 +1752,7 @@ export function createNavigationMenu(
     }),
     on(root, "pointerdown", () => {
       clearHoverSafetyState();
-      clearTimers();
+      resetPendingInteraction();
     }),
   );
 
@@ -1924,6 +1936,8 @@ export function createNavigationMenu(
 
   const closeMenuAndUnlock = () => {
     clearHoverSafetyState();
+    resetPendingInteraction();
+    resetPointerIntent();
     clickLocked = false;
     updateState(null, true);
     updateIndicator(null);
@@ -1998,10 +2012,11 @@ export function createNavigationMenu(
       return currentValue;
     },
     open: (value: string) => updateState(value, true),
-    close: () => updateState(null, true),
+    close: () => closeMenuAndUnlock(),
     destroy: () => {
       isDestroyed = true;
-      clearTimers();
+      resetPendingInteraction();
+      resetPointerIntent();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
