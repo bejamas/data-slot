@@ -146,6 +146,60 @@ describe('Tooltip', () => {
     controller.destroy()
   })
 
+  it('controller.hide() while hovered stays closed until a fresh hover', () => {
+    const { trigger, controller } = setup({ delay: 0 })
+
+    trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+    expect(controller.isOpen).toBe(true)
+
+    controller.hide()
+    expect(controller.isOpen).toBe(false)
+
+    trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+    expect(controller.isOpen).toBe(false)
+
+    trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+    expect(controller.isOpen).toBe(true)
+
+    controller.destroy()
+  })
+
+  it('controller.hide() while focused stays closed until a fresh focus', () => {
+    const { trigger, controller } = setup({ delay: 0 })
+
+    trigger.dispatchEvent(new FocusEvent('focus', { bubbles: true }))
+    expect(controller.isOpen).toBe(true)
+
+    controller.hide()
+    expect(controller.isOpen).toBe(false)
+
+    trigger.dispatchEvent(new FocusEvent('blur', { bubbles: true }))
+    expect(controller.isOpen).toBe(false)
+
+    trigger.dispatchEvent(new FocusEvent('focus', { bubbles: true }))
+    expect(controller.isOpen).toBe(true)
+
+    controller.destroy()
+  })
+
+  it('controller.hide() cancels a pending delayed open and allows a fresh hover', async () => {
+    const { trigger, controller } = setup({ delay: 20 })
+
+    trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+    controller.hide()
+
+    await wait(30)
+    expect(controller.isOpen).toBe(false)
+
+    trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+    trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+
+    await wait(30)
+    expect(controller.isOpen).toBe(true)
+
+    controller.destroy()
+  })
+
   it('sets ARIA attributes correctly - describedby only when open', () => {
     const { trigger, content, controller } = setup()
 

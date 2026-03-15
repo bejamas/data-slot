@@ -243,6 +243,13 @@ export function createHoverCard(
     clearCloseTimeout();
   };
 
+  const resetInteractionState = () => {
+    clearTimers();
+    pointerOnTrigger = false;
+    pointerOnContent = false;
+    focusWithin = false;
+  };
+
   const emitChange = (open: boolean, reason: HoverCardReason) => {
     emit(root, "hover-card:change", { open, reason, trigger, content });
     onOpenChange?.(open);
@@ -404,13 +411,19 @@ export function createHoverCard(
     applyState(open, reason, instant);
   };
 
+  const requestClosedState = (reason: HoverCardReason, instant = false) => {
+    resetInteractionState();
+    requestState(false, reason, instant);
+  };
+
+  const forceClosedState = (reason: HoverCardReason, instant = false) => {
+    resetInteractionState();
+    forceState(false, reason, instant);
+  };
+
   const closeForWarmHandoff = (sourceTrigger: HTMLElement, reason: HoverCardReason) => {
     if (sourceTrigger === trigger || !isOpen) return;
-    clearTimers();
-    pointerOnTrigger = false;
-    pointerOnContent = false;
-    focusWithin = false;
-    requestState(false, reason, true);
+    requestClosedState(reason, true);
   };
 
   registeredWarmHandoffTriggers.add(trigger);
@@ -511,7 +524,7 @@ export function createHoverCard(
       const related = e.relatedTarget as Node | null;
       if (related && content.contains(related)) return;
       if (isWarmHandoffTarget(related, trigger)) {
-        requestState(false, "pointer", true);
+        requestClosedState("pointer", true);
         return;
       }
       maybeScheduleClose("pointer");
@@ -531,7 +544,7 @@ export function createHoverCard(
       const related = e.relatedTarget as Node | null;
       if (related && trigger.contains(related)) return;
       if (isWarmHandoffTarget(related, trigger)) {
-        requestState(false, "pointer", true);
+        requestClosedState("pointer", true);
         return;
       }
       maybeScheduleClose("pointer");
@@ -553,7 +566,7 @@ export function createHoverCard(
       if (related && (trigger.contains(related) || content.contains(related))) return;
       focusWithin = false;
       if (isWarmHandoffTarget(related, trigger)) {
-        requestState(false, "blur", true);
+        requestClosedState("blur", true);
         return;
       }
       maybeScheduleClose("blur");
@@ -567,7 +580,7 @@ export function createHoverCard(
       if (related && (trigger.contains(related) || content.contains(related))) return;
       focusWithin = false;
       if (isWarmHandoffTarget(related, trigger)) {
-        requestState(false, "blur", true);
+        requestClosedState("blur", true);
         return;
       }
       maybeScheduleClose("blur");
@@ -578,7 +591,7 @@ export function createHoverCard(
     createDismissLayer({
       root,
       isOpen: () => isOpen,
-      onDismiss: () => requestState(false, "dismiss"),
+      onDismiss: () => requestClosedState("dismiss"),
       closeOnClickOutside,
       closeOnEscape,
     })
@@ -597,7 +610,12 @@ export function createHoverCard(
         open = detail.value;
       }
       if (typeof open !== "boolean") return;
-      forceState(open, "api");
+      if (open) {
+        clearTimers();
+        forceState(true, "api");
+      } else {
+        forceClosedState("api");
+      }
     })
   );
 
@@ -608,24 +626,31 @@ export function createHoverCard(
       requestState(true, "api");
     },
     close: () => {
-      clearTimers();
-      requestState(false, "api");
+      requestClosedState("api");
     },
     toggle: () => {
-      clearTimers();
       if (!isOpen && isTriggerDisabled()) return;
-      requestState(!isOpen, "api");
+      if (isOpen) {
+        requestClosedState("api");
+      } else {
+        clearTimers();
+        requestState(true, "api");
+      }
     },
     setOpen: (open) => {
-      clearTimers();
-      forceState(open, "api");
+      if (open) {
+        clearTimers();
+        forceState(true, "api");
+      } else {
+        forceClosedState("api");
+      }
     },
     get isOpen() {
       return isOpen;
     },
     destroy: () => {
       isDestroyed = true;
-      clearTimers();
+      resetInteractionState();
       positionSync.stop();
       presence.cleanup();
       portal.cleanup();

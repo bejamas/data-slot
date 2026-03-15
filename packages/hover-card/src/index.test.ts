@@ -145,6 +145,67 @@ describe('HoverCard', () => {
     controller.destroy()
   })
 
+  it('controller.close() clears hovered trigger state until a fresh hover', async () => {
+    const { trigger, controller } = setup({ delay: 0, closeDelay: 0, skipDelayDuration: 0 })
+
+    hoverEnter(trigger)
+    expect(controller.isOpen).toBe(true)
+
+    controller.close()
+    await waitForClose()
+    expect(controller.isOpen).toBe(false)
+
+    trigger.dispatchEvent(pointer('pointermove', 'mouse'))
+    expect(controller.isOpen).toBe(false)
+
+    trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+    hoverEnter(trigger)
+    expect(controller.isOpen).toBe(true)
+
+    controller.destroy()
+  })
+
+  it('setOpen(false) clears hovered content state until a fresh hover', async () => {
+    const { trigger, content, controller } = setup({ delay: 0, closeDelay: 0, skipDelayDuration: 0 })
+
+    hoverEnter(trigger)
+    expect(controller.isOpen).toBe(true)
+
+    content.dispatchEvent(pointer('pointerenter', 'mouse'))
+    controller.setOpen(false)
+    await waitForClose()
+    expect(controller.isOpen).toBe(false)
+
+    content.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+    trigger.dispatchEvent(pointer('pointermove', 'mouse'))
+    expect(controller.isOpen).toBe(false)
+
+    hoverEnter(trigger)
+    expect(controller.isOpen).toBe(true)
+
+    controller.destroy()
+  })
+
+  it('hover-card:set close clears hover state like controller.close()', async () => {
+    const { root, trigger, controller } = setup({ delay: 0, closeDelay: 0, skipDelayDuration: 0 })
+
+    hoverEnter(trigger)
+    expect(controller.isOpen).toBe(true)
+
+    root.dispatchEvent(new CustomEvent('hover-card:set', { detail: { open: false } }))
+    await waitForClose()
+    expect(controller.isOpen).toBe(false)
+
+    trigger.dispatchEvent(pointer('pointermove', 'mouse'))
+    expect(controller.isOpen).toBe(false)
+
+    trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+    hoverEnter(trigger)
+    expect(controller.isOpen).toBe(true)
+
+    controller.destroy()
+  })
+
   it('toggle() toggles state', async () => {
     const { controller } = setup()
 
@@ -996,6 +1057,25 @@ describe('HoverCard', () => {
     root.dispatchEvent(new CustomEvent('hover-card:set', { detail: { value: false } }))
     await waitForClose()
     expect(controller.isOpen).toBe(false)
+
+    controller.destroy()
+  })
+
+  it('setOpen(false) keeps focus-driven reopen gated until a fresh focus intent', async () => {
+    const { trigger, controller } = setup({ delay: 0, closeDelay: 0 })
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    expect(controller.isOpen).toBe(true)
+
+    controller.setOpen(false)
+    await waitForClose()
+    expect(controller.isOpen).toBe(false)
+
+    trigger.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body } as FocusEventInit))
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    expect(controller.isOpen).toBe(true)
 
     controller.destroy()
   })
