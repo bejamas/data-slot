@@ -9,6 +9,8 @@ describe("NavigationMenu", () => {
     new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
     );
+  const waitForAnimationFrame = () =>
+    new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
   const setup = (options: Parameters<typeof createNavigationMenu>[1] = {}) => {
     document.body.innerHTML = `
@@ -3317,6 +3319,94 @@ describe("NavigationMenu", () => {
 
       expect(viewportPositioner.style.top).toBe("104px");
       expect(viewportPositioner.style.left).toBe("150px");
+
+      controller.destroy();
+    });
+
+    it("sets data-instant only during sticky-scroll viewport tracking updates", async () => {
+      document.body.innerHTML = `
+        <div id="outer" style="overflow: auto; max-height: 120px;">
+          <div style="height: 320px;">
+            <nav data-slot="navigation-menu" id="root">
+              <ul data-slot="navigation-menu-list">
+                <li data-slot="navigation-menu-item" data-value="products">
+                  <button data-slot="navigation-menu-trigger">Products</button>
+                  <div data-slot="navigation-menu-content">Products content</div>
+                </li>
+                <li data-slot="navigation-menu-item" data-value="solutions">
+                  <button data-slot="navigation-menu-trigger">Solutions</button>
+                  <div data-slot="navigation-menu-content">Solutions content</div>
+                </li>
+              </ul>
+              <div data-slot="navigation-menu-viewport"></div>
+            </nav>
+          </div>
+        </div>
+      `;
+
+      const outer = document.getElementById("outer") as HTMLElement;
+      const root = document.getElementById("root") as HTMLElement;
+      const triggers = root.querySelectorAll(
+        '[data-slot="navigation-menu-trigger"]',
+      ) as NodeListOf<HTMLElement>;
+      const contents = root.querySelectorAll(
+        '[data-slot="navigation-menu-content"]',
+      ) as NodeListOf<HTMLElement>;
+      const viewport = root.querySelector(
+        '[data-slot="navigation-menu-viewport"]',
+      ) as HTMLElement;
+      const controller = createNavigationMenu(root, {
+        delayOpen: 0,
+        delayClose: 0,
+        side: "bottom",
+        align: "start",
+        sideOffset: 4,
+      });
+
+      const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+        ({
+          x: left,
+          y: top,
+          left,
+          top,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      let rootTop = 100;
+      let triggerTop = 100;
+      root.getBoundingClientRect = () => rect(100, rootTop, 400, 40);
+      triggers[0]!.getBoundingClientRect = () => rect(150, triggerTop, 100, 40);
+      triggers[1]!.getBoundingClientRect = () => rect(270, triggerTop, 100, 40);
+      contents[0]!.getBoundingClientRect = () => rect(0, 0, 300, 180);
+      contents[1]!.getBoundingClientRect = () => rect(0, 0, 320, 160);
+
+      controller.open("products");
+      await waitForPresenceExit();
+
+      const viewportPositioner = getViewportPositioner(viewport);
+      expect(viewport.hasAttribute("data-instant")).toBe(true);
+      expect(viewportPositioner.hasAttribute("data-instant")).toBe(true);
+
+      controller.open("solutions");
+      expect(viewport.hasAttribute("data-instant")).toBe(false);
+      expect(viewportPositioner.hasAttribute("data-instant")).toBe(false);
+
+      rootTop = 60;
+      triggerTop = 60;
+      outer.dispatchEvent(new Event("scroll"));
+      await waitForAnimationFrame();
+
+      expect(viewport.hasAttribute("data-instant")).toBe(true);
+      expect(viewportPositioner.hasAttribute("data-instant")).toBe(true);
+
+      await waitForAnimationFrame();
+
+      expect(viewport.hasAttribute("data-instant")).toBe(false);
+      expect(viewportPositioner.hasAttribute("data-instant")).toBe(false);
 
       controller.destroy();
     });

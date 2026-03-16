@@ -213,8 +213,11 @@ export function createNavigationMenu(
   let activeSafetyTriangle: HoverSafeTriangle | null = null;
   let hoverSafeTriangleOverlay: HTMLElement | null = null;
   let indicatorInstantRaf: number | null = null;
+  let viewportTrackingInstantRaf: number | null = null;
   let viewportOffsetLeft = 0;
   let viewportOffsetTop = 0;
+  let viewportInitialInstant = false;
+  let viewportTrackingInstant = false;
 
   const cleanups: Array<() => void> = [];
   const contentPresence = new Map<
@@ -267,14 +270,38 @@ export function createNavigationMenu(
     positioner.style.pointerEvents = "";
     positioner.style.transform = "";
     positioner.style.removeProperty("--transform-origin");
-    positioner.removeAttribute("data-instant");
   };
-  const removeViewportInstant = () => {
-    viewport?.removeAttribute("data-instant");
+  const clearViewportTrackingInstantRaf = () => {
+    if (viewportTrackingInstantRaf !== null) {
+      cancelAnimationFrame(viewportTrackingInstantRaf);
+      viewportTrackingInstantRaf = null;
+    }
+  };
+  const syncViewportInstant = () => {
+    const isInstant = viewportInitialInstant || viewportTrackingInstant;
+    if (viewport) {
+      if (isInstant) viewport.setAttribute("data-instant", "");
+      else viewport.removeAttribute("data-instant");
+    }
     const positioner = viewportPortal?.container;
     if (positioner instanceof HTMLElement) {
-      positioner.removeAttribute("data-instant");
+      if (isInstant) positioner.setAttribute("data-instant", "");
+      else positioner.removeAttribute("data-instant");
     }
+  };
+  const scheduleViewportTrackingInstantClear = () => {
+    clearViewportTrackingInstantRaf();
+    viewportTrackingInstantRaf = requestAnimationFrame(() => {
+      viewportTrackingInstantRaf = null;
+      viewportTrackingInstant = false;
+      syncViewportInstant();
+    });
+  };
+  const removeViewportInstant = () => {
+    clearViewportTrackingInstantRaf();
+    viewportInitialInstant = false;
+    viewportTrackingInstant = false;
+    syncViewportInstant();
   };
   const viewportPresence = viewport
     ? createPresenceLifecycle({
@@ -1377,7 +1404,10 @@ export function createNavigationMenu(
     elementResize: true,
     layoutShift: true,
     onUpdate: () => {
+      viewportTrackingInstant = true;
+      syncViewportInstant();
       syncActiveViewportLayout();
+      scheduleViewportTrackingInstantClear();
     },
   });
 
@@ -1590,18 +1620,12 @@ export function createNavigationMenu(
       if (viewport) {
         viewport.setAttribute("data-state", isOpen ? "open" : "closed");
         viewport.style.pointerEvents = isOpen ? "auto" : "none";
-        const viewportPositioner =
-          viewportPortal?.container as HTMLElement | undefined;
-
-        // Set data-instant on initial open to skip size animation
-        if (isOpen && !isSwitching) {
-          viewport.setAttribute("data-instant", "");
-          viewportPositioner?.setAttribute("data-instant", "");
-        } else if (isSwitching) {
-          removeViewportInstant();
-        } else if (!isOpen) {
-          removeViewportInstant();
+        viewportInitialInstant = isOpen && !isSwitching;
+        if (!isOpen || isSwitching) {
+          clearViewportTrackingInstantRaf();
+          viewportTrackingInstant = false;
         }
+        syncViewportInstant();
 
         if (direction) {
           viewport.style.setProperty(

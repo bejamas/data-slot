@@ -227,8 +227,10 @@ and restored to its original markup location when inactive/closed.
 }
 ```
 
-`data-instant` is used for the initial open phase and cleared when switching or closing.
-Use it to skip first-open transitions without suppressing exit animations.
+`data-instant` is used for the initial open phase and for sync-driven anchor tracking updates
+(for example when a sticky trigger moves while the menu is open). It is cleared when switching,
+closing, or after the tracking update settles. Use it to skip those reposition transitions without
+suppressing exit animations.
 
 ### Motion Animations
 
