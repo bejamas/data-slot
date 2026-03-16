@@ -11,6 +11,7 @@ import {
   setRootBinding,
   clearRootBinding,
   computeFloatingPosition,
+  createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
 } from "@data-slot/core";
@@ -1174,6 +1175,13 @@ export function createNavigationMenu(
 
     // Measure after content is visible.
     requestAnimationFrame(() => {
+      if (
+        viewport.getAttribute("data-state") !== "open" ||
+        content.getAttribute("data-state") !== "active"
+      ) {
+        return;
+      }
+
       const firstChild = content.firstElementChild as HTMLElement | null;
       const lastChild = content.lastElementChild as HTMLElement | null;
       const firstStyle = firstChild ? getComputedStyle(firstChild) : null;
@@ -1355,6 +1363,26 @@ export function createNavigationMenu(
     });
   };
 
+  const syncActiveViewportLayout = (data = getActiveData()) => {
+    if (!data) return;
+    const placement = resolvePlacement(data.item, data.content);
+    updateViewportSize(data.content, data.trigger, placement);
+  };
+
+  const viewportPositionSync = createPositionSync({
+    observedElements: [root, ...triggers],
+    isActive: () => currentValue !== null,
+    ancestorScroll: true,
+    ancestorResize: true,
+    elementResize: true,
+    layoutShift: true,
+    onUpdate: () => {
+      syncActiveViewportLayout();
+    },
+  });
+
+  cleanups.push(() => viewportPositionSync.stop());
+
   const getMotionDirection = (newIndex: number): "left" | "right" => {
     if (previousIndex === -1) return "right";
     return newIndex > previousIndex ? "right" : "left";
@@ -1519,6 +1547,7 @@ export function createNavigationMenu(
         mountContentInViewport(newData.content);
         const presence = contentPresence.get(newData.content);
         presence?.enter();
+        viewportPositionSync.start();
 
         if (direction) {
           const enterDirection =
@@ -1534,11 +1563,11 @@ export function createNavigationMenu(
         newData.content.style.pointerEvents = "auto";
         previousIndex = newData.index;
 
-        const placement = resolvePlacement(newData.item, newData.content);
-        updateViewportSize(newData.content, newData.trigger, placement);
+        syncActiveViewportLayout(newData);
         observeActiveContent(newData);
         updateIndicator(newData.trigger); // Indicator follows active trigger
       } else {
+        viewportPositionSync.stop();
         hideHoverBridge();
         clearHoverSafetyState();
         viewportPresence?.exit();
@@ -2053,9 +2082,6 @@ export function createNavigationMenu(
   // Recompute indicator position on window resize or list scroll
   cleanups.push(
     on(window, "resize", () => {
-      if (currentValue) {
-        requestAnimationFrame(() => updateViewportPositioner());
-      }
       if (currentValue || hoveredTrigger) {
         requestAnimationFrame(() => syncIndicator(hoveredTrigger));
       }
