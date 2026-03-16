@@ -191,6 +191,7 @@ The component sets these attributes automatically:
 | Arrow | `data-side` | `"top"` \| `"right"` \| `"bottom"` \| `"left"` \| `"inline-start"` \| `"inline-end"` |
 | Arrow | `data-align` | `"start"` \| `"center"` \| `"end"` |
 | Arrow | `data-uncentered` | Present when the arrow cannot stay perfectly centered |
+| Arrow | `aria-hidden` | `"true"` |
 | Trigger | `aria-describedby` | Content ID when open, removed when closed |
 
 ## Styling
@@ -200,6 +201,7 @@ By default, content is portaled to `document.body` while open.
 The positioned element (`tooltip-positioner`, or `tooltip-content` when `portal` is disabled) gets `--transform-origin`, which `tooltip-content` can use for transform animations via CSS inheritance.
 Use `data-open` / `data-closed`, `data-starting-style` / `data-ending-style`, `data-side`, `data-align`, and `data-instant` for styling and animations.
 Placement uses layout dimensions, so `scale`/`zoom` animations on `tooltip-content` remain stable without adding an extra wrapper.
+Tooltip arrow geometry is runtime-owned: the controller writes inline `top` / `left` coordinates and `position: absolute` on `tooltip-arrow`. CSS should only handle edge attachment, rotation, and optional cosmetic nudges. Avoid overriding the arrow cross-axis with helpers like `top-1/2`, `left-1/2`, or `-translate-y-1/2`.
 
 ### Recommended CSS
 
@@ -250,7 +252,6 @@ The example below matches the Base/shadcn composition style: real `tooltip-arrow
 }
 
 [data-slot="tooltip-arrow"] {
-  position: absolute;
   width: 0.625rem;
   height: 0.625rem;
   background: inherit;
@@ -260,10 +261,22 @@ The example below matches the Base/shadcn composition style: real `tooltip-arrow
 
 [data-slot="tooltip-arrow"][data-side="top"] { bottom: -0.25rem; }
 [data-slot="tooltip-arrow"][data-side="bottom"] { top: -0.25rem; }
-[data-slot="tooltip-arrow"][data-side="left"] { right: -0.25rem; }
-[data-slot="tooltip-arrow"][data-side="right"] { left: -0.25rem; }
-[data-slot="tooltip-arrow"][data-side="inline-start"] { right: -0.25rem; }
-[data-slot="tooltip-arrow"][data-side="inline-end"] { left: -0.25rem; }
+[data-slot="tooltip-arrow"][data-side="left"] {
+  right: -0.25rem;
+  transform: translateX(-1.5px) rotate(45deg);
+}
+[data-slot="tooltip-arrow"][data-side="right"] {
+  left: -0.25rem;
+  transform: translateX(1.5px) rotate(45deg);
+}
+[data-slot="tooltip-arrow"][data-side="inline-start"] {
+  right: -0.25rem;
+  transform: translateX(-1.5px) rotate(45deg);
+}
+[data-slot="tooltip-arrow"][data-side="inline-end"] {
+  left: -0.25rem;
+  transform: translateX(1.5px) rotate(45deg);
+}
 ```
 
 ### Tailwind Example
@@ -291,9 +304,13 @@ Use content and arrow data attributes for open-state styling:
              data-[side=top]:-bottom-1
              data-[side=bottom]:-top-1
              data-[side=left]:-right-1
+             data-[side=left]:-translate-x-[1.5px]
              data-[side=right]:-left-1
+             data-[side=right]:translate-x-[1.5px]
              data-[side=inline-start]:-right-1
-             data-[side=inline-end]:-left-1"
+             data-[side=inline-start]:-translate-x-[1.5px]
+             data-[side=inline-end]:-left-1
+             data-[side=inline-end]:translate-x-[1.5px]"
     ></div>
   </div>
 </div>

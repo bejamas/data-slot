@@ -156,6 +156,11 @@ export function createTooltip(
     throw new Error("Tooltip requires trigger and content slots");
   }
 
+  if (arrow) {
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.style.position = "absolute";
+  }
+
   // Resolve options with explicit precedence: JS > data-* > default
   const delay = options.delay ?? getDataNumber(root, "delay") ?? 300;
   const skipDelayDuration =
@@ -263,6 +268,8 @@ export function createTooltip(
     contentRect: DOMRect
   ) => {
     if (!arrow) return;
+
+    arrow.style.position = "absolute";
 
     const arrowRect = arrow.getBoundingClientRect();
     const arrowWidth = arrow.offsetWidth > 0 ? arrow.offsetWidth : arrowRect.width;

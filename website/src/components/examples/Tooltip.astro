@@ -12,7 +12,7 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
     Tooltip content
     <div
       data-slot="tooltip-arrow"
-      class="tooltip-arrow tooltip-arrow-logical"
+      class="tooltip-arrow"
     ></div>
   </div>
 </div>
@@ -87,11 +87,11 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
     left: -0.25rem;
     transform: translateX(1.5px) rotate(45deg);
   }
-  .tooltip-arrow-logical[data-side="inline-start"] {
+  .tooltip-arrow[data-side="inline-start"] {
     right: -0.25rem;
     transform: translateX(-1.5px) rotate(45deg);
   }
-  .tooltip-arrow-logical[data-side="inline-end"] {
+  .tooltip-arrow[data-side="inline-end"] {
     left: -0.25rem;
     transform: translateX(1.5px) rotate(45deg);
   }
@@ -163,28 +163,28 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
         <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Top</button>
         <div data-slot="tooltip-content" data-side="top" class="tooltip-content tooltip-content-logical">
           Side: top (default)
-          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+          <div data-slot="tooltip-arrow" class="tooltip-arrow"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="tooltip-root">
         <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Bottom</button>
         <div data-slot="tooltip-content" data-side="bottom" class="tooltip-content tooltip-content-logical">
           Side: bottom
-          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+          <div data-slot="tooltip-arrow" class="tooltip-arrow"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="tooltip-root">
         <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Left</button>
         <div data-slot="tooltip-content" data-side="left" class="tooltip-content tooltip-content-logical">
           Side: left
-          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+          <div data-slot="tooltip-arrow" class="tooltip-arrow"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="tooltip-root">
         <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Right</button>
         <div data-slot="tooltip-content" data-side="right" class="tooltip-content tooltip-content-logical">
           Side: right
-          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+          <div data-slot="tooltip-arrow" class="tooltip-arrow"></div>
         </div>
       </div>
     </div>
@@ -193,14 +193,14 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
         <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Inline start</button>
         <div data-slot="tooltip-content" data-side="inline-start" class="tooltip-content tooltip-content-logical">
           Side: inline-start
-          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+          <div data-slot="tooltip-arrow" class="tooltip-arrow"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="tooltip-root">
         <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Inline end</button>
         <div data-slot="tooltip-content" data-side="inline-end" class="tooltip-content tooltip-content-logical">
           Side: inline-end
-          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+          <div data-slot="tooltip-arrow" class="tooltip-arrow"></div>
         </div>
       </div>
     </div>
@@ -308,10 +308,9 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
     </div>
   </div>
   <p slot="note" class="mt-3">
-    Use a real <code>tooltip-arrow</code> element for Base/shadcn composition. Logical
-    <code>inline-start</code> / <code>inline-end</code> sides follow the current
-    <code>dir</code>, and warm-up transitions surface through valued
-    <code>data-instant</code> attributes.
+    Use a real <code>tooltip-arrow</code> element for Base/shadcn composition. The
+    runtime sets arrow <code>top</code> / <code>left</code> inline, so authored CSS
+    should only handle edge attachment, rotation, and any optional left/right nudge.
   </p>
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
   <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />

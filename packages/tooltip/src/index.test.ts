@@ -480,7 +480,7 @@ describe('Tooltip', () => {
       controller.destroy()
     })
 
-    it('positions tooltip-arrow on the cross axis and mirrors placement attrs', async () => {
+    it('positions tooltip-arrow with runtime-owned inline geometry and mirrors placement attrs', async () => {
       const { trigger, content, controller } = setup(
         {
           side: 'top',
@@ -518,7 +518,55 @@ describe('Tooltip', () => {
 
       expect(arrow.getAttribute('data-side')).toBe('top')
       expect(arrow.getAttribute('data-align')).toBe('center')
+      expect(arrow.getAttribute('aria-hidden')).toBe('true')
+      expect(arrow.style.position).toBe('absolute')
       expect(arrow.style.left).toBe('55px')
+      expect(arrow.style.top).toBe('')
+      expect(arrow.hasAttribute('data-uncentered')).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('positions tooltip-arrow vertically for left and right placements', async () => {
+      const { trigger, content, controller } = setup(
+        {
+          side: 'left',
+          align: 'center',
+          sideOffset: 4,
+          avoidCollisions: false,
+        },
+        `
+          <div data-slot="tooltip" id="root">
+            <button data-slot="tooltip-trigger">Hover me</button>
+            <div data-slot="tooltip-content">
+              Tooltip text
+              <div data-slot="tooltip-arrow"></div>
+            </div>
+          </div>
+        `
+      )
+
+      const arrow = getArrow(document)!
+      trigger.getBoundingClientRect = () => rect(200, 100, 40, 20)
+      content.getBoundingClientRect = () => {
+        const positioner = getPositioner(content)
+        if (positioner.style.transform) {
+          const { x, y } = getTranslate3dXY(positioner.style.transform)
+          return rect(x, y, 120, 40)
+        }
+        return rect(0, 0, 120, 40)
+      }
+      Object.defineProperty(arrow, 'offsetWidth', { configurable: true, value: 10 })
+      Object.defineProperty(arrow, 'offsetHeight', { configurable: true, value: 10 })
+      arrow.getBoundingClientRect = () => rect(0, 0, 10, 10)
+
+      controller.show()
+      await waitForRaf()
+
+      expect(arrow.getAttribute('data-side')).toBe('left')
+      expect(arrow.style.top).toBe('15px')
+      expect(arrow.style.left).toBe('')
+      expect(arrow.style.position).toBe('absolute')
       expect(arrow.hasAttribute('data-uncentered')).toBe(false)
 
       controller.destroy()
