@@ -3315,7 +3315,6 @@ describe("NavigationMenu", () => {
       rootTop = 60;
       triggerTop = 60;
       outer.dispatchEvent(new Event("scroll"));
-      await waitForAnimationFrame();
 
       expect(viewportPositioner.style.top).toBe("104px");
       expect(viewportPositioner.style.left).toBe("150px");
@@ -3398,7 +3397,6 @@ describe("NavigationMenu", () => {
       rootTop = 60;
       triggerTop = 60;
       outer.dispatchEvent(new Event("scroll"));
-      await waitForAnimationFrame();
 
       expect(viewport.hasAttribute("data-instant")).toBe(true);
       expect(viewportPositioner.hasAttribute("data-instant")).toBe(true);

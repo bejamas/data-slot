@@ -543,6 +543,7 @@ export interface PositionSyncOptions {
   observedElements?: readonly Element[];
   ignoreScrollTarget?: (target: EventTarget | null) => boolean;
   ancestorScroll?: boolean;
+  syncOnScroll?: boolean;
   ancestorResize?: boolean;
   elementResize?: boolean;
   layoutShift?: boolean;
@@ -692,6 +693,7 @@ export function createPositionSync(options: PositionSyncOptions): PositionSyncCo
   const isActive = options.isActive ?? (() => true);
   const observedElements = options.observedElements ?? [];
   const ancestorScroll = options.ancestorScroll ?? true;
+  const syncOnScroll = options.syncOnScroll ?? false;
   const ancestorResize = options.ancestorResize ?? true;
   const elementResize = options.elementResize ?? typeof ResizeObserver !== "undefined";
   const layoutShift = options.layoutShift ?? false;
@@ -711,10 +713,21 @@ export function createPositionSync(options: PositionSyncOptions): PositionSyncCo
       if (isActive()) options.onUpdate();
     });
   };
+  const cancelScheduled = () => {
+    if (rafId !== null) {
+      win.cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  };
 
   const onResize = () => schedule();
   const onScroll = (e: Event) => {
     if (options.ignoreScrollTarget?.(e.target)) return;
+    if (syncOnScroll) {
+      cancelScheduled();
+      if (isActive()) options.onUpdate();
+      return;
+    }
     schedule();
   };
 
@@ -808,8 +821,7 @@ export function createPositionSync(options: PositionSyncOptions): PositionSyncCo
     started = false;
 
     if (rafId !== null) {
-      win.cancelAnimationFrame(rafId);
-      rafId = null;
+      cancelScheduled();
     }
 
     if (frameId !== null) {

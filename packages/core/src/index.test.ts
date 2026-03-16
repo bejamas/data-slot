@@ -1194,6 +1194,34 @@ describe('core/popup', () => {
     sync.stop()
   })
 
+  it('createPositionSync can update synchronously from ancestor scroll', async () => {
+    document.body.innerHTML = `
+      <div id="outer" style="overflow: auto; max-height: 100px;">
+        <div style="height: 300px;">
+          <div id="anchor"></div>
+        </div>
+      </div>
+    `
+    const outer = document.getElementById('outer')!
+    const anchor = document.getElementById('anchor')!
+    let updates = 0
+
+    const sync = createPositionSync({
+      observedElements: [anchor],
+      syncOnScroll: true,
+      onUpdate: () => {
+        updates += 1
+      },
+    })
+
+    sync.start()
+    outer.dispatchEvent(new Event('scroll'))
+    expect(updates).toBe(1)
+    await waitForRaf()
+    expect(updates).toBe(1)
+    sync.stop()
+  })
+
   it('createPositionSync honors ignoreScrollTarget', async () => {
     document.body.innerHTML = `
       <div id="content" style="overflow: auto; max-height: 100px;">

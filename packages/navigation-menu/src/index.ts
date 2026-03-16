@@ -1429,6 +1429,7 @@ export function createNavigationMenu(
     observedElements: [root, ...triggers],
     isActive: () => currentValue !== null,
     ancestorScroll: true,
+    syncOnScroll: true,
     ancestorResize: true,
     elementResize: true,
     layoutShift: true,
