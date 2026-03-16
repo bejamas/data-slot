@@ -76,6 +76,7 @@ const menu = createNavigationMenu(element, {
 | `align` | `"start" \| "center" \| "end"` | `"start"` | Viewport alignment on cross-axis |
 | `sideOffset` | `number` | `0` | Distance from trigger to viewport (px) |
 | `alignOffset` | `number` | `0` | Cross-axis alignment offset (px) |
+| `positionMethod` | `"absolute" \| "fixed"` | `"absolute"` | Positioning strategy for the shared viewport positioner |
 | `safeTriangle` | `boolean` | `false` | Enable hover safe-triangle switching guard |
 | `onValueChange` | `(value: string \| null) => void` | `undefined` | Callback when active item changes |
 | `debugSafeTriangle` | `boolean` | `false` | Show red hover safe-triangle debug overlay |
@@ -93,6 +94,7 @@ Options can also be set via data attributes on the root element. JS options take
 | `data-align` | string | `"start"` | Viewport alignment: `"start"`, `"center"`, or `"end"` |
 | `data-side-offset` | number | `0` | Distance from trigger to viewport (px) |
 | `data-align-offset` | number | `0` | Cross-axis alignment offset (px) |
+| `data-position-method` | string | `"absolute"` | Positioning strategy: `"absolute"` or `"fixed"` |
 | `data-safe-triangle` | boolean | `false` | Enable hover safe-triangle switching guard |
 | `data-debug-safe-triangle` | boolean | `false` | Show red hover safe-triangle debug overlay |
 
@@ -175,6 +177,10 @@ at the navigation root so submenu layers are not clipped by local stacking conte
 Runtime positioner placement styles are reset on close, so restored authored positioners do not
 leave stale geometry that can affect document overflow.
 
+The runtime owns `position`, `top`, `left`, `width`, and `height` on the viewport positioner.
+Use `positionMethod: "fixed"` or `data-position-method="fixed"` when the menu needs viewport-based
+anchoring, such as inside sticky headers.
+
 The active `navigation-menu-content` panel is mounted inside `navigation-menu-viewport` while open
 and restored to its original markup location when inactive/closed.
 
@@ -190,9 +196,8 @@ and restored to its original markup location when inactive/closed.
   display: block;
 }
 
-/* Positioner owns placement in page coordinates */
+/* Positioner owns placement geometry */
 [data-slot="navigation-menu-viewport-positioner"] {
-  position: absolute;
   top: 0;
   left: 0;
   transition: top 0.3s, left 0.3s;

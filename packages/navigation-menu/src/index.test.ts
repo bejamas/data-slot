@@ -3256,6 +3256,156 @@ describe("NavigationMenu", () => {
       controller.destroy();
     });
 
+    it("supports fixed positioner mode from the root data attribute", async () => {
+      document.body.innerHTML = `
+        <nav
+          data-slot="navigation-menu"
+          id="root"
+          data-position-method="fixed"
+        >
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">Content</div>
+            </li>
+          </ul>
+          <div data-slot="navigation-menu-viewport"></div>
+        </nav>
+      `;
+      const root = document.getElementById("root") as HTMLElement;
+      const trigger = root.querySelector(
+        '[data-slot="navigation-menu-trigger"]',
+      ) as HTMLElement;
+      const content = root.querySelector(
+        '[data-slot="navigation-menu-content"]',
+      ) as HTMLElement;
+      const viewport = root.querySelector(
+        '[data-slot="navigation-menu-viewport"]',
+      ) as HTMLElement;
+      const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+      const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+        ({
+          x: left,
+          y: top,
+          left,
+          top,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      const scrollXDescriptor = Object.getOwnPropertyDescriptor(window, "scrollX");
+      const scrollYDescriptor = Object.getOwnPropertyDescriptor(window, "scrollY");
+      Object.defineProperty(window, "scrollX", { configurable: true, value: 40 });
+      Object.defineProperty(window, "scrollY", { configurable: true, value: 300 });
+
+      try {
+        root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+        trigger.getBoundingClientRect = () => rect(150, 100, 100, 40);
+        content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+
+        controller.open("products");
+        await waitForPresenceExit();
+
+        const viewportPositioner = getViewportPositioner(viewport);
+        expect(viewportPositioner.style.position).toBe("fixed");
+        expect(viewportPositioner.style.top).toBe("140px");
+        expect(viewportPositioner.style.left).toBe("150px");
+      } finally {
+        if (scrollXDescriptor) {
+          Object.defineProperty(window, "scrollX", scrollXDescriptor);
+        } else {
+          Reflect.deleteProperty(window as Window & Record<string, unknown>, "scrollX");
+        }
+        if (scrollYDescriptor) {
+          Object.defineProperty(window, "scrollY", scrollYDescriptor);
+        } else {
+          Reflect.deleteProperty(window as Window & Record<string, unknown>, "scrollY");
+        }
+        controller.destroy();
+      }
+    });
+
+    it("lets the JS positionMethod option override the data attribute", async () => {
+      document.body.innerHTML = `
+        <nav
+          data-slot="navigation-menu"
+          id="root"
+          data-position-method="fixed"
+        >
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="products">
+              <button data-slot="navigation-menu-trigger">Products</button>
+              <div data-slot="navigation-menu-content">Content</div>
+            </li>
+          </ul>
+          <div data-slot="navigation-menu-viewport"></div>
+        </nav>
+      `;
+      const root = document.getElementById("root") as HTMLElement;
+      const trigger = root.querySelector(
+        '[data-slot="navigation-menu-trigger"]',
+      ) as HTMLElement;
+      const content = root.querySelector(
+        '[data-slot="navigation-menu-content"]',
+      ) as HTMLElement;
+      const viewport = root.querySelector(
+        '[data-slot="navigation-menu-viewport"]',
+      ) as HTMLElement;
+      const controller = createNavigationMenu(root, {
+        delayOpen: 0,
+        delayClose: 0,
+        positionMethod: "absolute",
+      });
+
+      const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+        ({
+          x: left,
+          y: top,
+          left,
+          top,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      const scrollXDescriptor = Object.getOwnPropertyDescriptor(window, "scrollX");
+      const scrollYDescriptor = Object.getOwnPropertyDescriptor(window, "scrollY");
+      Object.defineProperty(window, "scrollX", { configurable: true, value: 40 });
+      Object.defineProperty(window, "scrollY", { configurable: true, value: 300 });
+
+      try {
+        root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+        trigger.getBoundingClientRect = () => rect(150, 100, 100, 40);
+        content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+
+        controller.open("products");
+        await waitForPresenceExit();
+
+        const viewportPositioner = getViewportPositioner(viewport);
+        expect(viewportPositioner.style.position).toBe("absolute");
+        expect(viewportPositioner.style.top).toBe("440px");
+        expect(viewportPositioner.style.left).toBe("190px");
+      } finally {
+        if (scrollXDescriptor) {
+          Object.defineProperty(window, "scrollX", scrollXDescriptor);
+        } else {
+          Reflect.deleteProperty(window as Window & Record<string, unknown>, "scrollX");
+        }
+        if (scrollYDescriptor) {
+          Object.defineProperty(window, "scrollY", scrollYDescriptor);
+        } else {
+          Reflect.deleteProperty(window as Window & Record<string, unknown>, "scrollY");
+        }
+        controller.destroy();
+      }
+    });
+
     it("repositions the viewport positioner when the open menu moves inside a scrollable ancestor", async () => {
       document.body.innerHTML = `
         <div id="outer" style="overflow: auto; max-height: 120px;">
@@ -3309,6 +3459,73 @@ describe("NavigationMenu", () => {
       await waitForPresenceExit();
 
       const viewportPositioner = getViewportPositioner(viewport);
+      expect(viewportPositioner.style.top).toBe("144px");
+      expect(viewportPositioner.style.left).toBe("150px");
+
+      rootTop = 60;
+      triggerTop = 60;
+      outer.dispatchEvent(new Event("scroll"));
+
+      expect(viewportPositioner.style.top).toBe("104px");
+      expect(viewportPositioner.style.left).toBe("150px");
+
+      controller.destroy();
+    });
+
+    it("tracks sticky-style viewport movement in fixed positioner mode", async () => {
+      document.body.innerHTML = `
+        <div id="outer" style="overflow: auto; max-height: 120px;">
+          <div style="height: 320px;">
+            <nav data-slot="navigation-menu" id="root" data-position-method="fixed">
+              <ul data-slot="navigation-menu-list">
+                <li data-slot="navigation-menu-item" data-value="products">
+                  <button data-slot="navigation-menu-trigger">Products</button>
+                  <div data-slot="navigation-menu-content">Content</div>
+                </li>
+              </ul>
+              <div data-slot="navigation-menu-viewport"></div>
+            </nav>
+          </div>
+        </div>
+      `;
+
+      const outer = document.getElementById("outer") as HTMLElement;
+      const root = document.getElementById("root") as HTMLElement;
+      const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+      const content = root.querySelector('[data-slot="navigation-menu-content"]') as HTMLElement;
+      const viewport = root.querySelector('[data-slot="navigation-menu-viewport"]') as HTMLElement;
+      const controller = createNavigationMenu(root, {
+        delayOpen: 0,
+        delayClose: 0,
+        side: "bottom",
+        align: "start",
+        sideOffset: 4,
+      });
+
+      const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+        ({
+          x: left,
+          y: top,
+          left,
+          top,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+
+      let rootTop = 100;
+      let triggerTop = 100;
+      root.getBoundingClientRect = () => rect(100, rootTop, 400, 40);
+      trigger.getBoundingClientRect = () => rect(150, triggerTop, 100, 40);
+      content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+
+      controller.open("products");
+      await waitForPresenceExit();
+
+      const viewportPositioner = getViewportPositioner(viewport);
+      expect(viewportPositioner.style.position).toBe("fixed");
       expect(viewportPositioner.style.top).toBe("144px");
       expect(viewportPositioner.style.left).toBe("150px");
 

@@ -24,6 +24,8 @@ export type Align = "start" | "center" | "end";
 const ALIGNS = ["start", "center", "end"] as const;
 const SIDES = ["top", "right", "bottom", "left"] as const;
 type Side = (typeof SIDES)[number];
+export type PositionMethod = "absolute" | "fixed";
+const POSITION_METHODS = ["absolute", "fixed"] as const;
 
 interface PlacementConfig {
   side: Side;
@@ -92,6 +94,8 @@ export interface NavigationMenuOptions {
   sideOffset?: number;
   /** Offset along alignment axis (px) */
   alignOffset?: number;
+  /** Positioning strategy for the shared viewport positioner */
+  positionMethod?: PositionMethod;
   /** Enable hover safe-triangle behavior (opt-in) */
   safeTriangle?: boolean;
   /** Callback when active item changes */
@@ -158,6 +162,10 @@ export function createNavigationMenu(
     options.sideOffset ?? getDataNumber(root, "sideOffset") ?? 0;
   const rootAlignOffset =
     options.alignOffset ?? getDataNumber(root, "alignOffset") ?? 0;
+  const rootPositionMethod =
+    options.positionMethod ??
+    getDataEnum(root, "positionMethod", POSITION_METHODS) ??
+    "absolute";
   const safeTriangle =
     options.safeTriangle ?? getDataBool(root, "safeTriangle") ?? false;
   const debugSafeTriangle =
@@ -365,10 +373,13 @@ export function createNavigationMenu(
     const positioner = viewportPortal.container as HTMLElement;
     const win = root.ownerDocument.defaultView ?? window;
     const rootRect = (root as HTMLElement).getBoundingClientRect();
-    const positionerTop = rootRect.top + win.scrollY + viewportOffsetTop;
-    const positionerLeft = rootRect.left + win.scrollX + viewportOffsetLeft;
+    const isFixed = rootPositionMethod === "fixed";
+    const positionerTop =
+      rootRect.top + viewportOffsetTop + (isFixed ? 0 : win.scrollY);
+    const positionerLeft =
+      rootRect.left + viewportOffsetLeft + (isFixed ? 0 : win.scrollX);
 
-    positioner.style.position = "absolute";
+    positioner.style.position = rootPositionMethod;
     positioner.style.top = `${positionerTop}px`;
     positioner.style.left = `${positionerLeft}px`;
     positioner.style.width = `${rootRect.width}px`;

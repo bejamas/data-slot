@@ -2,7 +2,8 @@
 import { Code } from "astro:components";
 import ExampleBlock from "../ExampleBlock.astro";
 
-const cssCode = `<nav data-slot="navigation-menu" class="nav-menu">
+const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
+<nav data-slot="navigation-menu" class="nav-menu">
   <ul data-slot="navigation-menu-list" class="nav-menu-list">
     <li data-slot="navigation-menu-item" data-value="products" class="nav-menu-item">
       <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Products</button>
@@ -58,7 +59,8 @@ const cssCode = `<nav data-slot="navigation-menu" class="nav-menu">
   .nav-menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; width: 380px; }
 </style>`;
 
-const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
+const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -->
+<nav data-slot="navigation-menu" class="relative">
   <ul data-slot="navigation-menu-list" class="flex relative list-none">
     <li data-slot="navigation-menu-item" data-value="products" class="static">
       <button
@@ -234,7 +236,7 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
       <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
     </ul>
   
-    <div data-slot="navigation-menu-positioner" class="isolate z-50">
+    <div data-slot="navigation-menu-viewport-positioner" class="isolate z-50">
         <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
     </div>
 
@@ -404,6 +406,10 @@ const tailwindCode = `<nav data-slot="navigation-menu" class="relative">
     </p>
     <p class="mt-3 text-muted">
       Use <code>data-align="start|center|end"</code> on items to control alignment.
+    </p>
+    <p class="mt-3 text-muted">
+      For sticky headers, opt into viewport anchoring with <code>data-position-method="fixed"</code>
+      or <code>createNavigationMenu(root, &#123; positionMethod: "fixed" &#125;)</code>.
     </p>
   </div>
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
