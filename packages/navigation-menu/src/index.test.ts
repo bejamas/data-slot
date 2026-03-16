@@ -3315,7 +3315,7 @@ describe("NavigationMenu", () => {
       rootTop = 60;
       triggerTop = 60;
       outer.dispatchEvent(new Event("scroll"));
-      await waitForPresenceExit();
+      await waitForAnimationFrame();
 
       expect(viewportPositioner.style.top).toBe("104px");
       expect(viewportPositioner.style.left).toBe("150px");

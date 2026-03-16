@@ -1193,12 +1193,216 @@ export function createNavigationMenu(
     hoverSafeTriangleOverlay = null;
   });
 
-  const updateViewportSize = (
+  const applyViewportLayout = (
     content: HTMLElement,
     trigger: HTMLElement,
     placement: PlacementConfig,
   ) => {
     if (!viewport) return;
+
+    if (
+      viewport.getAttribute("data-state") !== "open" ||
+      content.getAttribute("data-state") !== "active"
+    ) {
+      return;
+    }
+
+    const firstChild = content.firstElementChild as HTMLElement | null;
+    const lastChild = content.lastElementChild as HTMLElement | null;
+    const firstStyle = firstChild ? getComputedStyle(firstChild) : null;
+    const lastStyle = lastChild ? getComputedStyle(lastChild) : null;
+    const firstMarginTop = firstStyle
+      ? parseFloat(firstStyle.marginTop) || 0
+      : 0;
+    const lastMarginBottom = lastStyle
+      ? parseFloat(lastStyle.marginBottom) || 0
+      : 0;
+    const measureAxis = (...values: number[]): number => {
+      let max = 0;
+      for (const value of values) {
+        if (Number.isFinite(value)) max = Math.max(max, value);
+      }
+      return max;
+    };
+    const contentRect = content.getBoundingClientRect();
+    // Prefer intrinsic layout dimensions so transform-based animations don't shrink measurements.
+    const contentWidth = measureAxis(
+      contentRect.width,
+      content.scrollWidth,
+      content.offsetWidth,
+      content.clientWidth,
+    );
+    const layoutHeight = measureAxis(
+      contentRect.height,
+      content.scrollHeight,
+      content.offsetHeight,
+      content.clientHeight,
+    );
+    // Include outer margins used by content wrappers (commonly collapsed on first/last child).
+    const contentHeight = layoutHeight + firstMarginTop + lastMarginBottom;
+    const floatingRect = {
+      top: contentRect.top,
+      left: contentRect.left,
+      width: contentWidth,
+      height: contentHeight,
+      right: contentRect.left + contentWidth,
+      bottom: contentRect.top + contentHeight,
+    };
+
+    // Get viewport margin-top for hover bridge calculation
+    const viewportStyle = getComputedStyle(viewport);
+    const viewportMarginTop = parseFloat(viewportStyle.marginTop) || 0;
+
+    viewport.style.setProperty("--viewport-width", `${contentWidth}px`);
+    // Viewport height is just the content height - margins are outside the box
+    viewport.style.setProperty("--viewport-height", `${contentHeight}px`);
+
+    const rootRect = (root as HTMLElement).getBoundingClientRect();
+    const triggerRect = trigger.getBoundingClientRect();
+    const pos = computeFloatingPosition({
+      anchorRect: triggerRect,
+      contentRect: floatingRect,
+      side: placement.side,
+      align: placement.align,
+      sideOffset: placement.sideOffset,
+      alignOffset: placement.alignOffset,
+      avoidCollisions: false,
+      collisionPadding: 0,
+      allowedSides: SIDES,
+    });
+    const left = pos.x - rootRect.left;
+    const top = pos.y - rootRect.top;
+    viewportOffsetLeft = left;
+    viewportOffsetTop = top;
+    const originAnchor = getTransformOriginAnchor(
+      pos.side,
+      pos.align,
+      triggerRect,
+    );
+    const transformOriginX = originAnchor.x - (rootRect.left + left);
+    const transformOriginY = originAnchor.y - (rootRect.top + top);
+    const positionerOriginX = originAnchor.x - rootRect.left;
+    const positionerOriginY = originAnchor.y - rootRect.top;
+    const viewportTransformOrigin = `${transformOriginX}px ${transformOriginY}px`;
+    const positionerTransformOrigin = `${positionerOriginX}px ${positionerOriginY}px`;
+
+    viewport.style.top = "0px";
+    viewport.style.left = "0px";
+    viewport.style.willChange = "transform,width,height";
+    viewport.style.setProperty("--transform-origin", viewportTransformOrigin);
+    // Active content is mounted inside viewport.
+    content.style.top = "0px";
+    content.style.left = "0px";
+    content.style.setProperty("--transform-origin", viewportTransformOrigin);
+    viewport.setAttribute("data-side", pos.side);
+    viewport.setAttribute("data-align", pos.align);
+    content.setAttribute("data-side", pos.side);
+    content.setAttribute("data-align", pos.align);
+    const positioner = viewportPortal?.container as HTMLElement | undefined;
+    if (positioner && positioner !== viewport) {
+      positioner.setAttribute("data-side", pos.side);
+      positioner.setAttribute("data-align", pos.align);
+      positioner.style.setProperty(
+        "--transform-origin",
+        positionerTransformOrigin,
+      );
+    }
+    updateViewportPositioner();
+
+    // Build unified hover shield (rectangular gap bridge + triangular safety corridor).
+    const viewportRect = viewport.getBoundingClientRect();
+    const shieldPoints: Point[] = [];
+
+    const rootBottomGap = Math.max(0, viewportRect.top - rootRect.bottom); // viewport below
+    const rootTopGap = Math.max(0, rootRect.top - viewportRect.bottom); // viewport above
+    const rootRightGap = Math.max(0, viewportRect.left - rootRect.right); // viewport right
+    const rootLeftGap = Math.max(0, rootRect.left - viewportRect.right); // viewport left
+    const marginGap = Math.max(0, firstMarginTop + viewportMarginTop);
+    const verticalGap = Math.max(rootBottomGap, rootTopGap, marginGap);
+    const horizontalGap = Math.max(rootRightGap, rootLeftGap);
+    const triangle = safeTriangleEnabled
+      ? buildSafetyTriangle(triggerRect, rootRect, viewportRect)
+      : null;
+    activeSafetyTriangle = triangle;
+
+    const addRectPoints = (
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+    ) => {
+      if (width <= 0 || height <= 0) return;
+      shieldPoints.push(
+        { x, y },
+        { x: x + width, y },
+        { x: x + width, y: y + height },
+        { x, y: y + height },
+      );
+    };
+
+    if (verticalGap >= horizontalGap && verticalGap > 0) {
+      const gap = Math.max(rootBottomGap, rootTopGap, marginGap);
+      let rectX = left;
+      const rectY =
+        rootTopGap > rootBottomGap && rootTopGap >= marginGap
+          ? top + contentHeight
+          : top - gap;
+      let rectWidth = contentWidth;
+      if (triangle) {
+        const bridgePad = 8;
+        const baseMinX =
+          Math.min(triangle.edgeA.x, triangle.edgeB.x) - rootRect.left;
+        const baseMaxX =
+          Math.max(triangle.edgeA.x, triangle.edgeB.x) - rootRect.left;
+        rectX = baseMinX - bridgePad;
+        rectWidth = baseMaxX - baseMinX + bridgePad * 2;
+      }
+      addRectPoints(rectX, rectY, rectWidth, gap);
+    } else if (horizontalGap > 0) {
+      const gap = Math.max(rootRightGap, rootLeftGap);
+      let rectY = top;
+      const rectX =
+        rootLeftGap > rootRightGap ? left + contentWidth : left - gap;
+      let rectHeight = contentHeight;
+      if (triangle) {
+        const bridgePad = 8;
+        const baseMinY =
+          Math.min(triangle.edgeA.y, triangle.edgeB.y) - rootRect.top;
+        const baseMaxY =
+          Math.max(triangle.edgeA.y, triangle.edgeB.y) - rootRect.top;
+        rectY = baseMinY - bridgePad;
+        rectHeight = baseMaxY - baseMinY + bridgePad * 2;
+      }
+      addRectPoints(rectX, rectY, gap, rectHeight);
+    }
+
+    if (triangle) {
+      const apex = toLocalPoint(triangle.apex, rootRect);
+      const edgeA = toLocalPoint(triangle.edgeA, rootRect);
+      const edgeB = toLocalPoint(triangle.edgeB, rootRect);
+      shieldPoints.push(apex, edgeA, edgeB);
+    }
+
+    setHoverShieldShape(shieldPoints);
+    updateDebugSafeTrianglePreview();
+  };
+
+  const updateViewportSize = (
+    content: HTMLElement,
+    trigger: HTMLElement,
+    placement: PlacementConfig,
+    options: { defer?: boolean } = {},
+  ) => {
+    if (!viewport) return;
+
+    const run = () => {
+      applyViewportLayout(content, trigger, placement);
+    };
+
+    if (options.defer === false) {
+      run();
+      return;
+    }
 
     // Measure after content is visible.
     requestAnimationFrame(() => {
@@ -1208,192 +1412,17 @@ export function createNavigationMenu(
       ) {
         return;
       }
-
-      const firstChild = content.firstElementChild as HTMLElement | null;
-      const lastChild = content.lastElementChild as HTMLElement | null;
-      const firstStyle = firstChild ? getComputedStyle(firstChild) : null;
-      const lastStyle = lastChild ? getComputedStyle(lastChild) : null;
-      const firstMarginTop = firstStyle
-        ? parseFloat(firstStyle.marginTop) || 0
-        : 0;
-      const lastMarginBottom = lastStyle
-        ? parseFloat(lastStyle.marginBottom) || 0
-        : 0;
-      const measureAxis = (...values: number[]): number => {
-        let max = 0;
-        for (const value of values) {
-          if (Number.isFinite(value)) max = Math.max(max, value);
-        }
-        return max;
-      };
-      const contentRect = content.getBoundingClientRect();
-      // Prefer intrinsic layout dimensions so transform-based animations don't shrink measurements.
-      const contentWidth = measureAxis(
-        contentRect.width,
-        content.scrollWidth,
-        content.offsetWidth,
-        content.clientWidth,
-      );
-      const layoutHeight = measureAxis(
-        contentRect.height,
-        content.scrollHeight,
-        content.offsetHeight,
-        content.clientHeight,
-      );
-      // Include outer margins used by content wrappers (commonly collapsed on first/last child).
-      const contentHeight = layoutHeight + firstMarginTop + lastMarginBottom;
-      const floatingRect = {
-        top: contentRect.top,
-        left: contentRect.left,
-        width: contentWidth,
-        height: contentHeight,
-        right: contentRect.left + contentWidth,
-        bottom: contentRect.top + contentHeight,
-      };
-
-      // Get viewport margin-top for hover bridge calculation
-      const viewportStyle = getComputedStyle(viewport);
-      const viewportMarginTop = parseFloat(viewportStyle.marginTop) || 0;
-
-      viewport.style.setProperty("--viewport-width", `${contentWidth}px`);
-      // Viewport height is just the content height - margins are outside the box
-      viewport.style.setProperty("--viewport-height", `${contentHeight}px`);
-
-      const rootRect = (root as HTMLElement).getBoundingClientRect();
-      const triggerRect = trigger.getBoundingClientRect();
-      const pos = computeFloatingPosition({
-        anchorRect: triggerRect,
-        contentRect: floatingRect,
-        side: placement.side,
-        align: placement.align,
-        sideOffset: placement.sideOffset,
-        alignOffset: placement.alignOffset,
-        avoidCollisions: false,
-        collisionPadding: 0,
-        allowedSides: SIDES,
-      });
-      const left = pos.x - rootRect.left;
-      const top = pos.y - rootRect.top;
-      viewportOffsetLeft = left;
-      viewportOffsetTop = top;
-      const originAnchor = getTransformOriginAnchor(
-        pos.side,
-        pos.align,
-        triggerRect,
-      );
-      const transformOriginX = originAnchor.x - (rootRect.left + left);
-      const transformOriginY = originAnchor.y - (rootRect.top + top);
-      const positionerOriginX = originAnchor.x - rootRect.left;
-      const positionerOriginY = originAnchor.y - rootRect.top;
-      const viewportTransformOrigin = `${transformOriginX}px ${transformOriginY}px`;
-      const positionerTransformOrigin = `${positionerOriginX}px ${positionerOriginY}px`;
-
-      viewport.style.top = "0px";
-      viewport.style.left = "0px";
-      viewport.style.willChange = "transform,width,height";
-      viewport.style.setProperty("--transform-origin", viewportTransformOrigin);
-      // Active content is mounted inside viewport.
-      content.style.top = "0px";
-      content.style.left = "0px";
-      content.style.setProperty("--transform-origin", viewportTransformOrigin);
-      viewport.setAttribute("data-side", pos.side);
-      viewport.setAttribute("data-align", pos.align);
-      content.setAttribute("data-side", pos.side);
-      content.setAttribute("data-align", pos.align);
-      const positioner = viewportPortal?.container as HTMLElement | undefined;
-      if (positioner && positioner !== viewport) {
-        positioner.setAttribute("data-side", pos.side);
-        positioner.setAttribute("data-align", pos.align);
-        positioner.style.setProperty(
-          "--transform-origin",
-          positionerTransformOrigin,
-        );
-      }
-      updateViewportPositioner();
-
-      // Build unified hover shield (rectangular gap bridge + triangular safety corridor).
-      const viewportRect = viewport.getBoundingClientRect();
-      const shieldPoints: Point[] = [];
-
-      const rootBottomGap = Math.max(0, viewportRect.top - rootRect.bottom); // viewport below
-      const rootTopGap = Math.max(0, rootRect.top - viewportRect.bottom); // viewport above
-      const rootRightGap = Math.max(0, viewportRect.left - rootRect.right); // viewport right
-      const rootLeftGap = Math.max(0, rootRect.left - viewportRect.right); // viewport left
-      const marginGap = Math.max(0, firstMarginTop + viewportMarginTop);
-      const verticalGap = Math.max(rootBottomGap, rootTopGap, marginGap);
-      const horizontalGap = Math.max(rootRightGap, rootLeftGap);
-      const triangle = safeTriangleEnabled
-        ? buildSafetyTriangle(triggerRect, rootRect, viewportRect)
-        : null;
-      activeSafetyTriangle = triangle;
-
-      const addRectPoints = (
-        x: number,
-        y: number,
-        width: number,
-        height: number,
-      ) => {
-        if (width <= 0 || height <= 0) return;
-        shieldPoints.push(
-          { x, y },
-          { x: x + width, y },
-          { x: x + width, y: y + height },
-          { x, y: y + height },
-        );
-      };
-
-      if (verticalGap >= horizontalGap && verticalGap > 0) {
-        const gap = Math.max(rootBottomGap, rootTopGap, marginGap);
-        let rectX = left;
-        const rectY =
-          rootTopGap > rootBottomGap && rootTopGap >= marginGap
-            ? top + contentHeight
-            : top - gap;
-        let rectWidth = contentWidth;
-        if (triangle) {
-          const bridgePad = 8;
-          const baseMinX =
-            Math.min(triangle.edgeA.x, triangle.edgeB.x) - rootRect.left;
-          const baseMaxX =
-            Math.max(triangle.edgeA.x, triangle.edgeB.x) - rootRect.left;
-          rectX = baseMinX - bridgePad;
-          rectWidth = baseMaxX - baseMinX + bridgePad * 2;
-        }
-        addRectPoints(rectX, rectY, rectWidth, gap);
-      } else if (horizontalGap > 0) {
-        const gap = Math.max(rootRightGap, rootLeftGap);
-        let rectY = top;
-        const rectX =
-          rootLeftGap > rootRightGap ? left + contentWidth : left - gap;
-        let rectHeight = contentHeight;
-        if (triangle) {
-          const bridgePad = 8;
-          const baseMinY =
-            Math.min(triangle.edgeA.y, triangle.edgeB.y) - rootRect.top;
-          const baseMaxY =
-            Math.max(triangle.edgeA.y, triangle.edgeB.y) - rootRect.top;
-          rectY = baseMinY - bridgePad;
-          rectHeight = baseMaxY - baseMinY + bridgePad * 2;
-        }
-        addRectPoints(rectX, rectY, gap, rectHeight);
-      }
-
-      if (triangle) {
-        const apex = toLocalPoint(triangle.apex, rootRect);
-        const edgeA = toLocalPoint(triangle.edgeA, rootRect);
-        const edgeB = toLocalPoint(triangle.edgeB, rootRect);
-        shieldPoints.push(apex, edgeA, edgeB);
-      }
-
-      setHoverShieldShape(shieldPoints);
-      updateDebugSafeTrianglePreview();
+      run();
     });
   };
 
-  const syncActiveViewportLayout = (data = getActiveData()) => {
+  const syncActiveViewportLayout = (
+    data = getActiveData(),
+    options: { defer?: boolean } = {},
+  ) => {
     if (!data) return;
     const placement = resolvePlacement(data.item, data.content);
-    updateViewportSize(data.content, data.trigger, placement);
+    updateViewportSize(data.content, data.trigger, placement, options);
   };
 
   const viewportPositionSync = createPositionSync({
@@ -1406,7 +1435,7 @@ export function createNavigationMenu(
     onUpdate: () => {
       viewportTrackingInstant = true;
       syncViewportInstant();
-      syncActiveViewportLayout();
+      syncActiveViewportLayout(undefined, { defer: false });
       scheduleViewportTrackingInstantClear();
     },
   });
