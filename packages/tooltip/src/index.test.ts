@@ -84,6 +84,9 @@ describe('Tooltip', () => {
     return content
   }
 
+  const getArrow = (root: ParentNode): HTMLElement | null =>
+    root.querySelector('[data-slot="tooltip-arrow"]')
+
   const getTranslate3dXY = (transform: string): { x: number; y: number } => {
     const match = /translate3d\(\s*([-\d.]+)px\s*,\s*([-\d.]+)px\s*,\s*0(?:px)?\s*\)/.exec(
       transform
@@ -238,6 +241,25 @@ describe('Tooltip', () => {
     controller.destroy()
   })
 
+  it('applies starting-style and ending-style markers on content', async () => {
+    const { content, controller } = setup()
+
+    controller.show()
+    expect(content.hasAttribute('data-starting-style')).toBe(true)
+
+    await waitForRaf()
+    await waitForRaf()
+    expect(content.hasAttribute('data-starting-style')).toBe(false)
+
+    controller.hide()
+    expect(content.hasAttribute('data-ending-style')).toBe(true)
+
+    await waitForClose()
+    expect(content.hasAttribute('data-ending-style')).toBe(false)
+
+    controller.destroy()
+  })
+
   it('sets data-side and data-align on content', () => {
     const { content, controller } = setup()
 
@@ -289,9 +311,9 @@ describe('Tooltip', () => {
     triggerB.dispatchEvent(pointer('pointerenter', 'mouse'))
     await wait(5)
     expect(secondController.isOpen).toBe(true)
-    expect(rootB.hasAttribute('data-instant')).toBe(true)
-    expect(contentB.hasAttribute('data-instant')).toBe(true)
-    expect(getPositioner(contentB).hasAttribute('data-instant')).toBe(true)
+    expect(rootB.getAttribute('data-instant')).toBe('delay')
+    expect(contentB.getAttribute('data-instant')).toBe('delay')
+    expect(getPositioner(contentB).getAttribute('data-instant')).toBe('delay')
 
     triggerB.dispatchEvent(pointer('pointerleave', 'mouse'))
     await waitForClose()
@@ -323,9 +345,9 @@ describe('Tooltip', () => {
 
     triggerA.dispatchEvent(pointer('pointerleave', 'mouse', triggerB))
     expect(firstController.isOpen).toBe(false)
-    expect(rootA.hasAttribute('data-instant')).toBe(true)
-    expect(contentA.hasAttribute('data-instant')).toBe(true)
-    expect(getPositioner(contentA).hasAttribute('data-instant')).toBe(true)
+    expect(rootA.getAttribute('data-instant')).toBe('delay')
+    expect(contentA.getAttribute('data-instant')).toBe('delay')
+    expect(getPositioner(contentA).getAttribute('data-instant')).toBe('delay')
 
     triggerB.dispatchEvent(pointer('pointerenter', 'mouse'))
     await wait(5)
@@ -342,6 +364,35 @@ describe('Tooltip', () => {
     expect(root.hasAttribute('data-instant')).toBe(false)
     expect(content.hasAttribute('data-instant')).toBe(false)
     expect(getPositioner(content).hasAttribute('data-instant')).toBe(false)
+
+    controller.destroy()
+  })
+
+  it('sets data-instant="focus" for focus-triggered opens', async () => {
+    const { root, trigger, content, controller } = setup({ delay: 0 })
+
+    await wait(130)
+    trigger.dispatchEvent(new FocusEvent('focus', { bubbles: true }))
+    await wait(5)
+
+    expect(controller.isOpen).toBe(true)
+    expect(root.getAttribute('data-instant')).toBe('focus')
+    expect(content.getAttribute('data-instant')).toBe('focus')
+    expect(getPositioner(content).getAttribute('data-instant')).toBe('focus')
+
+    controller.destroy()
+  })
+
+  it('sets data-instant="dismiss" for escape closes', () => {
+    const { root, content, controller } = setup({ delay: 0 })
+
+    controller.show()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+
+    expect(controller.isOpen).toBe(false)
+    expect(root.getAttribute('data-instant')).toBe('dismiss')
+    expect(content.getAttribute('data-instant')).toBe('dismiss')
+    expect(getPositioner(content).getAttribute('data-instant')).toBe('dismiss')
 
     controller.destroy()
   })
@@ -429,6 +480,92 @@ describe('Tooltip', () => {
       controller.destroy()
     })
 
+    it('positions tooltip-arrow on the cross axis and mirrors placement attrs', async () => {
+      const { trigger, content, controller } = setup(
+        {
+          side: 'top',
+          align: 'center',
+          sideOffset: 4,
+          avoidCollisions: false,
+        },
+        `
+          <div data-slot="tooltip" id="root">
+            <button data-slot="tooltip-trigger">Hover me</button>
+            <div data-slot="tooltip-content">
+              Tooltip text
+              <div data-slot="tooltip-arrow"></div>
+            </div>
+          </div>
+        `
+      )
+
+      const arrow = getArrow(document)!
+      trigger.getBoundingClientRect = () => rect(100, 100, 80, 20)
+      content.getBoundingClientRect = () => {
+        const positioner = getPositioner(content)
+        if (positioner.style.transform) {
+          const { x, y } = getTranslate3dXY(positioner.style.transform)
+          return rect(x, y, 120, 40)
+        }
+        return rect(0, 0, 120, 40)
+      }
+      Object.defineProperty(arrow, 'offsetWidth', { configurable: true, value: 10 })
+      Object.defineProperty(arrow, 'offsetHeight', { configurable: true, value: 10 })
+      arrow.getBoundingClientRect = () => rect(0, 0, 10, 10)
+
+      controller.show()
+      await waitForRaf()
+
+      expect(arrow.getAttribute('data-side')).toBe('top')
+      expect(arrow.getAttribute('data-align')).toBe('center')
+      expect(arrow.style.left).toBe('55px')
+      expect(arrow.hasAttribute('data-uncentered')).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('marks tooltip-arrow as uncentered when clamped', async () => {
+      const { trigger, content, controller } = setup(
+        {
+          side: 'bottom',
+          align: 'start',
+          sideOffset: 4,
+          avoidCollisions: false,
+        },
+        `
+          <div data-slot="tooltip" id="root">
+            <button data-slot="tooltip-trigger">Hover me</button>
+            <div data-slot="tooltip-content">
+              Tooltip text
+              <div data-slot="tooltip-arrow"></div>
+            </div>
+          </div>
+        `
+      )
+
+      const arrow = getArrow(document)!
+      trigger.getBoundingClientRect = () => rect(0, 100, 10, 20)
+      content.getBoundingClientRect = () => {
+        const positioner = getPositioner(content)
+        if (positioner.style.transform) {
+          const { x, y } = getTranslate3dXY(positioner.style.transform)
+          return rect(x, y, 120, 40)
+        }
+        return rect(0, 0, 120, 40)
+      }
+      Object.defineProperty(arrow, 'offsetWidth', { configurable: true, value: 10 })
+      Object.defineProperty(arrow, 'offsetHeight', { configurable: true, value: 10 })
+      arrow.getBoundingClientRect = () => rect(0, 0, 10, 10)
+
+      controller.show()
+      await waitForRaf()
+
+      expect(arrow.style.left).toBe('5px')
+      expect(arrow.hasAttribute('data-uncentered')).toBe(true)
+
+      controller.destroy()
+    })
+
     it('resolves sideOffset/alignOffset as options > content attrs > root attrs', async () => {
       const { root, trigger, content, controller } = setup(
         {
@@ -485,6 +622,83 @@ describe('Tooltip', () => {
       expect(content.getAttribute('data-side')).toBe('top')
       const { y } = getTranslate3dXY(getPositioner(content).style.transform)
       expect(y).toBe(636)
+
+      controller.destroy()
+    })
+
+    it('preserves logical data-side output in LTR', async () => {
+      const { trigger, content, controller } = setup({
+        side: 'inline-start',
+        align: 'center',
+        sideOffset: 4,
+        avoidCollisions: false,
+      })
+
+      trigger.getBoundingClientRect = () => rect(100, 120, 60, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 80, 40)
+
+      controller.show()
+      await waitForRaf()
+
+      expect(content.getAttribute('data-side')).toBe('inline-start')
+      const { x } = getTranslate3dXY(getPositioner(content).style.transform)
+      expect(x).toBe(16)
+
+      controller.destroy()
+    })
+
+    it('flips logical sides in RTL and keeps logical output attrs', async () => {
+      const { root, trigger, content, controller } = setup(
+        {
+          side: 'inline-start',
+          align: 'center',
+          sideOffset: 4,
+          avoidCollisions: true,
+        },
+        `
+          <div data-slot="tooltip" id="root" dir="rtl">
+            <button data-slot="tooltip-trigger">Hover me</button>
+            <div data-slot="tooltip-content">Tooltip text</div>
+          </div>
+        `
+      )
+
+      trigger.getBoundingClientRect = () => rect(760, 120, 40, 20)
+      content.getBoundingClientRect = () => rect(0, 0, 120, 40)
+
+      const originalVisualViewport = Object.getOwnPropertyDescriptor(window, 'visualViewport')
+      const fakeVisualViewport = {
+        width: 800,
+        height: 600,
+        offsetLeft: 0,
+        offsetTop: 0,
+        addEventListener() {},
+        removeEventListener() {},
+        dispatchEvent() {
+          return true
+        },
+      } as unknown as VisualViewport
+
+      Object.defineProperty(window, 'visualViewport', {
+        configurable: true,
+        value: fakeVisualViewport,
+      })
+
+      try {
+        controller.show()
+        await waitForRaf()
+
+        expect(root.getAttribute('dir')).toBe('rtl')
+        expect(content.getAttribute('data-side')).toBe('inline-end')
+        const { x } = getTranslate3dXY(getPositioner(content).style.transform)
+        expect(x).toBe(636)
+      } finally {
+        if (originalVisualViewport) {
+          Object.defineProperty(window, 'visualViewport', originalVisualViewport)
+        } else {
+          Reflect.deleteProperty(window as Window & Record<string, unknown>, 'visualViewport')
+        }
+      }
 
       controller.destroy()
     })

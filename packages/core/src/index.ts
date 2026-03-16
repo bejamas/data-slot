@@ -34,6 +34,7 @@ export {
   createPositionSync,
 } from "./popup.ts";
 export type {
+  PopupDirection,
   PopupSide,
   PopupAlign,
   PopupPlacementOptions,

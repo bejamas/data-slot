@@ -43,13 +43,28 @@ const notifyWarmHandoff = (sourceTrigger: HTMLElement, reason: TooltipReason): v
   }
 };
 
-// Types aligned with Radix/Base UI naming
-export type TooltipSide = "top" | "right" | "bottom" | "left";
+// Types aligned with Base UI naming
+export type TooltipSide = "top" | "right" | "bottom" | "left" | "inline-start" | "inline-end";
 export type TooltipAlign = "start" | "center" | "end";
 export type TooltipReason = "pointer" | "focus" | "blur" | "escape" | "api";
+type TooltipInstantType = "delay" | "focus" | "dismiss" | null;
+type TooltipDirection = "ltr" | "rtl";
+type PhysicalTooltipSide = "top" | "right" | "bottom" | "left";
 
-const SIDES = ["top", "right", "bottom", "left"] as const;
+const SIDES = ["top", "right", "bottom", "left", "inline-start", "inline-end"] as const;
 const ALIGNS = ["start", "center", "end"] as const;
+
+const resolvePhysicalSide = (
+  side: TooltipSide,
+  direction: TooltipDirection
+): PhysicalTooltipSide => {
+  if (side === "inline-start") return direction === "rtl" ? "right" : "left";
+  if (side === "inline-end") return direction === "rtl" ? "left" : "right";
+  return side;
+};
+
+const uniqueElements = <T extends Element>(...elements: Array<T | null | undefined>): T[] =>
+  [...new Set(elements.filter((element): element is T => element != null))];
 
 export interface TooltipOptions {
   /** Delay before showing tooltip (ms). Default: 300 */
@@ -99,7 +114,7 @@ export interface TooltipController {
  * ```
  *
  * Placement data attributes are resolved as: content -> authored positioner -> root.
- * - `data-side`: 'top' | 'right' | 'bottom' | 'left' (bind-time preferred side)
+ * - `data-side`: 'top' | 'right' | 'bottom' | 'left' | 'inline-start' | 'inline-end' (bind-time preferred side)
  * - `data-align`: 'start' | 'center' | 'end' (bind-time preferred align)
  * - `data-side-offset`: number (px)
  * - `data-align-offset`: number (px)
@@ -125,6 +140,7 @@ export function createTooltip(
 
   const trigger = getPart<HTMLElement>(root, "tooltip-trigger");
   const content = getPart<HTMLElement>(root, "tooltip-content");
+  const arrow = content?.querySelector<HTMLElement>('[data-slot="tooltip-arrow"]') ?? null;
   const authoredPositionerCandidate = getPart<HTMLElement>(root, "tooltip-positioner");
   const authoredPositioner =
     authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)
@@ -189,7 +205,7 @@ export function createTooltip(
     8;
 
   let isOpen = false;
-  let isInstantTransition = false;
+  let instantType: TooltipInstantType = null;
   let hasFocus = false;
   let isDestroyed = false;
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -207,72 +223,114 @@ export function createTooltip(
   // ARIA setup - ensure content has stable id
   const contentId = ensureId(content, "tooltip-content");
   content.setAttribute("role", "tooltip");
-  content.setAttribute("data-side", preferredSide);
-  content.setAttribute("data-align", preferredAlign);
+  const resolveDirection = (): TooltipDirection => {
+    const rootElement = root instanceof HTMLElement ? root : null;
+    const authoredDirection = rootElement?.getAttribute("dir") ?? trigger.getAttribute("dir");
+    if (authoredDirection === "rtl") return "rtl";
 
-  const setDataState = (state: "open" | "closed") => {
+    const computedDirection =
+      getComputedStyle(trigger).direction ||
+      (rootElement ? getComputedStyle(rootElement).direction : "") ||
+      root.ownerDocument.documentElement.getAttribute("dir") ||
+      "";
+
+    return computedDirection === "rtl" ? "rtl" : "ltr";
+  };
+
+  const setPlacementState = (side: TooltipSide, align: TooltipAlign) => {
     const positioner = portal.container as HTMLElement;
-    root.setAttribute("data-state", state);
-    content.setAttribute("data-state", state);
-    if (positioner !== content) {
-      positioner.setAttribute("data-state", state);
+    for (const element of uniqueElements(content, positioner, arrow)) {
+      element.setAttribute("data-side", side);
+      element.setAttribute("data-align", align);
+    }
+  };
+
+  const setInstantState = (value: TooltipInstantType) => {
+    const positioner = portal.container as HTMLElement;
+    for (const element of uniqueElements(root, content, positioner, arrow)) {
+      if (value) {
+        element.setAttribute("data-instant", value);
+      } else {
+        element.removeAttribute("data-instant");
+      }
+    }
+  };
+
+  const setArrowPosition = (
+    side: TooltipSide,
+    direction: TooltipDirection,
+    anchorRect: DOMRect,
+    contentRect: DOMRect
+  ) => {
+    if (!arrow) return;
+
+    const arrowRect = arrow.getBoundingClientRect();
+    const arrowWidth = arrow.offsetWidth > 0 ? arrow.offsetWidth : arrowRect.width;
+    const arrowHeight = arrow.offsetHeight > 0 ? arrow.offsetHeight : arrowRect.height;
+
+    if (arrowWidth <= 0 || arrowHeight <= 0) {
+      arrow.style.removeProperty("left");
+      arrow.style.removeProperty("top");
+      arrow.removeAttribute("data-uncentered");
+      return;
     }
 
-    if (state === "open") {
-      root.setAttribute("data-open", "");
-      content.setAttribute("data-open", "");
-      if (positioner !== content) {
-        positioner.setAttribute("data-open", "");
-      }
-      if (isInstantTransition) {
-        root.setAttribute("data-instant", "");
-        content.setAttribute("data-instant", "");
-        if (positioner !== content) {
-          positioner.setAttribute("data-instant", "");
-        }
+    const physicalSide = resolvePhysicalSide(side, direction);
+    const arrowPadding = 5;
+
+    if (physicalSide === "top" || physicalSide === "bottom") {
+      const desiredLeft =
+        anchorRect.left + anchorRect.width / 2 - contentRect.left - arrowWidth / 2;
+      const maxLeft = Math.max(arrowPadding, contentRect.width - arrowWidth - arrowPadding);
+      const nextLeft = Math.min(Math.max(desiredLeft, arrowPadding), maxLeft);
+      arrow.style.left = `${nextLeft}px`;
+      arrow.style.removeProperty("top");
+      if (Math.abs(nextLeft - desiredLeft) > 0.5) {
+        arrow.setAttribute("data-uncentered", "");
       } else {
-        root.removeAttribute("data-instant");
-        content.removeAttribute("data-instant");
-        if (positioner !== content) {
-          positioner.removeAttribute("data-instant");
-        }
-      }
-      root.removeAttribute("data-closed");
-      content.removeAttribute("data-closed");
-      if (positioner !== content) {
-        positioner.removeAttribute("data-closed");
+        arrow.removeAttribute("data-uncentered");
       }
       return;
     }
 
-    root.setAttribute("data-closed", "");
-    content.setAttribute("data-closed", "");
-    if (positioner !== content) {
-      positioner.setAttribute("data-closed", "");
-    }
-    if (isInstantTransition) {
-      root.setAttribute("data-instant", "");
-      content.setAttribute("data-instant", "");
-      if (positioner !== content) {
-        positioner.setAttribute("data-instant", "");
-      }
+    const desiredTop =
+      anchorRect.top + anchorRect.height / 2 - contentRect.top - arrowHeight / 2;
+    const maxTop = Math.max(arrowPadding, contentRect.height - arrowHeight - arrowPadding);
+    const nextTop = Math.min(Math.max(desiredTop, arrowPadding), maxTop);
+    arrow.style.top = `${nextTop}px`;
+    arrow.style.removeProperty("left");
+    if (Math.abs(nextTop - desiredTop) > 0.5) {
+      arrow.setAttribute("data-uncentered", "");
     } else {
-      root.removeAttribute("data-instant");
-      content.removeAttribute("data-instant");
-      if (positioner !== content) {
-        positioner.removeAttribute("data-instant");
-      }
+      arrow.removeAttribute("data-uncentered");
     }
-    root.removeAttribute("data-open");
-    content.removeAttribute("data-open");
-    if (positioner !== content) {
-      positioner.removeAttribute("data-open");
+  };
+
+  const setDataState = (state: "open" | "closed") => {
+    const positioner = portal.container as HTMLElement;
+    // TODO(next-major): remove legacy tooltip data-state compatibility.
+    root.setAttribute("data-state", state);
+    content.setAttribute("data-state", state);
+    setInstantState(instantType);
+
+    if (state === "open") {
+      for (const element of uniqueElements(root, content, positioner, arrow)) {
+        element.setAttribute("data-open", "");
+        element.removeAttribute("data-closed");
+      }
+      return;
+    }
+
+    for (const element of uniqueElements(root, content, positioner, arrow)) {
+      element.setAttribute("data-closed", "");
+      element.removeAttribute("data-open");
     }
   };
 
   const updatePosition = () => {
     const positioner = portal.container as HTMLElement;
     const win = root.ownerDocument.defaultView ?? window;
+    const direction = resolveDirection();
     const tr = trigger.getBoundingClientRect();
     const cr = measurePopupContentRect(content);
     const pos = computeFloatingPosition({
@@ -284,6 +342,7 @@ export function createTooltip(
       alignOffset,
       avoidCollisions,
       collisionPadding,
+      direction,
     });
     const transformOrigin = computeFloatingTransformOrigin({
       side: pos.side,
@@ -291,6 +350,7 @@ export function createTooltip(
       anchorRect: tr,
       popupX: pos.x,
       popupY: pos.y,
+      direction,
     });
 
     positioner.style.position = "absolute";
@@ -301,12 +361,8 @@ export function createTooltip(
     positioner.style.willChange = "transform";
     positioner.style.margin = "0";
 
-    content.setAttribute("data-side", pos.side);
-    content.setAttribute("data-align", pos.align);
-    if (positioner !== content) {
-      positioner.setAttribute("data-side", pos.side);
-      positioner.setAttribute("data-align", pos.align);
-    }
+    setPlacementState(pos.side, pos.align);
+    setArrowPosition(pos.side, direction, tr, content.getBoundingClientRect());
   };
 
   const presence = createPresenceLifecycle({
@@ -329,14 +385,18 @@ export function createTooltip(
   const isTriggerDisabled = (): boolean =>
     trigger.hasAttribute("disabled") || trigger.getAttribute("aria-disabled") === "true";
 
-  const updateState = (open: boolean, reason: TooltipReason, instant = false) => {
+  const updateState = (
+    open: boolean,
+    reason: TooltipReason,
+    nextInstantType: TooltipInstantType = null
+  ) => {
     if (isOpen === open) return;
 
     if (!open && isOpen && skipDelayDuration > 0) {
       globalWarmUntil = Date.now() + skipDelayDuration;
     }
 
-    isInstantTransition = instant;
+    instantType = nextInstantType;
     isOpen = open;
 
     if (isOpen) {
@@ -370,29 +430,32 @@ export function createTooltip(
 
     // Skip delay if we're within the "warm" window (recently closed a tooltip)
     if (Date.now() < globalWarmUntil) {
-      updateState(true, reason, true);
+      updateState(true, reason, "delay");
       return;
     }
 
     showTimeout = setTimeout(() => {
-      updateState(true, reason);
+      updateState(true, reason, reason === "focus" ? "focus" : null);
       showTimeout = null;
     }, delay);
   };
 
-  const hideImmediately = (reason: TooltipReason, instant = false) => {
+  const hideImmediately = (
+    reason: TooltipReason,
+    nextInstantType: TooltipInstantType = null
+  ) => {
     if (showTimeout) {
       clearTimeout(showTimeout);
       showTimeout = null;
     }
 
-    updateState(false, reason, instant);
+    updateState(false, reason, nextInstantType);
   };
 
   const closeForWarmHandoff = (sourceTrigger: HTMLElement, reason: TooltipReason) => {
     if (sourceTrigger === trigger || !isOpen) return;
     hasFocus = false;
-    hideImmediately(reason, true);
+    hideImmediately(reason, "delay");
   };
 
   registeredWarmHandoffTriggers.add(trigger);
@@ -405,6 +468,7 @@ export function createTooltip(
   // Initialize state
   content.hidden = true;
   content.setAttribute("aria-hidden", "true");
+  setPlacementState(preferredSide, preferredAlign);
   setDataState("closed");
 
   // Pointer events on trigger
@@ -424,7 +488,7 @@ export function createTooltip(
       const related = e.relatedTarget as Node | null;
       if (related && content.contains(related)) return;
       if (isWarmHandoffTarget(related, trigger)) {
-        hideImmediately("pointer", true);
+        hideImmediately("pointer", "delay");
         return;
       }
       hideImmediately("pointer");
@@ -441,7 +505,7 @@ export function createTooltip(
 
       // Clicking an already-open tooltip trigger dismisses it.
       if (isOpen) {
-        hideImmediately("pointer", true);
+        hideImmediately("pointer", "dismiss");
       }
     }),
     // Focus events
@@ -455,7 +519,7 @@ export function createTooltip(
       hasFocus = false;
       const related = (e as FocusEvent).relatedTarget as Node | null;
       if (isWarmHandoffTarget(related, trigger)) {
-        hideImmediately("blur", true);
+        hideImmediately("blur", "delay");
         return;
       }
       hideImmediately("blur");
@@ -472,7 +536,7 @@ export function createTooltip(
       const related = e.relatedTarget as Node | null;
       if (related && trigger.contains(related)) return;
       if (isWarmHandoffTarget(related, trigger)) {
-        hideImmediately("pointer", true);
+        hideImmediately("pointer", "delay");
         return;
       }
       hideImmediately("pointer");
@@ -485,6 +549,7 @@ export function createTooltip(
       const detail = (e as CustomEvent).detail;
       // Preferred: { open: boolean }
       // Deprecated: { value: boolean }
+      // TODO(next-major): remove deprecated tooltip:set { value } compatibility.
       let open: boolean | undefined;
       if (detail?.open !== undefined) {
         open = detail.open;
@@ -510,7 +575,7 @@ export function createTooltip(
     createDismissLayer({
       root,
       isOpen: () => isOpen,
-      onDismiss: () => hideImmediately("escape"),
+      onDismiss: () => hideImmediately("escape", "dismiss"),
       closeOnClickOutside: false,
       closeOnEscape: true,
       preventEscapeDefault: false,

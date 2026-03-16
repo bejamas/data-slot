@@ -4,42 +4,55 @@ import ExampleBlock from "../ExampleBlock.astro";
 
 const cssCode = `<div data-slot="tooltip" class="tooltip-root">
   <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Hover me</button>
-  <div data-slot="tooltip-content" data-side="top" class="tooltip-content">
+  <div
+    data-slot="tooltip-content"
+    data-side="top"
+    class="tooltip-content tooltip-content-logical"
+  >
     Tooltip content
+    <div
+      data-slot="tooltip-arrow"
+      class="tooltip-arrow tooltip-arrow-logical"
+    ></div>
   </div>
 </div>
 
 <style>
   .tooltip-root { display: inline-block; }
   .tooltip-trigger-btn {
-    padding: 0.5rem 1rem;
-    background: none;
-    border: 1px dashed #ccc;
+    padding: 0.5rem 0.9rem;
+    background: #fff;
+    border: 1px dashed #d1d5db;
+    border-radius: 999px;
     cursor: help;
+    color: #111827;
   }
   .tooltip-content {
     position: absolute;
-    background: #1a1a1a;
-    color: #faf9f7;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: #111827;
+    color: #f9fafb;
+    padding: 0.375rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
     white-space: nowrap;
     z-index: 50;
-    /* Hidden by default */
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transform-origin: center;
+    transform-origin: var(--transform-origin, center);
     --tooltip-slide-x: 0px;
-    --tooltip-slide-y: -4px;
-    /* Visibility delays hiding until after fade */
+    --tooltip-slide-y: 0px;
     transition: opacity 0.15s, visibility 0s linear 0.15s;
   }
-  .tooltip-content[data-side="top"] { --tooltip-slide-y: 4px; }
-  .tooltip-content[data-side="bottom"] { --tooltip-slide-y: -4px; }
-  .tooltip-content[data-side="left"] { --tooltip-slide-x: 4px; --tooltip-slide-y: 0px; }
-  .tooltip-content[data-side="right"] { --tooltip-slide-x: -4px; --tooltip-slide-y: 0px; }
-  /* Open state */
+  .tooltip-content[data-side="top"] { --tooltip-slide-y: 8px; }
+  .tooltip-content[data-side="bottom"] { --tooltip-slide-y: -8px; }
+  .tooltip-content[data-side="left"] { --tooltip-slide-x: 8px; }
+  .tooltip-content[data-side="right"] { --tooltip-slide-x: -8px; }
+  .tooltip-content-logical[data-side="inline-start"] { --tooltip-slide-x: 8px; }
+  .tooltip-content-logical[data-side="inline-end"] { --tooltip-slide-x: -8px; }
   .tooltip-content[data-open] {
     opacity: 1;
     visibility: visible;
@@ -55,6 +68,32 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
   .tooltip-content[data-instant] {
     transition: none;
     animation: none;
+  }
+  .tooltip-arrow {
+    position: absolute;
+    width: 0.625rem;
+    height: 0.625rem;
+    background: inherit;
+    border-radius: 2px;
+    transform: rotate(45deg);
+  }
+  .tooltip-arrow[data-side="top"] { bottom: -0.25rem; }
+  .tooltip-arrow[data-side="bottom"] { top: -0.25rem; }
+  .tooltip-arrow[data-side="left"] {
+    right: -0.25rem;
+    transform: translateX(-1.5px) rotate(45deg);
+  }
+  .tooltip-arrow[data-side="right"] {
+    left: -0.25rem;
+    transform: translateX(1.5px) rotate(45deg);
+  }
+  .tooltip-arrow-logical[data-side="inline-start"] {
+    right: -0.25rem;
+    transform: translateX(-1.5px) rotate(45deg);
+  }
+  .tooltip-arrow-logical[data-side="inline-end"] {
+    left: -0.25rem;
+    transform: translateX(1.5px) rotate(45deg);
   }
   @keyframes tooltip-in {
     from {
@@ -76,25 +115,13 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
       transform: translate3d(var(--tooltip-slide-x), var(--tooltip-slide-y), 0) scale(0.98);
     }
   }
-  /* Arrow */
-  .tooltip-content::after {
-    content: "";
-    position: absolute;
-    border: 6px solid transparent;
-  }
-  .tooltip-content[data-side="top"]::after {
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border-top-color: #1a1a1a;
-  }
 </style>`;
 
 const tailwindCode = `<div data-slot="tooltip" class="inline-block">
   <button
     data-slot="tooltip-trigger"
-    class="px-4 py-2 bg-transparent border border-dashed border-gray-300
-           cursor-help underline decoration-dotted underline-offset-2"
+    class="rounded-full border border-dashed border-gray-300 bg-white px-4 py-2
+           text-gray-900 cursor-help underline decoration-dotted underline-offset-2"
   >
     Hover me
   </button>
@@ -102,110 +129,189 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
     data-slot="tooltip-content"
     data-side="top"
     class="absolute
-           bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50
+           inline-flex items-center gap-1.5 rounded-2xl bg-gray-900 px-3 py-1.5
+           text-xs whitespace-nowrap text-white z-50
            opacity-0 pointer-events-none transition-opacity duration-150
            data-[open]:opacity-100 data-[open]:pointer-events-auto
            data-[instant]:transition-none data-[instant]:[animation:none]
-           after:content-[''] after:absolute after:top-full after:left-1/2
-           after:-translate-x-1/2 after:border-[6px] after:border-transparent
-           after:border-t-gray-900"
+           data-[side=top]:[--tooltip-slide-y:8px]
+           data-[side=bottom]:[--tooltip-slide-y:-8px]
+           data-[side=left]:[--tooltip-slide-x:8px]
+           data-[side=right]:[--tooltip-slide-x:-8px]
+           data-[side=inline-start]:[--tooltip-slide-x:8px]
+           data-[side=inline-end]:[--tooltip-slide-x:-8px]"
   >
     Tooltip content
+    <div
+      data-slot="tooltip-arrow"
+      class="absolute size-2.5 rounded-[2px] bg-gray-900 rotate-45
+             data-[side=top]:-bottom-1
+             data-[side=bottom]:-top-1
+             data-[side=left]:-right-1 data-[side=left]:-translate-x-[1.5px]
+             data-[side=right]:-left-1 data-[side=right]:translate-x-[1.5px]
+             data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-[1.5px]
+             data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-[1.5px]"
+    ></div>
   </div>
 </div>`;
 ---
 
-<ExampleBlock label="sides: top, bottom, left, right (+ warm-up behavior)">
-  <div slot="preview-css" class="tooltip-group" id="tooltip-css">
-    <div data-slot="tooltip" class="tooltip-root">
-      <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Top</button>
-      <div data-slot="tooltip-content" data-side="top" class="tooltip-content">
-        Side: top (default)
+<ExampleBlock label="Base/shadcn composition + logical sides">
+  <div slot="preview-css" class="tooltip-stack" id="tooltip-css">
+    <div class="tooltip-group">
+      <div data-slot="tooltip" class="tooltip-root">
+        <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Top</button>
+        <div data-slot="tooltip-content" data-side="top" class="tooltip-content tooltip-content-logical">
+          Side: top (default)
+          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+        </div>
+      </div>
+      <div data-slot="tooltip" class="tooltip-root">
+        <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Bottom</button>
+        <div data-slot="tooltip-content" data-side="bottom" class="tooltip-content tooltip-content-logical">
+          Side: bottom
+          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+        </div>
+      </div>
+      <div data-slot="tooltip" class="tooltip-root">
+        <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Left</button>
+        <div data-slot="tooltip-content" data-side="left" class="tooltip-content tooltip-content-logical">
+          Side: left
+          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+        </div>
+      </div>
+      <div data-slot="tooltip" class="tooltip-root">
+        <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Right</button>
+        <div data-slot="tooltip-content" data-side="right" class="tooltip-content tooltip-content-logical">
+          Side: right
+          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+        </div>
       </div>
     </div>
-    <div data-slot="tooltip" class="tooltip-root">
-      <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Bottom</button>
-      <div data-slot="tooltip-content" data-side="bottom" class="tooltip-content">
-        Side: bottom
+    <div class="tooltip-group tooltip-group-logical">
+      <div data-slot="tooltip" class="tooltip-root">
+        <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Inline start</button>
+        <div data-slot="tooltip-content" data-side="inline-start" class="tooltip-content tooltip-content-logical">
+          Side: inline-start
+          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+        </div>
       </div>
-    </div>
-    <div data-slot="tooltip" class="tooltip-root">
-      <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Left</button>
-      <div data-slot="tooltip-content" data-side="left" class="tooltip-content">
-        Side: left
-      </div>
-    </div>
-    <div data-slot="tooltip" class="tooltip-root">
-      <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Right</button>
-      <div data-slot="tooltip-content" data-side="right" class="tooltip-content">
-        Side: right
+      <div data-slot="tooltip" class="tooltip-root">
+        <button data-slot="tooltip-trigger" class="tooltip-trigger-btn">Inline end</button>
+        <div data-slot="tooltip-content" data-side="inline-end" class="tooltip-content tooltip-content-logical">
+          Side: inline-end
+          <div data-slot="tooltip-arrow" class="tooltip-arrow tooltip-arrow-logical"></div>
+        </div>
       </div>
     </div>
   </div>
-  <div slot="preview-tailwind" class="flex gap-2" id="tooltip-tw">
-    <div data-slot="tooltip" class="inline-block">
-      <button
-        data-slot="tooltip-trigger"
-        class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
-      >
-        Top
-      </button>
-      <div
-        data-slot="tooltip-content"
-        data-side="top"
-        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none] after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-t-gray-900"
-      >
-        Side: top (default)
+  <div slot="preview-tailwind" class="flex flex-col gap-2" id="tooltip-tw">
+    <div class="flex flex-wrap gap-2">
+      <div data-slot="tooltip" class="inline-block">
+        <button
+          data-slot="tooltip-trigger"
+          class="rounded-full border border-dashed border-gray-300 bg-white px-4 py-2 text-gray-900 cursor-help underline decoration-dotted underline-offset-2"
+        >
+          Top
+        </button>
+        <div
+          data-slot="tooltip-content"
+          data-side="top"
+          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-gray-900 px-3 py-1.5 text-xs whitespace-nowrap text-white z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none]"
+        >
+          Side: top (default)
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-[2px] bg-gray-900 rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-[1.5px] data-[side=right]:-left-1 data-[side=right]:translate-x-[1.5px] data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-[1.5px] data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-[1.5px]"></div>
+        </div>
+      </div>
+      <div data-slot="tooltip" class="inline-block">
+        <button
+          data-slot="tooltip-trigger"
+          class="rounded-full border border-dashed border-gray-300 bg-white px-4 py-2 text-gray-900 cursor-help underline decoration-dotted underline-offset-2"
+        >
+          Bottom
+        </button>
+        <div
+          data-slot="tooltip-content"
+          data-side="bottom"
+          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-gray-900 px-3 py-1.5 text-xs whitespace-nowrap text-white z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none]"
+        >
+          Side: bottom
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-[2px] bg-gray-900 rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-[1.5px] data-[side=right]:-left-1 data-[side=right]:translate-x-[1.5px] data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-[1.5px] data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-[1.5px]"></div>
+        </div>
+      </div>
+      <div data-slot="tooltip" class="inline-block">
+        <button
+          data-slot="tooltip-trigger"
+          class="rounded-full border border-dashed border-gray-300 bg-white px-4 py-2 text-gray-900 cursor-help underline decoration-dotted underline-offset-2"
+        >
+          Left
+        </button>
+        <div
+          data-slot="tooltip-content"
+          data-side="left"
+          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-gray-900 px-3 py-1.5 text-xs whitespace-nowrap text-white z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none]"
+        >
+          Side: left
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-[2px] bg-gray-900 rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-[1.5px] data-[side=right]:-left-1 data-[side=right]:translate-x-[1.5px] data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-[1.5px] data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-[1.5px]"></div>
+        </div>
+      </div>
+      <div data-slot="tooltip" class="inline-block">
+        <button
+          data-slot="tooltip-trigger"
+          class="rounded-full border border-dashed border-gray-300 bg-white px-4 py-2 text-gray-900 cursor-help underline decoration-dotted underline-offset-2"
+        >
+          Right
+        </button>
+        <div
+          data-slot="tooltip-content"
+          data-side="right"
+          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-gray-900 px-3 py-1.5 text-xs whitespace-nowrap text-white z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none]"
+        >
+          Side: right
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-[2px] bg-gray-900 rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-[1.5px] data-[side=right]:-left-1 data-[side=right]:translate-x-[1.5px] data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-[1.5px] data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-[1.5px]"></div>
+        </div>
       </div>
     </div>
-    <div data-slot="tooltip" class="inline-block">
-      <button
-        data-slot="tooltip-trigger"
-        class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
-      >
-        Bottom
-      </button>
-      <div
-        data-slot="tooltip-content"
-        data-side="bottom"
-        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none] after:content-[''] after:absolute after:bottom-full after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent after:border-b-gray-900"
-      >
-        Side: bottom
+    <div class="flex flex-wrap gap-2">
+      <div data-slot="tooltip" class="inline-block">
+        <button
+          data-slot="tooltip-trigger"
+          class="rounded-full border border-dashed border-gray-300 bg-white px-4 py-2 text-gray-900 cursor-help underline decoration-dotted underline-offset-2"
+        >
+          Inline start
+        </button>
+        <div
+          data-slot="tooltip-content"
+          data-side="inline-start"
+          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-gray-900 px-3 py-1.5 text-xs whitespace-nowrap text-white z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none]"
+        >
+          Side: inline-start
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-[2px] bg-gray-900 rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-[1.5px] data-[side=right]:-left-1 data-[side=right]:translate-x-[1.5px] data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-[1.5px] data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-[1.5px]"></div>
+        </div>
       </div>
-    </div>
-    <div data-slot="tooltip" class="inline-block">
-      <button
-        data-slot="tooltip-trigger"
-        class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
-      >
-        Left
-      </button>
-      <div
-        data-slot="tooltip-content"
-        data-side="left"
-        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none] after:content-[''] after:absolute after:left-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-l-gray-900"
-      >
-        Side: left
-      </div>
-    </div>
-    <div data-slot="tooltip" class="inline-block">
-      <button
-        data-slot="tooltip-trigger"
-        class="px-4 py-2 bg-transparent border border-dashed border-gray-300 cursor-help underline decoration-dotted underline-offset-2"
-      >
-        Right
-      </button>
-      <div
-        data-slot="tooltip-content"
-        data-side="right"
-        class="absolute bg-gray-900 text-white px-3 py-2 text-sm whitespace-nowrap z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none] after:content-[''] after:absolute after:right-full after:top-1/2 after:-translate-y-1/2 after:border-[6px] after:border-transparent after:border-r-gray-900"
-      >
-        Side: right
+      <div data-slot="tooltip" class="inline-block">
+        <button
+          data-slot="tooltip-trigger"
+          class="rounded-full border border-dashed border-gray-300 bg-white px-4 py-2 text-gray-900 cursor-help underline decoration-dotted underline-offset-2"
+        >
+          Inline end
+        </button>
+        <div
+          data-slot="tooltip-content"
+          data-side="inline-end"
+          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-gray-900 px-3 py-1.5 text-xs whitespace-nowrap text-white z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-[open]:opacity-100 data-[open]:pointer-events-auto data-[instant]:transition-none data-[instant]:[animation:none]"
+        >
+          Side: inline-end
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-[2px] bg-gray-900 rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-[1.5px] data-[side=right]:-left-1 data-[side=right]:translate-x-[1.5px] data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-[1.5px] data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-[1.5px]"></div>
+        </div>
       </div>
     </div>
   </div>
   <p slot="note" class="mt-3">
-    Side via <code>data-side</code> attribute or JS option. Hover across quickly — warm-up skips delay for adjacent tooltips.
+    Use a real <code>tooltip-arrow</code> element for Base/shadcn composition. Logical
+    <code>inline-start</code> / <code>inline-end</code> sides follow the current
+    <code>dir</code>, and warm-up transitions surface through valued
+    <code>data-instant</code> attributes.
   </p>
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
   <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />

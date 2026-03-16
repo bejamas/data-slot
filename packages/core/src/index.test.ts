@@ -987,6 +987,46 @@ describe('core/popup', () => {
     }
   })
 
+  it('computeFloatingPosition preserves logical side output in LTR', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(100, 120, 60, 20),
+      contentRect: rect(0, 0, 80, 40),
+      side: 'inline-start',
+      align: 'center',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: false,
+      collisionPadding: 8,
+      viewportWidth: 800,
+      viewportHeight: 600,
+      direction: 'ltr',
+    })
+
+    expect(pos.side).toBe('inline-start')
+    expect(pos.x).toBe(16)
+    expect(pos.y).toBe(110)
+  })
+
+  it('computeFloatingPosition flips between logical sides in RTL', () => {
+    const pos = computeFloatingPosition({
+      anchorRect: rect(10, 120, 40, 20),
+      contentRect: rect(0, 0, 120, 40),
+      side: 'inline-end',
+      align: 'center',
+      sideOffset: 4,
+      alignOffset: 0,
+      avoidCollisions: true,
+      collisionPadding: 8,
+      viewportWidth: 220,
+      viewportHeight: 200,
+      direction: 'rtl',
+      allowedSides: ['inline-end', 'inline-start'],
+    })
+
+    expect(pos.side).toBe('inline-start')
+    expect(pos.x).toBe(54)
+  })
+
   it('getFloatingTransformOriginAnchor resolves trigger anchor point for side/align', () => {
     const anchor = rect(100, 200, 80, 20)
 
@@ -994,6 +1034,10 @@ describe('core/popup', () => {
     expect(getFloatingTransformOriginAnchor('bottom', 'center', anchor)).toEqual({ x: 140, y: 220 })
     expect(getFloatingTransformOriginAnchor('left', 'end', anchor)).toEqual({ x: 100, y: 220 })
     expect(getFloatingTransformOriginAnchor('right', 'center', anchor)).toEqual({ x: 180, y: 210 })
+    expect(getFloatingTransformOriginAnchor('inline-start', 'center', anchor, 'rtl')).toEqual({
+      x: 180,
+      y: 210,
+    })
   })
 
   it('computeFloatingTransformOrigin returns popup-local anchor coordinates', () => {

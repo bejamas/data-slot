@@ -2,8 +2,11 @@ import { on } from "./events.ts";
 import { containsWithPortals, portalToBody, restorePortal } from "./parts.ts";
 import type { PortalState } from "./parts.ts";
 
-export type PopupSide = "top" | "right" | "bottom" | "left";
+export type PopupDirection = "ltr" | "rtl";
+export type PopupSide = "top" | "right" | "bottom" | "left" | "inline-start" | "inline-end";
 export type PopupAlign = "start" | "center" | "end";
+
+type PhysicalPopupSide = "top" | "right" | "bottom" | "left";
 
 export interface PopupPlacementOptions {
   side: PopupSide;
@@ -12,6 +15,7 @@ export interface PopupPlacementOptions {
   alignOffset: number;
   avoidCollisions: boolean;
   collisionPadding: number;
+  direction?: PopupDirection;
   allowedSides?: readonly PopupSide[];
 }
 
@@ -49,9 +53,38 @@ export interface ComputeFloatingTransformOriginInput {
   anchorRect: RectLike;
   popupX: number;
   popupY: number;
+  direction?: PopupDirection;
 }
 
-const ALL_SIDES: readonly PopupSide[] = ["top", "right", "bottom", "left"];
+const resolvePhysicalSide = (
+  side: PopupSide,
+  direction: PopupDirection
+): PhysicalPopupSide => {
+  if (side === "inline-start") {
+    return direction === "rtl" ? "right" : "left";
+  }
+  if (side === "inline-end") {
+    return direction === "rtl" ? "left" : "right";
+  }
+  return side;
+};
+
+const getDefaultAllowedSides = (preferredSide: PopupSide): readonly PopupSide[] => {
+  switch (preferredSide) {
+    case "top":
+      return ["top", "right", "bottom", "left"];
+    case "bottom":
+      return ["bottom", "top", "right", "left"];
+    case "left":
+      return ["left", "top", "right", "bottom"];
+    case "right":
+      return ["right", "top", "bottom", "left"];
+    case "inline-start":
+      return ["inline-start", "inline-end", "top", "bottom"];
+    case "inline-end":
+      return ["inline-end", "inline-start", "top", "bottom"];
+  }
+};
 
 interface ViewportBounds {
   x: number;
@@ -80,7 +113,7 @@ const resolveViewportBounds = (input: ComputeFloatingPositionInput): ViewportBou
 };
 
 const computeBasePosition = (
-  side: PopupSide,
+  side: PhysicalPopupSide,
   align: PopupAlign,
   anchorRect: RectLike,
   contentRect: RectLike,
@@ -129,19 +162,26 @@ const getAlignedPointOnRect = (
 export const getFloatingTransformOriginAnchor = (
   side: PopupSide,
   align: PopupAlign,
-  anchorRect: RectLike
+  anchorRect: RectLike,
+  direction: PopupDirection = "ltr"
 ): FloatingTransformOriginAnchor => {
+  const physicalSide = resolvePhysicalSide(side, direction);
   const aligned = getAlignedPointOnRect(anchorRect, align);
-  if (side === "top") return { x: aligned.x, y: anchorRect.top };
-  if (side === "bottom") return { x: aligned.x, y: anchorRect.bottom };
-  if (side === "left") return { x: anchorRect.left, y: aligned.y };
+  if (physicalSide === "top") return { x: aligned.x, y: anchorRect.top };
+  if (physicalSide === "bottom") return { x: aligned.x, y: anchorRect.bottom };
+  if (physicalSide === "left") return { x: anchorRect.left, y: aligned.y };
   return { x: anchorRect.right, y: aligned.y };
 };
 
 export const computeFloatingTransformOrigin = (
   input: ComputeFloatingTransformOriginInput
 ): string => {
-  const anchor = getFloatingTransformOriginAnchor(input.side, input.align, input.anchorRect);
+  const anchor = getFloatingTransformOriginAnchor(
+    input.side,
+    input.align,
+    input.anchorRect,
+    input.direction
+  );
   return `${anchor.x - input.popupX}px ${anchor.y - input.popupY}px`;
 };
 
@@ -339,7 +379,7 @@ export function createModalStackItem(
 }
 
 const getMainAxisOverflow = (
-  side: PopupSide,
+  side: PhysicalPopupSide,
   pos: { x: number; y: number },
   contentRect: RectLike,
   viewport: ViewportBounds,
@@ -368,18 +408,20 @@ const rectOverlapsViewportAxis = (
   max: number
 ): boolean => end > min && start < max;
 
-const isVerticalSide = (side: PopupSide): boolean => side === "top" || side === "bottom";
+const isVerticalSide = (side: PhysicalPopupSide): boolean => side === "top" || side === "bottom";
 
 export function computeFloatingPosition(input: ComputeFloatingPositionInput): FloatingPosition {
   const viewport = resolveViewportBounds(input);
+  const direction = input.direction ?? "ltr";
   const allowedSides = input.allowedSides?.length
     ? [...new Set(input.allowedSides)]
-    : [...ALL_SIDES];
+    : [...getDefaultAllowedSides(input.side)];
   const preferredSide = allowedSides.includes(input.side) ? input.side : allowedSides[0]!;
   let side = preferredSide;
+  let physicalSide = resolvePhysicalSide(preferredSide, direction);
 
   let pos = computeBasePosition(
-    side,
+    physicalSide,
     input.align,
     input.anchorRect,
     input.contentRect,
@@ -402,17 +444,19 @@ export function computeFloatingPosition(input: ComputeFloatingPositionInput): Fl
       viewport.y,
       viewport.y + viewport.height
     );
-    const preferredMainAxisVisible = isVerticalSide(preferredSide) ? anchorOverlapsY : anchorOverlapsX;
+    const preferredMainAxisVisible = isVerticalSide(physicalSide) ? anchorOverlapsY : anchorOverlapsX;
 
     if (preferredMainAxisVisible) {
       const candidateSides = [preferredSide, ...allowedSides.filter((value) => value !== preferredSide)];
       let bestSide = side;
       let bestPos = pos;
       let bestOverflow = Number.POSITIVE_INFINITY;
+      let bestPhysicalSide = physicalSide;
 
       for (const candidate of candidateSides) {
+        const candidatePhysicalSide = resolvePhysicalSide(candidate, direction);
         const candidatePos = computeBasePosition(
-          candidate,
+          candidatePhysicalSide,
           input.align,
           input.anchorRect,
           input.contentRect,
@@ -421,7 +465,7 @@ export function computeFloatingPosition(input: ComputeFloatingPositionInput): Fl
         );
 
         const overflow = getMainAxisOverflow(
-          candidate,
+          candidatePhysicalSide,
           candidatePos,
           input.contentRect,
           viewport,
@@ -432,6 +476,7 @@ export function computeFloatingPosition(input: ComputeFloatingPositionInput): Fl
           bestSide = candidate;
           bestPos = candidatePos;
           bestOverflow = overflow;
+          bestPhysicalSide = candidatePhysicalSide;
           break;
         }
 
@@ -439,10 +484,12 @@ export function computeFloatingPosition(input: ComputeFloatingPositionInput): Fl
           bestSide = candidate;
           bestPos = candidatePos;
           bestOverflow = overflow;
+          bestPhysicalSide = candidatePhysicalSide;
         }
       }
 
       side = bestSide;
+      physicalSide = bestPhysicalSide;
       pos = bestPos;
     }
 
