@@ -239,33 +239,38 @@ suppressing exit animations.
 
 ### Motion Animations
 
-Content panels receive Base-style `data-activation-direction="left|right|up|down"` attributes
-during directional switches. Combine that with `data-starting-style` / `data-ending-style`
-markers from the presence lifecycle to style directional enter/exit animations before unmount.
-
-`data-motion` and `--motion-direction` are still written for backward compatibility with older
-examples, but they are legacy surfaces and will be removed in the next major version.
+Content panels receive `data-motion` attributes for directional enter/exit animations.
+Both content and viewport also receive `data-starting-style` / `data-ending-style` markers from
+presence lifecycle hooks, so you can style smooth fade/scale transitions before unmount.
 
 For exit animations, avoid CSS that force-hides content immediately by `data-state`
 (for example `display: none` on non-active panels), because that bypasses the presence lifecycle.
 
 ```css
-/* Entering from the right */
-[data-slot="navigation-menu-content"][data-starting-style][data-activation-direction="right"] {
-  opacity: 0;
-  transform: translateX(1rem);
+/* Entering from right */
+[data-slot="navigation-menu-content"][data-motion="from-right"] {
+  animation: slideFromRight 0.2s;
 }
 
-/* Exiting to the left */
-[data-slot="navigation-menu-content"][data-ending-style][data-activation-direction="right"] {
-  opacity: 0;
-  transform: translateX(-1rem);
+/* Exiting to left */
+[data-slot="navigation-menu-content"][data-motion="to-left"] {
+  animation: slideToLeft 0.2s;
 }
 
-[data-slot="navigation-menu-content"] {
-  transition:
-    opacity 175ms ease,
-    transform 350ms cubic-bezier(0.4, 0, 0.2, 1);
+/* Presence lifecycle helpers */
+[data-slot="navigation-menu-content"][data-ending-style],
+[data-slot="navigation-menu-viewport"][data-ending-style] {
+  opacity: 0;
+}
+
+@keyframes slideFromRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideToLeft {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-100%); opacity: 0; }
 }
 ```
 
@@ -280,7 +285,7 @@ For exit animations, avoid CSS that force-hides content immediately by `data-sta
 | `--indicator-width` | indicator | Width of hovered trigger |
 | `--indicator-top` | indicator | Top offset from list |
 | `--indicator-height` | indicator | Height of hovered trigger |
-| `--motion-direction` | viewport | Legacy compatibility variable: `1` (right) or `-1` (left) |
+| `--motion-direction` | viewport | `1` (right) or `-1` (left) |
 
 ## Keyboard Navigation
 

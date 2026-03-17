@@ -11,39 +11,6 @@ describe("NavigationMenu", () => {
     );
   const waitForAnimationFrame = () =>
     new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-  const rect = (
-    left: number,
-    top: number,
-    width: number,
-    height: number
-  ): DOMRect =>
-    ({
-      x: left,
-      y: top,
-      left,
-      top,
-      width,
-      height,
-      right: left + width,
-      bottom: top + height,
-      toJSON: () => ({}),
-    }) as DOMRect;
-  const mockTriggerRects = (
-    triggers: NodeListOf<HTMLElement>,
-    positions: Array<{ left: number; top: number; width?: number; height?: number }>
-  ) => {
-    positions.forEach((position, index) => {
-      const trigger = triggers[index];
-      if (!trigger) return;
-      trigger.getBoundingClientRect = () =>
-        rect(
-          position.left,
-          position.top,
-          position.width ?? 140,
-          position.height ?? 40,
-        );
-    });
-  };
 
   const setup = (options: Parameters<typeof createNavigationMenu>[1] = {}) => {
     document.body.innerHTML = `
@@ -925,24 +892,17 @@ describe("NavigationMenu", () => {
 
   it("does NOT set data-motion on initial open", () => {
     const { root, contents, controller } = setup();
-    const firstContent = contents[0]!;
 
     controller.open("products");
     // Initial open should not have direction animation
     expect(root.getAttribute("data-motion")).toBeNull();
-    expect(firstContent.getAttribute("data-motion")).toBeNull();
-    expect(firstContent.getAttribute("data-activation-direction")).toBeNull();
+    expect(contents[0]?.getAttribute("data-motion")).toBeNull();
 
     controller.destroy();
   });
 
-  it("sets activation direction and legacy motion when navigating right", () => {
-    const { root, triggers, contents, controller } = setup();
-    mockTriggerRects(triggers, [
-      { left: 120, top: 100 },
-      { left: 280, top: 100 },
-      { left: 440, top: 100 },
-    ]);
+  it("sets data-motion direction when navigating right (switching)", () => {
+    const { root, contents, controller } = setup();
 
     // Initial open - no motion
     controller.open("products");
@@ -950,8 +910,6 @@ describe("NavigationMenu", () => {
 
     // Navigate right (products -> solutions) - should have motion
     controller.open("solutions");
-    expect(contents[1]?.getAttribute("data-activation-direction")).toBe("right");
-    expect(contents[0]?.getAttribute("data-activation-direction")).toBe("right");
     expect(root.getAttribute("data-motion")).toBe("from-right");
     expect(contents[1]?.getAttribute("data-motion")).toBe("from-right");
     expect(contents[0]?.getAttribute("data-motion")).toBe("to-left");
@@ -959,13 +917,8 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("sets activation direction and legacy motion when navigating left", () => {
-    const { root, triggers, contents, controller } = setup();
-    mockTriggerRects(triggers, [
-      { left: 120, top: 100 },
-      { left: 280, top: 100 },
-      { left: 440, top: 100 },
-    ]);
+  it("sets data-motion direction when navigating left (switching)", () => {
+    const { root, contents, controller } = setup();
 
     // Open solutions first
     controller.open("solutions");
@@ -973,8 +926,6 @@ describe("NavigationMenu", () => {
     controller.open("products");
 
     // Navigate left (solutions -> products)
-    expect(contents[0]?.getAttribute("data-activation-direction")).toBe("left");
-    expect(contents[1]?.getAttribute("data-activation-direction")).toBe("left");
     expect(root.getAttribute("data-motion")).toBe("from-left");
     expect(contents[0]?.getAttribute("data-motion")).toBe("from-left");
     expect(contents[1]?.getAttribute("data-motion")).toBe("to-right");
@@ -983,12 +934,7 @@ describe("NavigationMenu", () => {
   });
 
   it("sets CSS variables on viewport when switching", () => {
-    const { triggers, viewport, controller } = setup();
-    mockTriggerRects(triggers, [
-      { left: 120, top: 100 },
-      { left: 280, top: 100 },
-      { left: 440, top: 100 },
-    ]);
+    const { viewport, controller } = setup();
 
     // Initial open - no motion direction set
     controller.open("products");
@@ -1002,45 +948,6 @@ describe("NavigationMenu", () => {
     // Navigate left (solutions -> products)
     controller.open("products");
     expect(viewport.style.getPropertyValue("--motion-direction")).toBe("-1");
-
-    controller.destroy();
-  });
-
-  it("clears activation direction on close", () => {
-    const { triggers, contents, controller } = setup();
-    mockTriggerRects(triggers, [
-      { left: 120, top: 100 },
-      { left: 280, top: 100 },
-      { left: 440, top: 100 },
-    ]);
-
-    controller.open("products");
-    controller.open("solutions");
-    expect(contents[1]?.getAttribute("data-activation-direction")).toBe("right");
-
-    controller.close();
-    expect(contents[1]?.getAttribute("data-activation-direction")).toBeNull();
-
-    controller.destroy();
-  });
-
-  it("uses vertical activation direction and leaves legacy motion unset", () => {
-    const { root, triggers, contents, viewport, controller } = setup();
-    mockTriggerRects(triggers, [
-      { left: 120, top: 100 },
-      { left: 120, top: 180 },
-      { left: 120, top: 260 },
-    ]);
-
-    controller.open("products");
-    controller.open("solutions");
-
-    expect(contents[1]?.getAttribute("data-activation-direction")).toBe("down");
-    expect(contents[0]?.getAttribute("data-activation-direction")).toBe("down");
-    expect(root.getAttribute("data-motion")).toBeNull();
-    expect(contents[1]?.getAttribute("data-motion")).toBeNull();
-    expect(contents[0]?.getAttribute("data-motion")).toBeNull();
-    expect(viewport.style.getPropertyValue("--motion-direction")).toBe("");
 
     controller.destroy();
   });

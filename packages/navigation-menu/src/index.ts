@@ -26,7 +26,6 @@ const SIDES = ["top", "right", "bottom", "left"] as const;
 type Side = (typeof SIDES)[number];
 export type PositionMethod = "absolute" | "fixed";
 const POSITION_METHODS = ["absolute", "fixed"] as const;
-type ActivationDirection = "left" | "right" | "up" | "down";
 
 interface PlacementConfig {
   side: Side;
@@ -210,6 +209,7 @@ export function createNavigationMenu(
 
   let currentValue: string | null = null;
   let pendingValue: string | null = null; // Track value being opened (during delay)
+  let previousIndex: number = -1;
   let openTimeout: ReturnType<typeof setTimeout> | null = null;
   let closeTimeout: ReturnType<typeof setTimeout> | null = null;
   let hoveredTrigger: HTMLElement | null = null;
@@ -433,6 +433,7 @@ export function createNavigationMenu(
       item: HTMLElement;
       trigger: HTMLElement;
       content: HTMLElement;
+      index: number;
     }
   >();
 
@@ -464,6 +465,7 @@ export function createNavigationMenu(
     };
   };
 
+  let validIndex = 0;
   items.forEach((item) => {
     const value = item.dataset["value"];
     if (!value) return;
@@ -477,6 +479,7 @@ export function createNavigationMenu(
         item,
         trigger,
         content,
+        index: validIndex++,
       });
       contentPresence.set(
         content,
@@ -484,9 +487,6 @@ export function createNavigationMenu(
           element: content,
           onExitComplete: () => {
             if (isDestroyed) return;
-            content.removeAttribute("data-activation-direction");
-            // TODO(next-major): remove legacy navigation-menu data-motion compatibility.
-            content.removeAttribute("data-motion");
             restoreContentPlacement(content);
             content.hidden = true;
             content.style.pointerEvents = "none";
@@ -517,6 +517,7 @@ export function createNavigationMenu(
         item: HTMLElement;
         trigger: HTMLElement;
         content: HTMLElement;
+        index: number;
       }
     | null => {
     const item = el?.closest(
@@ -1453,30 +1454,9 @@ export function createNavigationMenu(
 
   cleanups.push(() => viewportPositionSync.stop());
 
-  const getActivationDirection = (
-    previousTrigger: HTMLElement,
-    nextTrigger: HTMLElement,
-  ): ActivationDirection | null => {
-    const previousRect = previousTrigger.getBoundingClientRect();
-    const nextRect = nextTrigger.getBoundingClientRect();
-    const deltaX = nextRect.left - previousRect.left;
-    const deltaY = nextRect.top - previousRect.top;
-
-    if (deltaX === 0 && deltaY === 0) return null;
-    if (Math.abs(deltaX) >= Math.abs(deltaY) && deltaX !== 0) {
-      return deltaX > 0 ? "right" : "left";
-    }
-    if (deltaY !== 0) {
-      return deltaY > 0 ? "down" : "up";
-    }
-    return null;
-  };
-
-  const getLegacyMotionDirection = (
-    direction: ActivationDirection | null,
-  ): "left" | "right" | null => {
-    if (direction === "left" || direction === "right") return direction;
-    return null;
+  const getMotionDirection = (newIndex: number): "left" | "right" => {
+    if (previousIndex === -1) return "right";
+    return newIndex > previousIndex ? "right" : "left";
   };
 
   // Update hover indicator position
@@ -1570,23 +1550,20 @@ export function createNavigationMenu(
 
     const doUpdate = () => {
       const prevValue = currentValue;
-      const previousData = prevValue ? itemMap.get(prevValue) : null;
       const newData = value ? itemMap.get(value) : null;
 
       // Only animate direction when switching between different items
       const isSwitching =
         prevValue !== null && value !== null && prevValue !== value;
 
-      // Determine activation direction (only when switching).
-      const activationDirection =
-        isSwitching && previousData && newData
-          ? getActivationDirection(previousData.trigger, newData.trigger)
-          : null;
-      const legacyMotionDirection = getLegacyMotionDirection(activationDirection);
+      // Determine motion direction (only when switching)
+      const direction =
+        isSwitching && newData ? getMotionDirection(newData.index) : null;
 
       // If closing while focus is inside the active content panel, restore focus to its trigger.
       const active = document.activeElement as HTMLElement | null;
       if (value === null && active && prevValue) {
+        const previousData = itemMap.get(prevValue);
         if (previousData && containsWithPortals(previousData.content, active)) {
           previousData.trigger.focus();
         }
@@ -1608,19 +1585,10 @@ export function createNavigationMenu(
           setInert(content, true);
           content.style.pointerEvents = "none";
 
-          if (wasActive && activationDirection) {
-            content.setAttribute(
-              "data-activation-direction",
-              activationDirection,
-            );
-          } else if (wasActive) {
-            content.removeAttribute("data-activation-direction");
-          }
-
-          // TODO(next-major): remove legacy navigation-menu data-motion compatibility.
-          if (wasActive && legacyMotionDirection) {
+          // Set exit motion on the previous content (only when switching)
+          if (wasActive && direction) {
             const exitDirection =
-              legacyMotionDirection === "right" ? "to-left" : "to-right";
+              direction === "right" ? "to-left" : "to-right";
             content.setAttribute("data-motion", exitDirection);
           } else if (wasActive) {
             content.removeAttribute("data-motion");
@@ -1629,8 +1597,6 @@ export function createNavigationMenu(
           if (wasActive) {
             presence?.exit();
           } else if (!presence?.isExiting) {
-            content.removeAttribute("data-activation-direction");
-            // TODO(next-major): remove legacy navigation-menu data-motion compatibility.
             content.removeAttribute("data-motion");
             restoreContentPlacement(content);
             content.hidden = true;
@@ -1654,19 +1620,9 @@ export function createNavigationMenu(
         presence?.enter();
         viewportPositionSync.start();
 
-        if (activationDirection) {
-          newData.content.setAttribute(
-            "data-activation-direction",
-            activationDirection,
-          );
-        } else {
-          newData.content.removeAttribute("data-activation-direction");
-        }
-
-        // TODO(next-major): remove legacy navigation-menu data-motion compatibility.
-        if (legacyMotionDirection) {
+        if (direction) {
           const enterDirection =
-            legacyMotionDirection === "right" ? "from-right" : "from-left";
+            direction === "right" ? "from-right" : "from-left";
           newData.content.setAttribute("data-motion", enterDirection);
         } else {
           newData.content.removeAttribute("data-motion");
@@ -1676,6 +1632,7 @@ export function createNavigationMenu(
         setInert(newData.content, false);
         newData.content.hidden = false;
         newData.content.style.pointerEvents = "auto";
+        previousIndex = newData.index;
 
         syncActiveViewportLayout(newData);
         observeActiveContent(newData);
@@ -1691,11 +1648,10 @@ export function createNavigationMenu(
       // Update root state
       const isOpen = value !== null;
       root.setAttribute("data-state", isOpen ? "open" : "closed");
-      // TODO(next-major): remove legacy navigation-menu data-motion compatibility.
-      if (legacyMotionDirection) {
+      if (direction) {
         root.setAttribute(
           "data-motion",
-          legacyMotionDirection === "right" ? "from-right" : "from-left",
+          direction === "right" ? "from-right" : "from-left",
         );
       } else {
         root.removeAttribute("data-motion");
@@ -1712,14 +1668,11 @@ export function createNavigationMenu(
         }
         syncViewportInstant();
 
-        // TODO(next-major): remove legacy navigation-menu data-motion compatibility.
-        if (legacyMotionDirection) {
+        if (direction) {
           viewport.style.setProperty(
             "--motion-direction",
-            legacyMotionDirection === "right" ? "1" : "-1",
+            direction === "right" ? "1" : "-1",
           );
-        } else {
-          viewport.style.removeProperty("--motion-direction");
         }
       }
 

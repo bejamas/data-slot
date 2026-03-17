@@ -1,14 +1,14 @@
 [
   {
     "name": "@data-slot/navigation-menu",
-    "size": 7628,
-    "sizeFormatted": "7.4 KB",
+    "size": 8020,
+    "sizeFormatted": "7.8 KB",
     "description": "Dropdown navigation menus"
   },
   {
     "name": "@data-slot/core",
-    "size": 5770,
-    "sizeFormatted": "5.6 KB",
+    "size": 5969,
+    "sizeFormatted": "5.8 KB",
     "description": "Shared utilities"
   },
   {
@@ -18,22 +18,28 @@
     "description": "Command palette, ranked search"
   },
   {
+    "name": "@data-slot/select",
+    "size": 4639,
+    "sizeFormatted": "4.5 KB",
+    "description": "Dropdown select, form-ready"
+  },
+  {
     "name": "@data-slot/combobox",
     "size": 4616,
     "sizeFormatted": "4.5 KB",
     "description": "Autocomplete input"
   },
   {
-    "name": "@data-slot/select",
-    "size": 4226,
-    "sizeFormatted": "4.1 KB",
-    "description": "Dropdown select, form-ready"
-  },
-  {
     "name": "@data-slot/dropdown-menu",
     "size": 2772,
     "sizeFormatted": "2.7 KB",
     "description": "Action menus, kbd nav"
+  },
+  {
+    "name": "@data-slot/tooltip",
+    "size": 2750,
+    "sizeFormatted": "2.7 KB",
+    "description": "Hover/focus tooltips"
   },
   {
     "name": "@data-slot/slider",
@@ -43,15 +49,9 @@
   },
   {
     "name": "@data-slot/tabs",
-    "size": 2324,
+    "size": 2368,
     "sizeFormatted": "2.3 KB",
     "description": "Tabbed interfaces, kbd nav"
-  },
-  {
-    "name": "@data-slot/tooltip",
-    "size": 2296,
-    "sizeFormatted": "2.2 KB",
-    "description": "Hover/focus tooltips"
   },
   {
     "name": "@data-slot/popover",

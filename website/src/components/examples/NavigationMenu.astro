@@ -77,12 +77,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
       <div
         data-slot="navigation-menu-content"
         class="absolute top-full pt-6 px-4 pb-0
-               transition-[opacity,transform] duration-250 ease-out
-               data-[starting-style]:opacity-0 data-[ending-style]:opacity-0
-               data-[starting-style][data-activation-direction=right]:translate-x-4
-               data-[starting-style][data-activation-direction=left]:-translate-x-4
-               data-[ending-style][data-activation-direction=right]:-translate-x-4
-               data-[ending-style][data-activation-direction=left]:translate-x-4
+               data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4
                data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none
                data-[state=inactive]:invisible data-[state=active]:visible"
         hidden
@@ -135,26 +130,11 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
 [data-slot="navigation-menu-viewport"][data-instant] {
   transition: opacity 0.15s ease;
 }
-[data-slot="navigation-menu-content"] {
-  transition:
-    opacity 175ms ease,
-    transform 350ms cubic-bezier(0.4, 0, 0.2, 1);
+[data-slot="navigation-menu-content"][data-motion="from-right"] {
+  animation: slideFromRight 0.25s ease;
 }
-[data-slot="navigation-menu-content"][data-starting-style],
-[data-slot="navigation-menu-content"][data-ending-style] {
-  opacity: 0;
-}
-[data-slot="navigation-menu-content"][data-starting-style][data-activation-direction="right"] {
-  transform: translateX(1rem);
-}
-[data-slot="navigation-menu-content"][data-starting-style][data-activation-direction="left"] {
-  transform: translateX(-1rem);
-}
-[data-slot="navigation-menu-content"][data-ending-style][data-activation-direction="right"] {
-  transform: translateX(-1rem);
-}
-[data-slot="navigation-menu-content"][data-ending-style][data-activation-direction="left"] {
-  transform: translateX(1rem);
+[data-slot="navigation-menu-content"][data-motion="from-left"] {
+  animation: slideFromLeft 0.25s ease;
 }`;
 ---
 
@@ -265,15 +245,12 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
   <nav slot="preview-tailwind" data-slot="navigation-menu" class="relative" id="nav-menu-tw">
     <ul data-slot="navigation-menu-list" class="
       flex list-none relative z-10
-      [&_[data-slot='navigation-menu-content']]:transition-[opacity,transform]
-      [&_[data-slot='navigation-menu-content']]:duration-250
-      [&_[data-slot='navigation-menu-content']]:ease-out
-      [&_[data-slot='navigation-menu-content'][data-starting-style]]:opacity-0
-      [&_[data-slot='navigation-menu-content'][data-ending-style]]:opacity-0
-      [&_[data-slot='navigation-menu-content'][data-starting-style][data-activation-direction='right']]:translate-x-4
-      [&_[data-slot='navigation-menu-content'][data-starting-style][data-activation-direction='left']]:-translate-x-4
-      [&_[data-slot='navigation-menu-content'][data-ending-style][data-activation-direction='right']]:-translate-x-4
-      [&_[data-slot='navigation-menu-content'][data-ending-style][data-activation-direction='left']]:translate-x-4
+      [&_[data-slot='navigation-menu-content'][data-state='active']]:animate-in
+[&_[data-slot='navigation-menu-content'][data-state='inactive']]:animate-out
+[&_[data-slot='navigation-menu-content'][data-motion='from-right']]:slide-in-from-right-4
+[&_[data-slot='navigation-menu-content'][data-motion='from-left']]:slide-in-from-left-4
+[&_[data-slot='navigation-menu-content'][data-motion='to-right']]:slide-to-right-4
+[&_[data-slot='navigation-menu-content'][data-motion='to-left']]:slide-to-left-4
       "
     >
       <li data-slot="navigation-menu-item" data-value="products" class="static">
@@ -285,7 +262,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4 data-[motion='from-left']:slide-in-from-left-4 data-motion[to-right]:animate-slide-to-right-4 data-[state=active]:animate-in data-[state=inactive]:animate-out "
           hidden
         >
           <div class="grid grid-cols-2 gap-3 w-[380px] p-2">
@@ -422,12 +399,10 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
   </nav>
   <div slot="note">
     <p class="mt-3 text-muted">
-      Hover between items. Content uses Base-style <code>data-activation-direction</code> with
-      <code>data-starting-style</code> and <code>data-ending-style</code>.
+      Hover between items — content slides with direction. Viewport animates smoothly.
     </p>
     <p class="mt-3 text-muted">
-      CSS variables: <code>--viewport-width</code>, <code>--viewport-height</code>. Legacy
-      <code>--motion-direction</code> is still emitted for backward compatibility.
+      CSS variables: <code>--viewport-width</code>, <code>--viewport-height</code>, <code>--motion-direction</code>.
     </p>
     <p class="mt-3 text-muted">
       Use <code>data-align="start|center|end"</code> on items to control alignment.
