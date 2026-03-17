@@ -707,8 +707,10 @@ describe("Slider", () => {
     it("range element spans between thumbs", () => {
       const { range } = setupRange("", [25, 75]);
 
-      expect(range.style.left).toBe("25%");
-      expect(range.style.width).toBe("50%");
+      expect(range.style.getPropertyValue("--start-position")).toBe("25%");
+      expect(range.style.getPropertyValue("--relative-size")).toBe("50%");
+      expect(range.style.getPropertyValue("inset-inline-start")).toBe("var(--start-position)");
+      expect(range.style.width).toBe("var(--relative-size)");
     });
 
     it("keyboard affects focused thumb only", () => {
@@ -1056,37 +1058,45 @@ describe("Slider", () => {
 
     it("positions thumb vertically when orientation is vertical", () => {
       const { thumb } = setupSingle('data-orientation="vertical" data-default-value="50"');
-      expect(thumb.style.bottom).toBe("50%");
+      expect(thumb.style.getPropertyValue("--position")).toBe("50%");
+      expect(thumb.style.bottom).toBe("var(--position)");
+      expect(thumb.style.left).toBe("50%");
+      expect(thumb.style.getPropertyValue("translate")).toBe("-50% 50%");
     });
 
     it("positions range vertically when orientation is vertical", () => {
       const { range } = setupSingle('data-orientation="vertical" data-default-value="50"');
       expect(range.style.bottom).toBe("0%");
-      expect(range.style.height).toBe("50%");
+      expect(range.style.getPropertyValue("--start-position")).toBe("50%");
+      expect(range.style.height).toBe("var(--start-position)");
+      expect(range.style.width).toBe("inherit");
     });
 
     it("clears opposite axis styles for horizontal orientation", () => {
       const { thumb, range } = setupSingle('data-default-value="50"');
-      // Horizontal: left is set, bottom should be cleared
-      expect(thumb.style.left).toBe("50%");
+      expect(thumb.style.getPropertyValue("--position")).toBe("50%");
+      expect(thumb.style.getPropertyValue("inset-inline-start")).toBe("var(--position)");
+      expect(thumb.style.top).toBe("50%");
       expect(thumb.style.bottom).toBe("");
+      expect(thumb.style.getPropertyValue("translate")).toBe("-50% -50%");
 
-      expect(range.style.left).toBe("0%");
-      expect(range.style.width).toBe("50%");
+      expect(range.style.getPropertyValue("inset-inline-start")).toBe("0%");
+      expect(range.style.width).toBe("var(--start-position)");
       expect(range.style.bottom).toBe("");
-      expect(range.style.height).toBe("");
+      expect(range.style.height).toBe("inherit");
     });
 
     it("clears opposite axis styles for vertical orientation", () => {
       const { thumb, range } = setupSingle('data-orientation="vertical" data-default-value="50"');
-      // Vertical: bottom is set, left should be cleared
-      expect(thumb.style.bottom).toBe("50%");
-      expect(thumb.style.left).toBe("");
+      expect(thumb.style.bottom).toBe("var(--position)");
+      expect(thumb.style.left).toBe("50%");
+      expect(thumb.style.getPropertyValue("inset-inline-start")).toBe("");
 
       expect(range.style.bottom).toBe("0%");
-      expect(range.style.height).toBe("50%");
+      expect(range.style.height).toBe("var(--start-position)");
       expect(range.style.left).toBe("");
-      expect(range.style.width).toBe("");
+      expect(range.style.getPropertyValue("inset-inline-start")).toBe("");
+      expect(range.style.width).toBe("inherit");
     });
   });
 
@@ -1113,13 +1123,24 @@ describe("Slider", () => {
 
     it("positions thumb at correct percentage", () => {
       const { thumb } = setupSingle('data-default-value="50"');
-      expect(thumb.style.left).toBe("50%");
+      expect(thumb.style.position).toBe("absolute");
+      expect(thumb.style.getPropertyValue("--position")).toBe("50%");
+      expect(thumb.style.getPropertyValue("inset-inline-start")).toBe("var(--position)");
+      expect(thumb.style.getPropertyValue("translate")).toBe("-50% -50%");
     });
 
     it("sizes range element correctly for single value", () => {
       const { range } = setupSingle('data-default-value="30"');
-      expect(range.style.left).toBe("0%");
-      expect(range.style.width).toBe("30%");
+      expect(range.style.position).toBe("relative");
+      expect(range.style.getPropertyValue("--start-position")).toBe("30%");
+      expect(range.style.getPropertyValue("inset-inline-start")).toBe("0%");
+      expect(range.style.width).toBe("var(--start-position)");
+      expect(range.style.height).toBe("inherit");
+    });
+
+    it("applies runtime-owned layout styles to the track", () => {
+      const { track } = setupSingle('data-default-value="30"');
+      expect(track.style.position).toBe("relative");
     });
   });
 });

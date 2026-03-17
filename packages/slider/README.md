@@ -170,7 +170,8 @@ The component sets data attributes and inline styles for CSS hooks:
 /* Thumb positioning (set automatically) */
 [data-slot="slider-thumb"] {
   position: absolute;
-  /* left: X% (horizontal) or bottom: X% (vertical) */
+  /* --position: X%; inset-inline-start/top or bottom/left are applied inline */
+  /* translate is applied inline to center the thumb on the active value */
 }
 
 /* Range thumbs expose their index */
@@ -179,13 +180,19 @@ The component sets data attributes and inline styles for CSS hooks:
 
 /* Range positioning (set automatically) */
 [data-slot="slider-range"] {
-  position: absolute;
-  /* left + width (horizontal) or bottom + height (vertical) */
+  /* horizontal: relative + inset-inline-start/width */
+  /* vertical: absolute + bottom/height */
 }
 
 /* Thumb dragging state */
 [data-slot="slider-thumb"][data-dragging] { ... }
 ```
+
+`slider-track`, `slider-range`, and `slider-thumb` also get Base-style inline layout
+styles from the controller. The runtime owns the track's `position: relative`, the
+range's start/size positioning, and the thumb's absolute position / translate, so
+authors only need to supply visual styles unless they intentionally want to override
+that layout behavior.
 
 ## Accessibility
 

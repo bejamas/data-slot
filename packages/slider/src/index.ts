@@ -299,6 +299,71 @@ export function createSlider(
 
   const isHorizontal = orientation === "horizontal";
 
+  const applyTrackLayoutStyles = () => {
+    track.style.position = "relative";
+  };
+
+  const applyThumbLayoutStyles = (thumb: HTMLElement, percent: number) => {
+    thumb.style.position = "absolute";
+    thumb.style.setProperty("--position", `${percent}%`);
+
+    if (isHorizontal) {
+      thumb.style.setProperty("inset-inline-start", "var(--position)");
+      thumb.style.top = "50%";
+      thumb.style.bottom = "";
+      thumb.style.left = "";
+      thumb.style.setProperty("translate", "-50% -50%");
+    } else {
+      thumb.style.removeProperty("inset-inline-start");
+      thumb.style.bottom = "var(--position)";
+      thumb.style.left = "50%";
+      thumb.style.top = "";
+      thumb.style.setProperty("translate", "-50% 50%");
+    }
+  };
+
+  const applyRangeLayoutStyles = (
+    startPercent: number,
+    sizePercent: number,
+    isRangeSegment: boolean,
+  ) => {
+    if (!range) return;
+
+    const startPosition = isRangeSegment ? startPercent : sizePercent;
+
+    range.style.setProperty("--start-position", `${startPosition}%`);
+    range.style.position = isHorizontal ? "relative" : "absolute";
+
+    if (isHorizontal) {
+      range.style.setProperty(
+        "inset-inline-start",
+        isRangeSegment ? "var(--start-position)" : "0%",
+      );
+      range.style.width = isRangeSegment
+        ? "var(--relative-size)"
+        : "var(--start-position)";
+      range.style.height = "inherit";
+      range.style.bottom = "";
+      range.style.left = "";
+    } else {
+      range.style.removeProperty("inset-inline-start");
+      range.style.bottom = isRangeSegment ? "var(--start-position)" : "0%";
+      range.style.height = isRangeSegment
+        ? "var(--relative-size)"
+        : "var(--start-position)";
+      range.style.width = "inherit";
+      range.style.left = "";
+    }
+
+    if (isRangeSegment) {
+      range.style.setProperty("--relative-size", `${sizePercent}%`);
+    } else {
+      range.style.removeProperty("--relative-size");
+    }
+  };
+
+  applyTrackLayoutStyles();
+
   // Update visual state (CSS positioning, ARIA values)
   const updateVisualState = () => {
     if (isRange(currentValue)) {
@@ -312,44 +377,18 @@ export function createSlider(
         setAria(thumbs[0], "valuemin", String(min));
         // Min thumb's max is constrained by max thumb's value
         setAria(thumbs[0], "valuemax", String(maxVal));
-
-        if (isHorizontal) {
-          thumbs[0].style.left = `${minPercent}%`;
-          thumbs[0].style.bottom = "";
-        } else {
-          thumbs[0].style.bottom = `${minPercent}%`;
-          thumbs[0].style.left = "";
-        }
+        applyThumbLayoutStyles(thumbs[0], minPercent);
       }
       if (thumbs[1]) {
         setAria(thumbs[1], "valuenow", String(maxVal));
         // Max thumb's min is constrained by min thumb's value
         setAria(thumbs[1], "valuemin", String(minVal));
         setAria(thumbs[1], "valuemax", String(max));
-
-        if (isHorizontal) {
-          thumbs[1].style.left = `${maxPercent}%`;
-          thumbs[1].style.bottom = "";
-        } else {
-          thumbs[1].style.bottom = `${maxPercent}%`;
-          thumbs[1].style.left = "";
-        }
+        applyThumbLayoutStyles(thumbs[1], maxPercent);
       }
 
       // Update range
-      if (range) {
-        if (isHorizontal) {
-          range.style.left = `${minPercent}%`;
-          range.style.width = `${maxPercent - minPercent}%`;
-          range.style.bottom = "";
-          range.style.height = "";
-        } else {
-          range.style.bottom = `${minPercent}%`;
-          range.style.height = `${maxPercent - minPercent}%`;
-          range.style.left = "";
-          range.style.width = "";
-        }
-      }
+      applyRangeLayoutStyles(minPercent, maxPercent - minPercent, true);
     } else {
       const percent = valueToPercent(currentValue, min, max);
 
@@ -358,30 +397,11 @@ export function createSlider(
         setAria(thumbs[0], "valuenow", String(currentValue));
         setAria(thumbs[0], "valuemin", String(min));
         setAria(thumbs[0], "valuemax", String(max));
-
-        if (isHorizontal) {
-          thumbs[0].style.left = `${percent}%`;
-          thumbs[0].style.bottom = "";
-        } else {
-          thumbs[0].style.bottom = `${percent}%`;
-          thumbs[0].style.left = "";
-        }
+        applyThumbLayoutStyles(thumbs[0], percent);
       }
 
       // Update range (from start to thumb)
-      if (range) {
-        if (isHorizontal) {
-          range.style.left = "0%";
-          range.style.width = `${percent}%`;
-          range.style.bottom = "";
-          range.style.height = "";
-        } else {
-          range.style.bottom = "0%";
-          range.style.height = `${percent}%`;
-          range.style.left = "";
-          range.style.width = "";
-        }
-      }
+      applyRangeLayoutStyles(0, percent, false);
     }
 
     // Update root data-value
