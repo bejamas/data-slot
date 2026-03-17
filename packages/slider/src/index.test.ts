@@ -52,6 +52,47 @@ describe("Slider", () => {
     return { root, track, range, thumbs, control, controller };
   };
 
+  const setupFlat = (attrs = "", defaultValue?: number) => {
+    document.body.innerHTML = `
+      <div data-slot="slider" id="root" ${attrs}>
+        <div data-slot="slider-track">
+          <div data-slot="slider-range"></div>
+        </div>
+        <div data-slot="slider-thumb"></div>
+      </div>
+    `;
+    const root = document.getElementById("root") as HTMLElement;
+    const track = root.querySelector('[data-slot="slider-track"]') as HTMLElement;
+    const range = root.querySelector('[data-slot="slider-range"]') as HTMLElement;
+    const thumb = root.querySelector('[data-slot="slider-thumb"]') as HTMLElement;
+    const controller = createSlider(root, defaultValue !== undefined ? { defaultValue } : {});
+
+    return { root, track, range, thumb, control: root, controller };
+  };
+
+  const setupWithControlSlot = (attrs = "", defaultValue?: number) => {
+    document.body.innerHTML = `
+      <div data-slot="slider" id="root" ${attrs}>
+        <div data-slot="slider-control" id="control">
+          <div class="inner">
+            <div data-slot="slider-track">
+              <div data-slot="slider-range"></div>
+            </div>
+          </div>
+          <div data-slot="slider-thumb"></div>
+        </div>
+      </div>
+    `;
+    const root = document.getElementById("root") as HTMLElement;
+    const control = document.getElementById("control") as HTMLElement;
+    const track = root.querySelector('[data-slot="slider-track"]') as HTMLElement;
+    const range = root.querySelector('[data-slot="slider-range"]') as HTMLElement;
+    const thumb = root.querySelector('[data-slot="slider-thumb"]') as HTMLElement;
+    const controller = createSlider(root, defaultValue !== undefined ? { defaultValue } : {});
+
+    return { root, control, track, range, thumb, controller };
+  };
+
   describe("Basic Functionality", () => {
     it("initializes with default value from options", () => {
       const { controller } = setupSingle("", 50);
@@ -110,6 +151,40 @@ describe("Slider", () => {
 
       controller.setValue(27);
       expect(controller.value).toBe(30);
+    });
+
+    it("supports the flat shadcn-style structure with the root as control", () => {
+      const { root, track, controller } = setupFlat('data-default-value="50"');
+
+      track.getBoundingClientRect = () => ({
+        left: 0, right: 200, top: 0, bottom: 20,
+        width: 200, height: 20, x: 0, y: 0, toJSON() {}
+      } as DOMRect);
+      root.setPointerCapture = () => {};
+      root.releasePointerCapture = () => {};
+
+      root.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 150, clientY: 10, pointerId: 1, bubbles: true
+      }));
+
+      expect(controller.value).toBe(75);
+    });
+
+    it("uses an explicit slider-control slot as the control surface", () => {
+      const { control, track, controller } = setupWithControlSlot('data-default-value="25"');
+
+      track.getBoundingClientRect = () => ({
+        left: 0, right: 200, top: 0, bottom: 20,
+        width: 200, height: 20, x: 0, y: 0, toJSON() {}
+      } as DOMRect);
+      control.setPointerCapture = () => {};
+      control.releasePointerCapture = () => {};
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 100, clientY: 10, pointerId: 1, bubbles: true
+      }));
+
+      expect(controller.value).toBe(50);
     });
   });
 
@@ -209,6 +284,15 @@ describe("Slider", () => {
 
       expect(thumb.getAttribute("aria-disabled")).toBe("true");
       expect(root.hasAttribute("data-disabled")).toBe(true);
+    });
+
+    it("mirrors data-disabled to track, range, and thumb parts", () => {
+      const { root, track, range, thumb } = setupSingle('data-disabled');
+
+      expect(root.hasAttribute("data-disabled")).toBe(true);
+      expect(track.hasAttribute("data-disabled")).toBe(true);
+      expect(range.hasAttribute("data-disabled")).toBe(true);
+      expect(thumb.hasAttribute("data-disabled")).toBe(true);
     });
 
     it("updates aria-valuenow on value change", () => {
@@ -962,6 +1046,14 @@ describe("Slider", () => {
       expect(root.getAttribute("data-orientation")).toBe("vertical");
     });
 
+    it("mirrors data-orientation to track, range, and thumbs", () => {
+      const { track, range, thumb } = setupSingle('data-orientation="vertical"');
+
+      expect(track.getAttribute("data-orientation")).toBe("vertical");
+      expect(range.getAttribute("data-orientation")).toBe("vertical");
+      expect(thumb.getAttribute("data-orientation")).toBe("vertical");
+    });
+
     it("positions thumb vertically when orientation is vertical", () => {
       const { thumb } = setupSingle('data-orientation="vertical" data-default-value="50"');
       expect(thumb.style.bottom).toBe("50%");
@@ -1010,6 +1102,13 @@ describe("Slider", () => {
     it("sets data-value with comma for range", () => {
       const { root } = setupRange("", [25, 75]);
       expect(root.getAttribute("data-value")).toBe("25,75");
+    });
+
+    it("sets data-index on range thumbs", () => {
+      const { thumbs } = setupRange("", [25, 75]);
+
+      expect(thumbs[0]?.getAttribute("data-index")).toBe("0");
+      expect(thumbs[1]?.getAttribute("data-index")).toBe("1");
     });
 
     it("positions thumb at correct percentage", () => {

@@ -132,7 +132,15 @@ function percentToValue(percent: number, min: number, max: number): number {
  * Expected markup:
  * ```html
  * <div data-slot="slider" data-default-value="50">
- *   <div class="slider-control">
+ *   <div data-slot="slider-track">
+ *     <div data-slot="slider-range"></div>
+ *   </div>
+ *   <div data-slot="slider-thumb"></div>
+ * </div>
+ *
+ * <!-- Optional control wrapper -->
+ * <div data-slot="slider" data-default-value="50">
+ *   <div data-slot="slider-control">
  *     <div data-slot="slider-track">
  *       <div data-slot="slider-range"></div>
  *     </div>
@@ -152,9 +160,11 @@ export function createSlider(
   );
   if (existingController) return existingController;
 
+  const rootElement = root as HTMLElement;
   const track = getPart<HTMLElement>(root, "slider-track");
   const thumbs = getParts<HTMLElement>(root, "slider-thumb");
   const range = getPart<HTMLElement>(root, "slider-range");
+  const explicitControl = getPart<HTMLElement>(root, "slider-control");
 
   if (!track || thumbs.length === 0) {
     throw new Error(
@@ -162,11 +172,12 @@ export function createSlider(
     );
   }
 
-  // Get control element (parent of track)
-  const control = track.parentElement;
-  if (!control) {
-    throw new Error("Slider track must have a parent element (control)");
-  }
+  // Resolve the interactive control surface. Prefer an explicit control part,
+  // then preserve the historical parent-of-track fallback, finally use the root.
+  const control =
+    explicitControl ??
+    (track.parentElement instanceof HTMLElement ? track.parentElement : null) ??
+    rootElement;
 
   // Resolve options with explicit precedence: JS > data-* > default
   let min = options.min ?? getDataNumber(root, "min") ?? 0;
@@ -225,15 +236,30 @@ export function createSlider(
   // Store original touchAction to restore later
   let prevTouchAction: string | null = null;
 
-  // Set orientation attribute on root
-  root.setAttribute("data-orientation", orientation);
+  const stateParts = Array.from(
+    new Set(
+      [rootElement, control, track, range, ...thumbs].filter(
+        (part): part is HTMLElement => part instanceof HTMLElement,
+      ),
+    ),
+  );
+
+  const syncOrientation = () => {
+    for (const part of stateParts) {
+      part.setAttribute("data-orientation", orientation);
+    }
+  };
+
+  syncOrientation();
 
   // Setup disabled state
   const applyDisabled = (isDisabled: boolean) => {
-    if (isDisabled) {
-      root.setAttribute("data-disabled", "");
-    } else {
-      root.removeAttribute("data-disabled");
+    for (const part of stateParts) {
+      if (isDisabled) {
+        part.setAttribute("data-disabled", "");
+      } else {
+        part.removeAttribute("data-disabled");
+      }
     }
     for (const thumb of thumbs) {
       setAria(thumb, "disabled", isDisabled);
@@ -248,6 +274,11 @@ export function createSlider(
     thumb.tabIndex = disabled ? -1 : 0;
     ensureId(thumb, "slider-thumb");
     setAria(thumb, "orientation", orientation);
+    if (isRangeSlider) {
+      thumb.setAttribute("data-index", String(index));
+    } else {
+      thumb.removeAttribute("data-index");
+    }
 
     // Prefer author-provided labels (data-label or existing aria-label/aria-labelledby)
     const hasAriaLabel =

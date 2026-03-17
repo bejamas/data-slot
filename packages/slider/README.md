@@ -17,7 +17,15 @@ npm install @data-slot/slider
 ```html
 <!-- Single value slider -->
 <div data-slot="slider" data-default-value="50">
-  <div class="slider-control">
+  <div data-slot="slider-track">
+    <div data-slot="slider-range"></div>
+  </div>
+  <div data-slot="slider-thumb"></div>
+</div>
+
+<!-- Optional control wrapper -->
+<div data-slot="slider" data-default-value="50">
+  <div data-slot="slider-control">
     <div data-slot="slider-track">
       <div data-slot="slider-range"></div>
     </div>
@@ -27,13 +35,11 @@ npm install @data-slot/slider
 
 <!-- Range slider (two thumbs) -->
 <div data-slot="slider" data-default-value="25,75">
-  <div class="slider-control">
-    <div data-slot="slider-track">
-      <div data-slot="slider-range"></div>
-    </div>
-    <div data-slot="slider-thumb"></div>
-    <div data-slot="slider-thumb"></div>
+  <div data-slot="slider-track">
+    <div data-slot="slider-range"></div>
   </div>
+  <div data-slot="slider-thumb"></div>
+  <div data-slot="slider-thumb"></div>
 </div>
 ```
 
@@ -150,11 +156,26 @@ The component sets data attributes and inline styles for CSS hooks:
 [data-slot="slider"][data-disabled] { ... }
 [data-slot="slider"][data-dragging] { ... }
 
+/* Parts mirror shared state for shadcn/Base-style selectors */
+[data-slot="slider-track"][data-orientation="horizontal"] { ... }
+[data-slot="slider-track"][data-orientation="vertical"] { ... }
+[data-slot="slider-range"][data-orientation="horizontal"] { ... }
+[data-slot="slider-range"][data-orientation="vertical"] { ... }
+[data-slot="slider-track"][data-disabled] { ... }
+[data-slot="slider-range"][data-disabled] { ... }
+[data-slot="slider-thumb"][data-orientation="horizontal"] { ... }
+[data-slot="slider-thumb"][data-orientation="vertical"] { ... }
+[data-slot="slider-thumb"][data-disabled] { ... }
+
 /* Thumb positioning (set automatically) */
 [data-slot="slider-thumb"] {
   position: absolute;
   /* left: X% (horizontal) or bottom: X% (vertical) */
 }
+
+/* Range thumbs expose their index */
+[data-slot="slider-thumb"][data-index="0"] { ... }
+[data-slot="slider-thumb"][data-index="1"] { ... }
 
 /* Range positioning (set automatically) */
 [data-slot="slider-range"] {
@@ -175,6 +196,10 @@ Each thumb element receives:
 - `aria-orientation`
 - `aria-disabled` (when disabled)
 - `aria-label` (from `data-label` or auto-generated for range)
+
+`slider-track`, `slider-range`, and `slider-thumb` also mirror the root's
+`data-orientation` and `data-disabled` attrs for styling. `slider-control` is optional;
+when omitted, the root acts as the interactive control surface.
 
 ## License
 

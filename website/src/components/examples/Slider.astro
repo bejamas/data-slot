@@ -3,21 +3,14 @@ import { Code } from "astro:components";
 import ExampleBlock from "../ExampleBlock.astro";
 
 const cssCodeBasic = `<div data-slot="slider" data-default-value="50" class="slider">
-  <div class="slider-control">
-    <div data-slot="slider-track" class="slider-track">
-      <div data-slot="slider-range" class="slider-range"></div>
-    </div>
-    <div data-slot="slider-thumb" class="slider-thumb"></div>
+  <div data-slot="slider-track" class="slider-track">
+    <div data-slot="slider-range" class="slider-range"></div>
   </div>
+  <div data-slot="slider-thumb" class="slider-thumb"></div>
 </div>
 
 <style>
   .slider {
-    position: relative;
-    width: 100%;
-    padding: 0.5rem 0;
-  }
-  .slider-control {
     position: relative;
     display: flex;
     align-items: center;
@@ -26,7 +19,7 @@ const cssCodeBasic = `<div data-slot="slider" data-default-value="50" class="sli
   }
   .slider-track {
     position: relative;
-    flex: 1;
+    width: 100%;
     height: 4px;
     background: #e5e5e5;
     border-radius: 2px;
@@ -45,7 +38,8 @@ const cssCodeBasic = `<div data-slot="slider" data-default-value="50" class="sli
     border: 2px solid #1a1a1a;
     border-radius: 50%;
     cursor: grab;
-    transform: translateX(-50%);
+    top: 50%;
+    transform: translate(-50%, -50%);
   }
   .slider-thumb:focus {
     outline: none;
@@ -58,76 +52,66 @@ const cssCodeBasic = `<div data-slot="slider" data-default-value="50" class="sli
   }
 </style>`;
 
-const tailwindCodeBasic = `<div data-slot="slider" data-default-value="50" class="relative w-full py-2">
-  <div class="relative flex items-center w-full h-5">
-    <div data-slot="slider-track" class="relative flex-1 h-1 bg-gray-200 rounded">
-      <div data-slot="slider-range" class="absolute h-full bg-gray-900 rounded"></div>
-    </div>
-    <div
-      data-slot="slider-thumb"
-      class="absolute w-5 h-5 bg-white border-2 border-gray-900 rounded-full cursor-grab
-             -translate-x-1/2 focus:outline-none focus:ring-2 focus:ring-gray-900/20
-             data-[dragging]:cursor-grabbing"
-    ></div>
+const tailwindCodeBasic = `<div data-slot="slider" data-default-value="50" class="relative flex h-5 w-full items-center">
+  <div data-slot="slider-track" class="relative h-1 w-full rounded bg-gray-200">
+    <div data-slot="slider-range" class="absolute h-full rounded bg-gray-900"></div>
   </div>
+  <div
+    data-slot="slider-thumb"
+    class="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2
+           border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2
+           focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+  ></div>
 </div>`;
 
 const cssCodeRange = `<div data-slot="slider" data-default-value="25,75" class="slider">
-  <div class="slider-control">
-    <div data-slot="slider-track" class="slider-track">
-      <div data-slot="slider-range" class="slider-range"></div>
-    </div>
-    <div data-slot="slider-thumb" class="slider-thumb"></div>
-    <div data-slot="slider-thumb" class="slider-thumb"></div>
+  <div data-slot="slider-track" class="slider-track">
+    <div data-slot="slider-range" class="slider-range"></div>
   </div>
+  <div data-slot="slider-thumb" class="slider-thumb"></div>
+  <div data-slot="slider-thumb" class="slider-thumb"></div>
 </div>
 
 <style>
   /* Same styles as basic slider */
 </style>`;
 
-const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" class="relative w-full py-2">
-  <div class="relative flex items-center w-full h-5">
-    <div data-slot="slider-track" class="relative flex-1 h-1 bg-gray-200 rounded">
-      <div data-slot="slider-range" class="absolute h-full bg-gray-900 rounded"></div>
-    </div>
-    <div
-      data-slot="slider-thumb"
-      class="absolute w-5 h-5 bg-white border-2 border-gray-900 rounded-full cursor-grab
-             -translate-x-1/2 focus:outline-none focus:ring-2 focus:ring-gray-900/20
-             data-[dragging]:cursor-grabbing"
-    ></div>
-    <div
-      data-slot="slider-thumb"
-      class="absolute w-5 h-5 bg-white border-2 border-gray-900 rounded-full cursor-grab
-             -translate-x-1/2 focus:outline-none focus:ring-2 focus:ring-gray-900/20
-             data-[dragging]:cursor-grabbing"
-    ></div>
+const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" class="relative flex h-5 w-full items-center">
+  <div data-slot="slider-track" class="relative h-1 w-full rounded bg-gray-200">
+    <div data-slot="slider-range" class="absolute h-full rounded bg-gray-900"></div>
   </div>
+  <div
+    data-slot="slider-thumb"
+    class="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2
+           border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2
+           focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+  ></div>
+  <div
+    data-slot="slider-thumb"
+    class="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2
+           border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2
+           focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+  ></div>
 </div>`;
 ---
 
 <!-- Basic Slider -->
 <ExampleBlock label="Basic Slider">
   <div slot="preview-css" data-slot="slider" data-default-value="50" id="slider-basic-css" class="slider-css">
-    <div class="slider-control-css">
-      <div data-slot="slider-track" class="slider-track-css">
-        <div data-slot="slider-range" class="slider-range-css"></div>
-      </div>
-      <div data-slot="slider-thumb" class="slider-thumb-css"></div>
+    <div data-slot="slider-track" class="slider-track-css">
+      <div data-slot="slider-range" class="slider-range-css"></div>
     </div>
+    <div data-slot="slider-thumb" class="slider-thumb-css"></div>
   </div>
 
-  <div slot="preview-tailwind" data-slot="slider" data-default-value="50" id="slider-basic-tw" class="relative w-full py-2">
-    <div class="relative flex items-center w-full h-5">
-      <div data-slot="slider-track" class="relative flex-1 h-1 bg-gray-200 rounded">
-        <div data-slot="slider-range" class="absolute h-full bg-gray-900 rounded"></div>
-      </div>
-      <div
-        data-slot="slider-thumb"
-        class="absolute w-5 h-5 bg-white border-2 border-gray-900 rounded-full cursor-grab -translate-x-1/2 focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
-      ></div>
+  <div slot="preview-tailwind" data-slot="slider" data-default-value="50" id="slider-basic-tw" class="relative flex h-5 w-full items-center">
+    <div data-slot="slider-track" class="relative h-1 w-full rounded bg-gray-200">
+      <div data-slot="slider-range" class="absolute h-full rounded bg-gray-900"></div>
     </div>
+    <div
+      data-slot="slider-thumb"
+      class="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+    ></div>
   </div>
 
   <Code slot="code-css" code={cssCodeBasic} lang="html" theme="vitesse-light" />
@@ -137,29 +121,25 @@ const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" cl
 <!-- Range Slider -->
 <ExampleBlock label="Range Slider">
   <div slot="preview-css" data-slot="slider" data-default-value="25,75" id="slider-range-css" class="slider-css">
-    <div class="slider-control-css">
-      <div data-slot="slider-track" class="slider-track-css">
-        <div data-slot="slider-range" class="slider-range-css"></div>
-      </div>
-      <div data-slot="slider-thumb" class="slider-thumb-css"></div>
-      <div data-slot="slider-thumb" class="slider-thumb-css"></div>
+    <div data-slot="slider-track" class="slider-track-css">
+      <div data-slot="slider-range" class="slider-range-css"></div>
     </div>
+    <div data-slot="slider-thumb" class="slider-thumb-css"></div>
+    <div data-slot="slider-thumb" class="slider-thumb-css"></div>
   </div>
 
-  <div slot="preview-tailwind" data-slot="slider" data-default-value="25,75" id="slider-range-tw" class="relative w-full py-2">
-    <div class="relative flex items-center w-full h-5">
-      <div data-slot="slider-track" class="relative flex-1 h-1 bg-gray-200 rounded">
-        <div data-slot="slider-range" class="absolute h-full bg-gray-900 rounded"></div>
-      </div>
-      <div
-        data-slot="slider-thumb"
-        class="absolute w-5 h-5 bg-white border-2 border-gray-900 rounded-full cursor-grab -translate-x-1/2 focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
-      ></div>
-      <div
-        data-slot="slider-thumb"
-        class="absolute w-5 h-5 bg-white border-2 border-gray-900 rounded-full cursor-grab -translate-x-1/2 focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
-      ></div>
+  <div slot="preview-tailwind" data-slot="slider" data-default-value="25,75" id="slider-range-tw" class="relative flex h-5 w-full items-center">
+    <div data-slot="slider-track" class="relative h-1 w-full rounded bg-gray-200">
+      <div data-slot="slider-range" class="absolute h-full rounded bg-gray-900"></div>
     </div>
+    <div
+      data-slot="slider-thumb"
+      class="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+    ></div>
+    <div
+      data-slot="slider-thumb"
+      class="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+    ></div>
   </div>
 
   <Code slot="code-css" code={cssCodeRange} lang="html" theme="vitesse-light" />
@@ -170,11 +150,6 @@ const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" cl
   /* CSS version styles */
   .slider-css {
     position: relative;
-    width: 100%;
-    padding: 0.5rem 0;
-  }
-  .slider-control-css {
-    position: relative;
     display: flex;
     align-items: center;
     width: 100%;
@@ -182,7 +157,7 @@ const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" cl
   }
   .slider-track-css {
     position: relative;
-    flex: 1;
+    width: 100%;
     height: 4px;
     background: #e5e5e5;
     border-radius: 2px;
@@ -201,7 +176,8 @@ const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" cl
     border: 2px solid #1a1a1a;
     border-radius: 50%;
     cursor: grab;
-    transform: translateX(-50%);
+    top: 50%;
+    transform: translate(-50%, -50%);
   }
   .slider-thumb-css:focus {
     outline: none;
