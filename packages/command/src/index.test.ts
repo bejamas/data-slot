@@ -91,17 +91,23 @@ describe("Command", () => {
 
   beforeEach(() => {
     document.body.innerHTML = "";
+    document.head.innerHTML = "";
   });
 
-  it("initializes with ARIA wiring and selects the first enabled item", () => {
+  it("initializes with ARIA wiring and selected item markup", () => {
     const { root, input, list, controller } = setup();
-    const firstItem = root.querySelector('[data-slot="command-item"]') as HTMLElement;
+    const items = root.querySelectorAll('[data-slot="command-item"]') as NodeListOf<HTMLElement>;
+    const firstItem = items[0] as HTMLElement;
+    const secondItem = items[1] as HTMLElement;
 
     expect(root.tabIndex).toBe(-1);
     expect(input.getAttribute("role")).toBe("combobox");
     expect(input.getAttribute("aria-controls")).toBe(list.id);
     expect(list.getAttribute("role")).toBe("listbox");
     expect(firstItem.getAttribute("aria-selected")).toBe("true");
+    expect(firstItem.getAttribute("data-selected")).toBe("true");
+    expect(secondItem.getAttribute("aria-selected")).toBe("false");
+    expect(secondItem.hasAttribute("data-selected")).toBe(false);
     expect(controller.value).toBe("A");
     expect(root.getAttribute("data-value")).toBe("A");
     expect(list.style.getPropertyValue("--command-list-height")).toEndWith("px");
@@ -635,6 +641,65 @@ describe("Command", () => {
     otherItems[2]?.dispatchEvent(new PointerEvent("pointermove", { bubbles: true }));
     expect(second.controller.value).toBe("A");
     second.controller.destroy();
+  });
+
+  it("emits data-selected='true' for the active item and supports shadcn-style selectors", () => {
+    const style = document.createElement("style");
+    style.textContent = `
+      .data-selected\\:bg-muted[data-selected="true"] {
+        background-color: rgb(236, 228, 217);
+      }
+
+      .group\\/command-item[data-selected="true"] .group-data-selected\\/command-item\\:text-foreground {
+        color: rgb(36, 28, 22);
+      }
+    `;
+    document.head.appendChild(style);
+
+    document.body.innerHTML = `
+      <div data-slot="command" id="root">
+        <input data-slot="command-input" />
+        <div data-slot="command-list">
+          <div data-slot="command-item" data-value="alpha" class="group/command-item data-selected:bg-muted">
+            <span class="group-data-selected/command-item:text-foreground">Alpha</span>
+          </div>
+          <div data-slot="command-item" data-value="beta" class="group/command-item data-selected:bg-muted">
+            <span class="group-data-selected/command-item:text-foreground">Beta</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const controller = createCommand(root);
+    const items = root.querySelectorAll('[data-slot="command-item"]') as NodeListOf<HTMLElement>;
+    const firstText = items[0]?.querySelector("span") as HTMLElement;
+    const secondText = items[1]?.querySelector("span") as HTMLElement;
+
+    expect(items[0]?.getAttribute("data-selected")).toBe("true");
+    expect(items[0]?.getAttribute("aria-selected")).toBe("true");
+    expect(items[1]?.hasAttribute("data-selected")).toBe(false);
+    expect(items[1]?.getAttribute("aria-selected")).toBe("false");
+    expect(getComputedStyle(items[0]!).backgroundColor).toBe("rgb(236, 228, 217)");
+    expect(getComputedStyle(firstText).color).toBe("rgb(36, 28, 22)");
+
+    controller.select("beta");
+
+    expect(items[0]?.hasAttribute("data-selected")).toBe(false);
+    expect(items[0]?.getAttribute("aria-selected")).toBe("false");
+    expect(items[1]?.getAttribute("data-selected")).toBe("true");
+    expect(items[1]?.getAttribute("aria-selected")).toBe("true");
+    expect(getComputedStyle(items[1]!).backgroundColor).toBe("rgb(236, 228, 217)");
+    expect(getComputedStyle(secondText).color).toBe("rgb(36, 28, 22)");
+
+    controller.select(null);
+
+    expect(items[0]?.hasAttribute("data-selected")).toBe(false);
+    expect(items[0]?.getAttribute("aria-selected")).toBe("false");
+    expect(items[1]?.hasAttribute("data-selected")).toBe(false);
+    expect(items[1]?.getAttribute("aria-selected")).toBe("false");
+
+    controller.destroy();
   });
 
   it("does not hijack nested interactive descendants", () => {

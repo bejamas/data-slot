@@ -467,7 +467,7 @@ export function createCommand(
       const selected = meta.value === currentValue && currentValue !== null;
       setAria(meta.el, "selected", selected);
       if (selected) {
-        meta.el.setAttribute("data-selected", "");
+        meta.el.setAttribute("data-selected", "true");
       } else {
         meta.el.removeAttribute("data-selected");
       }
