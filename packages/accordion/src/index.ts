@@ -192,6 +192,8 @@ interface AccordionItemRecord {
   content: HTMLElement;
   presence: ReturnType<typeof createPresenceLifecycle>;
   sizeObserver: ResizeObserver | null;
+  idleAnimationName: string | null;
+  idleAnimationSuppressed: boolean;
   openSettleRafId: number | null;
   openSettleTimeoutId: number | null;
   closeZeroRafId: number | null;
@@ -358,6 +360,25 @@ export function createAccordion(
     }
   };
 
+  const disableIdlePanelAnimation = (item: AccordionItemRecord) => {
+    if (item.idleAnimationSuppressed) return;
+    const inlineAnimationName = item.content.style.getPropertyValue("animation-name");
+    item.idleAnimationName = inlineAnimationName || null;
+    item.idleAnimationSuppressed = true;
+    item.content.style.setProperty("animation-name", "none");
+  };
+
+  const enablePanelAnimation = (item: AccordionItemRecord) => {
+    if (!item.idleAnimationSuppressed) return;
+    if (item.idleAnimationName) {
+      item.content.style.setProperty("animation-name", item.idleAnimationName);
+    } else {
+      item.content.style.removeProperty("animation-name");
+    }
+    item.idleAnimationName = null;
+    item.idleAnimationSuppressed = false;
+  };
+
   const applyOpenVisibility = (item: AccordionItemRecord) => {
     item.content.removeAttribute("hidden");
   };
@@ -373,13 +394,22 @@ export function createAccordion(
 
   let expandedValues = new Set<string>();
 
-  const finishOpenSettle = (item: AccordionItemRecord) => {
+  const finishOpenSettle = (
+    item: AccordionItemRecord,
+    motionStrategy: AccordionMotionStrategy
+  ) => {
     clearOpenSettleTracking(item);
     if (!expandedValues.has(item.value) || item.presence.isExiting) return;
     setPanelSizeAuto(item);
+    if (motionStrategy === "css-animation") {
+      disableIdlePanelAnimation(item);
+    }
   };
 
-  const scheduleOpenSettle = (item: AccordionItemRecord) => {
+  const scheduleOpenSettle = (
+    item: AccordionItemRecord,
+    motionStrategy: AccordionMotionStrategy
+  ) => {
     clearOpenSettleTracking(item);
 
     const maxDuration = getMaxPresenceDurationMs(item.content);
@@ -407,7 +437,7 @@ export function createAccordion(
           return;
         }
 
-        finishOpenSettle(item);
+        finishOpenSettle(item, motionStrategy);
       };
 
       const onAnimationEnd = (event: Event) => {
@@ -415,7 +445,7 @@ export function createAccordion(
         if (maxSizeTransitionMs > 0) return;
         if (!hasElapsed(settleDuration)) return;
 
-        finishOpenSettle(item);
+        finishOpenSettle(item, motionStrategy);
       };
 
       item.content.addEventListener("transitionend", onTransitionEnd);
@@ -429,7 +459,7 @@ export function createAccordion(
 
       item.openSettleTimeoutId = win.setTimeout(() => {
         item.openSettleTimeoutId = null;
-        finishOpenSettle(item);
+        finishOpenSettle(item, motionStrategy);
       }, Math.ceil(settleDuration) + 50);
 
       return;
@@ -437,7 +467,7 @@ export function createAccordion(
 
     item.openSettleRafId = win.requestAnimationFrame(() => {
       item.openSettleRafId = null;
-      finishOpenSettle(item);
+      finishOpenSettle(item, motionStrategy);
     });
   };
 
@@ -499,7 +529,7 @@ export function createAccordion(
       } else {
         syncPanelSizePx(item);
       }
-      scheduleOpenSettle(item);
+      scheduleOpenSettle(item, motionStrategy);
     } else {
       applyClosedVisibility(item);
     }
@@ -535,7 +565,7 @@ export function createAccordion(
           item.presence.enter();
         }
       }
-      scheduleOpenSettle(item);
+      scheduleOpenSettle(item, motionStrategy);
       return;
     }
 
@@ -607,6 +637,14 @@ export function createAccordion(
       return false;
     }
 
+    itemRecords.forEach((item) => {
+      const isOpen = expandedValues.has(item.value);
+      const willBeOpen = nextExpanded.has(item.value);
+      if (isOpen !== willBeOpen) {
+        enablePanelAnimation(item);
+      }
+    });
+
     expandedValues = nextExpanded;
     syncAllItems();
     emitValueChange();
@@ -662,6 +700,8 @@ export function createAccordion(
         },
       }),
       sizeObserver: null,
+      idleAnimationName: null,
+      idleAnimationSuppressed: false,
       openSettleRafId: null,
       openSettleTimeoutId: null,
       closeZeroRafId: null,

@@ -521,6 +521,66 @@ describe("Accordion", () => {
     controller.destroy();
   });
 
+  it("freezes settled keyframe panels until their state changes again", async () => {
+    document.body.innerHTML = `
+      <div data-slot="accordion" id="root">
+        <div data-slot="accordion-item" data-value="one">
+          <button data-slot="accordion-trigger">Item One</button>
+          <div data-slot="accordion-content">Content One</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const content = root.querySelector('[data-slot="accordion-content"]') as HTMLElement;
+    const setSize = mockScrollSize(content, 120, 240);
+
+    content.style.animationName = "accordion-open";
+    content.style.animationDuration = "30ms";
+    content.style.animationDelay = "0ms";
+    content.style.transitionDuration = "0s";
+
+    const controller = createAccordion(root, { defaultValue: "one" });
+
+    await wait(40);
+    content.dispatchEvent(new Event("animationend"));
+
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("auto");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("auto");
+    expect(content.style.animationName).toBe("none");
+
+    setSize(96, 180);
+    controller.collapse("one");
+
+    expect(content.style.animationName).toBe("accordion-open");
+    expect(content.hasAttribute("data-ending-style")).toBe(true);
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("96px");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("180px");
+
+    await wait(40);
+    content.dispatchEvent(new Event("animationend"));
+
+    expect(content.hidden).toBe(true);
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("0px");
+
+    setSize(88, 160);
+    controller.expand("one");
+
+    expect(content.style.animationName).toBe("accordion-open");
+    expect(content.hasAttribute("data-starting-style")).toBe(true);
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("88px");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("160px");
+
+    await wait(40);
+    content.dispatchEvent(new Event("animationend"));
+
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("auto");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("auto");
+    expect(content.style.animationName).toBe("none");
+
+    controller.destroy();
+  });
+
   it("measures panel size correctly when descendants consume --accordion-panel-height", () => {
     const { contents, controller } = setup();
     const content = contents[0]!;
