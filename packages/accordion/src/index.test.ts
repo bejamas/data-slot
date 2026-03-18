@@ -61,6 +61,11 @@ describe("Accordion", () => {
       setTimeout(() => resolve(), 0);
     });
 
+  const wait = (ms: number) =>
+    new Promise<void>((resolve) => {
+      setTimeout(() => resolve(), ms);
+    });
+
   const mockScrollSize = (element: HTMLElement, initialHeight: number, initialWidth: number) => {
     let height = initialHeight;
     let width = initialWidth;
@@ -105,6 +110,8 @@ describe("Accordion", () => {
     expect(contents[0]?.getAttribute("data-orientation")).toBe("vertical");
     expect(contents[0]?.style.getPropertyValue("--accordion-panel-height")).toBe("0px");
     expect(contents[0]?.style.getPropertyValue("--accordion-panel-width")).toBe("0px");
+    expect(contents[0]?.style.getPropertyValue("--radix-accordion-content-height")).toBe("0px");
+    expect(contents[0]?.style.getPropertyValue("--radix-accordion-content-width")).toBe("0px");
 
     controller.destroy();
   });
@@ -422,11 +429,15 @@ describe("Accordion", () => {
     expect(contents[0]?.hasAttribute("data-starting-style")).toBe(true);
     expect(contents[0]?.style.getPropertyValue("--accordion-panel-height")).toBe("120px");
     expect(contents[0]?.style.getPropertyValue("--accordion-panel-width")).toBe("240px");
+    expect(contents[0]?.style.getPropertyValue("--radix-accordion-content-height")).toBe("120px");
+    expect(contents[0]?.style.getPropertyValue("--radix-accordion-content-width")).toBe("240px");
 
     await waitForRaf();
     expect(contents[0]?.hasAttribute("data-starting-style")).toBe(true);
     expect(contents[0]?.style.getPropertyValue("--accordion-panel-height")).toBe("auto");
     expect(contents[0]?.style.getPropertyValue("--accordion-panel-width")).toBe("auto");
+    expect(contents[0]?.style.getPropertyValue("--radix-accordion-content-height")).toBe("auto");
+    expect(contents[0]?.style.getPropertyValue("--radix-accordion-content-width")).toBe("auto");
 
     await waitForRaf();
     expect(contents[0]?.hasAttribute("data-starting-style")).toBe(false);
@@ -453,6 +464,7 @@ describe("Accordion", () => {
 
     expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("120px");
     expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("240px");
+    expect(content.style.getPropertyValue("--radix-accordion-content-height")).toBe("120px");
 
     await new Promise<void>((resolve) => {
       setTimeout(() => resolve(), 90);
@@ -460,6 +472,118 @@ describe("Accordion", () => {
 
     expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("auto");
     expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("auto");
+    expect(content.style.getPropertyValue("--radix-accordion-content-height")).toBe("auto");
+
+    controller.destroy();
+  });
+
+  it("supports keyframe-based panel animations without zeroing panel vars before exit completes", async () => {
+    const { contents, controller } = setup();
+    const content = contents[0]!;
+    const setSize = mockScrollSize(content, 120, 240);
+
+    content.style.animationName = "accordion-open";
+    content.style.animationDuration = "30ms";
+    content.style.animationDelay = "0ms";
+    content.style.transitionDuration = "0s";
+
+    controller.expand("one");
+
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("120px");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("240px");
+
+    await wait(40);
+    content.dispatchEvent(new Event("animationend"));
+
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("auto");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("auto");
+
+    setSize(96, 180);
+    controller.collapse("one");
+
+    expect(content.hasAttribute("data-ending-style")).toBe(true);
+    expect(content.hidden).toBe(false);
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("96px");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("180px");
+
+    await waitForRaf();
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("96px");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("180px");
+
+    await wait(40);
+    content.dispatchEvent(new Event("animationend"));
+
+    expect(content.hasAttribute("data-ending-style")).toBe(false);
+    expect(content.hidden).toBe(true);
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("0px");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("0px");
+
+    controller.destroy();
+  });
+
+  it("measures panel size correctly when descendants consume --accordion-panel-height", () => {
+    const { contents, controller } = setup();
+    const content = contents[0]!;
+
+    content.style.animationName = "accordion-open";
+    content.style.animationDuration = "30ms";
+    content.style.animationDelay = "0ms";
+    content.style.transitionDuration = "0s";
+
+    Object.defineProperty(content, "scrollHeight", {
+      configurable: true,
+      get: () => {
+        const height = content.style.getPropertyValue("--accordion-panel-height").trim();
+        return height === "auto" ? 120 : Number.parseFloat(height) || 0;
+      },
+    });
+
+    Object.defineProperty(content, "scrollWidth", {
+      configurable: true,
+      get: () => {
+        const width = content.style.getPropertyValue("--accordion-panel-width").trim();
+        return width === "auto" ? 240 : Number.parseFloat(width) || 0;
+      },
+    });
+
+    controller.expand("one");
+
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("120px");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("240px");
+
+    controller.destroy();
+  });
+
+  it("does not remeasure a settled keyframe panel when another item opens in multiple mode", async () => {
+    const { contents, controller } = setup({ options: { multiple: true } });
+    const firstContent = contents[0]!;
+    const secondContent = contents[1]!;
+    mockScrollSize(firstContent, 120, 240);
+    mockScrollSize(secondContent, 96, 180);
+
+    firstContent.style.animationName = "accordion-open";
+    firstContent.style.animationDuration = "30ms";
+    firstContent.style.animationDelay = "0ms";
+    firstContent.style.transitionDuration = "0s";
+
+    secondContent.style.animationName = "accordion-open";
+    secondContent.style.animationDuration = "30ms";
+    secondContent.style.animationDelay = "0ms";
+    secondContent.style.transitionDuration = "0s";
+
+    controller.expand("one");
+    await wait(40);
+    firstContent.dispatchEvent(new Event("animationend"));
+
+    expect(firstContent.style.getPropertyValue("--accordion-panel-height")).toBe("auto");
+    expect(firstContent.style.getPropertyValue("--accordion-panel-width")).toBe("auto");
+
+    controller.expand("two");
+
+    expect(firstContent.style.getPropertyValue("--accordion-panel-height")).toBe("auto");
+    expect(firstContent.style.getPropertyValue("--accordion-panel-width")).toBe("auto");
+    expect(firstContent.hasAttribute("data-starting-style")).toBe(false);
+    expect(firstContent.hasAttribute("data-ending-style")).toBe(false);
 
     controller.destroy();
   });
@@ -577,6 +701,54 @@ describe("Accordion", () => {
     });
 
     expect(controller.value).toEqual(["two"]);
+
+    controller.destroy();
+  });
+
+  it("data-default-value JSON array expands multiple initial items in multiple mode", () => {
+    const { controller } = setup({
+      rootAttrs: `data-multiple data-default-value='["one","three"]'`,
+    });
+
+    expect(controller.value).toEqual(["one", "three"]);
+
+    controller.destroy();
+  });
+
+  it("data-default-value JSON array resolves to the first valid item in single mode", () => {
+    const { controller } = setup({
+      rootAttrs: `data-default-value='["two","one"]'`,
+    });
+
+    expect(controller.value).toEqual(["two"]);
+
+    controller.destroy();
+  });
+
+  it("data-default-value JSON array ignores non-string entries", () => {
+    const { controller } = setup({
+      rootAttrs: `data-multiple data-default-value='["one",2,false,"three"]'`,
+    });
+
+    expect(controller.value).toEqual(["one", "three"]);
+
+    controller.destroy();
+  });
+
+  it("falls back to the raw data-default-value string when JSON array parsing fails", () => {
+    document.body.innerHTML = `
+      <div data-slot="accordion" id="root" data-default-value="[two]">
+        <div data-slot="accordion-item" data-value="[two]">
+          <button data-slot="accordion-trigger">Item Two</button>
+          <div data-slot="accordion-content">Content Two</div>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const controller = createAccordion(root);
+
+    expect(controller.value).toEqual(["[two]"]);
 
     controller.destroy();
   });

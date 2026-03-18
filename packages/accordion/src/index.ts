@@ -16,6 +16,7 @@ import { on, emit } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
 type AccordionOrientation = (typeof ORIENTATIONS)[number];
+type AccordionMotionStrategy = "css-transition" | "css-animation" | "none";
 const SIZE_TRANSITION_PROPERTIES = new Set([
   "all",
   "height",
@@ -89,6 +90,16 @@ const getMaxPresenceDurationMs = (element: HTMLElement): number => {
   return Math.max(transitionMs, animationMs);
 };
 
+const hasActiveAnimation = (style: CSSStyleDeclaration): boolean => {
+  const animationMs = getMaxTimingMs(style.animationDuration, style.animationDelay);
+  if (animationMs <= 0) return false;
+
+  return style.animationName
+    .split(",")
+    .map((name) => name.trim())
+    .some((name) => name !== "" && name !== "none");
+};
+
 const getMaxTransitionTimingMsForProperties = (
   element: HTMLElement,
   shouldIncludeProperty: (property: string) => boolean
@@ -116,6 +127,26 @@ const getMaxSizeTransitionMs = (element: HTMLElement): number =>
   getMaxTransitionTimingMsForProperties(element, (property) =>
     SIZE_TRANSITION_PROPERTIES.has(property)
   );
+
+const parseDefaultValueDataAttribute = (value: string | undefined): string | string[] | undefined => {
+  if (value === undefined) return undefined;
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue.startsWith("[") || !trimmedValue.endsWith("]")) {
+    return value;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmedValue);
+    if (!Array.isArray(parsed)) {
+      return value;
+    }
+
+    return parsed.filter((entry): entry is string => typeof entry === "string");
+  } catch {
+    return value;
+  }
+};
 
 export interface AccordionOptions {
   /** Allow multiple items open at once */
@@ -231,6 +262,8 @@ export function createAccordion(
   const setPanelSizeVars = (item: AccordionItemRecord, height: string, width: string) => {
     item.content.style.setProperty("--accordion-panel-height", height);
     item.content.style.setProperty("--accordion-panel-width", width);
+    item.content.style.setProperty("--radix-accordion-content-height", height);
+    item.content.style.setProperty("--radix-accordion-content-width", width);
   };
 
   const setPanelSizePx = (item: AccordionItemRecord, height: number, width: number) => {
@@ -245,7 +278,13 @@ export function createAccordion(
     setPanelSizePx(item, 0, 0);
   };
 
-  const syncPanelSizePx = (item: AccordionItemRecord) => {
+  const syncPanelSizePx = (
+    item: AccordionItemRecord,
+    { resetVarsToAuto = false }: { resetVarsToAuto?: boolean } = {}
+  ) => {
+    if (resetVarsToAuto) {
+      setPanelSizeAuto(item);
+    }
     setPanelSizePx(item, item.content.scrollHeight, item.content.scrollWidth);
   };
 
@@ -288,6 +327,35 @@ export function createAccordion(
   const clearSizePhaseTracking = (item: AccordionItemRecord) => {
     clearOpenSettleTracking(item);
     clearClosePhaseTracking(item);
+  };
+
+  const getMotionStrategy = (item: AccordionItemRecord): AccordionMotionStrategy => {
+    const style = getComputedStyle(item.content);
+    const hasSizeTransition = getMaxSizeTransitionMs(item.content) > 0;
+    const hasAnimation = hasActiveAnimation(style);
+
+    if (hasAnimation && !hasSizeTransition) return "css-animation";
+    if (hasSizeTransition) return "css-transition";
+    if (hasAnimation) return "css-animation";
+    return "none";
+  };
+
+  const measurePanelWithAnimationSuppressed = (
+    item: AccordionItemRecord,
+    work: () => void
+  ) => {
+    const inlineAnimationName = item.content.style.getPropertyValue("animation-name");
+    item.content.style.setProperty("animation-name", "none");
+
+    try {
+      work();
+    } finally {
+      if (inlineAnimationName) {
+        item.content.style.setProperty("animation-name", inlineAnimationName);
+      } else {
+        item.content.style.removeProperty("animation-name");
+      }
+    }
   };
 
   const applyOpenVisibility = (item: AccordionItemRecord) => {
@@ -420,10 +488,17 @@ export function createAccordion(
     setTriggerStateAttrs(item, open);
     item.content.removeAttribute("data-starting-style");
     item.content.removeAttribute("data-ending-style");
+    const motionStrategy = getMotionStrategy(item);
 
     if (open) {
       applyOpenVisibility(item);
-      syncPanelSizePx(item);
+      if (motionStrategy === "css-animation") {
+        measurePanelWithAnimationSuppressed(item, () => {
+          syncPanelSizePx(item, { resetVarsToAuto: true });
+        });
+      } else {
+        syncPanelSizePx(item);
+      }
       scheduleOpenSettle(item);
     } else {
       applyClosedVisibility(item);
@@ -439,13 +514,26 @@ export function createAccordion(
     setOpenClosedAttrs(item.el, open);
     setOpenClosedAttrs(item.content, open);
     setTriggerStateAttrs(item, open);
+    const motionStrategy = getMotionStrategy(item);
 
     if (open) {
       clearClosePhaseTracking(item);
       applyOpenVisibility(item);
-      syncPanelSizePx(item);
-      if (!wasOpen) {
-        item.presence.enter();
+      if (wasOpen && !item.presence.isExiting && hasAutoPanelSize(item)) {
+        return;
+      }
+      if (motionStrategy === "css-animation") {
+        measurePanelWithAnimationSuppressed(item, () => {
+          syncPanelSizePx(item, { resetVarsToAuto: true });
+          if (!wasOpen) {
+            item.presence.enter();
+          }
+        });
+      } else {
+        syncPanelSizePx(item);
+        if (!wasOpen) {
+          item.presence.enter();
+        }
       }
       scheduleOpenSettle(item);
       return;
@@ -453,9 +541,16 @@ export function createAccordion(
 
     if (wasOpen) {
       clearOpenSettleTracking(item);
-      syncPanelSizePx(item);
-      item.presence.exit();
-      scheduleCloseToZero(item);
+      if (motionStrategy === "css-animation") {
+        measurePanelWithAnimationSuppressed(item, () => {
+          syncPanelSizePx(item, { resetVarsToAuto: true });
+          item.presence.exit();
+        });
+      } else {
+        syncPanelSizePx(item);
+        item.presence.exit();
+        scheduleCloseToZero(item);
+      }
       return;
     }
 
@@ -645,7 +740,8 @@ export function createAccordion(
   });
 
   const itemValues = new Set(itemRecords.map((item) => item.value));
-  const rawDefaultValue = options.defaultValue ?? getDataString(root, "defaultValue");
+  const rawDefaultValue =
+    options.defaultValue ?? parseDefaultValueDataAttribute(getDataString(root, "defaultValue"));
   const defaultValues = rawDefaultValue
     ? Array.isArray(rawDefaultValue)
       ? rawDefaultValue

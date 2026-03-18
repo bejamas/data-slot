@@ -80,9 +80,12 @@ const tailwindCode = `<div data-slot="accordion" data-default-value="features">
     </button>
     <div
       data-slot="accordion-content"
-      class="h-[var(--accordion-panel-height)] overflow-hidden text-gray-500 transition-[height] duration-300 ease-out data-[starting-style]:h-0"
+      class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
     >
-      <div data-slot="accordion-content-inner" class="pb-4 pt-0">
+      <div
+        data-slot="accordion-content-inner"
+        class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+      >
         Unlike React-based headless libraries, data-slot works with vanilla HTML.
       </div>
     </div>
@@ -106,9 +109,12 @@ const tailwindCode = `<div data-slot="accordion" data-default-value="features">
     </button>
     <div
       data-slot="accordion-content"
-      class="h-[var(--accordion-panel-height)] overflow-hidden text-gray-500 transition-[height] duration-300 ease-out data-[starting-style]:h-0"
+      class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
     >
-      <div data-slot="accordion-content-inner" class="pb-4 pt-0">
+      <div
+        data-slot="accordion-content-inner"
+        class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+      >
         Yes. All components implement WAI-ARIA patterns.
       </div>
     </div>
@@ -171,9 +177,12 @@ const tailwindCode = `<div data-slot="accordion" data-default-value="features">
       </button>
       <div
         data-slot="accordion-content"
-        class="h-[var(--accordion-panel-height)] overflow-hidden text-gray-500 transition-[height] duration-300 ease-out data-[starting-style]:h-0"
+        class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
       >
-        <div data-slot="accordion-content-inner" class="pb-4 pt-0">
+        <div
+          data-slot="accordion-content-inner"
+          class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+        >
           Unlike React-based headless libraries, data-slot works with vanilla HTML.
           Just add <code>data-slot</code> attributes to your markup and call <code>create()</code>.
           No framework, no virtual DOM, no build step required.
@@ -195,9 +204,12 @@ const tailwindCode = `<div data-slot="accordion" data-default-value="features">
       </button>
       <div
         data-slot="accordion-content"
-        class="h-[var(--accordion-panel-height)] overflow-hidden text-gray-500 transition-[height] duration-300 ease-out data-[starting-style]:h-0"
+        class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
       >
-        <div data-slot="accordion-content-inner" class="pb-4 pt-0">
+        <div
+          data-slot="accordion-content-inner"
+          class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+        >
           Yes. All components implement WAI-ARIA patterns with proper roles,
           keyboard navigation, and focus management out of the box.
         </div>
@@ -218,9 +230,12 @@ const tailwindCode = `<div data-slot="accordion" data-default-value="features">
       </button>
       <div
         data-slot="accordion-content"
-        class="h-[var(--accordion-panel-height)] overflow-hidden text-gray-500 transition-[height] duration-300 ease-out data-[starting-style]:h-0"
+        class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
       >
-        <div data-slot="accordion-content-inner" class="pb-4 pt-0">
+        <div
+          data-slot="accordion-content-inner"
+          class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+        >
           No dependencies. Each component is standalone and tree-shakeable.
         </div>
       </div>

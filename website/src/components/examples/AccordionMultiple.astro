@@ -52,9 +52,12 @@ const tailwindCode = `<div data-slot="accordion">
     </button>
     <div
       data-slot="accordion-content"
-      class="h-[var(--accordion-panel-height)] overflow-hidden text-gray-500 transition-[height] duration-300 ease-out data-[starting-style]:h-0"
+      class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
     >
-      <div data-slot="accordion-content-inner" class="pb-4 pt-0">
+      <div
+        data-slot="accordion-content-inner"
+        class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+      >
         With <code>multiple: true</code>, multiple items can be open simultaneously.
       </div>
     </div>
@@ -78,9 +81,12 @@ const tailwindCode = `<div data-slot="accordion">
     </button>
     <div
       data-slot="accordion-content"
-      class="h-[var(--accordion-panel-height)] overflow-hidden text-gray-500 transition-[height] duration-300 ease-out data-[starting-style]:h-0"
+      class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
     >
-      <div data-slot="accordion-content-inner" class="pb-4 pt-0">
+      <div
+        data-slot="accordion-content-inner"
+        class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+      >
         Try clicking both items — they stay open independently.
       </div>
     </div>
@@ -134,9 +140,12 @@ const tailwindCode = `<div data-slot="accordion">
       </button>
       <div
         data-slot="accordion-content"
-        class="h-[var(--accordion-panel-height)] overflow-hidden text-gray-500 transition-[height] duration-300 ease-out data-[starting-style]:h-0"
+        class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
       >
-        <div data-slot="accordion-content-inner" class="pb-4 pt-0">
+        <div
+          data-slot="accordion-content-inner"
+          class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+        >
           With <code>multiple: true</code>, multiple items can be open simultaneously.
         </div>
       </div>
@@ -156,9 +165,12 @@ const tailwindCode = `<div data-slot="accordion">
       </button>
       <div
         data-slot="accordion-content"
-        class="h-[var(--accordion-panel-height)] overflow-hidden text-gray-500 transition-[height] duration-300 ease-out data-[starting-style]:h-0"
+        class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
       >
-        <div data-slot="accordion-content-inner" class="pb-4 pt-0">
+        <div
+          data-slot="accordion-content-inner"
+          class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+        >
           Try clicking both items — they stay open independently.
         </div>
       </div>

@@ -98,7 +98,7 @@ Options can also be set via data attributes on the root element. JS options take
 | Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
 | `data-multiple` | `boolean` | `false` | Allow multiple items open at once |
-| `data-default-value` | `string` | none | Initially expanded item |
+| `data-default-value` | `string` | none | Initially expanded item, or a JSON array string for multiple defaults |
 | `data-disabled` | `boolean` | `false` | Disable the entire accordion |
 | `data-orientation` | `"horizontal" \| "vertical"` | `"vertical"` | Controls roving-focus arrow keys |
 | `data-loop-focus` | `boolean` | `true` | Wrap roving focus at the ends |
@@ -113,6 +113,18 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
   data-multiple
   data-default-value="one"
   data-orientation="horizontal"
+>
+  ...
+</div>
+```
+
+For multiple default items in HTML, encode the value as JSON:
+
+```html
+<div
+  data-slot="accordion"
+  data-multiple
+  data-default-value='["one","two"]'
 >
   ...
 </div>
@@ -167,6 +179,8 @@ The content element exposes size variables for height or width transitions:
 | --- | --- |
 | `--accordion-panel-height` | Panel height (`auto` at rest, measured px during transitions, `0px` when closed) |
 | `--accordion-panel-width` | Panel width (`auto` at rest, measured px during transitions, `0px` when closed) |
+| `--radix-accordion-content-height` | Compatibility alias for Tailwind/Radix accordion keyframes |
+| `--radix-accordion-content-width` | Compatibility alias for width-based integrations |
 
 ### CSS Example
 
@@ -237,9 +251,12 @@ The content element exposes size variables for height or width transitions:
     </button>
     <div
       data-slot="accordion-content"
-      class="h-[var(--accordion-panel-height)] overflow-hidden text-sm transition-[height] ease-out data-[starting-style]:h-0"
+      class="overflow-hidden text-sm data-open:animate-accordion-down data-closed:animate-accordion-up"
     >
-      <div data-slot="accordion-content-inner" class="px-4 pb-4 pt-0">
+      <div
+        data-slot="accordion-content-inner"
+        class="h-(--accordion-panel-height) px-4 pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+      >
         Content
       </div>
     </div>
