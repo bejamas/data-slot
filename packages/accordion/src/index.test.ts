@@ -1,183 +1,608 @@
-import { describe, expect, it } from 'bun:test'
-import { createAccordion, create } from './index'
-import { clearRootBinding, setRootBinding } from '../../core/src/index'
+import { describe, expect, it } from "bun:test";
+import { createAccordion, create } from "./index";
+import { clearRootBinding, setRootBinding } from "../../core/src/index";
 
-describe('Accordion', () => {
-  const ROOT_BINDING_KEY = '@data-slot/accordion'
+describe("Accordion", () => {
+  const ROOT_BINDING_KEY = "@data-slot/accordion";
 
-  const setup = (options: Parameters<typeof createAccordion>[1] = {}) => {
+  const setup = ({
+    options = {},
+    rootAttrs = "",
+    itemAttrs = ["", "", ""],
+  }: {
+    options?: Parameters<typeof createAccordion>[1];
+    rootAttrs?: string;
+    itemAttrs?: string[];
+  } = {}) => {
     document.body.innerHTML = `
-      <div data-slot="accordion" id="root">
-        <div data-slot="accordion-item" data-value="one">
+      <div data-slot="accordion" id="root" ${rootAttrs}>
+        <div data-slot="accordion-item" data-value="one" ${itemAttrs[0] ?? ""}>
           <button data-slot="accordion-trigger">Item One</button>
           <div data-slot="accordion-content">Content One</div>
         </div>
-        <div data-slot="accordion-item" data-value="two">
+        <div data-slot="accordion-item" data-value="two" ${itemAttrs[1] ?? ""}>
           <button data-slot="accordion-trigger">Item Two</button>
           <div data-slot="accordion-content">Content Two</div>
         </div>
-        <div data-slot="accordion-item" data-value="three">
+        <div data-slot="accordion-item" data-value="three" ${itemAttrs[2] ?? ""}>
           <button data-slot="accordion-trigger">Item Three</button>
           <div data-slot="accordion-content">Content Three</div>
         </div>
       </div>
-    `
-    const root = document.getElementById('root')!
-    const items = [...document.querySelectorAll('[data-slot="accordion-item"]')] as HTMLElement[]
-    const triggers = [...document.querySelectorAll('[data-slot="accordion-trigger"]')] as HTMLElement[]
-    const contents = [...document.querySelectorAll('[data-slot="accordion-content"]')] as HTMLElement[]
-    const controller = createAccordion(root, options)
+    `;
 
-    return { root, items, triggers, contents, controller }
-  }
+    const root = document.getElementById("root")!;
+    const items = Array.from(
+      root.querySelectorAll('[data-slot="accordion-item"]')
+    ) as HTMLElement[];
+    const triggers = Array.from(
+      root.querySelectorAll('[data-slot="accordion-trigger"]')
+    ) as HTMLElement[];
+    const contents = Array.from(
+      root.querySelectorAll('[data-slot="accordion-content"]')
+    ) as HTMLElement[];
+    const controller = createAccordion(root, options);
 
-  it('initializes with all items collapsed by default', () => {
-    const { contents, controller } = setup()
+    return { root, items, triggers, contents, controller };
+  };
 
-    expect(contents[0]?.hidden).toBe(true)
-    expect(contents[1]?.hidden).toBe(true)
-    expect(contents[2]?.hidden).toBe(true)
-    expect(controller.value).toEqual([])
+  const waitForRaf = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
 
-    controller.destroy()
-  })
+  const waitForExit = async () => {
+    await waitForRaf();
+    await waitForRaf();
+  };
 
-  it('initializes with defaultValue expanded', () => {
-    const { contents, controller } = setup({ defaultValue: 'two' })
+  const waitForTimeout = () =>
+    new Promise<void>((resolve) => {
+      setTimeout(() => resolve(), 0);
+    });
 
-    expect(contents[0]?.hidden).toBe(true)
-    expect(contents[1]?.hidden).toBe(false)
-    expect(contents[2]?.hidden).toBe(true)
-    expect(controller.value).toEqual(['two'])
+  const mockScrollSize = (element: HTMLElement, initialHeight: number, initialWidth: number) => {
+    let height = initialHeight;
+    let width = initialWidth;
 
-    controller.destroy()
-  })
+    Object.defineProperty(element, "scrollHeight", {
+      configurable: true,
+      get: () => height,
+    });
 
-  it('expands item on trigger click', () => {
-    const { triggers, contents, controller } = setup()
+    Object.defineProperty(element, "scrollWidth", {
+      configurable: true,
+      get: () => width,
+    });
 
-    triggers[0]?.click()
-    expect(contents[0]?.hidden).toBe(false)
-    expect(controller.value).toEqual(['one'])
+    return (nextHeight: number, nextWidth: number) => {
+      height = nextHeight;
+      width = nextWidth;
+    };
+  };
 
-    controller.destroy()
-  })
+  it("initializes with Base UI-style root, item, trigger, and content attrs", () => {
+    const { root, items, triggers, contents, controller } = setup();
 
-  it('collapses other items in single mode', () => {
-    const { triggers, contents, controller } = setup({ defaultValue: 'one' })
+    expect(root.hasAttribute("role")).toBe(false);
+    expect(root.getAttribute("data-orientation")).toBe("vertical");
+    expect(root.hasAttribute("data-disabled")).toBe(false);
 
-    triggers[1]?.click()
-    // data-state is set immediately; hidden is delayed for animation
-    expect(contents[0]?.getAttribute('data-state')).toBe('closed')
-    expect(contents[1]?.hidden).toBe(false)
-    expect(controller.value).toEqual(['two'])
+    expect(items[0]?.getAttribute("data-state")).toBe("closed");
+    expect(items[0]?.hasAttribute("data-closed")).toBe(true);
+    expect(items[0]?.hasAttribute("data-open")).toBe(false);
+    expect(items[0]?.getAttribute("data-index")).toBe("0");
 
-    controller.destroy()
-  })
+    expect(triggers[0]?.getAttribute("aria-expanded")).toBe("false");
+    expect(triggers[0]?.getAttribute("data-state")).toBe("closed");
+    expect(triggers[0]?.hasAttribute("data-panel-open")).toBe(false);
 
-  it('allows multiple items in multiple mode', () => {
-    const { triggers, contents, controller } = setup({ multiple: true })
+    expect(contents[0]?.hidden).toBe(true);
+    expect(contents[0]?.getAttribute("data-state")).toBe("closed");
+    expect(contents[0]?.hasAttribute("data-closed")).toBe(true);
+    expect(contents[0]?.hasAttribute("data-open")).toBe(false);
+    expect(contents[0]?.getAttribute("data-index")).toBe("0");
+    expect(contents[0]?.getAttribute("data-orientation")).toBe("vertical");
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-height")).toBe("0px");
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-width")).toBe("0px");
 
-    triggers[0]?.click()
-    triggers[1]?.click()
-    expect(contents[0]?.hidden).toBe(false)
-    expect(contents[1]?.hidden).toBe(false)
-    expect(controller.value).toEqual(['one', 'two'])
+    controller.destroy();
+  });
 
-    controller.destroy()
-  })
+  it("initializes with defaultValue expanded", () => {
+    const { contents, triggers, controller } = setup({ options: { defaultValue: "two" } });
 
-  it('toggles items on click', () => {
-    const { triggers, contents, controller } = setup({ collapsible: true })
+    expect(contents[0]?.hidden).toBe(true);
+    expect(contents[1]?.hidden).toBe(false);
+    expect(contents[1]?.hasAttribute("data-open")).toBe(true);
+    expect(triggers[1]?.hasAttribute("data-panel-open")).toBe(true);
+    expect(controller.value).toEqual(["two"]);
 
-    triggers[0]?.click()
-    expect(contents[0]?.hidden).toBe(false)
+    controller.destroy();
+  });
 
-    triggers[0]?.click()
-    // data-state is set immediately; hidden is delayed for animation
-    expect(contents[0]?.getAttribute('data-state')).toBe('closed')
+  it("expands and collapses items on trigger click", async () => {
+    const { triggers, contents, controller } = setup();
 
-    controller.destroy()
-  })
+    triggers[0]?.click();
+    expect(contents[0]?.hidden).toBe(false);
+    expect(contents[0]?.hasAttribute("data-open")).toBe(true);
+    expect(controller.value).toEqual(["one"]);
 
-  it('respects collapsible option in single mode', () => {
+    triggers[0]?.click();
+    expect(contents[0]?.hasAttribute("data-ending-style")).toBe(true);
+    expect(controller.value).toEqual([]);
+
+    await waitForExit();
+    expect(contents[0]?.hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("collapses other items in single mode", async () => {
+    const { triggers, contents, controller } = setup({ options: { defaultValue: "one" } });
+
+    triggers[1]?.click();
+
+    expect(contents[0]?.getAttribute("data-state")).toBe("closed");
+    expect(contents[1]?.hidden).toBe(false);
+    expect(controller.value).toEqual(["two"]);
+
+    await waitForExit();
+    expect(contents[0]?.hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("allows multiple items in multiple mode", () => {
+    const { triggers, contents, controller } = setup({ options: { multiple: true } });
+
+    triggers[0]?.click();
+    triggers[1]?.click();
+
+    expect(contents[0]?.hidden).toBe(false);
+    expect(contents[1]?.hidden).toBe(false);
+    expect(controller.value).toEqual(["one", "two"]);
+
+    controller.destroy();
+  });
+
+  it("keeps deprecated collapsible=false compatibility in single mode", () => {
     const { triggers, contents, controller } = setup({
-      defaultValue: 'one',
-      collapsible: false,
-    })
+      options: {
+        defaultValue: "one",
+        collapsible: false,
+      },
+    });
 
-    // Cannot collapse the only open item
-    triggers[0]?.click()
-    expect(contents[0]?.hidden).toBe(false)
-    expect(controller.value).toEqual(['one'])
+    triggers[0]?.click();
 
-    controller.destroy()
-  })
+    expect(contents[0]?.hidden).toBe(false);
+    expect(controller.value).toEqual(["one"]);
 
-  it('sets aria-expanded on triggers', () => {
-    const { triggers, controller } = setup()
+    controller.destroy();
+  });
 
-    expect(triggers[0]?.getAttribute('aria-expanded')).toBe('false')
+  it("emits accordion:change when values change", () => {
+    const { root, controller } = setup();
 
-    controller.expand('one')
-    expect(triggers[0]?.getAttribute('aria-expanded')).toBe('true')
+    let lastValue: string[] = [];
+    root.addEventListener("accordion:change", (event) => {
+      lastValue = (event as CustomEvent).detail.value;
+    });
 
-    controller.collapse('one')
-    expect(triggers[0]?.getAttribute('aria-expanded')).toBe('false')
+    controller.expand("one");
+    expect(lastValue).toEqual(["one"]);
 
-    controller.destroy()
-  })
+    controller.collapse("one");
+    expect(lastValue).toEqual([]);
 
-  it('sets data-state on items', () => {
-    const { items, controller } = setup()
+    controller.destroy();
+  });
 
-    expect(items[0]?.getAttribute('data-state')).toBe('closed')
+  it("controller methods ignore invalid values and work correctly", () => {
+    const { controller } = setup({ options: { multiple: true } });
 
-    controller.expand('one')
-    expect(items[0]?.getAttribute('data-state')).toBe('open')
+    controller.expand("one");
+    expect(controller.value).toEqual(["one"]);
 
-    controller.destroy()
-  })
+    controller.expand("two");
+    expect(controller.value).toEqual(["one", "two"]);
 
-  it('emits accordion:change event', () => {
-    const { root, controller } = setup()
+    controller.expand("missing");
+    expect(controller.value).toEqual(["one", "two"]);
 
-    let lastValue: string[] = []
-    root.addEventListener('accordion:change', (e) => {
-      lastValue = (e as CustomEvent).detail.value
-    })
+    controller.collapse("one");
+    expect(controller.value).toEqual(["two"]);
 
-    controller.expand('one')
-    expect(lastValue).toEqual(['one'])
+    controller.toggle("two");
+    expect(controller.value).toEqual([]);
 
-    controller.collapse('one')
-    expect(lastValue).toEqual([])
+    controller.toggle("three");
+    expect(controller.value).toEqual(["three"]);
 
-    controller.destroy()
-  })
+    controller.destroy();
+  });
 
-  it('controller methods work correctly', () => {
-    const { controller } = setup({ multiple: true })
+  it("supports accordion:set while respecting valid values", () => {
+    const { root, controller } = setup({ options: { multiple: true } });
 
-    controller.expand('one')
-    expect(controller.value).toEqual(['one'])
+    root.dispatchEvent(
+      new CustomEvent("accordion:set", {
+        detail: { value: ["one", "missing", "two"] },
+      })
+    );
 
-    controller.expand('two')
-    expect(controller.value).toEqual(['one', 'two'])
+    expect(controller.value).toEqual(["one", "two"]);
 
-    controller.collapse('one')
-    expect(controller.value).toEqual(['two'])
+    controller.destroy();
+  });
 
-    controller.toggle('two')
-    expect(controller.value).toEqual([])
+  it("uses canonical disabled behavior on the root but still allows programmatic control", () => {
+    const { root, items, triggers, contents, controller } = setup({
+      options: { disabled: true, defaultValue: "one" },
+    });
 
-    controller.toggle('three')
-    expect(controller.value).toEqual(['three'])
+    expect(root.hasAttribute("data-disabled")).toBe(true);
+    expect(items[0]?.hasAttribute("data-disabled")).toBe(true);
+    expect(triggers[0]?.hasAttribute("data-disabled")).toBe(true);
+    expect(triggers[0]?.getAttribute("aria-disabled")).toBe("true");
+    expect(contents[0]?.hasAttribute("data-disabled")).toBe(true);
 
-    controller.destroy()
-  })
+    triggers[1]?.click();
+    expect(controller.value).toEqual(["one"]);
 
-  it('create binds all accordion components and returns controllers', () => {
+    controller.expand("two");
+    expect(controller.value).toEqual(["two"]);
+
+    root.dispatchEvent(
+      new CustomEvent("accordion:set", {
+        detail: { value: "three" },
+      })
+    );
+    expect(controller.value).toEqual(["three"]);
+
+    controller.destroy();
+  });
+
+  it("respects per-item disabled state and skips disabled items during roving focus", () => {
+    const { triggers, contents, controller } = setup({
+      itemAttrs: ["", "data-disabled", ""],
+    });
+    const triggerOne = triggers[0]!;
+    const triggerTwo = triggers[1]!;
+    const triggerThree = triggers[2]!;
+
+    expect(triggerTwo.hasAttribute("data-disabled")).toBe(true);
+    expect(triggerTwo.getAttribute("aria-disabled")).toBe("true");
+
+    triggerTwo.click();
+    expect(contents[1]?.hidden).toBe(true);
+    expect(controller.value).toEqual([]);
+
+    triggerOne.focus();
+    triggerOne.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggerThree);
+
+    controller.destroy();
+  });
+
+  it("supports hiddenUntilFound and reopens on beforematch", async () => {
+    const { contents, controller } = setup({
+      options: { hiddenUntilFound: true },
+    });
+
+    expect(contents[0]?.getAttribute("hidden")).toBe("until-found");
+
+    contents[1]?.dispatchEvent(new Event("beforematch", { bubbles: true }));
+
+    expect(controller.value).toEqual(["two"]);
+    expect(contents[1]?.hasAttribute("hidden")).toBe(false);
+
+    controller.collapse("two");
+    await waitForExit();
+    expect(contents[1]?.getAttribute("hidden")).toBe("until-found");
+
+    controller.destroy();
+  });
+
+  it("supports horizontal orientation", () => {
+    const { root, triggers, contents, controller } = setup({
+      options: { orientation: "horizontal" },
+    });
+    const triggerOne = triggers[0]!;
+    const triggerTwo = triggers[1]!;
+
+    expect(root.getAttribute("data-orientation")).toBe("horizontal");
+    expect(contents[0]?.getAttribute("data-orientation")).toBe("horizontal");
+
+    triggerOne.focus();
+    triggerOne.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggerTwo);
+
+    triggerTwo.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggerOne);
+
+    controller.destroy();
+  });
+
+  it("reverses ArrowLeft and ArrowRight in RTL horizontal orientation", () => {
+    const { triggers, controller } = setup({
+      options: { orientation: "horizontal" },
+      rootAttrs: 'dir="rtl"',
+    });
+    const triggerOne = triggers[0]!;
+    const triggerTwo = triggers[1]!;
+
+    triggerOne.focus();
+    triggerOne.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggerTwo);
+
+    triggerTwo.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggerOne);
+
+    controller.destroy();
+  });
+
+  it("honors loopFocus=false", () => {
+    const { triggers, controller } = setup({
+      options: { loopFocus: false },
+    });
+    const triggerOne = triggers[0]!;
+    const triggerThree = triggers[2]!;
+
+    triggerThree.focus();
+    triggerThree.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggerThree);
+
+    triggerOne.focus();
+    triggerOne.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggerOne);
+
+    controller.destroy();
+  });
+
+  it("opens on Space keydown and suppresses the synthesized click toggle", async () => {
+    const { triggers, contents, controller } = setup();
+
+    triggers[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: " ", bubbles: true })
+    );
+    expect(controller.value).toEqual(["one"]);
+    expect(contents[0]?.hidden).toBe(false);
+
+    triggers[0]?.click();
+    expect(controller.value).toEqual(["one"]);
+
+    await waitForTimeout();
+    triggers[0]?.click();
+    expect(controller.value).toEqual([]);
+
+    controller.destroy();
+  });
+
+  it("opens on Enter keydown and suppresses the synthesized click toggle", async () => {
+    const { triggers, controller } = setup();
+
+    triggers[0]?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+    );
+    expect(controller.value).toEqual(["one"]);
+
+    triggers[0]?.click();
+    expect(controller.value).toEqual(["one"]);
+
+    await waitForTimeout();
+    triggers[0]?.click();
+    expect(controller.value).toEqual([]);
+
+    controller.destroy();
+  });
+
+  it("sets data-starting-style on open and settles panel size vars to auto", async () => {
+    const { contents, controller } = setup();
+    mockScrollSize(contents[0]!, 120, 240);
+
+    controller.expand("one");
+
+    expect(contents[0]?.hasAttribute("data-starting-style")).toBe(true);
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-height")).toBe("120px");
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-width")).toBe("240px");
+
+    await waitForRaf();
+    expect(contents[0]?.hasAttribute("data-starting-style")).toBe(true);
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-height")).toBe("auto");
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-width")).toBe("auto");
+
+    await waitForRaf();
+    expect(contents[0]?.hasAttribute("data-starting-style")).toBe(false);
+
+    controller.destroy();
+  });
+
+  it("does not settle panel size vars early when a shorter non-size transition ends first", async () => {
+    const { contents, controller } = setup();
+    const content = contents[0]!;
+    mockScrollSize(content, 120, 240);
+    content.style.transitionProperty = "height, opacity";
+    content.style.transitionDuration = "30ms, 15ms";
+    content.style.transitionDelay = "0ms, 0ms";
+
+    controller.expand("one");
+
+    const opacityEnd = new Event("transitionend");
+    Object.defineProperty(opacityEnd, "propertyName", {
+      configurable: true,
+      value: "opacity",
+    });
+    content.dispatchEvent(opacityEnd);
+
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("120px");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("240px");
+
+    await new Promise<void>((resolve) => {
+      setTimeout(() => resolve(), 90);
+    });
+
+    expect(content.style.getPropertyValue("--accordion-panel-height")).toBe("auto");
+    expect(content.style.getPropertyValue("--accordion-panel-width")).toBe("auto");
+
+    controller.destroy();
+  });
+
+  it("sets data-ending-style on close, transitions panel size vars to 0px, and hides after exit", async () => {
+    const { contents, controller } = setup();
+    const setSize = mockScrollSize(contents[0]!, 80, 160);
+
+    controller.expand("one");
+    await waitForRaf();
+
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-height")).toBe("auto");
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-width")).toBe("auto");
+
+    setSize(96, 180);
+    controller.collapse("one");
+
+    expect(contents[0]?.hasAttribute("data-ending-style")).toBe(true);
+    expect(contents[0]?.hidden).toBe(false);
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-height")).toBe("96px");
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-width")).toBe("180px");
+
+    await waitForRaf();
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-height")).toBe("0px");
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-width")).toBe("0px");
+
+    await waitForExit();
+    expect(contents[0]?.hasAttribute("data-ending-style")).toBe(false);
+    expect(contents[0]?.hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("cancels pending exit markers when a panel is reopened before exit completes", async () => {
+    const { contents, controller } = setup();
+    mockScrollSize(contents[0]!, 100, 200);
+
+    controller.expand("one");
+    controller.collapse("one");
+    expect(contents[0]?.hasAttribute("data-ending-style")).toBe(true);
+
+    controller.expand("one");
+    expect(controller.value).toEqual(["one"]);
+    expect(contents[0]?.hasAttribute("data-ending-style")).toBe(false);
+    expect(contents[0]?.hidden).toBe(false);
+
+    await waitForRaf();
+    expect(contents[0]?.style.getPropertyValue("--accordion-panel-height")).toBe("auto");
+
+    controller.destroy();
+  });
+
+  it("reads Base UI-style root data attributes", () => {
+    const { root, triggers, controller } = setup({
+      rootAttrs:
+        'data-orientation="horizontal" data-loop-focus="false" data-hidden-until-found data-default-value="two"',
+    });
+    const triggerThree = triggers[2]!;
+
+    expect(root.getAttribute("data-orientation")).toBe("horizontal");
+    expect(controller.value).toEqual(["two"]);
+
+    triggerThree.focus();
+    triggerThree.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggerThree);
+
+    controller.destroy();
+  });
+
+  it("reads data-disabled from the root", () => {
+    const { root, triggers, controller } = setup({
+      rootAttrs: "data-disabled",
+    });
+
+    expect(root.hasAttribute("data-disabled")).toBe(true);
+
+    triggers[0]?.click();
+    expect(controller.value).toEqual([]);
+
+    controller.destroy();
+  });
+
+  it("data-multiple allows multiple items open", () => {
+    const { triggers, controller } = setup({
+      rootAttrs: "data-multiple",
+    });
+
+    triggers[0]?.click();
+    triggers[1]?.click();
+
+    expect(controller.value).toEqual(["one", "two"]);
+
+    controller.destroy();
+  });
+
+  it("data-collapsible='false' prevents collapsing the last item", () => {
+    const { triggers, controller } = setup({
+      rootAttrs: 'data-collapsible="false"',
+    });
+
+    triggers[0]?.click();
+    expect(controller.value).toEqual(["one"]);
+
+    triggers[0]?.click();
+    expect(controller.value).toEqual(["one"]);
+
+    controller.destroy();
+  });
+
+  it("data-default-value expands the initial item", () => {
+    const { controller } = setup({
+      rootAttrs: 'data-default-value="two"',
+    });
+
+    expect(controller.value).toEqual(["two"]);
+
+    controller.destroy();
+  });
+
+  it("JS options override data attributes", () => {
+    const { triggers, controller } = setup({
+      options: { multiple: false, orientation: "vertical" },
+      rootAttrs: 'data-multiple data-orientation="horizontal"',
+    });
+    const triggerOne = triggers[0]!;
+    const triggerTwo = triggers[1]!;
+
+    triggerOne.click();
+    triggerTwo.click();
+    expect(controller.value).toEqual(["two"]);
+
+    triggerTwo.focus();
+    triggerTwo.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+    );
+    expect(document.activeElement).toBe(triggerTwo);
+
+    controller.destroy();
+  });
+
+  it("create binds all accordion roots and returns controllers", () => {
     document.body.innerHTML = `
       <div data-slot="accordion">
         <div data-slot="accordion-item" data-value="a">
@@ -189,254 +614,65 @@ describe('Accordion', () => {
           <div data-slot="accordion-content">B Content</div>
         </div>
       </div>
-    `
+    `;
 
-    const controllers = create()
-    expect(controllers).toHaveLength(1)
-    
-    const triggers = document.querySelectorAll('[data-slot="accordion-trigger"]')
-    const contents = document.querySelectorAll('[data-slot="accordion-content"]')
+    const controllers = create();
+    const triggers = document.querySelectorAll('[data-slot="accordion-trigger"]');
+    const contents = document.querySelectorAll('[data-slot="accordion-content"]');
 
-    expect((contents[0] as HTMLElement).hidden).toBe(true)
-    ;(triggers[0] as HTMLElement).click()
-    expect((contents[0] as HTMLElement).hidden).toBe(false)
+    expect(controllers).toHaveLength(1);
+    expect((contents[0] as HTMLElement).hidden).toBe(true);
 
-    // Can control programmatically
-    controllers[0]?.expand('b')
-    expect((contents[1] as HTMLElement).hidden).toBe(false)
+    (triggers[0] as HTMLElement).click();
+    expect((contents[0] as HTMLElement).hidden).toBe(false);
 
-    controllers.forEach(c => c.destroy())
-  })
+    controllers[0]?.expand("b");
+    expect((contents[1] as HTMLElement).hidden).toBe(false);
 
-  // Keyboard navigation tests
-  it('ArrowDown moves focus to next trigger', () => {
-    const { triggers, controller } = setup()
+    controllers.forEach((controller) => controller.destroy());
+  });
 
-    triggers[0]?.focus()
-    expect(document.activeElement).toBe(triggers[0])
+  describe("root binding", () => {
+    it("reuses the existing controller for duplicate direct binds", () => {
+      const { root, controller } = setup();
 
-    triggers[0]?.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })
-    )
-    expect(document.activeElement).toBe(triggers[1])
+      expect(createAccordion(root)).toBe(controller);
 
-    controller.destroy()
-  })
+      controller.destroy();
+    });
 
-  it('ArrowUp moves focus to previous trigger', () => {
-    const { triggers, controller } = setup()
+    it("reuses a controller bound by another module copy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
 
-    triggers[1]?.focus()
-    expect(document.activeElement).toBe(triggers[1])
+      const foreignController = { destroy() {} } as ReturnType<typeof createAccordion>;
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
 
-    triggers[1]?.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true })
-    )
-    expect(document.activeElement).toBe(triggers[0])
+      expect(createAccordion(root)).toBe(foreignController);
 
-    controller.destroy()
-  })
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+    });
 
-  it('ArrowDown wraps from last to first trigger', () => {
-    const { triggers, controller } = setup()
+    it("create() skips roots bound by another module copy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
 
-    triggers[2]?.focus()
-    expect(document.activeElement).toBe(triggers[2])
+      const foreignController = { destroy() {} } as ReturnType<typeof createAccordion>;
+      setRootBinding(root, ROOT_BINDING_KEY, foreignController);
 
-    triggers[2]?.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })
-    )
-    expect(document.activeElement).toBe(triggers[0])
+      expect(create()).toHaveLength(0);
 
-    controller.destroy()
-  })
+      clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
+    });
 
-  it('ArrowUp wraps from first to last trigger', () => {
-    const { triggers, controller } = setup()
+    it("allows rebinding after destroy", () => {
+      const { root, controller } = setup();
+      controller.destroy();
 
-    triggers[0]?.focus()
-    expect(document.activeElement).toBe(triggers[0])
+      const rebound = createAccordion(root);
+      expect(rebound).not.toBe(controller);
 
-    triggers[0]?.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true })
-    )
-    expect(document.activeElement).toBe(triggers[2])
-
-    controller.destroy()
-  })
-
-  it('Home key focuses first trigger', () => {
-    const { triggers, controller } = setup()
-
-    triggers[2]?.focus()
-    expect(document.activeElement).toBe(triggers[2])
-
-    triggers[2]?.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Home', bubbles: true })
-    )
-    expect(document.activeElement).toBe(triggers[0])
-
-    controller.destroy()
-  })
-
-  it('End key focuses last trigger', () => {
-    const { triggers, controller } = setup()
-
-    triggers[0]?.focus()
-    expect(document.activeElement).toBe(triggers[0])
-
-    triggers[0]?.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'End', bubbles: true })
-    )
-    expect(document.activeElement).toBe(triggers[2])
-
-    controller.destroy()
-  })
-
-  // Data attribute tests
-  describe('data attributes', () => {
-    it("data-multiple allows multiple items open", () => {
-      document.body.innerHTML = `
-        <div data-slot="accordion" id="root" data-multiple>
-          <div data-slot="accordion-item" data-value="one">
-            <button data-slot="accordion-trigger">One</button>
-            <div data-slot="accordion-content">Content One</div>
-          </div>
-          <div data-slot="accordion-item" data-value="two">
-            <button data-slot="accordion-trigger">Two</button>
-            <div data-slot="accordion-content">Content Two</div>
-          </div>
-        </div>
-      `
-      const root = document.getElementById('root')!
-      const triggers = root.querySelectorAll('[data-slot="accordion-trigger"]')
-      const controller = createAccordion(root)
-
-      ;(triggers[0] as HTMLElement).click()
-      ;(triggers[1] as HTMLElement).click()
-
-      expect(controller.value).toEqual(['one', 'two'])
-
-      controller.destroy()
-    })
-
-    it("data-collapsible='false' prevents collapsing last item", () => {
-      document.body.innerHTML = `
-        <div data-slot="accordion" id="root" data-collapsible="false">
-          <div data-slot="accordion-item" data-value="one">
-            <button data-slot="accordion-trigger">One</button>
-            <div data-slot="accordion-content">Content One</div>
-          </div>
-          <div data-slot="accordion-item" data-value="two">
-            <button data-slot="accordion-trigger">Two</button>
-            <div data-slot="accordion-content">Content Two</div>
-          </div>
-        </div>
-      `
-      const root = document.getElementById('root')!
-      const triggers = root.querySelectorAll('[data-slot="accordion-trigger"]')
-      const controller = createAccordion(root)
-
-      ;(triggers[0] as HTMLElement).click()
-      expect(controller.value).toEqual(['one'])
-
-      // Try to collapse - should not work
-      ;(triggers[0] as HTMLElement).click()
-      expect(controller.value).toEqual(['one'])
-
-      controller.destroy()
-    })
-
-    it("data-default-value expands item initially", () => {
-      document.body.innerHTML = `
-        <div data-slot="accordion" id="root" data-default-value="two">
-          <div data-slot="accordion-item" data-value="one">
-            <button data-slot="accordion-trigger">One</button>
-            <div data-slot="accordion-content">Content One</div>
-          </div>
-          <div data-slot="accordion-item" data-value="two">
-            <button data-slot="accordion-trigger">Two</button>
-            <div data-slot="accordion-content">Content Two</div>
-          </div>
-        </div>
-      `
-      const root = document.getElementById('root')!
-      const controller = createAccordion(root)
-
-      expect(controller.value).toEqual(['two'])
-
-      controller.destroy()
-    })
-
-    it("JS option overrides data attribute", () => {
-      document.body.innerHTML = `
-        <div data-slot="accordion" id="root" data-multiple>
-          <div data-slot="accordion-item" data-value="one">
-            <button data-slot="accordion-trigger">One</button>
-            <div data-slot="accordion-content">Content One</div>
-          </div>
-          <div data-slot="accordion-item" data-value="two">
-            <button data-slot="accordion-trigger">Two</button>
-            <div data-slot="accordion-content">Content Two</div>
-          </div>
-        </div>
-      `
-      const root = document.getElementById('root')!
-      const triggers = root.querySelectorAll('[data-slot="accordion-trigger"]')
-      // JS option says false, data attribute says true - JS wins
-      const controller = createAccordion(root, { multiple: false })
-
-      ;(triggers[0] as HTMLElement).click()
-      ;(triggers[1] as HTMLElement).click()
-
-      // In single mode, second click closes first
-      expect(controller.value).toEqual(['two'])
-
-      controller.destroy()
-    })
-  })
-
-  describe('root binding', () => {
-    it('reuses the existing controller for duplicate direct binds', () => {
-      const { root, controller } = setup()
-
-      expect(createAccordion(root)).toBe(controller)
-
-      controller.destroy()
-    })
-
-    it('reuses a controller bound by another module copy', () => {
-      const { root, controller } = setup()
-      controller.destroy()
-
-      const foreignController = { destroy() {} } as ReturnType<typeof createAccordion>
-      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
-
-      expect(createAccordion(root)).toBe(foreignController)
-
-      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
-    })
-
-    it('create() skips roots bound by another module copy', () => {
-      const { root, controller } = setup()
-      controller.destroy()
-
-      const foreignController = { destroy() {} } as ReturnType<typeof createAccordion>
-      setRootBinding(root, ROOT_BINDING_KEY, foreignController)
-
-      expect(create()).toHaveLength(0)
-
-      clearRootBinding(root, ROOT_BINDING_KEY, foreignController)
-    })
-
-    it('allows rebinding after destroy', () => {
-      const { root, controller } = setup()
-      controller.destroy()
-
-      const rebound = createAccordion(root)
-      expect(rebound).not.toBe(controller)
-
-      rebound.destroy()
-    })
-  })
-})
+      rebound.destroy();
+    });
+  });
+});

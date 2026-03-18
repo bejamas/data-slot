@@ -148,40 +148,29 @@ html {
   text-align: left;
   cursor: pointer;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 1rem;
 }
 
-.accordion-trigger::after {
-  content: "+";
+.accordion-trigger-icon {
+  margin-left: auto;
   color: var(--muted);
+  flex-shrink: 0;
   transition: transform 0.25s ease;
 }
 
-.accordion-trigger[aria-expanded="true"]::after {
-  content: "+";
+.accordion-item[data-state="open"] .accordion-trigger-icon {
   transform: rotate(45deg);
-}
-
-/* Grid-based height animation for accordion */
-.accordion-content-wrapper {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.3s ease-out;
-}
-
-.accordion-item[data-state="open"] .accordion-content-wrapper {
-  grid-template-rows: 1fr;
 }
 
 .accordion-content {
   overflow: hidden;
-  min-height: 0;
+  height: var(--accordion-panel-height);
+  transition: height 0.3s ease-out;
 }
 
-/* Override library's hidden attribute - let grid control visibility */
-.accordion-content[hidden] {
-  display: block !important;
+.accordion-content[data-starting-style] {
+  height: 0;
 }
 
 .accordion-content-inner {

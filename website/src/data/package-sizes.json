@@ -1,8 +1,8 @@
 [
   {
     "name": "@data-slot/navigation-menu",
-    "size": 8020,
-    "sizeFormatted": "7.8 KB",
+    "size": 7927,
+    "sizeFormatted": "7.7 KB",
     "description": "Dropdown navigation menus"
   },
   {
@@ -30,6 +30,12 @@
     "description": "Autocomplete input"
   },
   {
+    "name": "@data-slot/accordion",
+    "size": 2954,
+    "sizeFormatted": "2.9 KB",
+    "description": "Collapsible sections"
+  },
+  {
     "name": "@data-slot/dropdown-menu",
     "size": 2772,
     "sizeFormatted": "2.7 KB",
@@ -43,8 +49,8 @@
   },
   {
     "name": "@data-slot/slider",
-    "size": 2482,
-    "sizeFormatted": "2.4 KB",
+    "size": 2732,
+    "sizeFormatted": "2.7 KB",
     "description": "Single/range value sliders"
   },
   {
@@ -76,11 +82,5 @@
     "size": 1678,
     "sizeFormatted": "1.6 KB",
     "description": "Simple show/hide toggle"
-  },
-  {
-    "name": "@data-slot/accordion",
-    "size": 1408,
-    "sizeFormatted": "1.4 KB",
-    "description": "Collapsible sections"
   }
 ]
