@@ -1,6 +1,6 @@
 {
   "name": "@data-slot/alert-dialog",
-  "version": "0.2.156",
+  "version": "0.2.157",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
