@@ -80,6 +80,12 @@
       "require": "./dist/dropdown-menu.cjs",
       "default": "./dist/dropdown-menu.js"
     },
+    "./switch": {
+      "types": "./dist/switch.d.ts",
+      "import": "./dist/switch.js",
+      "require": "./dist/switch.cjs",
+      "default": "./dist/switch.js"
+    },
     "./toggle": {
       "types": "./dist/toggle.d.ts",
       "import": "./dist/toggle.js",
@@ -129,6 +135,7 @@
     "@data-slot/collapsible": "workspace:*",
     "@data-slot/navigation-menu": "workspace:*",
     "@data-slot/dropdown-menu": "workspace:*",
+    "@data-slot/switch": "workspace:*",
     "@data-slot/toggle": "workspace:*",
     "@data-slot/toggle-group": "workspace:*",
     "@data-slot/select": "workspace:*",

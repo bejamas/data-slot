@@ -199,6 +199,7 @@ jobs:
           publish_pkg packages/combobox
           publish_pkg packages/hover-card
           publish_pkg packages/command
+          publish_pkg packages/switch
 
           publish_pkg packages/ui
 

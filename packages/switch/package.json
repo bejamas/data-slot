@@ -1,0 +1,41 @@
+{
+  "name": "@data-slot/switch",
+  "version": "0.2.154",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bejamas/data-slot.git",
+    "directory": "packages/switch"
+  },
+  "keywords": [
+    "headless",
+    "ui",
+    "switch",
+    "toggle",
+    "form",
+    "vanilla",
+    "data-slot"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@data-slot/core": "workspace:*"
+  }
+}

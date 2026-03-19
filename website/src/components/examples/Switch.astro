@@ -1,0 +1,221 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div class="switch-stack">
+  <label class="switch-row">
+    <span data-slot="switch" data-default-checked class="switch-root">
+      <span data-slot="switch-thumb" class="switch-thumb"></span>
+    </span>
+    Release updates
+  </label>
+
+  <label class="switch-row">
+    <span data-slot="switch" class="switch-root switch-root--compact">
+      <span data-slot="switch-thumb" class="switch-thumb switch-thumb--compact"></span>
+    </span>
+    Compact alerts
+  </label>
+</div>
+
+<style>
+  .switch-stack {
+    display: grid;
+    gap: 0.875rem;
+  }
+
+  .switch-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #1f2937;
+  }
+
+  .switch-root {
+    position: relative;
+    display: inline-flex;
+    width: 32px;
+    height: 18px;
+    align-items: center;
+    border-radius: 999px;
+    background: #d1d5db;
+    padding: 1px;
+    transition: background-color 150ms ease;
+    outline: none;
+  }
+
+  .switch-root[data-checked] {
+    background: #111827;
+  }
+
+  .switch-root--compact {
+    width: 24px;
+    height: 14px;
+  }
+
+  .switch-thumb {
+    display: block;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: white;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.18);
+    transition: transform 150ms ease;
+  }
+
+  .switch-thumb[data-checked] {
+    transform: translateX(14px);
+  }
+
+  .switch-thumb--compact {
+    width: 12px;
+    height: 12px;
+  }
+
+  .switch-root--compact .switch-thumb[data-checked] {
+    transform: translateX(10px);
+  }
+</style>`;
+
+const tailwindCode = `<div class="grid gap-3">
+  <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+    <span
+      data-slot="switch"
+      data-default-checked
+      data-size="default"
+      class="data-checked:bg-gray-900 data-unchecked:bg-gray-300 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-[18px] w-[32px] shrink-0 items-center rounded-full border border-transparent p-px outline-none transition-colors focus-visible:ring-2"
+    >
+      <span
+        data-slot="switch-thumb"
+        class="pointer-events-none block size-4 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-[14px] data-unchecked:translate-x-0"
+      ></span>
+    </span>
+    Release updates
+  </label>
+
+  <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+    <span
+      data-slot="switch"
+      data-size="sm"
+      class="data-checked:bg-gray-900 data-unchecked:bg-gray-300 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-[14px] w-[24px] shrink-0 items-center rounded-full border border-transparent p-px outline-none transition-colors focus-visible:ring-2"
+    >
+      <span
+        data-slot="switch-thumb"
+        class="pointer-events-none block size-3 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-[10px] data-unchecked:translate-x-0"
+      ></span>
+    </span>
+    Compact alerts
+  </label>
+</div>`;
+---
+
+<ExampleBlock>
+  <div slot="preview-css" class="switch-stack">
+    <label class="switch-row">
+      <span data-slot="switch" data-default-checked class="switch-root">
+        <span data-slot="switch-thumb" class="switch-thumb"></span>
+      </span>
+      Release updates
+    </label>
+
+    <label class="switch-row">
+      <span data-slot="switch" class="switch-root switch-root--compact">
+        <span data-slot="switch-thumb" class="switch-thumb switch-thumb--compact"></span>
+      </span>
+      Compact alerts
+    </label>
+  </div>
+
+  <div slot="preview-tailwind" class="grid gap-3">
+    <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+      <span
+        data-slot="switch"
+        data-default-checked
+        data-size="default"
+        class="data-checked:bg-gray-900 data-unchecked:bg-gray-300 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-[18px] w-[32px] shrink-0 items-center rounded-full border border-transparent p-px outline-none transition-colors focus-visible:ring-2"
+      >
+        <span
+          data-slot="switch-thumb"
+          class="pointer-events-none block size-4 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-[14px] data-unchecked:translate-x-0"
+        ></span>
+      </span>
+      Release updates
+    </label>
+
+    <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+      <span
+        data-slot="switch"
+        data-size="sm"
+        class="data-checked:bg-gray-900 data-unchecked:bg-gray-300 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-[14px] w-[24px] shrink-0 items-center rounded-full border border-transparent p-px outline-none transition-colors focus-visible:ring-2"
+      >
+        <span
+          data-slot="switch-thumb"
+          class="pointer-events-none block size-3 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-[10px] data-unchecked:translate-x-0"
+        ></span>
+      </span>
+      Compact alerts
+    </label>
+  </div>
+
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+
+<style>
+  .switch-stack {
+    display: grid;
+    gap: 0.875rem;
+  }
+
+  .switch-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #1f2937;
+  }
+
+  .switch-root {
+    position: relative;
+    display: inline-flex;
+    width: 32px;
+    height: 18px;
+    align-items: center;
+    border-radius: 999px;
+    background: #d1d5db;
+    padding: 1px;
+    transition: background-color 150ms ease;
+    outline: none;
+  }
+
+  .switch-root[data-checked] {
+    background: #111827;
+  }
+
+  .switch-root--compact {
+    width: 24px;
+    height: 14px;
+  }
+
+  .switch-thumb {
+    display: block;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: white;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.18);
+    transition: transform 150ms ease;
+  }
+
+  .switch-thumb[data-checked] {
+    transform: translateX(14px);
+  }
+
+  .switch-thumb--compact {
+    width: 12px;
+    height: 12px;
+  }
+
+  .switch-root--compact .switch-thumb[data-checked] {
+    transform: translateX(10px);
+  }
+</style>

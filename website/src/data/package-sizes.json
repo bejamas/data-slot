@@ -31,8 +31,8 @@
   },
   {
     "name": "@data-slot/accordion",
-    "size": 3519,
-    "sizeFormatted": "3.4 KB",
+    "size": 3634,
+    "sizeFormatted": "3.5 KB",
     "description": "Collapsible sections"
   },
   {
@@ -76,6 +76,12 @@
     "size": 1858,
     "sizeFormatted": "1.8 KB",
     "description": "Blocking confirmation dialogs"
+  },
+  {
+    "name": "@data-slot/switch",
+    "size": 1824,
+    "sizeFormatted": "1.8 KB",
+    "description": "Form-ready on/off switch"
   },
   {
     "name": "@data-slot/collapsible",

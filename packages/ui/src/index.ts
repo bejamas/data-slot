@@ -55,6 +55,9 @@ export type {
   DropdownMenuController,
 } from "@data-slot/dropdown-menu";
 
+export { createSwitch } from "@data-slot/switch";
+export type { SwitchOptions, SwitchController } from "@data-slot/switch";
+
 export { createCombobox } from "@data-slot/combobox";
 export type {
   ComboboxOptions,

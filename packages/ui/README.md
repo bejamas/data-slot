@@ -28,6 +28,7 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 | `@data-slot/popover` | 2.0 KB | Anchored floating content |
 | `@data-slot/dialog` | 1.9 KB | Modal dialogs with focus management |
 | `@data-slot/alert-dialog` | 1.8 KB | Blocking confirmation dialogs |
+| `@data-slot/switch` | 1.8 KB | Form-ready on/off switch |
 | `@data-slot/toggle-group` | 1.7 KB | Single/multi toggle groups |
 | `@data-slot/collapsible` | 1.6 KB | Simple show/hide toggle |
 | `@data-slot/accordion` | 1.4 KB | Collapsible content sections |
@@ -56,6 +57,7 @@ Available subpaths:
 - `@data-slot/ui/collapsible`
 - `@data-slot/ui/navigation-menu`
 - `@data-slot/ui/dropdown-menu`
+- `@data-slot/ui/switch`
 - `@data-slot/ui/toggle`
 - `@data-slot/ui/toggle-group`
 - `@data-slot/ui/select`
@@ -123,12 +125,17 @@ tabs.destroy();       // Cleanup
 
 ## Styling
 
-Components are unstyled. Use `data-state` and ARIA attributes for CSS:
+Components are unstyled. Use `data-state`, switch-specific state hooks, and ARIA attributes for CSS:
 
 ```css
 /* Active tab trigger */
 [data-slot="tabs-trigger"][aria-selected="true"] {
   font-weight: bold;
+}
+
+/* Checked switch */
+[data-slot="switch"][data-checked] {
+  background: black;
 }
 
 /* Open dialog */
@@ -163,6 +170,7 @@ With Tailwind:
 | `createTooltip` | @data-slot/tooltip |
 | `createCollapsible` | @data-slot/collapsible |
 | `createNavigationMenu` | @data-slot/navigation-menu |
+| `createSwitch` | @data-slot/switch |
 | `createCombobox` | @data-slot/combobox |
 | `createCommand` | @data-slot/command |
 
@@ -179,6 +187,7 @@ With Tailwind:
 | `TooltipOptions`, `TooltipController` | @data-slot/tooltip |
 | `CollapsibleOptions`, `CollapsibleController` | @data-slot/collapsible |
 | `NavigationMenuOptions`, `NavigationMenuController` | @data-slot/navigation-menu |
+| `SwitchOptions`, `SwitchController` | @data-slot/switch |
 | `ComboboxOptions`, `ComboboxController` | @data-slot/combobox |
 | `CommandOptions`, `CommandController`, `CommandFilter` | @data-slot/command |
 

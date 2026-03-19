@@ -29,6 +29,7 @@
       "@data-slot/tooltip": ["./packages/tooltip/src/index.ts"],
       "@data-slot/collapsible": ["./packages/collapsible/src/index.ts"],
       "@data-slot/command": ["./packages/command/src/index.ts"],
+      "@data-slot/switch": ["./packages/switch/src/index.ts"],
       "@data-slot/ui": ["./packages/ui/src/index.ts"],
       "@data-slot/ui/*": ["./packages/ui/src/*.ts"]
     }

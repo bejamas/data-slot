@@ -14,6 +14,7 @@ export default defineConfig({
     "src/collapsible.ts",
     "src/navigation-menu.ts",
     "src/dropdown-menu.ts",
+    "src/switch.ts",
     "src/toggle.ts",
     "src/toggle-group.ts",
     "src/select.ts",
