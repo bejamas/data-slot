@@ -66,6 +66,8 @@ const resolvePhysicalSide = (
 const uniqueElements = <T extends Element>(...elements: Array<T | null | undefined>): T[] =>
   [...new Set(elements.filter((element): element is T => element != null))];
 
+type TooltipLayoutRect = Pick<DOMRectReadOnly, "top" | "right" | "bottom" | "left" | "width" | "height">;
+
 export interface TooltipOptions {
   /** Delay before showing tooltip (ms). Default: 300 */
   delay?: number;
@@ -265,7 +267,7 @@ export function createTooltip(
     side: TooltipSide,
     direction: TooltipDirection,
     anchorRect: DOMRect,
-    contentRect: DOMRect
+    contentRect: TooltipLayoutRect
   ) => {
     if (!arrow) return;
 
@@ -369,7 +371,14 @@ export function createTooltip(
     positioner.style.margin = "0";
 
     setPlacementState(pos.side, pos.align);
-    setArrowPosition(pos.side, direction, tr, content.getBoundingClientRect());
+    setArrowPosition(pos.side, direction, tr, {
+      top: pos.y,
+      left: pos.x,
+      right: pos.x + cr.width,
+      bottom: pos.y + cr.height,
+      width: cr.width,
+      height: cr.height,
+    });
   };
 
   const presence = createPresenceLifecycle({

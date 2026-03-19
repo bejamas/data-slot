@@ -480,6 +480,52 @@ describe('Tooltip', () => {
       controller.destroy()
     })
 
+    it('positions tooltip-arrow horizontally from untransformed popup geometry during scale enter animations', async () => {
+      const { trigger, content, controller } = setup(
+        {
+          side: 'top',
+          align: 'center',
+          sideOffset: 4,
+          avoidCollisions: false,
+        },
+        `
+          <div data-slot="tooltip" id="root">
+            <button data-slot="tooltip-trigger">Hover me</button>
+            <div data-slot="tooltip-content">
+              Tooltip text
+              <div data-slot="tooltip-arrow"></div>
+            </div>
+          </div>
+        `
+      )
+
+      const arrow = getArrow(document)!
+      trigger.getBoundingClientRect = () => rect(100, 100, 80, 20)
+      content.getBoundingClientRect = () => {
+        const positioner = getPositioner(content)
+        if (positioner.style.transform) {
+          const { x, y } = getTranslate3dXY(positioner.style.transform)
+          return rect(x + 3, y + 1, 114, 38)
+        }
+        return rect(0, 0, 114, 38)
+      }
+
+      Object.defineProperty(content, 'offsetWidth', { configurable: true, value: 120 })
+      Object.defineProperty(content, 'offsetHeight', { configurable: true, value: 40 })
+      Object.defineProperty(arrow, 'offsetWidth', { configurable: true, value: 10 })
+      Object.defineProperty(arrow, 'offsetHeight', { configurable: true, value: 10 })
+      arrow.getBoundingClientRect = () => rect(0, 0, 10, 10)
+
+      controller.show()
+      await waitForRaf()
+
+      expect(arrow.style.left).toBe('55px')
+      expect(arrow.style.top).toBe('')
+      expect(arrow.hasAttribute('data-uncentered')).toBe(false)
+
+      controller.destroy()
+    })
+
     it('positions tooltip-arrow with runtime-owned inline geometry and mirrors placement attrs', async () => {
       const { trigger, content, controller } = setup(
         {
@@ -567,6 +613,52 @@ describe('Tooltip', () => {
       expect(arrow.style.top).toBe('15px')
       expect(arrow.style.left).toBe('')
       expect(arrow.style.position).toBe('absolute')
+      expect(arrow.hasAttribute('data-uncentered')).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('positions tooltip-arrow vertically from untransformed popup geometry during scale enter animations', async () => {
+      const { trigger, content, controller } = setup(
+        {
+          side: 'left',
+          align: 'center',
+          sideOffset: 4,
+          avoidCollisions: false,
+        },
+        `
+          <div data-slot="tooltip" id="root">
+            <button data-slot="tooltip-trigger">Hover me</button>
+            <div data-slot="tooltip-content">
+              Tooltip text
+              <div data-slot="tooltip-arrow"></div>
+            </div>
+          </div>
+        `
+      )
+
+      const arrow = getArrow(document)!
+      trigger.getBoundingClientRect = () => rect(200, 100, 40, 20)
+      content.getBoundingClientRect = () => {
+        const positioner = getPositioner(content)
+        if (positioner.style.transform) {
+          const { x, y } = getTranslate3dXY(positioner.style.transform)
+          return rect(x + 3, y + 1, 114, 38)
+        }
+        return rect(0, 0, 114, 38)
+      }
+
+      Object.defineProperty(content, 'offsetWidth', { configurable: true, value: 120 })
+      Object.defineProperty(content, 'offsetHeight', { configurable: true, value: 40 })
+      Object.defineProperty(arrow, 'offsetWidth', { configurable: true, value: 10 })
+      Object.defineProperty(arrow, 'offsetHeight', { configurable: true, value: 10 })
+      arrow.getBoundingClientRect = () => rect(0, 0, 10, 10)
+
+      controller.show()
+      await waitForRaf()
+
+      expect(arrow.style.top).toBe('15px')
+      expect(arrow.style.left).toBe('')
       expect(arrow.hasAttribute('data-uncentered')).toBe(false)
 
       controller.destroy()
