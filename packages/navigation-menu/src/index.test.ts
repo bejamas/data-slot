@@ -444,7 +444,7 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("uses data-instant only for the initial open frame", async () => {
+  it("keeps data-instant through the initial open settling phase, then clears it", async () => {
     const { viewport, controller } = setup();
 
     controller.open("products");
@@ -454,9 +454,12 @@ describe("NavigationMenu", () => {
     expect(viewportPopup.hasAttribute("data-instant")).toBe(true);
     expect(viewportPositioner.hasAttribute("data-instant")).toBe(true);
 
-    await new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve(undefined))),
-    );
+    await waitForAnimationFrames(2);
+    expect(viewport.hasAttribute("data-instant")).toBe(true);
+    expect(viewportPopup.hasAttribute("data-instant")).toBe(true);
+    expect(viewportPositioner.hasAttribute("data-instant")).toBe(true);
+
+    await waitForAnimationFrames(4);
     expect(viewport.hasAttribute("data-instant")).toBe(false);
     expect(viewportPopup.hasAttribute("data-instant")).toBe(false);
     expect(viewportPositioner.hasAttribute("data-instant")).toBe(false);
@@ -4557,6 +4560,7 @@ describe("NavigationMenu", () => {
 
       controller.open("products");
       await waitForPresenceExit();
+      await waitForAnimationFrames(4);
 
       const viewportPositioner = getViewportPositioner(viewport);
       expect(viewport.hasAttribute("data-instant")).toBe(false);

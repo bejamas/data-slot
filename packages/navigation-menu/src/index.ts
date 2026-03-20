@@ -50,6 +50,7 @@ interface PopupSizeState {
 }
 
 type ViewportLayoutMode = "initial-open" | "measure-target" | "sync-current";
+const INITIAL_OPEN_INSTANT_SETTLE_FRAMES = 4;
 
 interface ContentPositionState {
   applied: boolean;
@@ -282,6 +283,7 @@ export function createNavigationMenu(
   let viewportOffsetLeft = 0;
   let viewportOffsetTop = 0;
   let viewportInitialInstant = false;
+  let viewportInitialInstantFramesRemaining = 0;
   let viewportTrackingInstant = false;
 
   const cleanups: Array<() => void> = [];
@@ -743,6 +745,12 @@ export function createNavigationMenu(
     clearViewportTrackingInstantRaf();
     viewportTrackingInstantRaf = requestAnimationFrame(() => {
       viewportTrackingInstantRaf = null;
+      if (viewportInitialInstant && viewportInitialInstantFramesRemaining > 0) {
+        viewportInitialInstantFramesRemaining -= 1;
+        scheduleViewportTrackingInstantClear();
+        return;
+      }
+      viewportInitialInstantFramesRemaining = 0;
       viewportInitialInstant = false;
       viewportTrackingInstant = false;
       syncPopupStackInstant();
@@ -750,9 +758,21 @@ export function createNavigationMenu(
   };
   const removeViewportInstant = () => {
     clearViewportTrackingInstantRaf();
+    viewportInitialInstantFramesRemaining = 0;
     viewportInitialInstant = false;
     viewportTrackingInstant = false;
     syncPopupStackInstant();
+  };
+  const refreshViewportInitialInstant = (
+    frames = INITIAL_OPEN_INSTANT_SETTLE_FRAMES,
+  ) => {
+    viewportInitialInstant = true;
+    viewportInitialInstantFramesRemaining = Math.max(
+      viewportInitialInstantFramesRemaining,
+      frames,
+    );
+    syncPopupStackInstant();
+    scheduleViewportTrackingInstantClear();
   };
   const teardownPopupStack = () => {
     const stack = popupStack;
@@ -937,6 +957,9 @@ export function createNavigationMenu(
       if (!activeData || activeData.content !== data.content) return;
       const stack = ensurePopupStack();
       if (!stack || stack.isClosing) return;
+      if (viewportInitialInstant) {
+        refreshViewportInitialInstant();
+      }
       const placement = resolvePlacement(activeData.item, activeData.content);
       if (
         stack.popup.hasAttribute("data-starting-style") ||
@@ -2336,11 +2359,9 @@ export function createNavigationMenu(
           setOpenSurfaceState(stack?.popup ?? getCurrentPopup(), true);
           setOpenSurfaceState(viewport, true);
           viewport.style.pointerEvents = "auto";
-          viewportInitialInstant = true;
           clearViewportTrackingInstantRaf();
           viewportTrackingInstant = false;
-          syncPopupStackInstant();
-          scheduleViewportTrackingInstantClear();
+          refreshViewportInitialInstant();
         }
         if (stack?.popup) {
           stack.popup.hidden = false;
@@ -2377,6 +2398,7 @@ export function createNavigationMenu(
         previousIndex = newData.index;
 
         if (isSwitching) {
+          viewportInitialInstantFramesRemaining = 0;
           viewportInitialInstant = false;
           clearViewportTrackingInstantRaf();
           viewportTrackingInstant = false;
@@ -2442,6 +2464,12 @@ export function createNavigationMenu(
         setOpenSurfaceState(viewport, isOpen);
         viewport.style.pointerEvents = isOpen ? "auto" : "none";
         viewportInitialInstant = isInitialOpen;
+        viewportInitialInstantFramesRemaining = isInitialOpen
+          ? Math.max(
+              viewportInitialInstantFramesRemaining,
+              INITIAL_OPEN_INSTANT_SETTLE_FRAMES,
+            )
+          : 0;
         if (!isOpen || isSwitching) {
           clearViewportTrackingInstantRaf();
           viewportTrackingInstant = false;
