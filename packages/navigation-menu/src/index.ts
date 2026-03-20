@@ -39,6 +39,18 @@ interface Point {
   y: number;
 }
 
+interface Size {
+  width: number;
+  height: number;
+}
+
+interface ContentPositionState {
+  applied: boolean;
+  left: string;
+  position: string;
+  top: string;
+}
+
 interface HoverSafeTriangle {
   apex: Point;
   edgeA: Point;
@@ -77,6 +89,105 @@ const getTransformOriginAnchor = (
   if (side === "bottom") return { x: aligned.x, y: triggerRect.bottom };
   if (side === "left") return { x: triggerRect.left, y: aligned.y };
   return { x: triggerRect.right, y: aligned.y };
+};
+
+const parseTimingToMs = (value: string): number => {
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  if (trimmed.endsWith("ms")) {
+    const parsed = Number(trimmed.slice(0, -2).trim());
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  if (trimmed.endsWith("s")) {
+    const parsed = Number(trimmed.slice(0, -1).trim());
+    return Number.isFinite(parsed) ? parsed * 1000 : 0;
+  }
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getMaxTimingMs = (durationsRaw: string, delaysRaw: string): number => {
+  const durations = durationsRaw.split(",");
+  const delays = delaysRaw.split(",");
+  const len = Math.max(durations.length, delays.length);
+  let max = 0;
+
+  for (let i = 0; i < len; i++) {
+    const duration = parseTimingToMs(
+      durations[i] ?? durations[durations.length - 1] ?? "0",
+    );
+    const delay = parseTimingToMs(
+      delays[i] ?? delays[delays.length - 1] ?? "0",
+    );
+    max = Math.max(max, duration + delay);
+  }
+
+  return max;
+};
+
+const getMaxAnimationDurationMs = (element: HTMLElement): number => {
+  const style = getComputedStyle(element);
+  const transitionMs = getMaxTimingMs(
+    style.transitionDuration,
+    style.transitionDelay,
+  );
+  const animationMs = getMaxTimingMs(
+    style.animationDuration,
+    style.animationDelay,
+  );
+  return Math.max(transitionMs, animationMs);
+};
+
+const runOnceAnimationsFinish = (
+  element: HTMLElement,
+  fn: () => void,
+  signal?: AbortSignal | null,
+) => {
+  const win = element.ownerDocument.defaultView ?? window;
+  const cleanup = () => {
+    if (timeoutId !== null) {
+      win.clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
+
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  signal?.addEventListener("abort", cleanup, { once: true });
+
+  const maxDuration = getMaxAnimationDurationMs(element);
+  if (maxDuration <= 0) {
+    win.requestAnimationFrame(() => {
+      if (signal?.aborted) return;
+      fn();
+    });
+    return;
+  }
+
+  timeoutId = win.setTimeout(() => {
+    cleanup();
+    if (signal?.aborted) return;
+    fn();
+  }, Math.ceil(maxDuration) + 50);
+};
+
+const getCssDimensions = (element: Element): Size => {
+  const css = getComputedStyle(element);
+  let width = parseFloat(css.width) || 0;
+  let height = parseFloat(css.height) || 0;
+
+  if (element instanceof HTMLElement) {
+    const offsetWidth = element.offsetWidth || width;
+    const offsetHeight = element.offsetHeight || height;
+    if (
+      Math.round(width) !== offsetWidth ||
+      Math.round(height) !== offsetHeight
+    ) {
+      width = offsetWidth;
+      height = offsetHeight;
+    }
+  }
+
+  return { width, height };
 };
 
 export interface NavigationMenuOptions {
@@ -241,6 +352,7 @@ export function createNavigationMenu(
     HTMLElement,
     ReturnType<typeof createPresenceLifecycle>
   >();
+  const contentPositionState = new Map<HTMLElement, ContentPositionState>();
   const contentPlacement = new Map<
     HTMLElement,
     {
@@ -349,6 +461,140 @@ export function createNavigationMenu(
     if (!stack.popupExitComplete || !stack.viewportExitComplete) return;
     teardownPopupStack();
   };
+  let previousPopupSize: Size = { width: 0, height: 0 };
+  let targetPopupSize: Size = { width: 0, height: 0 };
+  let popupSizeAnimationFrame: number | null = null;
+  let popupSizeResetAbortController: AbortController | null = null;
+
+  const rememberPopupSize = (size: Size) => {
+    if (size.width > 0) previousPopupSize.width = size.width;
+    if (size.height > 0) previousPopupSize.height = size.height;
+  };
+  const rememberTargetPopupSize = (size: Size) => {
+    if (size.width > 0) targetPopupSize.width = size.width;
+    if (size.height > 0) targetPopupSize.height = size.height;
+  };
+  const resetPopupSizeMemory = () => {
+    previousPopupSize = { width: 0, height: 0 };
+    targetPopupSize = { width: 0, height: 0 };
+  };
+  const clearPopupSizeAnimationFrame = () => {
+    if (popupSizeAnimationFrame !== null) {
+      cancelAnimationFrame(popupSizeAnimationFrame);
+      popupSizeAnimationFrame = null;
+    }
+  };
+  const cancelPopupAutoSizeReset = () => {
+    popupSizeResetAbortController?.abort();
+    popupSizeResetAbortController = null;
+  };
+  const clearPopupSizingTracking = () => {
+    clearPopupSizeAnimationFrame();
+    cancelPopupAutoSizeReset();
+  };
+  const setPopupFixedSizeVars = (
+    popup: HTMLElement,
+    width: number,
+    height: number,
+  ) => {
+    popup.style.setProperty("--popup-width", `${width}px`);
+    popup.style.setProperty("--popup-height", `${height}px`);
+  };
+  const setPopupAutoSizeVars = (popup: HTMLElement) => {
+    popup.style.setProperty("--popup-width", "auto");
+    popup.style.setProperty("--popup-height", "auto");
+  };
+  const setViewportLegacySizeVars = (width: number, height: number) => {
+    if (!viewport) return;
+    // TODO(next-major): drop legacy viewport sizing aliases in favor of popup vars.
+    viewport.style.setProperty("--viewport-width", `${width}px`);
+    viewport.style.setProperty("--viewport-height", `${height}px`);
+  };
+  const setPositionerSizeVars = (
+    positioner: HTMLElement,
+    width: number,
+    height: number,
+  ) => {
+    positioner.style.setProperty("--positioner-width", `${width}px`);
+    positioner.style.setProperty("--positioner-height", `${height}px`);
+  };
+  const clearPopupStackSizeVars = (stack: PopupStackController) => {
+    stack.positioner.style.removeProperty("--positioner-width");
+    stack.positioner.style.removeProperty("--positioner-height");
+    stack.popup.style.removeProperty("--popup-width");
+    stack.popup.style.removeProperty("--popup-height");
+    viewport?.style.removeProperty("--viewport-width");
+    viewport?.style.removeProperty("--viewport-height");
+  };
+  const getPopupTransitionBaseline = (): Size => {
+    const popup = getCurrentPopup();
+    if (!popup) return { ...previousPopupSize };
+
+    const popupWidthVar = popup.style.getPropertyValue("--popup-width").trim();
+    const popupHeightVar = popup.style.getPropertyValue("--popup-height").trim();
+    const measured =
+      popupWidthVar &&
+      popupWidthVar !== "auto" &&
+      popupHeightVar &&
+      popupHeightVar !== "auto"
+        ? {
+            width: popup.offsetWidth || previousPopupSize.width,
+            height: popup.offsetHeight || previousPopupSize.height,
+          }
+        : getCssDimensions(popup);
+    const baseline = {
+      width: measured.width || previousPopupSize.width,
+      height: measured.height || previousPopupSize.height,
+    };
+    rememberPopupSize(baseline);
+    return baseline;
+  };
+  const schedulePopupAutoSizeReset = (stack: PopupStackController) => {
+    cancelPopupAutoSizeReset();
+    popupSizeResetAbortController = new AbortController();
+    runOnceAnimationsFinish(
+      stack.popup,
+      () => {
+        if (isDestroyed || popupStack !== stack || stack.isClosing) return;
+        setPopupAutoSizeVars(stack.popup);
+        popupSizeResetAbortController = null;
+      },
+      popupSizeResetAbortController.signal,
+    );
+  };
+  const setContentMountedAbsolute = (
+    content: HTMLElement,
+    absolute: boolean,
+  ) => {
+    if (absolute) {
+      const state = contentPositionState.get(content) ?? {
+        applied: false,
+        left: "",
+        position: "",
+        top: "",
+      };
+      if (!state.applied) {
+        state.position = content.style.position;
+        state.top = content.style.top;
+        state.left = content.style.left;
+      }
+      state.applied = true;
+      contentPositionState.set(content, state);
+      content.style.position = "absolute";
+      content.style.top = "0px";
+      content.style.left = "0px";
+      return;
+    }
+    const state = contentPositionState.get(content);
+    if (!state?.applied) return;
+    if (state.position) content.style.position = state.position;
+    else content.style.removeProperty("position");
+    if (state.top) content.style.top = state.top;
+    else content.style.removeProperty("top");
+    if (state.left) content.style.left = state.left;
+    else content.style.removeProperty("left");
+    state.applied = false;
+  };
 
   const getCurrentPopup = () => popupStack?.popup ?? findPopupStackParts().popup;
   const getCurrentPositioner = () =>
@@ -388,8 +634,6 @@ export function createNavigationMenu(
       positioner.style.position = "";
       positioner.style.top = "";
       positioner.style.left = "";
-      positioner.style.width = "";
-      positioner.style.height = "";
       positioner.style.margin = "";
       positioner.style.willChange = "";
       positioner.style.pointerEvents = "";
@@ -403,14 +647,19 @@ export function createNavigationMenu(
 
     const popup = getCurrentPopup();
     if (popup) {
-      popup.style.position = "";
-      popup.style.top = "";
-      popup.style.left = "";
       popup.style.willChange = "";
       popup.style.pointerEvents = "";
       popup.style.removeProperty("--transform-origin");
       popup.style.removeProperty("--popup-width");
       popup.style.removeProperty("--popup-height");
+    }
+    if (viewport) {
+      viewport.style.top = "";
+      viewport.style.left = "";
+      viewport.style.willChange = "";
+      viewport.style.removeProperty("--transform-origin");
+      viewport.style.removeProperty("--viewport-width");
+      viewport.style.removeProperty("--viewport-height");
     }
   };
   const clearViewportTrackingInstantRaf = () => {
@@ -454,8 +703,10 @@ export function createNavigationMenu(
     const stack = popupStack;
     if (!stack || !viewport) return;
 
+    clearPopupSizingTracking();
     removeViewportInstant();
     resetPopupStackStyles();
+    resetPopupSizeMemory();
     viewportOffsetLeft = 0;
     viewportOffsetTop = 0;
     viewport.hidden = true;
@@ -606,8 +857,6 @@ export function createNavigationMenu(
     positioner.style.position = rootPositionMethod;
     positioner.style.top = `${positionerTop}px`;
     positioner.style.left = `${positionerLeft}px`;
-    positioner.style.width = `${rootRect.width}px`;
-    positioner.style.height = `${rootRect.height}px`;
     positioner.style.margin = "0";
     positioner.style.willChange = "top,left";
     positioner.style.pointerEvents = "none";
@@ -627,20 +876,25 @@ export function createNavigationMenu(
     if (!viewport || !data) return;
     activeRO = new ResizeObserver(() => {
       const placement = resolvePlacement(data.item, data.content);
-      updateViewportSize(data.content, data.trigger, placement);
+      updateViewportSize(data.content, data.trigger, placement, {
+        baseline: getPopupTransitionBaseline(),
+      });
     });
     activeRO.observe(data.content);
   };
   cleanups.push(() => activeRO?.disconnect());
   cleanups.push(() => {
+    clearPopupSizingTracking();
     removeViewportInstant();
     contentPresence.forEach((presence) => presence.cleanup());
     contentPresence.clear();
     contentPlacement.forEach((_state, content) => {
       restoreContentPlacement(content);
+      setContentMountedAbsolute(content, false);
       content.hidden = true;
       content.style.pointerEvents = "none";
     });
+    contentPositionState.clear();
     contentPlacement.clear();
     teardownPopupStack();
   });
@@ -710,6 +964,7 @@ export function createNavigationMenu(
             setContentSurfaceState(content, false);
             setContentActivationDirection(content, null);
             content.removeAttribute("data-motion");
+            setContentMountedAbsolute(content, false);
             restoreContentPlacement(content);
             content.hidden = true;
             content.style.pointerEvents = "none";
@@ -1438,8 +1693,8 @@ export function createNavigationMenu(
     triggerRect: DOMRect,
     side: Side,
     sideOffset: number,
-    contentWidth: number,
-    contentHeight: number,
+    width: number,
+    height: number,
   ) => {
     const win = root.ownerDocument.defaultView ?? window;
     const visualViewport = win.visualViewport;
@@ -1460,32 +1715,73 @@ export function createNavigationMenu(
       side === "top"
         ? Math.max(0, triggerRect.top - viewportY - sideOffset)
         : side === "bottom"
-          ? Math.max(
-              0,
-              viewportY + viewportHeight - triggerRect.bottom - sideOffset,
-            )
-          : Math.max(0, viewportHeight);
+        ? Math.max(
+            0,
+            viewportY + viewportHeight - triggerRect.bottom - sideOffset,
+          )
+        : Math.max(0, viewportHeight);
 
-    positioner.style.setProperty("--positioner-width", `${contentWidth}px`);
-    positioner.style.setProperty("--positioner-height", `${contentHeight}px`);
+    setPositionerSizeVars(positioner, width, height);
     positioner.style.setProperty("--available-width", `${availableWidth}px`);
     positioner.style.setProperty("--available-height", `${availableHeight}px`);
+  };
+
+  const readPopupSize = (
+    popup: HTMLElement,
+    fallback: Size = previousPopupSize,
+  ): Size => {
+    const measured = getCssDimensions(popup);
+    const size = {
+      width: measured.width || fallback.width || previousPopupSize.width,
+      height: measured.height || fallback.height || previousPopupSize.height,
+    };
+    rememberPopupSize(size);
+    return size;
+  };
+
+  const measureTargetPopupSize = (
+    stack: PopupStackController,
+  ): Size => {
+    clearPopupStackSizeVars(stack);
+    return getCssDimensions(stack.popup);
   };
 
   const applyViewportLayout = (
     content: HTMLElement,
     trigger: HTMLElement,
     placement: PlacementConfig,
+    options: {
+      baseline?: Size | null;
+      mode?: "measure-target" | "sync-current";
+    } = {},
   ) => {
     const stack = ensurePopupStack();
     if (!viewport || !stack) return;
     const { popup, positioner } = stack;
+    const mode = options.mode ?? "measure-target";
 
     if (
       viewport.getAttribute("data-state") !== "open" ||
       content.getAttribute("data-state") !== "active"
     ) {
       return;
+    }
+
+    setContentMountedAbsolute(content, false);
+
+    const previousSizeVars =
+      mode === "measure-target"
+        ? {
+            popupWidth: popup.style.getPropertyValue("--popup-width"),
+            popupHeight: popup.style.getPropertyValue("--popup-height"),
+            positionerWidth: positioner.style.getPropertyValue("--positioner-width"),
+            positionerHeight: positioner.style.getPropertyValue("--positioner-height"),
+            viewportWidth: viewport.style.getPropertyValue("--viewport-width"),
+            viewportHeight: viewport.style.getPropertyValue("--viewport-height"),
+          }
+        : null;
+    if (mode === "measure-target") {
+      clearPopupSizingTracking();
     }
 
     const firstChild = content.firstElementChild as HTMLElement | null;
@@ -1506,21 +1802,88 @@ export function createNavigationMenu(
       return max;
     };
     const contentRect = content.getBoundingClientRect();
-    // Prefer intrinsic layout dimensions so transform-based animations don't shrink measurements.
-    const contentWidth = measureAxis(
-      contentRect.width,
-      content.scrollWidth,
-      content.offsetWidth,
-      content.clientWidth,
+    const fallbackSize = {
+      width: measureAxis(
+        contentRect.width,
+        content.scrollWidth,
+        content.offsetWidth,
+        content.clientWidth,
+      ),
+      height:
+        measureAxis(
+          contentRect.height,
+          content.scrollHeight,
+          content.offsetHeight,
+          content.clientHeight,
+        ) + firstMarginTop + lastMarginBottom,
+    };
+    const baseline = options.baseline ?? previousPopupSize;
+    const measuredPopupSize =
+      mode === "measure-target"
+        ? measureTargetPopupSize(stack)
+        : readPopupSize(popup, baseline);
+    const contentSize = {
+      width:
+        mode === "sync-current"
+          ? targetPopupSize.width ||
+            measuredPopupSize.width ||
+            fallbackSize.width
+          : measuredPopupSize.width || fallbackSize.width,
+      height:
+        mode === "sync-current"
+          ? targetPopupSize.height ||
+            measuredPopupSize.height ||
+            fallbackSize.height
+          : measuredPopupSize.height || fallbackSize.height,
+    };
+    rememberPopupSize(
+      measuredPopupSize.width > 0 && measuredPopupSize.height > 0
+        ? measuredPopupSize
+        : contentSize,
     );
-    const layoutHeight = measureAxis(
-      contentRect.height,
-      content.scrollHeight,
-      content.offsetHeight,
-      content.clientHeight,
-    );
-    // Include outer margins used by content wrappers (commonly collapsed on first/last child).
-    const contentHeight = layoutHeight + firstMarginTop + lastMarginBottom;
+    if (
+      mode === "measure-target" ||
+      targetPopupSize.width <= 0 ||
+      targetPopupSize.height <= 0
+    ) {
+      rememberTargetPopupSize(contentSize);
+    }
+    const contentWidth = contentSize.width;
+    const contentHeight = contentSize.height;
+    if (contentWidth <= 0 || contentHeight <= 0) {
+      if (previousSizeVars) {
+        const restoreVar = (
+          el: HTMLElement,
+          name: string,
+          value: string,
+        ) => {
+          if (value) {
+            el.style.setProperty(name, value);
+          } else {
+            el.style.removeProperty(name);
+          }
+        };
+        restoreVar(popup, "--popup-width", previousSizeVars.popupWidth);
+        restoreVar(popup, "--popup-height", previousSizeVars.popupHeight);
+        restoreVar(
+          positioner,
+          "--positioner-width",
+          previousSizeVars.positionerWidth,
+        );
+        restoreVar(
+          positioner,
+          "--positioner-height",
+          previousSizeVars.positionerHeight,
+        );
+        restoreVar(viewport, "--viewport-width", previousSizeVars.viewportWidth);
+        restoreVar(
+          viewport,
+          "--viewport-height",
+          previousSizeVars.viewportHeight,
+        );
+      }
+      return;
+    }
     const floatingRect = {
       top: contentRect.top,
       left: contentRect.left,
@@ -1534,9 +1897,7 @@ export function createNavigationMenu(
     const viewportStyle = getComputedStyle(viewport);
     const viewportMarginTop = parseFloat(viewportStyle.marginTop) || 0;
 
-    viewport.style.setProperty("--viewport-width", `${contentWidth}px`);
-    // Viewport height is just the content height - margins are outside the box
-    viewport.style.setProperty("--viewport-height", `${contentHeight}px`);
+    setViewportLegacySizeVars(contentWidth, contentHeight);
 
     const rootRect = (root as HTMLElement).getBoundingClientRect();
     const triggerRect = trigger.getBoundingClientRect();
@@ -1567,22 +1928,13 @@ export function createNavigationMenu(
     const viewportTransformOrigin = `${transformOriginX}px ${transformOriginY}px`;
     const positionerTransformOrigin = `${positionerOriginX}px ${positionerOriginY}px`;
 
-    popup.style.position = "absolute";
-    popup.style.top = "0px";
-    popup.style.left = "0px";
     popup.style.willChange = "width,height";
     popup.style.pointerEvents = "auto";
-    popup.style.setProperty("--popup-width", `${contentWidth}px`);
-    popup.style.setProperty("--popup-height", `${contentHeight}px`);
     popup.style.setProperty("--transform-origin", viewportTransformOrigin);
     viewport.style.top = "0px";
     viewport.style.left = "0px";
     viewport.style.willChange = "transform,width,height";
-    // TODO(next-major): drop legacy viewport sizing aliases in favor of popup vars.
     viewport.style.setProperty("--transform-origin", viewportTransformOrigin);
-    // Active content is mounted inside viewport.
-    content.style.top = "0px";
-    content.style.left = "0px";
     content.style.setProperty("--transform-origin", viewportTransformOrigin);
     popup.setAttribute("data-side", pos.side);
     popup.setAttribute("data-align", pos.align);
@@ -1606,6 +1958,28 @@ export function createNavigationMenu(
     );
     updateViewportPositioner();
 
+    if (mode === "measure-target") {
+      const transitionStart = {
+        width: baseline.width || contentWidth,
+        height: baseline.height || contentHeight,
+      };
+      setPopupFixedSizeVars(popup, transitionStart.width, transitionStart.height);
+      popupSizeAnimationFrame = requestAnimationFrame(() => {
+        popupSizeAnimationFrame = null;
+        if (
+          isDestroyed ||
+          popupStack !== stack ||
+          stack.isClosing ||
+          viewport.getAttribute("data-state") !== "open" ||
+          content.getAttribute("data-state") !== "active"
+        ) {
+          return;
+        }
+        setPopupFixedSizeVars(popup, contentWidth, contentHeight);
+        schedulePopupAutoSizeReset(stack);
+      });
+    }
+
     // Build unified hover shield (rectangular gap bridge + triangular safety corridor).
     const viewportRect = viewport.getBoundingClientRect();
     const shieldPoints: Point[] = [];
@@ -1614,7 +1988,7 @@ export function createNavigationMenu(
     const rootTopGap = Math.max(0, rootRect.top - viewportRect.bottom); // viewport above
     const rootRightGap = Math.max(0, viewportRect.left - rootRect.right); // viewport right
     const rootLeftGap = Math.max(0, rootRect.left - viewportRect.right); // viewport left
-    const marginGap = Math.max(0, firstMarginTop + viewportMarginTop);
+    const marginGap = Math.max(0, viewportMarginTop);
     const verticalGap = Math.max(rootBottomGap, rootTopGap, marginGap);
     const horizontalGap = Math.max(rootRightGap, rootLeftGap);
     const triangle = safeTriangleEnabled
@@ -1688,12 +2062,16 @@ export function createNavigationMenu(
     content: HTMLElement,
     trigger: HTMLElement,
     placement: PlacementConfig,
-    options: { defer?: boolean } = {},
+    options: {
+      baseline?: Size | null;
+      defer?: boolean;
+      mode?: "measure-target" | "sync-current";
+    } = {},
   ) => {
     if (!viewport) return;
 
     const run = () => {
-      applyViewportLayout(content, trigger, placement);
+      applyViewportLayout(content, trigger, placement, options);
     };
 
     if (options.defer === false) {
@@ -1715,7 +2093,11 @@ export function createNavigationMenu(
 
   const syncActiveViewportLayout = (
     data = getActiveData(),
-    options: { defer?: boolean } = {},
+    options: {
+      baseline?: Size | null;
+      defer?: boolean;
+      mode?: "measure-target" | "sync-current";
+    } = {},
   ) => {
     if (!data) return;
     const placement = resolvePlacement(data.item, data.content);
@@ -1733,7 +2115,10 @@ export function createNavigationMenu(
     onUpdate: () => {
       viewportTrackingInstant = true;
       syncPopupStackInstant();
-      syncActiveViewportLayout(undefined, { defer: false });
+      syncActiveViewportLayout(undefined, {
+        defer: false,
+        mode: "sync-current",
+      });
       scheduleViewportTrackingInstantClear();
     },
   });
@@ -1837,6 +2222,7 @@ export function createNavigationMenu(
     const doUpdate = () => {
       const prevValue = currentValue;
       const newData = value ? itemMap.get(value) : null;
+      const popupSizeBaseline = getPopupTransitionBaseline();
 
       // Only animate direction when switching between different items
       const isSwitching =
@@ -1889,10 +2275,12 @@ export function createNavigationMenu(
           }
 
           if (wasActive) {
+            setContentMountedAbsolute(content, true);
             presence?.exit();
           } else if (!presence?.isExiting) {
             setContentActivationDirection(content, null);
             content.removeAttribute("data-motion");
+            setContentMountedAbsolute(content, false);
             restoreContentPlacement(content);
             content.hidden = true;
           } else {
@@ -1937,13 +2325,16 @@ export function createNavigationMenu(
           newData.content.removeAttribute("data-motion");
         }
         setContentSurfaceState(newData.content, true);
+        setContentMountedAbsolute(newData.content, false);
         newData.content.removeAttribute("aria-hidden");
         setInert(newData.content, false);
         newData.content.hidden = false;
         newData.content.style.pointerEvents = "auto";
         previousIndex = newData.index;
 
-        syncActiveViewportLayout(newData);
+        syncActiveViewportLayout(newData, {
+          baseline: popupSizeBaseline,
+        });
         observeActiveContent(newData);
         updateIndicator(newData.trigger); // Indicator follows active trigger
       } else {
@@ -1951,6 +2342,23 @@ export function createNavigationMenu(
         hideHoverBridge();
         clearHoverSafetyState();
         if (popupStack) {
+          clearPopupSizingTracking();
+          if (popupSizeBaseline.width > 0 && popupSizeBaseline.height > 0) {
+            setPopupFixedSizeVars(
+              popupStack.popup,
+              popupSizeBaseline.width,
+              popupSizeBaseline.height,
+            );
+            setPositionerSizeVars(
+              popupStack.positioner,
+              popupSizeBaseline.width,
+              popupSizeBaseline.height,
+            );
+            setViewportLegacySizeVars(
+              popupSizeBaseline.width,
+              popupSizeBaseline.height,
+            );
+          }
           popupStack.isClosing = true;
           popupStack.popupExitComplete = false;
           popupStack.viewportExitComplete = false;
@@ -2052,6 +2460,7 @@ export function createNavigationMenu(
     content.tabIndex = -1; // Make focusable for ArrowDown fallback
     setInert(content, true);
     content.hidden = true;
+    setContentMountedAbsolute(content, false);
     content.style.pointerEvents = "none";
   });
 
@@ -2270,8 +2679,10 @@ export function createNavigationMenu(
         if (e.target !== viewport) return; // Ignore bubbling from children
         const data = currentValue ? itemMap.get(currentValue) : null;
         if (data) {
-          const placement = resolvePlacement(data.item, data.content);
-          updateViewportSize(data.content, data.trigger, placement);
+          syncActiveViewportLayout(data, {
+            defer: false,
+            mode: "sync-current",
+          });
         }
       }),
     );

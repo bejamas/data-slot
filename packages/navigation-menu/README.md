@@ -244,9 +244,6 @@ anchoring, such as inside sticky headers.
 
 /* Popup owns the main shell animation */
 [data-slot="navigation-menu-popup"] {
-  position: absolute;
-  top: 0;
-  left: 0;
   transform-origin: var(--transform-origin);
   width: var(--popup-width);
   height: var(--popup-height);
@@ -288,6 +285,8 @@ suppressing exit animations.
 Use `data-starting-style` / `data-ending-style` on `navigation-menu-popup` for full popup
 open/close animations, and on `navigation-menu-content` for panel presence.
 Directional panel switching should key off `data-activation-direction="left|right"` on content.
+The active panel stays in normal flow; mounted inactive/exiting panels are absolutely positioned
+by the runtime so they do not affect popup measurement while they animate out.
 
 For exit animations, avoid CSS that force-hides content immediately by `data-state`
 (for example `display: none` on non-active panels), because that bypasses the presence lifecycle.
@@ -322,14 +321,18 @@ For exit animations, avoid CSS that force-hides content immediately by `data-sta
 ```
 
 Legacy `data-motion` and `--motion-direction` are still emitted during panel switches for backward
-compatibility, but `data-activation-direction` is the canonical directional hook.
+compatibility. That includes both root-level and content-level `data-motion` output, but
+`data-activation-direction` is the canonical directional hook.
+
+`--popup-width` / `--popup-height` are the animated shell vars. They transition through fixed pixel
+values and settle back to `auto` once the popup animation completes.
 
 ### CSS Variables
 
 | Variable | Element | Description |
 |----------|---------|-------------|
-| `--popup-width` | popup | Fixed width of the popup shell |
-| `--popup-height` | popup | Fixed height of the popup shell |
+| `--popup-width` | popup | Popup width during size transitions; settles back to `auto` at rest |
+| `--popup-height` | popup | Popup height during size transitions; settles back to `auto` at rest |
 | `--positioner-width` | positioner | Measured width of the active panel |
 | `--positioner-height` | positioner | Measured height of the active panel |
 | `--available-width` | positioner | Available width between the active trigger and the viewport edge |
@@ -346,7 +349,7 @@ compatibility, but `data-activation-direction` is the canonical directional hook
 ### Deprecated Compatibility
 
 - `navigation-menu-viewport-positioner` is a deprecated alias for `navigation-menu-positioner`.
-- `--viewport-width`, `--viewport-height`, `data-motion`, and `--motion-direction` are deprecated and planned for removal in the next major release.
+- `--viewport-width`, `--viewport-height`, root/content `data-motion`, and `--motion-direction` are deprecated and planned for removal in the next major release.
 - Content-wrapped `navigation-menu-portal` / `navigation-menu-positioner` shells are restore-only compatibility and are also planned for removal in the next major release.
 
 ## Keyboard Navigation
