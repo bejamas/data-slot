@@ -1,6 +1,6 @@
 {
   "name": "@data-slot/popover",
-  "version": "0.2.158",
+  "version": "0.2.159",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
