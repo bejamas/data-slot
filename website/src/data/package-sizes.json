@@ -1,8 +1,8 @@
 [
   {
     "name": "@data-slot/navigation-menu",
-    "size": 7927,
-    "sizeFormatted": "7.7 KB",
+    "size": 8949,
+    "sizeFormatted": "8.7 KB",
     "description": "Dropdown navigation menus"
   },
   {
@@ -36,16 +36,16 @@
     "description": "Collapsible sections"
   },
   {
+    "name": "@data-slot/tooltip",
+    "size": 2784,
+    "sizeFormatted": "2.7 KB",
+    "description": "Hover/focus tooltips"
+  },
+  {
     "name": "@data-slot/dropdown-menu",
     "size": 2772,
     "sizeFormatted": "2.7 KB",
     "description": "Action menus, kbd nav"
-  },
-  {
-    "name": "@data-slot/tooltip",
-    "size": 2750,
-    "sizeFormatted": "2.7 KB",
-    "description": "Hover/focus tooltips"
   },
   {
     "name": "@data-slot/slider",
@@ -72,16 +72,16 @@
     "description": "Modal dialogs, focus trap"
   },
   {
+    "name": "@data-slot/switch",
+    "size": 1890,
+    "sizeFormatted": "1.8 KB",
+    "description": "Form-ready on/off switch"
+  },
+  {
     "name": "@data-slot/alert-dialog",
     "size": 1858,
     "sizeFormatted": "1.8 KB",
     "description": "Blocking confirmation dialogs"
-  },
-  {
-    "name": "@data-slot/switch",
-    "size": 1824,
-    "sizeFormatted": "1.8 KB",
-    "description": "Form-ready on/off switch"
   },
   {
     "name": "@data-slot/collapsible",

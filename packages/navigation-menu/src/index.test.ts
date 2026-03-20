@@ -11,6 +11,34 @@ describe("NavigationMenu", () => {
     );
   const waitForAnimationFrame = () =>
     new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const withMockTransitionDurations = async (
+    getDuration: (el: Element) => string,
+    run: () => Promise<void> | void
+  ) => {
+    const originalGetComputedStyle = window.getComputedStyle;
+
+    Object.defineProperty(window, "getComputedStyle", {
+      configurable: true,
+      value: ((el: Element) => {
+        const style = originalGetComputedStyle.call(window, el);
+        return Object.assign({}, style, {
+          transitionDuration: getDuration(el),
+          transitionDelay: "0s",
+          animationDuration: "0s",
+          animationDelay: "0s",
+        }) as CSSStyleDeclaration;
+      }) as typeof window.getComputedStyle,
+    });
+
+    try {
+      await run();
+    } finally {
+      Object.defineProperty(window, "getComputedStyle", {
+        configurable: true,
+        value: originalGetComputedStyle,
+      });
+    }
+  };
 
   const setup = (options: Parameters<typeof createNavigationMenu>[1] = {}) => {
     document.body.innerHTML = `
@@ -168,14 +196,31 @@ describe("NavigationMenu", () => {
   };
 
   const getViewportPositioner = (viewport: HTMLElement): HTMLElement => {
-    const parent = viewport.parentElement;
-    if (!(parent instanceof HTMLElement)) {
-      throw new Error("Expected viewport to have a parent element");
+    const positioner = viewport.closest(
+      '[data-slot="navigation-menu-positioner"], [data-slot="navigation-menu-viewport-positioner"]'
+    );
+    if (!(positioner instanceof HTMLElement)) {
+      throw new Error(
+        "Expected viewport to be wrapped by navigation-menu-positioner or navigation-menu-viewport-positioner"
+      );
     }
-    if (parent.getAttribute("data-slot") !== "navigation-menu-viewport-positioner") {
-      throw new Error("Expected viewport to be wrapped by navigation-menu-viewport-positioner");
+    return positioner;
+  };
+
+  const getViewportPopup = (viewport: HTMLElement): HTMLElement => {
+    const popup = viewport.closest('[data-slot="navigation-menu-popup"]');
+    if (!(popup instanceof HTMLElement)) {
+      throw new Error("Expected viewport to be wrapped by navigation-menu-popup");
     }
-    return parent;
+    return popup;
+  };
+
+  const getViewportPortal = (viewport: HTMLElement): HTMLElement => {
+    const portal = viewport.closest('[data-slot="navigation-menu-portal"]');
+    if (!(portal instanceof HTMLElement)) {
+      throw new Error("Expected viewport to be wrapped by navigation-menu-portal");
+    }
+    return portal;
   };
 
   const mockHoverEnvironment = (hoveredElements: Element[] = []) => {
@@ -255,8 +300,12 @@ describe("NavigationMenu", () => {
     expect(contents[0]?.getAttribute("data-state")).toBe("active");
     expect(contents[0]?.parentElement).toBe(viewport);
     expect(originalParent?.contains(contents[0]!)).toBe(false);
+    const viewportPopup = getViewportPopup(viewport);
     const viewportPositioner = getViewportPositioner(viewport);
-    expect(viewportPositioner.parentElement).toBe(document.body);
+    const viewportPortal = getViewportPortal(viewport);
+    expect(viewport.parentElement).toBe(viewportPopup);
+    expect(viewportPopup.parentElement).toBe(viewportPositioner);
+    expect(viewportPortal.parentElement).toBe(document.body);
     expect(controller.value).toBe("products");
 
     controller.destroy();
@@ -276,7 +325,13 @@ describe("NavigationMenu", () => {
       expect(content.hidden).toBe(true);
     });
     expect(contents[0]?.parentElement).toBe(originalParent);
-    expect(viewport.closest('[data-slot="navigation-menu-viewport-positioner"]')).toBeNull();
+    expect(
+      viewport.closest(
+        '[data-slot="navigation-menu-positioner"], [data-slot="navigation-menu-viewport-positioner"]'
+      )
+    ).toBeNull();
+    expect(viewport.closest('[data-slot="navigation-menu-popup"]')).toBeNull();
+    expect(viewport.closest('[data-slot="navigation-menu-portal"]')).toBeNull();
 
     controller.destroy();
   });
@@ -341,19 +396,43 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("sets data-state on root and viewport", () => {
-    const { root, viewport, controller } = setup();
+  it("sets data-state and open/closed attributes on the popup stack", async () => {
+    const { root, viewport, contents, controller } = setup();
 
     expect(root.getAttribute("data-state")).toBe("closed");
+    expect(root.hasAttribute("data-closed")).toBe(true);
     expect(viewport.getAttribute("data-state")).toBe("closed");
+    expect(viewport.hasAttribute("data-closed")).toBe(true);
+    expect(contents[0]?.getAttribute("data-state")).toBe("inactive");
+    expect(contents[0]?.hasAttribute("data-closed")).toBe(true);
 
     controller.open("products");
+    const viewportPopup = getViewportPopup(viewport);
+    const viewportPositioner = getViewportPositioner(viewport);
     expect(root.getAttribute("data-state")).toBe("open");
+    expect(root.hasAttribute("data-open")).toBe(true);
+    expect(viewportPositioner.getAttribute("data-state")).toBe("open");
+    expect(viewportPositioner.hasAttribute("data-open")).toBe(true);
+    expect(viewportPopup.getAttribute("data-state")).toBe("open");
+    expect(viewportPopup.hasAttribute("data-open")).toBe(true);
     expect(viewport.getAttribute("data-state")).toBe("open");
+    expect(viewport.hasAttribute("data-open")).toBe(true);
+    expect(contents[0]?.getAttribute("data-state")).toBe("active");
+    expect(contents[0]?.hasAttribute("data-open")).toBe(true);
 
     controller.close();
     expect(root.getAttribute("data-state")).toBe("closed");
+    expect(root.hasAttribute("data-closed")).toBe(true);
+    expect(viewportPositioner.getAttribute("data-state")).toBe("closed");
+    expect(viewportPositioner.hasAttribute("data-closed")).toBe(true);
+    expect(viewportPopup.getAttribute("data-state")).toBe("closed");
+    expect(viewportPopup.hasAttribute("data-closed")).toBe(true);
     expect(viewport.getAttribute("data-state")).toBe("closed");
+    expect(viewport.hasAttribute("data-closed")).toBe(true);
+    expect(contents[0]?.getAttribute("data-state")).toBe("inactive");
+    expect(contents[0]?.hasAttribute("data-closed")).toBe(true);
+
+    await waitForPresenceExit();
 
     controller.destroy();
   });
@@ -931,6 +1010,135 @@ describe("NavigationMenu", () => {
     expect(contents[1]?.getAttribute("data-motion")).toBe("to-right");
 
     controller.destroy();
+  });
+
+  it("sets data-activation-direction only when switching panels", async () => {
+    const { contents, controller } = setup();
+
+    controller.open("products");
+    contents.forEach((content) => {
+      expect(content.hasAttribute("data-activation-direction")).toBe(false);
+    });
+
+    controller.open("solutions");
+    expect(contents[0]?.getAttribute("data-activation-direction")).toBe("right");
+    expect(contents[1]?.getAttribute("data-activation-direction")).toBe("right");
+
+    controller.open("products");
+    expect(contents[0]?.getAttribute("data-activation-direction")).toBe("left");
+    expect(contents[1]?.getAttribute("data-activation-direction")).toBe("left");
+
+    await waitForPresenceExit();
+    controller.close();
+    contents.forEach((content) => {
+      expect(content.hasAttribute("data-activation-direction")).toBe(false);
+    });
+
+    controller.destroy();
+  });
+
+  it("preserves exit direction on a panel already exiting when closing", async () => {
+    await withMockTransitionDurations(
+      (el) =>
+        (el as HTMLElement).getAttribute("data-slot") ===
+        "navigation-menu-content"
+          ? "120ms"
+          : "0s",
+      async () => {
+        const { contents, controller } = setup();
+
+        controller.open("products");
+        controller.open("solutions");
+
+        expect(contents[0]?.getAttribute("data-activation-direction")).toBe(
+          "right",
+        );
+        expect(contents[0]?.getAttribute("data-motion")).toBe("to-left");
+
+        controller.close();
+
+        expect(contents[0]?.hasAttribute("data-ending-style")).toBe(true);
+        expect(contents[0]?.getAttribute("data-activation-direction")).toBe(
+          "right",
+        );
+        expect(contents[0]?.getAttribute("data-motion")).toBe("to-left");
+        expect(contents[1]?.hasAttribute("data-activation-direction")).toBe(
+          false,
+        );
+        expect(contents[1]?.getAttribute("data-motion")).toBeNull();
+
+        contents[0]?.dispatchEvent(
+          new TransitionEvent("transitionend", { bubbles: true }),
+        );
+        expect(contents[0]?.hasAttribute("data-ending-style")).toBe(false);
+        expect(contents[0]?.hasAttribute("data-activation-direction")).toBe(
+          false,
+        );
+        expect(contents[0]?.getAttribute("data-motion")).toBeNull();
+
+        controller.destroy();
+      },
+    );
+  });
+
+  it("applies popup presence markers and mirrors them to the viewport", async () => {
+    const { viewport, controller } = setup();
+
+    controller.open("products");
+    const viewportPopup = getViewportPopup(viewport);
+    expect(viewportPopup.hasAttribute("data-starting-style")).toBe(true);
+    expect(viewport.hasAttribute("data-starting-style")).toBe(true);
+
+    await waitForAnimationFrame();
+    await waitForAnimationFrame();
+    expect(viewportPopup.hasAttribute("data-starting-style")).toBe(false);
+    expect(viewport.hasAttribute("data-starting-style")).toBe(false);
+
+    controller.close();
+    expect(viewportPopup.hasAttribute("data-ending-style")).toBe(true);
+    expect(viewport.hasAttribute("data-ending-style")).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("waits for the viewport exit before tearing down the popup stack", async () => {
+    await withMockTransitionDurations(
+      (el) => {
+        const slot = (el as HTMLElement).getAttribute("data-slot");
+        if (slot === "navigation-menu-popup") return "50ms";
+        if (slot === "navigation-menu-viewport") return "120ms";
+        return "0s";
+      },
+      async () => {
+        const { viewport, controller } = setup();
+
+        controller.open("products");
+        const viewportPopup = getViewportPopup(viewport);
+
+        controller.close();
+        expect(viewportPopup.hasAttribute("data-ending-style")).toBe(true);
+        expect(viewport.hasAttribute("data-ending-style")).toBe(true);
+
+        viewportPopup.dispatchEvent(
+          new TransitionEvent("transitionend", { bubbles: true }),
+        );
+        expect(viewportPopup.hasAttribute("data-ending-style")).toBe(false);
+        expect(viewport.hasAttribute("data-ending-style")).toBe(true);
+        expect(viewport.hidden).toBe(false);
+        expect(viewport.closest('[data-slot="navigation-menu-popup"]')).toBe(
+          viewportPopup,
+        );
+
+        viewport.dispatchEvent(
+          new TransitionEvent("transitionend", { bubbles: true }),
+        );
+        expect(viewport.hasAttribute("data-ending-style")).toBe(false);
+        expect(viewport.hidden).toBe(true);
+        expect(viewport.closest('[data-slot="navigation-menu-popup"]')).toBeNull();
+
+        controller.destroy();
+      },
+    );
   });
 
   it("sets CSS variables on viewport when switching", () => {
@@ -1721,12 +1929,26 @@ describe("NavigationMenu", () => {
     controller.open("products");
     await waitForPresenceExit();
 
+    const viewportPopup = getViewportPopup(viewport);
+    const viewportPositioner = getViewportPositioner(viewport);
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const viewportY = window.visualViewport?.offsetTop ?? 0;
     expect(viewport.style.getPropertyValue("--viewport-width")).toBe("200px");
     expect(viewport.style.getPropertyValue("--viewport-height")).toBe("180px");
+    expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe("200px");
+    expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe("180px");
+    expect(viewportPositioner.style.getPropertyValue("--positioner-width")).toBe("200px");
+    expect(viewportPositioner.style.getPropertyValue("--positioner-height")).toBe("180px");
+    expect(viewportPositioner.style.getPropertyValue("--available-width")).toBe(
+      `${viewportWidth}px`,
+    );
+    expect(viewportPositioner.style.getPropertyValue("--available-height")).toBe(
+      `${viewportY + viewportHeight - 140}px`,
+    );
     expect(viewport.style.top).toBe("0px");
     expect(viewport.style.left).toBe("0px");
     expect(viewport.style.transform).toBe("");
-    const viewportPositioner = getViewportPositioner(viewport);
     expect(viewportPositioner.style.top).toBe("140px");
     expect(viewportPositioner.style.left).toBe("70px");
 
@@ -2033,6 +2255,67 @@ describe("NavigationMenu", () => {
     controllers.forEach((c) => c.destroy());
   });
 
+  it("uses an authored popup stack when provided", async () => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+        </ul>
+        <div data-slot="navigation-menu-portal" id="viewport-portal">
+          <div data-slot="navigation-menu-positioner" id="viewport-positioner">
+            <div data-slot="navigation-menu-popup" id="viewport-popup">
+              <div data-slot="navigation-menu-viewport"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const viewportPortal = document.getElementById("viewport-portal") as HTMLElement;
+    const viewportPositioner = document.getElementById("viewport-positioner") as HTMLElement;
+    const viewportPopup = document.getElementById("viewport-popup") as HTMLElement;
+    const viewport = root.querySelector('[data-slot="navigation-menu-viewport"]') as HTMLElement;
+    const content = root.querySelector('[data-slot="navigation-menu-content"]') as HTMLElement;
+    const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+    const controller = createNavigationMenu(root, { delayOpen: 0, delayClose: 0 });
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    trigger.getBoundingClientRect = () => rect(150, 100, 100, 40);
+    content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+
+    controller.open("products");
+    expect(viewportPortal.parentElement).toBe(document.body);
+    expect(viewport.parentElement).toBe(viewportPopup);
+    expect(viewportPopup.parentElement).toBe(viewportPositioner);
+    expect(viewportPopup.hasAttribute("data-open")).toBe(true);
+
+    controller.close();
+    expect(viewportPopup.hasAttribute("data-closed")).toBe(true);
+    await waitForPresenceExit();
+    expect(viewportPortal.parentElement).toBe(root);
+    expect(viewport.parentElement).toBe(viewportPopup);
+    expect(viewportPopup.hidden).toBe(true);
+
+    controller.destroy();
+  });
+
   it("uses authored portal/positioner slots when provided", async () => {
     document.body.innerHTML = `
       <nav data-slot="navigation-menu" id="root">
@@ -2084,7 +2367,9 @@ describe("NavigationMenu", () => {
     expect(contentPortal.parentElement).toBe(root.querySelector('[data-slot="navigation-menu-item"]'));
     expect(viewportPortal.parentElement).toBe(document.body);
     expect(content.parentElement).toBe(viewport);
-    expect(viewport.parentElement).toBe(viewportPositioner);
+    const viewportPopup = getViewportPopup(viewport);
+    expect(viewport.parentElement).toBe(viewportPopup);
+    expect(viewportPopup.parentElement).toBe(viewportPositioner);
     await waitForPresenceExit();
     expect(viewportPositioner.style.top).not.toBe("");
     expect(viewportPositioner.style.left).not.toBe("");
@@ -2096,6 +2381,7 @@ describe("NavigationMenu", () => {
     expect(content.parentElement).toBe(contentPositioner);
     expect(contentPortal.parentElement).toBe(root.querySelector('[data-slot="navigation-menu-item"]'));
     expect(viewportPortal.parentElement).toBe(root);
+    expect(viewport.parentElement).toBe(viewportPositioner);
     expect(viewportPositioner.style.top).toBe("");
     expect(viewportPositioner.style.left).toBe("");
     expect(viewportPositioner.style.width).toBe("");
@@ -2991,6 +3277,12 @@ describe("NavigationMenu", () => {
         "138px -8px",
       );
       expect(content.style.getPropertyValue("--transform-origin")).toBe(
+        "138px -8px",
+      );
+      const viewportPopup = getViewportPopup(viewport);
+      expect(viewportPopup.getAttribute("data-side")).toBe("bottom");
+      expect(viewportPopup.getAttribute("data-align")).toBe("center");
+      expect(viewportPopup.style.getPropertyValue("--transform-origin")).toBe(
         "138px -8px",
       );
 

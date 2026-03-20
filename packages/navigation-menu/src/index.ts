@@ -122,7 +122,7 @@ const DUPLICATE_BINDING_WARNING =
 /**
  * Create a navigation menu controller for a root element
  *
- * Expected markup:
+ * Canonical popup-stack markup:
  * ```html
  * <nav data-slot="navigation-menu">
  *   <ul data-slot="navigation-menu-list">
@@ -133,9 +133,18 @@ const DUPLICATE_BINDING_WARNING =
  *     <!-- Optional hover indicator -->
  *     <div data-slot="navigation-menu-indicator"></div>
  *   </ul>
- *   <div data-slot="navigation-menu-viewport"></div>
+ *   <div data-slot="navigation-menu-portal">
+ *     <div data-slot="navigation-menu-positioner">
+ *       <div data-slot="navigation-menu-popup">
+ *         <div data-slot="navigation-menu-viewport"></div>
+ *       </div>
+ *     </div>
+ *   </div>
  * </nav>
  * ```
+ *
+ * Minimal markup that only authors `navigation-menu-viewport` still works; the
+ * popup stack is synthesized while open and restored on close.
  */
 export function createNavigationMenu(
   root: Element,
@@ -240,44 +249,169 @@ export function createNavigationMenu(
       mountedInViewport: boolean;
     }
   >();
-  const authoredViewportPositioner = viewport
-    ? findSlotAncestor(viewport, "navigation-menu-viewport-positioner")
-    : null;
-  const authoredLegacyViewportPositioner = viewport
-    ? findSlotAncestor(viewport, "navigation-menu-positioner")
-    : null;
-  const authoredAnyViewportPositioner =
-    authoredViewportPositioner ?? authoredLegacyViewportPositioner;
-  const authoredViewportPortal = authoredAnyViewportPositioner
-    ? findSlotAncestor(authoredAnyViewportPositioner, "navigation-menu-portal")
-    : null;
-  const viewportPortal = viewport
-    ? createPortalLifecycle({
-        content: viewport,
-        root,
-        enabled: true,
-        wrapperSlot: authoredAnyViewportPositioner
-          ? undefined
-          : "navigation-menu-viewport-positioner",
-        container: authoredAnyViewportPositioner ?? undefined,
-        mountTarget: authoredAnyViewportPositioner
-          ? (authoredViewportPortal ?? authoredAnyViewportPositioner)
-          : undefined,
-      })
-    : null;
-  const resetViewportPositionerStyles = () => {
-    const positioner = viewportPortal?.container;
-    if (!(positioner instanceof HTMLElement)) return;
-    positioner.style.position = "";
-    positioner.style.top = "";
-    positioner.style.left = "";
-    positioner.style.width = "";
-    positioner.style.height = "";
-    positioner.style.margin = "";
-    positioner.style.willChange = "";
-    positioner.style.pointerEvents = "";
-    positioner.style.transform = "";
-    positioner.style.removeProperty("--transform-origin");
+  // TODO(next-major): drop restore-only compatibility for content-wrapped
+  // `navigation-menu-portal` / `navigation-menu-positioner` shells.
+  const setOpenClosedAttrs = (el: Element | null, open: boolean) => {
+    if (!el) return;
+    if (open) {
+      el.setAttribute("data-open", "");
+      el.removeAttribute("data-closed");
+      return;
+    }
+    el.setAttribute("data-closed", "");
+    el.removeAttribute("data-open");
+  };
+  const setOpenSurfaceState = (el: Element | null, open: boolean) => {
+    if (!el) return;
+    el.setAttribute("data-state", open ? "open" : "closed");
+    setOpenClosedAttrs(el, open);
+  };
+  const setContentSurfaceState = (content: HTMLElement, active: boolean) => {
+    content.setAttribute("data-state", active ? "active" : "inactive");
+    setOpenClosedAttrs(content, active);
+  };
+  const setContentActivationDirection = (
+    content: HTMLElement,
+    direction: "left" | "right" | null,
+  ) => {
+    if (direction) {
+      content.setAttribute("data-activation-direction", direction);
+      return;
+    }
+    content.removeAttribute("data-activation-direction");
+  };
+  const findPopupStackParts = () => {
+    if (!viewport) {
+      return {
+        popup: null as HTMLElement | null,
+        positioner: null as HTMLElement | null,
+        portal: null as HTMLElement | null,
+      };
+    }
+
+    let popup: HTMLElement | null = null;
+    let positioner: HTMLElement | null = null;
+    let portal: HTMLElement | null = null;
+    let current: HTMLElement | null = viewport.parentElement;
+    let stage: "popup" | "positioner" | "portal" = "popup";
+
+    while (current && current !== root) {
+      const slot = current.getAttribute("data-slot");
+      if (slot === "navigation-menu-portal") {
+        portal = current;
+        break;
+      }
+
+      if (stage === "popup" && slot === "navigation-menu-popup") {
+        popup = current;
+        stage = "positioner";
+        current = current.parentElement;
+        continue;
+      }
+
+      // TODO(next-major): remove legacy `navigation-menu-viewport-positioner`
+      // support and keep only `navigation-menu-positioner`.
+      if (
+        (stage === "popup" || stage === "positioner") &&
+        (slot === "navigation-menu-positioner" ||
+          slot === "navigation-menu-viewport-positioner")
+      ) {
+        positioner = current;
+        stage = "portal";
+        current = current.parentElement;
+        continue;
+      }
+
+      current = current.parentElement;
+    }
+
+    return { popup, positioner, portal };
+  };
+
+  interface PopupStackController {
+    popup: HTMLElement;
+    positioner: HTMLElement;
+    portal: HTMLElement;
+    popupPortal: ReturnType<typeof createPortalLifecycle>;
+    popupPresence: ReturnType<typeof createPresenceLifecycle>;
+    viewportPresence: ReturnType<typeof createPresenceLifecycle>;
+    generatedPopup: boolean;
+    generatedPositioner: boolean;
+    generatedPortal: boolean;
+    isClosing: boolean;
+    popupExitComplete: boolean;
+    viewportExitComplete: boolean;
+  }
+
+  let popupStack: PopupStackController | null = null;
+  const maybeTeardownPopupStack = (stack: PopupStackController) => {
+    if (isDestroyed || popupStack !== stack || !stack.isClosing) return;
+    if (!stack.popupExitComplete || !stack.viewportExitComplete) return;
+    teardownPopupStack();
+  };
+
+  const getCurrentPopup = () => popupStack?.popup ?? findPopupStackParts().popup;
+  const getCurrentPositioner = () =>
+    popupStack?.positioner ?? findPopupStackParts().positioner;
+
+  const wrapWithGeneratedSlot = (child: HTMLElement, slot: string) => {
+    const doc = root.ownerDocument ?? document;
+    const wrapper = doc.createElement("div");
+    wrapper.setAttribute("data-slot", slot);
+    if (slot === "navigation-menu-positioner") {
+      wrapper.style.isolation = "isolate";
+      wrapper.style.zIndex = "50";
+    }
+    const parent = child.parentNode;
+    if (!parent) {
+      throw new Error(
+        "NavigationMenu expected popup stack child to have a parent node",
+      );
+    }
+    parent.insertBefore(wrapper, child);
+    wrapper.appendChild(child);
+    return wrapper;
+  };
+
+  const unwrapGeneratedSlot = (wrapper: HTMLElement) => {
+    const parent = wrapper.parentNode;
+    if (!parent) return;
+    while (wrapper.firstChild) {
+      parent.insertBefore(wrapper.firstChild, wrapper);
+    }
+    wrapper.remove();
+  };
+
+  const resetPopupStackStyles = () => {
+    const positioner = getCurrentPositioner();
+    if (positioner) {
+      positioner.style.position = "";
+      positioner.style.top = "";
+      positioner.style.left = "";
+      positioner.style.width = "";
+      positioner.style.height = "";
+      positioner.style.margin = "";
+      positioner.style.willChange = "";
+      positioner.style.pointerEvents = "";
+      positioner.style.transform = "";
+      positioner.style.removeProperty("--transform-origin");
+      positioner.style.removeProperty("--positioner-width");
+      positioner.style.removeProperty("--positioner-height");
+      positioner.style.removeProperty("--available-width");
+      positioner.style.removeProperty("--available-height");
+    }
+
+    const popup = getCurrentPopup();
+    if (popup) {
+      popup.style.position = "";
+      popup.style.top = "";
+      popup.style.left = "";
+      popup.style.willChange = "";
+      popup.style.pointerEvents = "";
+      popup.style.removeProperty("--transform-origin");
+      popup.style.removeProperty("--popup-width");
+      popup.style.removeProperty("--popup-height");
+    }
   };
   const clearViewportTrackingInstantRaf = () => {
     if (viewportTrackingInstantRaf !== null) {
@@ -285,14 +419,19 @@ export function createNavigationMenu(
       viewportTrackingInstantRaf = null;
     }
   };
-  const syncViewportInstant = () => {
+  const syncPopupStackInstant = () => {
     const isInstant = viewportInitialInstant || viewportTrackingInstant;
     if (viewport) {
       if (isInstant) viewport.setAttribute("data-instant", "");
       else viewport.removeAttribute("data-instant");
     }
-    const positioner = viewportPortal?.container;
-    if (positioner instanceof HTMLElement) {
+    const popup = getCurrentPopup();
+    if (popup) {
+      if (isInstant) popup.setAttribute("data-instant", "");
+      else popup.removeAttribute("data-instant");
+    }
+    const positioner = getCurrentPositioner();
+    if (positioner) {
       if (isInstant) positioner.setAttribute("data-instant", "");
       else positioner.removeAttribute("data-instant");
     }
@@ -302,30 +441,114 @@ export function createNavigationMenu(
     viewportTrackingInstantRaf = requestAnimationFrame(() => {
       viewportTrackingInstantRaf = null;
       viewportTrackingInstant = false;
-      syncViewportInstant();
+      syncPopupStackInstant();
     });
   };
   const removeViewportInstant = () => {
     clearViewportTrackingInstantRaf();
     viewportInitialInstant = false;
     viewportTrackingInstant = false;
-    syncViewportInstant();
+    syncPopupStackInstant();
   };
-  const viewportPresence = viewport
-    ? createPresenceLifecycle({
-        element: viewport,
-        onExitComplete: () => {
-          if (isDestroyed) return;
-          removeViewportInstant();
-          resetViewportPositionerStyles();
-          viewportOffsetLeft = 0;
-          viewportOffsetTop = 0;
-          viewportPortal?.restore();
-          viewport.hidden = true;
-          viewport.style.pointerEvents = "none";
-        },
-      })
-    : null;
+  const teardownPopupStack = () => {
+    const stack = popupStack;
+    if (!stack || !viewport) return;
+
+    removeViewportInstant();
+    resetPopupStackStyles();
+    viewportOffsetLeft = 0;
+    viewportOffsetTop = 0;
+    viewport.hidden = true;
+    viewport.style.pointerEvents = "none";
+    stack.popup.hidden = true;
+    stack.popup.style.pointerEvents = "none";
+    stack.popupPortal.restore();
+
+    if (stack.generatedPopup) {
+      unwrapGeneratedSlot(stack.popup);
+    }
+    if (stack.generatedPositioner) {
+      unwrapGeneratedSlot(stack.positioner);
+    }
+    if (stack.generatedPortal) {
+      unwrapGeneratedSlot(stack.portal);
+    }
+
+    stack.popupPresence.cleanup();
+    stack.viewportPresence.cleanup();
+    popupStack = null;
+  };
+
+  const ensurePopupStack = () => {
+    if (!viewport) return null;
+    if (popupStack) return popupStack;
+
+    const detected = findPopupStackParts();
+    let popup = detected.popup;
+    let positioner = detected.positioner;
+    let portal = detected.portal;
+    let generatedPopup = false;
+    let generatedPositioner = false;
+    let generatedPortal = false;
+
+    if (!popup || !popup.contains(viewport)) {
+      popup = wrapWithGeneratedSlot(viewport, "navigation-menu-popup");
+      generatedPopup = true;
+    }
+
+    if (!positioner || !positioner.contains(popup)) {
+      positioner = wrapWithGeneratedSlot(popup, "navigation-menu-positioner");
+      generatedPositioner = true;
+    }
+
+    if (!portal || !portal.contains(positioner)) {
+      portal = wrapWithGeneratedSlot(positioner, "navigation-menu-portal");
+      generatedPortal = true;
+    }
+
+    const popupPortal = createPortalLifecycle({
+      content: popup,
+      root,
+      enabled: true,
+      container: positioner,
+      mountTarget: portal,
+    });
+    const stack = {
+      popup,
+      positioner,
+      portal,
+      popupPortal,
+      popupPresence: null as unknown as ReturnType<typeof createPresenceLifecycle>,
+      viewportPresence:
+        null as unknown as ReturnType<typeof createPresenceLifecycle>,
+      generatedPopup,
+      generatedPositioner,
+      generatedPortal,
+      isClosing: false,
+      popupExitComplete: false,
+      viewportExitComplete: false,
+    } satisfies PopupStackController;
+    const viewportPresence = createPresenceLifecycle({
+      element: viewport,
+      onExitComplete: () => {
+        stack.viewportExitComplete = true;
+        maybeTeardownPopupStack(stack);
+      },
+    });
+    const popupPresence = createPresenceLifecycle({
+      element: popup,
+      onExitComplete: () => {
+        stack.popupExitComplete = true;
+        maybeTeardownPopupStack(stack);
+      },
+    });
+
+    stack.popupPresence = popupPresence;
+    stack.viewportPresence = viewportPresence;
+    popupStack = stack;
+
+    return popupStack;
+  };
 
   const mountContentInViewport = (content: HTMLElement) => {
     if (!viewport) return;
@@ -369,8 +592,9 @@ export function createNavigationMenu(
   };
 
   const updateViewportPositioner = () => {
-    if (!viewport || !viewportPortal) return;
-    const positioner = viewportPortal.container as HTMLElement;
+    if (!viewport) return;
+    const positioner = getCurrentPositioner();
+    if (!positioner) return;
     const win = root.ownerDocument.defaultView ?? window;
     const rootRect = (root as HTMLElement).getBoundingClientRect();
     const isFixed = rootPositionMethod === "fixed";
@@ -418,11 +642,7 @@ export function createNavigationMenu(
       content.style.pointerEvents = "none";
     });
     contentPlacement.clear();
-    resetViewportPositionerStyles();
-    viewportOffsetLeft = 0;
-    viewportOffsetTop = 0;
-    viewportPresence?.cleanup();
-    viewportPortal?.cleanup();
+    teardownPopupStack();
   });
 
   // Build a map of items with their triggers and content
@@ -487,6 +707,9 @@ export function createNavigationMenu(
           element: content,
           onExitComplete: () => {
             if (isDestroyed) return;
+            setContentSurfaceState(content, false);
+            setContentActivationDirection(content, null);
+            content.removeAttribute("data-motion");
             restoreContentPlacement(content);
             content.hidden = true;
             content.style.pointerEvents = "none";
@@ -742,8 +965,11 @@ export function createNavigationMenu(
     if (root.contains(candidate)) return true;
     if (viewport?.contains(candidate)) return true;
 
-    const positioner = viewportPortal?.container;
-    if (positioner instanceof HTMLElement && positioner.contains(candidate)) {
+    const popup = getCurrentPopup();
+    if (popup?.contains(candidate)) return true;
+
+    const positioner = getCurrentPositioner();
+    if (positioner?.contains(candidate)) {
       return true;
     }
 
@@ -818,8 +1044,10 @@ export function createNavigationMenu(
   let hoverBridge: HTMLElement | null = null;
   const getBridgeHost = (): HTMLElement | null => {
     if (!viewport) return null;
-    const container = viewportPortal?.container;
-    if (container instanceof HTMLElement) return container;
+    const positioner = getCurrentPositioner();
+    if (positioner) return positioner;
+    const popup = getCurrentPopup();
+    if (popup) return popup;
     return viewport.parentElement instanceof HTMLElement
       ? viewport.parentElement
       : viewport;
@@ -1138,7 +1366,7 @@ export function createNavigationMenu(
     const bridge = getOrCreateHoverBridge();
     const bridgeHost = bridge.parentElement;
     const renderedPoints =
-      bridgeHost && bridgeHost === viewportPortal?.container
+      bridgeHost && bridgeHost === getCurrentPositioner()
         ? points.map((point) => ({
             x: point.x - viewportOffsetLeft,
             y: point.y - viewportOffsetTop,
@@ -1184,9 +1412,10 @@ export function createNavigationMenu(
     const activeData = getActiveData();
     if (activeData?.content.contains(node)) return true;
     if (viewport?.contains(node)) return true;
+    if (getCurrentPopup()?.contains(node)) return true;
     if (hoverBridge?.contains(node)) return true;
-    const container = viewportPortal?.container;
-    if (container instanceof HTMLElement && container.contains(node))
+    const positioner = getCurrentPositioner();
+    if (positioner?.contains(node))
       return true;
     return false;
   };
@@ -1204,12 +1433,53 @@ export function createNavigationMenu(
     hoverSafeTriangleOverlay = null;
   });
 
+  const syncPositionerSizingVars = (
+    positioner: HTMLElement,
+    triggerRect: DOMRect,
+    side: Side,
+    sideOffset: number,
+    contentWidth: number,
+    contentHeight: number,
+  ) => {
+    const win = root.ownerDocument.defaultView ?? window;
+    const visualViewport = win.visualViewport;
+    const viewportX = visualViewport?.offsetLeft ?? 0;
+    const viewportY = visualViewport?.offsetTop ?? 0;
+    const viewportWidth = visualViewport?.width ?? win.innerWidth;
+    const viewportHeight = visualViewport?.height ?? win.innerHeight;
+    const availableWidth =
+      side === "left"
+        ? Math.max(0, triggerRect.left - viewportX - sideOffset)
+        : side === "right"
+          ? Math.max(
+              0,
+              viewportX + viewportWidth - triggerRect.right - sideOffset,
+            )
+          : Math.max(0, viewportWidth);
+    const availableHeight =
+      side === "top"
+        ? Math.max(0, triggerRect.top - viewportY - sideOffset)
+        : side === "bottom"
+          ? Math.max(
+              0,
+              viewportY + viewportHeight - triggerRect.bottom - sideOffset,
+            )
+          : Math.max(0, viewportHeight);
+
+    positioner.style.setProperty("--positioner-width", `${contentWidth}px`);
+    positioner.style.setProperty("--positioner-height", `${contentHeight}px`);
+    positioner.style.setProperty("--available-width", `${availableWidth}px`);
+    positioner.style.setProperty("--available-height", `${availableHeight}px`);
+  };
+
   const applyViewportLayout = (
     content: HTMLElement,
     trigger: HTMLElement,
     placement: PlacementConfig,
   ) => {
-    if (!viewport) return;
+    const stack = ensurePopupStack();
+    if (!viewport || !stack) return;
+    const { popup, positioner } = stack;
 
     if (
       viewport.getAttribute("data-state") !== "open" ||
@@ -1297,27 +1567,43 @@ export function createNavigationMenu(
     const viewportTransformOrigin = `${transformOriginX}px ${transformOriginY}px`;
     const positionerTransformOrigin = `${positionerOriginX}px ${positionerOriginY}px`;
 
+    popup.style.position = "absolute";
+    popup.style.top = "0px";
+    popup.style.left = "0px";
+    popup.style.willChange = "width,height";
+    popup.style.pointerEvents = "auto";
+    popup.style.setProperty("--popup-width", `${contentWidth}px`);
+    popup.style.setProperty("--popup-height", `${contentHeight}px`);
+    popup.style.setProperty("--transform-origin", viewportTransformOrigin);
     viewport.style.top = "0px";
     viewport.style.left = "0px";
     viewport.style.willChange = "transform,width,height";
+    // TODO(next-major): drop legacy viewport sizing aliases in favor of popup vars.
     viewport.style.setProperty("--transform-origin", viewportTransformOrigin);
     // Active content is mounted inside viewport.
     content.style.top = "0px";
     content.style.left = "0px";
     content.style.setProperty("--transform-origin", viewportTransformOrigin);
+    popup.setAttribute("data-side", pos.side);
+    popup.setAttribute("data-align", pos.align);
     viewport.setAttribute("data-side", pos.side);
     viewport.setAttribute("data-align", pos.align);
     content.setAttribute("data-side", pos.side);
     content.setAttribute("data-align", pos.align);
-    const positioner = viewportPortal?.container as HTMLElement | undefined;
-    if (positioner && positioner !== viewport) {
-      positioner.setAttribute("data-side", pos.side);
-      positioner.setAttribute("data-align", pos.align);
-      positioner.style.setProperty(
-        "--transform-origin",
-        positionerTransformOrigin,
-      );
-    }
+    positioner.setAttribute("data-side", pos.side);
+    positioner.setAttribute("data-align", pos.align);
+    positioner.style.setProperty(
+      "--transform-origin",
+      positionerTransformOrigin,
+    );
+    syncPositionerSizingVars(
+      positioner,
+      triggerRect,
+      pos.side as Side,
+      placement.sideOffset,
+      contentWidth,
+      contentHeight,
+    );
     updateViewportPositioner();
 
     // Build unified hover shield (rectangular gap bridge + triangular safety corridor).
@@ -1446,7 +1732,7 @@ export function createNavigationMenu(
     layoutShift: true,
     onUpdate: () => {
       viewportTrackingInstant = true;
-      syncViewportInstant();
+      syncPopupStackInstant();
       syncActiveViewportLayout(undefined, { defer: false });
       scheduleViewportTrackingInstantClear();
     },
@@ -1580,23 +1866,32 @@ export function createNavigationMenu(
 
         if (!isActive) {
           const presence = contentPresence.get(content);
-          content.setAttribute("data-state", "inactive");
+          setContentSurfaceState(content, false);
           content.setAttribute("aria-hidden", "true");
           setInert(content, true);
           content.style.pointerEvents = "none";
 
-          // Set exit motion on the previous content (only when switching)
-          if (wasActive && direction) {
+          if (value === null) {
+            if (wasActive) {
+              setContentActivationDirection(content, null);
+              content.removeAttribute("data-motion");
+            }
+          } else if (wasActive && direction) {
+            // Set exit motion on the previous content only while switching panels.
+            setContentActivationDirection(content, direction);
+            // TODO(next-major): remove legacy `data-motion` switching output.
             const exitDirection =
               direction === "right" ? "to-left" : "to-right";
             content.setAttribute("data-motion", exitDirection);
           } else if (wasActive) {
+            setContentActivationDirection(content, null);
             content.removeAttribute("data-motion");
           }
 
           if (wasActive) {
             presence?.exit();
           } else if (!presence?.isExiting) {
+            setContentActivationDirection(content, null);
             content.removeAttribute("data-motion");
             restoreContentPlacement(content);
             content.hidden = true;
@@ -1608,12 +1903,23 @@ export function createNavigationMenu(
 
       // Update new active content
       if (newData) {
-        viewportPortal?.mount();
+        const stack = ensurePopupStack();
+        stack?.popupPortal.mount();
+        if (stack) {
+          stack.isClosing = false;
+          stack.popupExitComplete = false;
+          stack.viewportExitComplete = false;
+        }
+        if (stack?.popup) {
+          stack.popup.hidden = false;
+          stack.popup.style.pointerEvents = "auto";
+        }
         if (viewport) {
           viewport.hidden = false;
         }
         if (prevValue === null) {
-          viewportPresence?.enter();
+          stack?.popupPresence.enter();
+          stack?.viewportPresence.enter();
         }
         mountContentInViewport(newData.content);
         const presence = contentPresence.get(newData.content);
@@ -1621,13 +1927,16 @@ export function createNavigationMenu(
         viewportPositionSync.start();
 
         if (direction) {
+          setContentActivationDirection(newData.content, direction);
+          // TODO(next-major): remove legacy `data-motion` switching output.
           const enterDirection =
             direction === "right" ? "from-right" : "from-left";
           newData.content.setAttribute("data-motion", enterDirection);
         } else {
+          setContentActivationDirection(newData.content, null);
           newData.content.removeAttribute("data-motion");
         }
-        newData.content.setAttribute("data-state", "active");
+        setContentSurfaceState(newData.content, true);
         newData.content.removeAttribute("aria-hidden");
         setInert(newData.content, false);
         newData.content.hidden = false;
@@ -1641,14 +1950,21 @@ export function createNavigationMenu(
         viewportPositionSync.stop();
         hideHoverBridge();
         clearHoverSafetyState();
-        viewportPresence?.exit();
+        if (popupStack) {
+          popupStack.isClosing = true;
+          popupStack.popupExitComplete = false;
+          popupStack.viewportExitComplete = false;
+          popupStack.popupPresence.exit();
+          popupStack.viewportPresence.exit();
+        }
         observeActiveContent(null);
       }
 
       // Update root state
       const isOpen = value !== null;
-      root.setAttribute("data-state", isOpen ? "open" : "closed");
+      setOpenSurfaceState(root, isOpen);
       if (direction) {
+        // TODO(next-major): remove legacy root `data-motion` output.
         root.setAttribute(
           "data-motion",
           direction === "right" ? "from-right" : "from-left",
@@ -1659,20 +1975,27 @@ export function createNavigationMenu(
 
       // Update viewport state
       if (viewport) {
-        viewport.setAttribute("data-state", isOpen ? "open" : "closed");
+        const popup = getCurrentPopup();
+        const positioner = getCurrentPositioner();
+        setOpenSurfaceState(positioner, isOpen);
+        setOpenSurfaceState(popup, isOpen);
+        setOpenSurfaceState(viewport, isOpen);
         viewport.style.pointerEvents = isOpen ? "auto" : "none";
         viewportInitialInstant = isOpen && !isSwitching;
         if (!isOpen || isSwitching) {
           clearViewportTrackingInstantRaf();
           viewportTrackingInstant = false;
         }
-        syncViewportInstant();
+        syncPopupStackInstant();
 
         if (direction) {
+          // TODO(next-major): remove legacy viewport motion-direction output.
           viewport.style.setProperty(
             "--motion-direction",
             direction === "right" ? "1" : "-1",
           );
+        } else {
+          viewport.style.removeProperty("--motion-direction");
         }
       }
 
@@ -1699,11 +2022,18 @@ export function createNavigationMenu(
   };
 
   // Initialize all as closed
-  root.setAttribute("data-state", "closed");
+  const initialPopupStack = findPopupStackParts();
+  setOpenSurfaceState(root, false);
   if (viewport) {
-    viewport.setAttribute("data-state", "closed");
+    setOpenSurfaceState(initialPopupStack.positioner, false);
+    setOpenSurfaceState(initialPopupStack.popup, false);
+    setOpenSurfaceState(viewport, false);
     viewport.hidden = true;
     viewport.style.pointerEvents = "none";
+    if (initialPopupStack.popup) {
+      initialPopupStack.popup.hidden = true;
+      initialPopupStack.popup.style.pointerEvents = "none";
+    }
   }
   if (indicator) {
     indicator.setAttribute("data-state", "hidden");
@@ -1717,7 +2047,7 @@ export function createNavigationMenu(
     // Keep all top-level triggers tabbable for natural Tab/Shift+Tab traversal.
     trigger.tabIndex = 0;
     item.setAttribute("data-state", "closed");
-    content.setAttribute("data-state", "inactive");
+    setContentSurfaceState(content, false);
     content.setAttribute("aria-hidden", "true");
     content.tabIndex = -1; // Make focusable for ArrowDown fallback
     setInert(content, true);

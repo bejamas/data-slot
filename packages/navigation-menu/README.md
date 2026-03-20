@@ -29,7 +29,13 @@ npm install @data-slot/navigation-menu
     </li>
     <div data-slot="navigation-menu-indicator"></div>
   </ul>
-  <div data-slot="navigation-menu-viewport"></div>
+  <div data-slot="navigation-menu-portal">
+    <div data-slot="navigation-menu-positioner">
+      <div data-slot="navigation-menu-popup">
+        <div data-slot="navigation-menu-viewport"></div>
+      </div>
+    </div>
+  </div>
 </nav>
 
 <script type="module">
@@ -38,6 +44,9 @@ npm install @data-slot/navigation-menu
   const controllers = create();
 </script>
 ```
+
+Minimal markup that only authors `navigation-menu-viewport` still works. The runtime
+generates the popup stack while the menu is open and restores the original DOM on close.
 
 ## API
 
@@ -76,7 +85,7 @@ const menu = createNavigationMenu(element, {
 | `align` | `"start" \| "center" \| "end"` | `"start"` | Viewport alignment on cross-axis |
 | `sideOffset` | `number` | `0` | Distance from trigger to viewport (px) |
 | `alignOffset` | `number` | `0` | Cross-axis alignment offset (px) |
-| `positionMethod` | `"absolute" \| "fixed"` | `"absolute"` | Positioning strategy for the shared viewport positioner |
+| `positionMethod` | `"absolute" \| "fixed"` | `"absolute"` | Positioning strategy for the shared popup positioner |
 | `safeTriangle` | `boolean` | `false` | Enable hover safe-triangle switching guard |
 | `onValueChange` | `(value: string \| null) => void` | `undefined` | Callback when active item changes |
 | `debugSafeTriangle` | `boolean` | `false` | Show red hover safe-triangle debug overlay |
@@ -111,8 +120,9 @@ Can be set on:
 2. `navigation-menu-item`
 3. `navigation-menu` root (lowest priority, global default)
 
-`navigation-menu-viewport-positioner` / `navigation-menu-positioner` are styling containers.
-Their `data-side` / `data-align` are mirrored output values and are not used as placement inputs.
+`navigation-menu-positioner` is the canonical popup positioning slot. Its `data-side` /
+`data-align` are mirrored output values and are not used as placement inputs.
+`navigation-menu-viewport-positioner` is still accepted as a legacy alias.
 
 ```html
 <!-- Faster hover response with focus auto-open opt-in -->
@@ -153,36 +163,58 @@ Their `data-side` / `data-align` are mirrored output values and are not used as 
     <!-- Optional hover indicator -->
     <div data-slot="navigation-menu-indicator"></div>
   </ul>
-  <!-- Optional viewport for animated content switching -->
-  <div data-slot="navigation-menu-viewport"></div>
+  <div data-slot="navigation-menu-portal">
+    <div data-slot="navigation-menu-positioner">
+      <div data-slot="navigation-menu-popup">
+        <div data-slot="navigation-menu-viewport"></div>
+      </div>
+    </div>
+  </div>
 </nav>
 ```
 
-### Optional Slots
+If you only author `navigation-menu-viewport`, the runtime synthesizes the missing
+`navigation-menu-portal`, `navigation-menu-positioner`, and `navigation-menu-popup`
+wrappers while the menu is open.
+
+### Slots
 
 - `navigation-menu-indicator` - Animated highlight that follows top-level hover/focus targets; when a submenu is open, it stays anchored to the active trigger
-- `navigation-menu-viewport` - Container for content with size transitions
-- `navigation-menu-viewport-positioner` - Positioning wrapper for viewport (generated if not authored)
+- `navigation-menu-portal` - Portal wrapper that is moved to `document.body` while the menu is open
+- `navigation-menu-positioner` - Canonical popup positioning surface; receives resolved side/alignment output and sizing vars
+- `navigation-menu-popup` - Canonical animated popup shell that wraps the viewport
+- `navigation-menu-viewport` - Clipping viewport that holds the active content panel
+- `navigation-menu-viewport-positioner` - Deprecated alias for `navigation-menu-positioner`
 - `navigation-menu-bridge` - Hover safety shield (gap bridge + triangle corridor)
-- `navigation-menu-portal` - Optional authored portal wrapper that can contain positioners
 - `navigation-menu-safe-triangle` - Debug-only hover safety polygon (rendered when enabled)
+
+### Output Attributes
+
+| Surface | Attributes |
+|---------|------------|
+| root | `data-state="open\|closed"`, `data-open`, `data-closed` |
+| positioner | `data-state="open\|closed"`, `data-open`, `data-closed`, `data-side`, `data-align`, `data-instant` |
+| popup | `data-state="open\|closed"`, `data-open`, `data-closed`, `data-side`, `data-align`, `data-starting-style`, `data-ending-style`, `data-instant` |
+| viewport | `data-state="open\|closed"`, `data-open`, `data-closed`, `data-side`, `data-align`, `data-starting-style`, `data-ending-style`, `data-instant` |
+| content | `data-state="active\|inactive"`, `data-open`, `data-closed`, `data-side`, `data-align`, `data-starting-style`, `data-ending-style`, `data-activation-direction="left\|right"` |
+
+`data-activation-direction` is only emitted while switching between open top-level panels.
+A full close is intentionally non-directional.
 
 ## Styling
 
-`navigation-menu-viewport` is portaled to `document.body` while open. If authored
-`navigation-menu-portal` / `navigation-menu-viewport-positioner` slots are present, they are
-reused. Otherwise, a `navigation-menu-viewport-positioner` wrapper is generated and positioned
-at the navigation root so submenu layers are not clipped by local stacking contexts.
+`navigation-menu-portal` is moved to `document.body` while open. If authored popup-stack slots
+are present, they are reused. Otherwise, missing `portal` / `positioner` / `popup` wrappers are
+generated while open and removed on close.
 
-Runtime positioner placement styles are reset on close, so restored authored positioners do not
-leave stale geometry that can affect document overflow.
+Runtime geometry is owned by `navigation-menu-positioner`: `position`, `top`, `left`, `width`,
+and `height` are written inline and reset on close. `navigation-menu-popup` is the canonical
+animated shell. The active `navigation-menu-content` panel is mounted inside
+`navigation-menu-viewport` while open and restored to its original markup location when inactive
+or closed.
 
-The runtime owns `position`, `top`, `left`, `width`, and `height` on the viewport positioner.
 Use `positionMethod: "fixed"` or `data-position-method="fixed"` when the menu needs viewport-based
 anchoring, such as inside sticky headers.
-
-The active `navigation-menu-content` panel is mounted inside `navigation-menu-viewport` while open
-and restored to its original markup location when inactive/closed.
 
 ### Basic Styling
 
@@ -192,11 +224,12 @@ and restored to its original markup location when inactive/closed.
   display: none;
 }
 
-[data-slot="navigation-menu-content"][data-state="active"] {
+[data-slot="navigation-menu-content"][data-open] {
   display: block;
 }
 
 /* Positioner owns placement geometry */
+[data-slot="navigation-menu-positioner"],
 [data-slot="navigation-menu-viewport-positioner"] {
   top: 0;
   left: 0;
@@ -204,18 +237,31 @@ and restored to its original markup location when inactive/closed.
 }
 
 /* Skip initial position animation */
+[data-slot="navigation-menu-positioner"][data-instant],
 [data-slot="navigation-menu-viewport-positioner"][data-instant] {
   transition: none;
 }
 
-/* Viewport owns sizing and animation */
-[data-slot="navigation-menu-viewport"] {
+/* Popup owns the main shell animation */
+[data-slot="navigation-menu-popup"] {
+  position: absolute;
   top: 0;
   left: 0;
   transform-origin: var(--transform-origin);
+  width: var(--popup-width);
+  height: var(--popup-height);
+  transition: transform 0.3s, width 0.3s, height 0.3s, opacity 0.15s;
+}
+
+[data-slot="navigation-menu-popup"][data-starting-style],
+[data-slot="navigation-menu-popup"][data-ending-style] {
+  opacity: 0;
+}
+
+/* Viewport keeps backward-compatible sizing aliases */
+[data-slot="navigation-menu-viewport"] {
   width: var(--viewport-width);
   height: var(--viewport-height);
-  transition: transform 0.3s, width 0.3s, height 0.3s;
 }
 
 /* Skip animation on initial open */
@@ -239,53 +285,69 @@ suppressing exit animations.
 
 ### Motion Animations
 
-Content panels receive `data-motion` attributes for directional enter/exit animations.
-Both content and viewport also receive `data-starting-style` / `data-ending-style` markers from
-presence lifecycle hooks, so you can style smooth fade/scale transitions before unmount.
+Use `data-starting-style` / `data-ending-style` on `navigation-menu-popup` for full popup
+open/close animations, and on `navigation-menu-content` for panel presence.
+Directional panel switching should key off `data-activation-direction="left|right"` on content.
 
 For exit animations, avoid CSS that force-hides content immediately by `data-state`
 (for example `display: none` on non-active panels), because that bypasses the presence lifecycle.
 
 ```css
-/* Entering from right */
-[data-slot="navigation-menu-content"][data-motion="from-right"] {
-  animation: slideFromRight 0.2s;
+[data-slot="navigation-menu-popup"][data-starting-style],
+[data-slot="navigation-menu-popup"][data-ending-style] {
+  opacity: 0;
+  transform: scale(0.96);
 }
 
-/* Exiting to left */
-[data-slot="navigation-menu-content"][data-motion="to-left"] {
-  animation: slideToLeft 0.2s;
-}
-
-/* Presence lifecycle helpers */
-[data-slot="navigation-menu-content"][data-ending-style],
-[data-slot="navigation-menu-viewport"][data-ending-style] {
+[data-slot="navigation-menu-content"][data-starting-style],
+[data-slot="navigation-menu-content"][data-ending-style] {
   opacity: 0;
 }
 
-@keyframes slideFromRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+[data-slot="navigation-menu-content"][data-starting-style][data-activation-direction="right"] {
+  transform: translateX(2rem);
 }
 
-@keyframes slideToLeft {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(-100%); opacity: 0; }
+[data-slot="navigation-menu-content"][data-starting-style][data-activation-direction="left"] {
+  transform: translateX(-2rem);
+}
+
+[data-slot="navigation-menu-content"][data-ending-style][data-activation-direction="right"] {
+  transform: translateX(-2rem);
+}
+
+[data-slot="navigation-menu-content"][data-ending-style][data-activation-direction="left"] {
+  transform: translateX(2rem);
 }
 ```
+
+Legacy `data-motion` and `--motion-direction` are still emitted during panel switches for backward
+compatibility, but `data-activation-direction` is the canonical directional hook.
 
 ### CSS Variables
 
 | Variable | Element | Description |
 |----------|---------|-------------|
-| `--viewport-width` | viewport | Width of active content |
-| `--viewport-height` | viewport | Height of active content |
-| `--transform-origin` | viewport/content/positioner | Pixel origin anchored to trigger (`side` + `align`), scoped to each element's coordinate space |
+| `--popup-width` | popup | Fixed width of the popup shell |
+| `--popup-height` | popup | Fixed height of the popup shell |
+| `--positioner-width` | positioner | Measured width of the active panel |
+| `--positioner-height` | positioner | Measured height of the active panel |
+| `--available-width` | positioner | Available width between the active trigger and the viewport edge |
+| `--available-height` | positioner | Available height between the active trigger and the viewport edge |
+| `--transform-origin` | popup / viewport / content / positioner | Pixel origin anchored to trigger (`side` + `align`), scoped to each element's coordinate space |
+| `--viewport-width` | viewport | Legacy alias for the active panel width |
+| `--viewport-height` | viewport | Legacy alias for the active panel height |
 | `--indicator-left` | indicator | Left offset from list |
 | `--indicator-width` | indicator | Width of hovered trigger |
 | `--indicator-top` | indicator | Top offset from list |
 | `--indicator-height` | indicator | Height of hovered trigger |
-| `--motion-direction` | viewport | `1` (right) or `-1` (left) |
+| `--motion-direction` | viewport | Legacy switching direction output: `1` (right) or `-1` (left) |
+
+### Deprecated Compatibility
+
+- `navigation-menu-viewport-positioner` is a deprecated alias for `navigation-menu-positioner`.
+- `--viewport-width`, `--viewport-height`, `data-motion`, and `--motion-direction` are deprecated and planned for removal in the next major release.
+- Content-wrapped `navigation-menu-portal` / `navigation-menu-positioner` shells are restore-only compatibility and are also planned for removal in the next major release.
 
 ## Keyboard Navigation
 

@@ -3,7 +3,7 @@ import { Code } from "astro:components";
 import ExampleBlock from "../ExampleBlock.astro";
 
 const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
-<nav data-slot="navigation-menu" class="nav-menu">
+<nav data-slot="navigation-menu" class="nav-menu" data-side-offset="8">
   <ul data-slot="navigation-menu-list" class="nav-menu-list">
     <li data-slot="navigation-menu-item" data-value="products" class="nav-menu-item">
       <button data-slot="navigation-menu-trigger" class="nav-menu-trigger">Products</button>
@@ -23,7 +23,13 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
     <!-- More submenu items... -->
     <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
   </ul>
-  <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
+  <div data-slot="navigation-menu-portal">
+    <div data-slot="navigation-menu-positioner" class="nav-menu-positioner">
+      <div data-slot="navigation-menu-popup" class="nav-menu-popup">
+        <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
+      </div>
+    </div>
+  </div>
 </nav>
 
 <style>
@@ -43,24 +49,77 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
   .nav-menu-trigger::after { content: "▼"; font-size: 0.6rem; }
   .nav-menu-trigger[data-state="open"]::after { transform: rotate(180deg); }
   .nav-menu-trigger-plain::after { content: none; }
-  .nav-menu-viewport {
+
+  .nav-menu-positioner {
+    top: 0;
+    left: 0;
+    transition: top 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+                left 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .nav-menu-positioner[data-instant] { transition: none; }
+
+  .nav-menu-popup {
     position: absolute;
     top: 0;
     left: 0;
-    transform: translate3d(0, 0, 0);
+    width: var(--popup-width, 0px);
+    height: var(--popup-height, 0px);
+    transform-origin: var(--transform-origin);
     background: #faf9f7;
     border-radius: 8px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-    width: var(--viewport-width, 0);
-    height: var(--viewport-height, 0);
-    transition: transform 0.25s, width 0.25s, height 0.25s;
+    overflow: hidden;
+    transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+                width 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+                height 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+                opacity 0.16s ease;
   }
-  .nav-menu-content { position: absolute; top: 100%; padding: 1.5rem 1rem; }
-  .nav-menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; width: 380px; }
+  .nav-menu-popup[data-instant] {
+    transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+                opacity 0.16s ease;
+  }
+  .nav-menu-popup[data-starting-style],
+  .nav-menu-popup[data-ending-style] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  .nav-menu-popup[data-closed]:not([data-ending-style]) {
+    pointer-events: none;
+  }
+
+  .nav-menu-viewport { width: 100%; height: 100%; }
+  .nav-menu-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translateX(0);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+                opacity 0.16s ease;
+    will-change: transform, opacity;
+  }
+  .nav-menu-content[data-closed]:not([data-ending-style]) {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .nav-menu-content[data-starting-style],
+  .nav-menu-content[data-ending-style] { opacity: 0; }
+  .nav-menu-content[data-starting-style][data-activation-direction="right"] {
+    transform: translateX(24px);
+  }
+  .nav-menu-content[data-starting-style][data-activation-direction="left"] {
+    transform: translateX(-24px);
+  }
+  .nav-menu-content[data-ending-style][data-activation-direction="right"] {
+    transform: translateX(-24px);
+  }
+  .nav-menu-content[data-ending-style][data-activation-direction="left"] {
+    transform: translateX(24px);
+  }
+  .nav-menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; width: 380px; padding: 0.75rem; }
 </style>`;
 
 const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -->
-<nav data-slot="navigation-menu" class="relative">
+<nav data-slot="navigation-menu" class="relative" data-side-offset="8">
   <ul data-slot="navigation-menu-list" class="flex relative list-none">
     <li data-slot="navigation-menu-item" data-value="products" class="static">
       <button
@@ -76,13 +135,10 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
       </button>
       <div
         data-slot="navigation-menu-content"
-        class="absolute top-full pt-6 px-4 pb-0
-               data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4
-               data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none
-               data-[state=inactive]:invisible data-[state=active]:visible"
+        class="nav-menu-tw-content absolute left-0 top-0 z-10"
         hidden
       >
-        <div class="grid grid-cols-2 gap-3 w-[380px]">
+        <div class="grid grid-cols-2 gap-3 w-[380px] p-2">
           <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
             <div class="mb-1 font-medium">Analytics</div>
             <div class="text-sm text-muted">Real-time metrics</div>
@@ -110,31 +166,74 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
              width: var(--indicator-width, 0); height: var(--indicator-height, 0);"
     ></div>
   </ul>
-  <div
-    data-slot="navigation-menu-viewport"
-    class="absolute top-0 left-0 bg-bg rounded-lg shadow-lg
-           overflow-hidden mt-2 opacity-0 pointer-events-none
-           data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
-    style="width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
-  ></div>
+  <div data-slot="navigation-menu-portal">
+    <div data-slot="navigation-menu-positioner" class="nav-menu-tw-positioner z-50">
+      <div
+        data-slot="navigation-menu-popup"
+        class="nav-menu-tw-popup absolute top-0 left-0 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_24px_rgba(0,0,0,0.12)]"
+        style="width: var(--popup-width, 0px); height: var(--popup-height, 0px); transform-origin: var(--transform-origin);"
+      >
+        <div data-slot="navigation-menu-viewport" class="h-full w-full"></div>
+      </div>
+    </div>
+  </div>
 </nav>
 
-/* CSS needed for animations (viewport size + content direction) */
-[data-slot="navigation-menu-viewport"] {
-  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1),
-              width 0.25s cubic-bezier(0.32, 0.72, 0, 1),
-              height 0.25s cubic-bezier(0.32, 0.72, 0, 1),
-              opacity 0.15s ease;
+/* Because the popup stack is portaled, target the moving parts directly. */
+.nav-menu-tw-positioner {
+  transition: top 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+              left 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.nav-menu-tw-positioner[data-instant] {
+  transition: none;
+}
+.nav-menu-tw-popup {
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+              width 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+              height 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+              opacity 0.16s ease;
   will-change: transform, width, height;
 }
-[data-slot="navigation-menu-viewport"][data-instant] {
-  transition: opacity 0.15s ease;
+.nav-menu-tw-popup[data-instant] {
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+              opacity 0.16s ease;
 }
-[data-slot="navigation-menu-content"][data-motion="from-right"] {
-  animation: slideFromRight 0.25s ease;
+.nav-menu-tw-popup[data-starting-style],
+.nav-menu-tw-popup[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.96);
 }
-[data-slot="navigation-menu-content"][data-motion="from-left"] {
-  animation: slideFromLeft 0.25s ease;
+.nav-menu-tw-popup[data-closed]:not([data-ending-style]) {
+  pointer-events: none;
+}
+.nav-menu-tw-content[data-closed]:not([data-ending-style]) {
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-menu-tw-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateX(0);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+              opacity 0.16s ease;
+  will-change: transform, opacity;
+}
+.nav-menu-tw-content[data-starting-style],
+.nav-menu-tw-content[data-ending-style] {
+  opacity: 0;
+}
+.nav-menu-tw-content[data-starting-style][data-activation-direction="right"] {
+  transform: translateX(24px);
+}
+.nav-menu-tw-content[data-starting-style][data-activation-direction="left"] {
+  transform: translateX(-24px);
+}
+.nav-menu-tw-content[data-ending-style][data-activation-direction="right"] {
+  transform: translateX(-24px);
+}
+.nav-menu-tw-content[data-ending-style][data-activation-direction="left"] {
+  transform: translateX(24px);
 }`;
 ---
 
@@ -236,23 +335,18 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
       <div data-slot="navigation-menu-indicator" class="nav-menu-indicator"></div>
     </ul>
   
-    <div data-slot="navigation-menu-viewport-positioner" class="isolate z-50">
-        <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
+    <div data-slot="navigation-menu-portal">
+      <div data-slot="navigation-menu-positioner" class="nav-menu-positioner">
+        <div data-slot="navigation-menu-popup" class="nav-menu-popup">
+          <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
+        </div>
+      </div>
     </div>
 
   </nav>
   
-  <nav slot="preview-tailwind" data-slot="navigation-menu" class="relative" id="nav-menu-tw">
-    <ul data-slot="navigation-menu-list" class="
-      flex list-none relative z-10
-      [&_[data-slot='navigation-menu-content'][data-state='active']]:animate-in
-[&_[data-slot='navigation-menu-content'][data-state='inactive']]:animate-out
-[&_[data-slot='navigation-menu-content'][data-motion='from-right']]:slide-in-from-right-4
-[&_[data-slot='navigation-menu-content'][data-motion='from-left']]:slide-in-from-left-4
-[&_[data-slot='navigation-menu-content'][data-motion='to-right']]:slide-to-right-4
-[&_[data-slot='navigation-menu-content'][data-motion='to-left']]:slide-to-left-4
-      "
-    >
+  <nav slot="preview-tailwind" data-slot="navigation-menu" class="relative" id="nav-menu-tw" data-side-offset="8">
+    <ul data-slot="navigation-menu-list" class="flex list-none relative z-10">
       <li data-slot="navigation-menu-item" data-value="products" class="static">
         <button
           data-slot="navigation-menu-trigger"
@@ -262,7 +356,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none data-motion[from-right]:animate-slide-in-from-right-4 data-motion[from-left]:animate-slide-in-from-left-4 data-[motion='from-left']:slide-in-from-left-4 data-motion[to-right]:animate-slide-to-right-4 data-[state=active]:animate-in data-[state=inactive]:animate-out "
+          class="nav-menu-tw-content absolute left-0 top-0 z-10"
           hidden
         >
           <div class="grid grid-cols-2 gap-3 w-[380px] p-2">
@@ -294,7 +388,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+          class="nav-menu-tw-content absolute left-0 top-0 z-10"
           hidden
         >
           <div class="grid grid-cols-2 gap-2 w-[380px] p-2">
@@ -334,7 +428,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+          class="nav-menu-tw-content absolute left-0 top-0 z-10"
           hidden
         >
           <div class="grid grid-cols-3 gap-3 p-2 w-[520px]">
@@ -374,7 +468,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="absolute top-0 opacity-100 data-[state=inactive]:opacity-0 data-[state=inactive]:pointer-events-none"
+          class="nav-menu-tw-content absolute left-0 top-0 z-10"
           hidden
         >
           <div class="w-[140px] p-2">
@@ -391,18 +485,27 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         style="left: var(--indicator-left, 0); top: var(--indicator-top, 0); width: var(--indicator-width, 0); height: var(--indicator-height, 0);"
       ></div>
     </ul>
-    <div
-      data-slot="navigation-menu-viewport"
-      class="absolute mt-2 data-instant:transition-opacity duration-150 top-0 left-0 bg-bg rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12),0_0_0_1px_var(--color-border)] overflow-hidden opacity-0 pointer-events-none data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
-      style="width: var(--viewport-width, 0); height: var(--viewport-height, 0);"
-    ></div>
+    <div data-slot="navigation-menu-portal">
+      <div data-slot="navigation-menu-positioner" class="nav-menu-tw-positioner isolate z-50">
+        <div
+          data-slot="navigation-menu-popup"
+          class="nav-menu-tw-popup absolute top-0 left-0 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_24px_rgba(0,0,0,0.12)]"
+          style="width: var(--popup-width, 0px); height: var(--popup-height, 0px); transform-origin: var(--transform-origin);"
+        >
+          <div data-slot="navigation-menu-viewport" class="h-full w-full"></div>
+        </div>
+      </div>
+    </div>
   </nav>
   <div slot="note">
     <p class="mt-3 text-muted">
-      Hover between items — content slides with direction. Viewport animates smoothly.
+      Hover between items. The popup shell animates on full open and close, and the content only slides when switching between panels.
     </p>
     <p class="mt-3 text-muted">
-      CSS variables: <code>--viewport-width</code>, <code>--viewport-height</code>, <code>--motion-direction</code>.
+      CSS variables: <code>--popup-width</code>, <code>--popup-height</code>, <code>--positioner-width</code>, <code>--positioner-height</code>, <code>--available-width</code>, <code>--available-height</code>, <code>--transform-origin</code>.
+    </p>
+    <p class="mt-3 text-muted">
+      Legacy <code>--viewport-width</code> and <code>--viewport-height</code> are still emitted, but the demo uses the popup shell as the canonical sizing surface.
     </p>
     <p class="mt-3 text-muted">
       Use <code>data-align="start|center|end"</code> on items to control alignment.
