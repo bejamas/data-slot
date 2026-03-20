@@ -44,10 +44,26 @@ interface Size {
   height: number;
 }
 
+interface PopupSizeState {
+  committed: Size;
+  live: Size;
+}
+
+type ViewportLayoutMode = "initial-open" | "measure-target" | "sync-current";
+
 interface ContentPositionState {
   applied: boolean;
   left: string;
   position: string;
+  top: string;
+}
+
+interface PopupPositionState {
+  applied: boolean;
+  bottom: string;
+  left: string;
+  position: string;
+  right: string;
   top: string;
 }
 
@@ -89,85 +105,6 @@ const getTransformOriginAnchor = (
   if (side === "bottom") return { x: aligned.x, y: triggerRect.bottom };
   if (side === "left") return { x: triggerRect.left, y: aligned.y };
   return { x: triggerRect.right, y: aligned.y };
-};
-
-const parseTimingToMs = (value: string): number => {
-  const trimmed = value.trim();
-  if (!trimmed) return 0;
-  if (trimmed.endsWith("ms")) {
-    const parsed = Number(trimmed.slice(0, -2).trim());
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  if (trimmed.endsWith("s")) {
-    const parsed = Number(trimmed.slice(0, -1).trim());
-    return Number.isFinite(parsed) ? parsed * 1000 : 0;
-  }
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const getMaxTimingMs = (durationsRaw: string, delaysRaw: string): number => {
-  const durations = durationsRaw.split(",");
-  const delays = delaysRaw.split(",");
-  const len = Math.max(durations.length, delays.length);
-  let max = 0;
-
-  for (let i = 0; i < len; i++) {
-    const duration = parseTimingToMs(
-      durations[i] ?? durations[durations.length - 1] ?? "0",
-    );
-    const delay = parseTimingToMs(
-      delays[i] ?? delays[delays.length - 1] ?? "0",
-    );
-    max = Math.max(max, duration + delay);
-  }
-
-  return max;
-};
-
-const getMaxAnimationDurationMs = (element: HTMLElement): number => {
-  const style = getComputedStyle(element);
-  const transitionMs = getMaxTimingMs(
-    style.transitionDuration,
-    style.transitionDelay,
-  );
-  const animationMs = getMaxTimingMs(
-    style.animationDuration,
-    style.animationDelay,
-  );
-  return Math.max(transitionMs, animationMs);
-};
-
-const runOnceAnimationsFinish = (
-  element: HTMLElement,
-  fn: () => void,
-  signal?: AbortSignal | null,
-) => {
-  const win = element.ownerDocument.defaultView ?? window;
-  const cleanup = () => {
-    if (timeoutId !== null) {
-      win.clearTimeout(timeoutId);
-      timeoutId = null;
-    }
-  };
-
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  signal?.addEventListener("abort", cleanup, { once: true });
-
-  const maxDuration = getMaxAnimationDurationMs(element);
-  if (maxDuration <= 0) {
-    win.requestAnimationFrame(() => {
-      if (signal?.aborted) return;
-      fn();
-    });
-    return;
-  }
-
-  timeoutId = win.setTimeout(() => {
-    cleanup();
-    if (signal?.aborted) return;
-    fn();
-  }, Math.ceil(maxDuration) + 50);
 };
 
 const getCssDimensions = (element: Element): Size => {
@@ -353,6 +290,7 @@ export function createNavigationMenu(
     ReturnType<typeof createPresenceLifecycle>
   >();
   const contentPositionState = new Map<HTMLElement, ContentPositionState>();
+  const popupPositionState = new WeakMap<HTMLElement, PopupPositionState>();
   const contentPlacement = new Map<
     HTMLElement,
     {
@@ -461,48 +399,52 @@ export function createNavigationMenu(
     if (!stack.popupExitComplete || !stack.viewportExitComplete) return;
     teardownPopupStack();
   };
-  let previousPopupSize: Size = { width: 0, height: 0 };
-  let targetPopupSize: Size = { width: 0, height: 0 };
-  let popupSizeAnimationFrame: number | null = null;
-  let popupSizeResetAbortController: AbortController | null = null;
-
-  const rememberPopupSize = (size: Size) => {
-    if (size.width > 0) previousPopupSize.width = size.width;
-    if (size.height > 0) previousPopupSize.height = size.height;
+  let popupSizeState: PopupSizeState = {
+    committed: { width: 0, height: 0 },
+    live: { width: 0, height: 0 },
   };
-  const rememberTargetPopupSize = (size: Size) => {
-    if (size.width > 0) targetPopupSize.width = size.width;
-    if (size.height > 0) targetPopupSize.height = size.height;
+  let popupSizeResizeObserver: ResizeObserver | null = null;
+  let activeMutationObserver: MutationObserver | null = null;
+  let activeContentMeasureRaf: number | null = null;
+
+  const rememberCommittedPopupSize = (size: Size) => {
+    if (size.width > 0) popupSizeState.committed.width = size.width;
+    if (size.height > 0) popupSizeState.committed.height = size.height;
+  };
+  const rememberLivePopupSize = (size: Size) => {
+    if (size.width > 0) popupSizeState.live.width = size.width;
+    if (size.height > 0) popupSizeState.live.height = size.height;
   };
   const resetPopupSizeMemory = () => {
-    previousPopupSize = { width: 0, height: 0 };
-    targetPopupSize = { width: 0, height: 0 };
+    popupSizeState = {
+      committed: { width: 0, height: 0 },
+      live: { width: 0, height: 0 },
+    };
   };
-  const clearPopupSizeAnimationFrame = () => {
-    if (popupSizeAnimationFrame !== null) {
-      cancelAnimationFrame(popupSizeAnimationFrame);
-      popupSizeAnimationFrame = null;
+  const clearActiveContentMeasureRaf = () => {
+    if (activeContentMeasureRaf !== null) {
+      cancelAnimationFrame(activeContentMeasureRaf);
+      activeContentMeasureRaf = null;
     }
   };
-  const cancelPopupAutoSizeReset = () => {
-    popupSizeResetAbortController?.abort();
-    popupSizeResetAbortController = null;
-  };
-  const clearPopupSizingTracking = () => {
-    clearPopupSizeAnimationFrame();
-    cancelPopupAutoSizeReset();
+  const setPopupSizeVars = (
+    popup: HTMLElement,
+    size: Size | "auto",
+  ) => {
+    if (size === "auto") {
+      popup.style.setProperty("--popup-width", "auto");
+      popup.style.setProperty("--popup-height", "auto");
+      return;
+    }
+    popup.style.setProperty("--popup-width", `${size.width}px`);
+    popup.style.setProperty("--popup-height", `${size.height}px`);
   };
   const setPopupFixedSizeVars = (
     popup: HTMLElement,
     width: number,
     height: number,
   ) => {
-    popup.style.setProperty("--popup-width", `${width}px`);
-    popup.style.setProperty("--popup-height", `${height}px`);
-  };
-  const setPopupAutoSizeVars = (popup: HTMLElement) => {
-    popup.style.setProperty("--popup-width", "auto");
-    popup.style.setProperty("--popup-height", "auto");
+    setPopupSizeVars(popup, { width, height });
   };
   const setViewportLegacySizeVars = (width: number, height: number) => {
     if (!viewport) return;
@@ -512,54 +454,86 @@ export function createNavigationMenu(
   };
   const setPositionerSizeVars = (
     positioner: HTMLElement,
-    width: number,
-    height: number,
+    size: Size | "max-content",
   ) => {
-    positioner.style.setProperty("--positioner-width", `${width}px`);
-    positioner.style.setProperty("--positioner-height", `${height}px`);
+    if (size === "max-content") {
+      positioner.style.setProperty("--positioner-width", "max-content");
+      positioner.style.setProperty("--positioner-height", "max-content");
+      return;
+    }
+    positioner.style.setProperty("--positioner-width", `${size.width}px`);
+    positioner.style.setProperty("--positioner-height", `${size.height}px`);
   };
-  const clearPopupStackSizeVars = (stack: PopupStackController) => {
-    stack.positioner.style.removeProperty("--positioner-width");
-    stack.positioner.style.removeProperty("--positioner-height");
-    stack.popup.style.removeProperty("--popup-width");
-    stack.popup.style.removeProperty("--popup-height");
-    viewport?.style.removeProperty("--viewport-width");
-    viewport?.style.removeProperty("--viewport-height");
+  const applyInlineStyleOverrides = (
+    element: HTMLElement,
+    styles: Record<string, string>,
+  ) => {
+    const previous = new Map<string, string>();
+    for (const [property, value] of Object.entries(styles)) {
+      previous.set(property, element.style.getPropertyValue(property));
+      element.style.setProperty(property, value);
+    }
+    return () => {
+      for (const [property, value] of previous) {
+        if (value) element.style.setProperty(property, value);
+        else element.style.removeProperty(property);
+      }
+    };
+  };
+  const measureTargetPopupSize = (
+    stack: PopupStackController,
+    _side: Side,
+  ): Size => {
+    const popupOverrides: Record<string, string> = {
+      "--popup-width": "auto",
+      "--popup-height": "auto",
+      position: "static",
+      transform: "none",
+      scale: "1",
+      top: "",
+      right: "",
+      bottom: "",
+      left: "",
+    };
+    const restorePopup = applyInlineStyleOverrides(stack.popup, popupOverrides);
+    const restorePositioner = applyInlineStyleOverrides(stack.positioner, {
+      "--positioner-width": "max-content",
+      "--positioner-height": "max-content",
+      "--available-width": "max-content",
+      "--available-height": "max-content",
+    });
+    const measured = getCssDimensions(stack.popup);
+    restorePositioner();
+    restorePopup();
+    return measured;
   };
   const getPopupTransitionBaseline = (): Size => {
     const popup = getCurrentPopup();
-    if (!popup) return { ...previousPopupSize };
+    if (!popup) return { ...popupSizeState.committed };
 
-    const popupWidthVar = popup.style.getPropertyValue("--popup-width").trim();
-    const popupHeightVar = popup.style.getPropertyValue("--popup-height").trim();
-    const measured =
-      popupWidthVar &&
-      popupWidthVar !== "auto" &&
-      popupHeightVar &&
-      popupHeightVar !== "auto"
-        ? {
-            width: popup.offsetWidth || previousPopupSize.width,
-            height: popup.offsetHeight || previousPopupSize.height,
-          }
-        : getCssDimensions(popup);
+    const measuredCss = getCssDimensions(popup);
     const baseline = {
-      width: measured.width || previousPopupSize.width,
-      height: measured.height || previousPopupSize.height,
+      width:
+        popup.offsetWidth ||
+        measuredCss.width ||
+        popupSizeState.live.width ||
+        popupSizeState.committed.width,
+      height:
+        popup.offsetHeight ||
+        measuredCss.height ||
+        popupSizeState.live.height ||
+        popupSizeState.committed.height,
     };
-    rememberPopupSize(baseline);
+    rememberLivePopupSize(baseline);
     return baseline;
   };
-  const schedulePopupAutoSizeReset = (stack: PopupStackController) => {
-    cancelPopupAutoSizeReset();
-    popupSizeResetAbortController = new AbortController();
-    runOnceAnimationsFinish(
-      stack.popup,
-      () => {
-        if (isDestroyed || popupStack !== stack || stack.isClosing) return;
-        setPopupAutoSizeVars(stack.popup);
-        popupSizeResetAbortController = null;
-      },
-      popupSizeResetAbortController.signal,
+  const isPopupSizeTransitionInFlight = (): boolean => {
+    const committed = popupSizeState.committed;
+    if (committed.width <= 0 || committed.height <= 0) return false;
+    const rendered = getPopupTransitionBaseline();
+    return (
+      Math.abs(rendered.width - committed.width) > 1 ||
+      Math.abs(rendered.height - committed.height) > 1
     );
   };
   const setContentMountedAbsolute = (
@@ -595,10 +569,88 @@ export function createNavigationMenu(
     else content.style.removeProperty("left");
     state.applied = false;
   };
+  const restorePopupPosition = (popup: HTMLElement) => {
+    const state = popupPositionState.get(popup);
+    if (!state?.applied) return;
+    if (state.position) popup.style.position = state.position;
+    else popup.style.removeProperty("position");
+    if (state.top) popup.style.top = state.top;
+    else popup.style.removeProperty("top");
+    if (state.right) popup.style.right = state.right;
+    else popup.style.removeProperty("right");
+    if (state.bottom) popup.style.bottom = state.bottom;
+    else popup.style.removeProperty("bottom");
+    if (state.left) popup.style.left = state.left;
+    else popup.style.removeProperty("left");
+    state.applied = false;
+  };
+  const setPopupRuntimePosition = (
+    popup: HTMLElement,
+    preset: "top" | "left" | null,
+  ) => {
+    if (preset === null) {
+      restorePopupPosition(popup);
+      return;
+    }
+
+    const state = popupPositionState.get(popup) ?? {
+      applied: false,
+      bottom: "",
+      left: "",
+      position: "",
+      right: "",
+      top: "",
+    };
+
+    if (!state.applied) {
+      state.position = popup.style.position;
+      state.top = popup.style.top;
+      state.right = popup.style.right;
+      state.bottom = popup.style.bottom;
+      state.left = popup.style.left;
+    }
+
+    state.applied = true;
+    popupPositionState.set(popup, state);
+
+    if (preset === "top") {
+      popup.style.position = "absolute";
+      popup.style.top = "";
+      popup.style.right = "";
+      popup.style.bottom = "0px";
+      popup.style.left = "0px";
+      return;
+    }
+
+    popup.style.position = "absolute";
+    popup.style.top = "0px";
+    popup.style.right = "0px";
+    popup.style.bottom = "";
+    popup.style.left = "";
+  };
 
   const getCurrentPopup = () => popupStack?.popup ?? findPopupStackParts().popup;
   const getCurrentPositioner = () =>
     popupStack?.positioner ?? findPopupStackParts().positioner;
+  const observePopupSize = (popup: HTMLElement | null) => {
+    popupSizeResizeObserver?.disconnect();
+    popupSizeResizeObserver = null;
+    if (!popup || typeof ResizeObserver !== "function") return;
+    popupSizeResizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const inlineSize = Array.isArray(entry?.borderBoxSize)
+        ? entry?.borderBoxSize[0]?.inlineSize
+        : undefined;
+      const blockSize = Array.isArray(entry?.borderBoxSize)
+        ? entry?.borderBoxSize[0]?.blockSize
+        : undefined;
+      rememberLivePopupSize({
+        width: Math.ceil(inlineSize ?? popup.offsetWidth),
+        height: Math.ceil(blockSize ?? popup.offsetHeight),
+      });
+    });
+    popupSizeResizeObserver.observe(popup);
+  };
 
   const wrapWithGeneratedSlot = (child: HTMLElement, slot: string) => {
     const doc = root.ownerDocument ?? document;
@@ -649,6 +701,8 @@ export function createNavigationMenu(
     if (popup) {
       popup.style.willChange = "";
       popup.style.pointerEvents = "";
+      restorePopupPosition(popup);
+      popup.style.removeProperty("scale");
       popup.style.removeProperty("--transform-origin");
       popup.style.removeProperty("--popup-width");
       popup.style.removeProperty("--popup-height");
@@ -689,6 +743,7 @@ export function createNavigationMenu(
     clearViewportTrackingInstantRaf();
     viewportTrackingInstantRaf = requestAnimationFrame(() => {
       viewportTrackingInstantRaf = null;
+      viewportInitialInstant = false;
       viewportTrackingInstant = false;
       syncPopupStackInstant();
     });
@@ -703,7 +758,9 @@ export function createNavigationMenu(
     const stack = popupStack;
     if (!stack || !viewport) return;
 
-    clearPopupSizingTracking();
+    clearActiveContentMeasureRaf();
+    popupSizeResizeObserver?.disconnect();
+    popupSizeResizeObserver = null;
     removeViewportInstant();
     resetPopupStackStyles();
     resetPopupSizeMemory();
@@ -797,6 +854,7 @@ export function createNavigationMenu(
     stack.popupPresence = popupPresence;
     stack.viewportPresence = viewportPresence;
     popupStack = stack;
+    observePopupSize(popup);
 
     return popupStack;
   };
@@ -864,6 +922,38 @@ export function createNavigationMenu(
 
   // ResizeObserver for active panel - handles fonts/images/content changes after open
   let activeRO: ResizeObserver | null = null;
+  const scheduleActiveContentLayoutSync = (
+    data: {
+      item: HTMLElement;
+      content: HTMLElement;
+      trigger: HTMLElement;
+    },
+  ) => {
+    clearActiveContentMeasureRaf();
+    activeContentMeasureRaf = requestAnimationFrame(() => {
+      activeContentMeasureRaf = null;
+      if (!viewport || currentValue === null) return;
+      const activeData = getActiveData();
+      if (!activeData || activeData.content !== data.content) return;
+      const stack = ensurePopupStack();
+      if (!stack || stack.isClosing) return;
+      const placement = resolvePlacement(activeData.item, activeData.content);
+      if (
+        stack.popup.hasAttribute("data-starting-style") ||
+        isPopupSizeTransitionInFlight()
+      ) {
+        updateViewportSize(activeData.content, activeData.trigger, placement, {
+          defer: false,
+          mode: "sync-current",
+        });
+        return;
+      }
+      updateViewportSize(activeData.content, activeData.trigger, placement, {
+        defer: false,
+        mode: "measure-target",
+      });
+    });
+  };
   const observeActiveContent = (
     data: {
       item: HTMLElement;
@@ -873,18 +963,29 @@ export function createNavigationMenu(
   ) => {
     activeRO?.disconnect();
     activeRO = null;
+    activeMutationObserver?.disconnect();
+    activeMutationObserver = null;
+    clearActiveContentMeasureRaf();
     if (!viewport || !data) return;
     activeRO = new ResizeObserver(() => {
-      const placement = resolvePlacement(data.item, data.content);
-      updateViewportSize(data.content, data.trigger, placement, {
-        baseline: getPopupTransitionBaseline(),
-      });
+      scheduleActiveContentLayoutSync(data);
     });
     activeRO.observe(data.content);
+    if (typeof MutationObserver === "function") {
+      activeMutationObserver = new MutationObserver(() => {
+        scheduleActiveContentLayoutSync(data);
+      });
+      activeMutationObserver.observe(data.content, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    }
   };
   cleanups.push(() => activeRO?.disconnect());
+  cleanups.push(() => activeMutationObserver?.disconnect());
+  cleanups.push(clearActiveContentMeasureRaf);
   cleanups.push(() => {
-    clearPopupSizingTracking();
     removeViewportInstant();
     contentPresence.forEach((presence) => presence.cleanup());
     contentPresence.clear();
@@ -896,6 +997,8 @@ export function createNavigationMenu(
     });
     contentPositionState.clear();
     contentPlacement.clear();
+    popupSizeResizeObserver?.disconnect();
+    popupSizeResizeObserver = null;
     teardownPopupStack();
   });
 
@@ -1721,29 +1824,9 @@ export function createNavigationMenu(
           )
         : Math.max(0, viewportHeight);
 
-    setPositionerSizeVars(positioner, width, height);
+    setPositionerSizeVars(positioner, { width, height });
     positioner.style.setProperty("--available-width", `${availableWidth}px`);
     positioner.style.setProperty("--available-height", `${availableHeight}px`);
-  };
-
-  const readPopupSize = (
-    popup: HTMLElement,
-    fallback: Size = previousPopupSize,
-  ): Size => {
-    const measured = getCssDimensions(popup);
-    const size = {
-      width: measured.width || fallback.width || previousPopupSize.width,
-      height: measured.height || fallback.height || previousPopupSize.height,
-    };
-    rememberPopupSize(size);
-    return size;
-  };
-
-  const measureTargetPopupSize = (
-    stack: PopupStackController,
-  ): Size => {
-    clearPopupStackSizeVars(stack);
-    return getCssDimensions(stack.popup);
   };
 
   const applyViewportLayout = (
@@ -1751,14 +1834,14 @@ export function createNavigationMenu(
     trigger: HTMLElement,
     placement: PlacementConfig,
     options: {
-      baseline?: Size | null;
-      mode?: "measure-target" | "sync-current";
+      mode?: ViewportLayoutMode;
     } = {},
   ) => {
     const stack = ensurePopupStack();
     if (!viewport || !stack) return;
     const { popup, positioner } = stack;
     const mode = options.mode ?? "measure-target";
+    const measuresTarget = mode !== "sync-current";
 
     if (
       viewport.getAttribute("data-state") !== "open" ||
@@ -1768,21 +1851,6 @@ export function createNavigationMenu(
     }
 
     setContentMountedAbsolute(content, false);
-
-    const previousSizeVars =
-      mode === "measure-target"
-        ? {
-            popupWidth: popup.style.getPropertyValue("--popup-width"),
-            popupHeight: popup.style.getPropertyValue("--popup-height"),
-            positionerWidth: positioner.style.getPropertyValue("--positioner-width"),
-            positionerHeight: positioner.style.getPropertyValue("--positioner-height"),
-            viewportWidth: viewport.style.getPropertyValue("--viewport-width"),
-            viewportHeight: viewport.style.getPropertyValue("--viewport-height"),
-          }
-        : null;
-    if (mode === "measure-target") {
-      clearPopupSizingTracking();
-    }
 
     const firstChild = content.firstElementChild as HTMLElement | null;
     const lastChild = content.lastElementChild as HTMLElement | null;
@@ -1817,71 +1885,34 @@ export function createNavigationMenu(
           content.clientHeight,
         ) + firstMarginTop + lastMarginBottom,
     };
-    const baseline = options.baseline ?? previousPopupSize;
+    const committedSizeBeforeMeasure = { ...popupSizeState.committed };
     const measuredPopupSize =
-      mode === "measure-target"
-        ? measureTargetPopupSize(stack)
-        : readPopupSize(popup, baseline);
+      measuresTarget
+        ? measureTargetPopupSize(stack, placement.side)
+        : getPopupTransitionBaseline();
     const contentSize = {
       width:
         mode === "sync-current"
-          ? targetPopupSize.width ||
+          ? committedSizeBeforeMeasure.width ||
             measuredPopupSize.width ||
             fallbackSize.width
           : measuredPopupSize.width || fallbackSize.width,
       height:
         mode === "sync-current"
-          ? targetPopupSize.height ||
+          ? committedSizeBeforeMeasure.height ||
             measuredPopupSize.height ||
             fallbackSize.height
           : measuredPopupSize.height || fallbackSize.height,
     };
-    rememberPopupSize(
+    rememberLivePopupSize(
       measuredPopupSize.width > 0 && measuredPopupSize.height > 0
         ? measuredPopupSize
         : contentSize,
     );
-    if (
-      mode === "measure-target" ||
-      targetPopupSize.width <= 0 ||
-      targetPopupSize.height <= 0
-    ) {
-      rememberTargetPopupSize(contentSize);
-    }
+    if (measuresTarget) rememberCommittedPopupSize(contentSize);
     const contentWidth = contentSize.width;
     const contentHeight = contentSize.height;
     if (contentWidth <= 0 || contentHeight <= 0) {
-      if (previousSizeVars) {
-        const restoreVar = (
-          el: HTMLElement,
-          name: string,
-          value: string,
-        ) => {
-          if (value) {
-            el.style.setProperty(name, value);
-          } else {
-            el.style.removeProperty(name);
-          }
-        };
-        restoreVar(popup, "--popup-width", previousSizeVars.popupWidth);
-        restoreVar(popup, "--popup-height", previousSizeVars.popupHeight);
-        restoreVar(
-          positioner,
-          "--positioner-width",
-          previousSizeVars.positionerWidth,
-        );
-        restoreVar(
-          positioner,
-          "--positioner-height",
-          previousSizeVars.positionerHeight,
-        );
-        restoreVar(viewport, "--viewport-width", previousSizeVars.viewportWidth);
-        restoreVar(
-          viewport,
-          "--viewport-height",
-          previousSizeVars.viewportHeight,
-        );
-      }
       return;
     }
     const floatingRect = {
@@ -1930,6 +1961,13 @@ export function createNavigationMenu(
 
     popup.style.willChange = "width,height";
     popup.style.pointerEvents = "auto";
+    if (pos.side === "top") {
+      setPopupRuntimePosition(popup, "top");
+    } else if (pos.side === "left") {
+      setPopupRuntimePosition(popup, "left");
+    } else {
+      setPopupRuntimePosition(popup, null);
+    }
     popup.style.setProperty("--transform-origin", viewportTransformOrigin);
     viewport.style.top = "0px";
     viewport.style.left = "0px";
@@ -1959,25 +1997,19 @@ export function createNavigationMenu(
     updateViewportPositioner();
 
     if (mode === "measure-target") {
-      const transitionStart = {
-        width: baseline.width || contentWidth,
-        height: baseline.height || contentHeight,
-      };
-      setPopupFixedSizeVars(popup, transitionStart.width, transitionStart.height);
-      popupSizeAnimationFrame = requestAnimationFrame(() => {
-        popupSizeAnimationFrame = null;
-        if (
-          isDestroyed ||
-          popupStack !== stack ||
-          stack.isClosing ||
-          viewport.getAttribute("data-state") !== "open" ||
-          content.getAttribute("data-state") !== "active"
-        ) {
-          return;
-        }
-        setPopupFixedSizeVars(popup, contentWidth, contentHeight);
-        schedulePopupAutoSizeReset(stack);
-      });
+      setPopupFixedSizeVars(popup, contentWidth, contentHeight);
+    } else if (mode === "initial-open") {
+      setPopupFixedSizeVars(popup, contentWidth, contentHeight);
+    } else {
+      const popupWidthVar = popup.style.getPropertyValue("--popup-width").trim();
+      const popupHeightVar = popup.style.getPropertyValue("--popup-height").trim();
+      if (!popupWidthVar || !popupHeightVar) {
+        setPopupFixedSizeVars(
+          popup,
+          committedSizeBeforeMeasure.width || contentWidth,
+          committedSizeBeforeMeasure.height || contentHeight,
+        );
+      }
     }
 
     // Build unified hover shield (rectangular gap bridge + triangular safety corridor).
@@ -2063,9 +2095,8 @@ export function createNavigationMenu(
     trigger: HTMLElement,
     placement: PlacementConfig,
     options: {
-      baseline?: Size | null;
       defer?: boolean;
-      mode?: "measure-target" | "sync-current";
+      mode?: ViewportLayoutMode;
     } = {},
   ) => {
     if (!viewport) return;
@@ -2094,9 +2125,8 @@ export function createNavigationMenu(
   const syncActiveViewportLayout = (
     data = getActiveData(),
     options: {
-      baseline?: Size | null;
       defer?: boolean;
-      mode?: "measure-target" | "sync-current";
+      mode?: ViewportLayoutMode;
     } = {},
   ) => {
     if (!data) return;
@@ -2223,6 +2253,8 @@ export function createNavigationMenu(
       const prevValue = currentValue;
       const newData = value ? itemMap.get(value) : null;
       const popupSizeBaseline = getPopupTransitionBaseline();
+      const isOpen = value !== null;
+      const isInitialOpen = prevValue === null && isOpen;
 
       // Only animate direction when switching between different items
       const isSwitching =
@@ -2298,6 +2330,18 @@ export function createNavigationMenu(
           stack.popupExitComplete = false;
           stack.viewportExitComplete = false;
         }
+        if (viewport && isInitialOpen) {
+          setOpenSurfaceState(root, true);
+          setOpenSurfaceState(stack?.positioner ?? getCurrentPositioner(), true);
+          setOpenSurfaceState(stack?.popup ?? getCurrentPopup(), true);
+          setOpenSurfaceState(viewport, true);
+          viewport.style.pointerEvents = "auto";
+          viewportInitialInstant = true;
+          clearViewportTrackingInstantRaf();
+          viewportTrackingInstant = false;
+          syncPopupStackInstant();
+          scheduleViewportTrackingInstantClear();
+        }
         if (stack?.popup) {
           stack.popup.hidden = false;
           stack.popup.style.pointerEvents = "auto";
@@ -2332,8 +2376,16 @@ export function createNavigationMenu(
         newData.content.style.pointerEvents = "auto";
         previousIndex = newData.index;
 
+        if (isSwitching) {
+          viewportInitialInstant = false;
+          clearViewportTrackingInstantRaf();
+          viewportTrackingInstant = false;
+          syncPopupStackInstant();
+        }
+
         syncActiveViewportLayout(newData, {
-          baseline: popupSizeBaseline,
+          defer: isInitialOpen || isSwitching ? false : undefined,
+          mode: isInitialOpen ? "initial-open" : "measure-target",
         });
         observeActiveContent(newData);
         updateIndicator(newData.trigger); // Indicator follows active trigger
@@ -2342,7 +2394,6 @@ export function createNavigationMenu(
         hideHoverBridge();
         clearHoverSafetyState();
         if (popupStack) {
-          clearPopupSizingTracking();
           if (popupSizeBaseline.width > 0 && popupSizeBaseline.height > 0) {
             setPopupFixedSizeVars(
               popupStack.popup,
@@ -2351,8 +2402,10 @@ export function createNavigationMenu(
             );
             setPositionerSizeVars(
               popupStack.positioner,
-              popupSizeBaseline.width,
-              popupSizeBaseline.height,
+              {
+                width: popupSizeBaseline.width,
+                height: popupSizeBaseline.height,
+              },
             );
             setViewportLegacySizeVars(
               popupSizeBaseline.width,
@@ -2369,7 +2422,6 @@ export function createNavigationMenu(
       }
 
       // Update root state
-      const isOpen = value !== null;
       setOpenSurfaceState(root, isOpen);
       if (direction) {
         // TODO(next-major): remove legacy root `data-motion` output.
@@ -2389,7 +2441,7 @@ export function createNavigationMenu(
         setOpenSurfaceState(popup, isOpen);
         setOpenSurfaceState(viewport, isOpen);
         viewport.style.pointerEvents = isOpen ? "auto" : "none";
-        viewportInitialInstant = isOpen && !isSwitching;
+        viewportInitialInstant = isInitialOpen;
         if (!isOpen || isSwitching) {
           clearViewportTrackingInstantRaf();
           viewportTrackingInstant = false;

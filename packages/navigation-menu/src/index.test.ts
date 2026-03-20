@@ -444,22 +444,21 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("keeps data-instant during initial open and clears it on switch", async () => {
+  it("uses data-instant only for the initial open frame", async () => {
     const { viewport, controller } = setup();
 
     controller.open("products");
     const viewportPositioner = getViewportPositioner(viewport);
+    const viewportPopup = getViewportPopup(viewport);
     expect(viewport.hasAttribute("data-instant")).toBe(true);
+    expect(viewportPopup.hasAttribute("data-instant")).toBe(true);
     expect(viewportPositioner.hasAttribute("data-instant")).toBe(true);
 
     await new Promise((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve(undefined))),
     );
-    expect(viewport.hasAttribute("data-instant")).toBe(true);
-    expect(viewportPositioner.hasAttribute("data-instant")).toBe(true);
-
-    controller.open("solutions");
     expect(viewport.hasAttribute("data-instant")).toBe(false);
+    expect(viewportPopup.hasAttribute("data-instant")).toBe(false);
     expect(viewportPositioner.hasAttribute("data-instant")).toBe(false);
 
     controller.destroy();
@@ -1944,8 +1943,8 @@ describe("NavigationMenu", () => {
     const viewportY = window.visualViewport?.offsetTop ?? 0;
     expect(viewport.style.getPropertyValue("--viewport-width")).toBe("200px");
     expect(viewport.style.getPropertyValue("--viewport-height")).toBe("180px");
-    expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe("auto");
-    expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe("auto");
+    expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe("200px");
+    expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe("180px");
     expect(viewportPositioner.style.getPropertyValue("--positioner-width")).toBe("200px");
     expect(viewportPositioner.style.getPropertyValue("--positioner-height")).toBe("180px");
     expect(viewportPositioner.style.getPropertyValue("--available-width")).toBe(
@@ -1963,7 +1962,7 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("waits for the longest popup transition before resetting popup size vars to auto", async () => {
+  it("establishes the fixed popup size synchronously on initial open", async () => {
     const { root, triggers, contents, viewport, controller } = setup();
     const trigger = triggers[0]!;
     const content = contents[0]!;
@@ -1994,6 +1993,183 @@ describe("NavigationMenu", () => {
     });
 
     await withMockTransitionDurations(
+      (el) => (el === getViewportPopup(viewport) ? "0.08s, 0.08s" : "0s"),
+      async () => {
+        controller.open("products");
+
+        const viewportPopup = getViewportPopup(viewport);
+        const viewportPositioner = getViewportPositioner(viewport);
+
+        expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe(
+          "200px",
+        );
+        expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe(
+          "180px",
+        );
+        expect(
+          viewportPositioner.style.getPropertyValue("--positioner-width"),
+        ).toBe("200px");
+        expect(
+          viewportPositioner.style.getPropertyValue("--positioner-height"),
+        ).toBe("180px");
+        expect(viewport.style.getPropertyValue("--viewport-width")).toBe(
+          "200px",
+        );
+        expect(viewport.style.getPropertyValue("--viewport-height")).toBe(
+          "180px",
+        );
+        expect(viewportPositioner.hasAttribute("data-instant")).toBe(true);
+
+        await waitForAnimationFrame();
+
+        expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe(
+          "200px",
+        );
+        expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe(
+          "180px",
+        );
+
+        await waitForMs(160);
+
+        expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe(
+          "200px",
+        );
+        expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe(
+          "180px",
+        );
+      },
+    );
+
+    controller.destroy();
+  });
+
+  it("updates popup size vars to the next panel size on switch", async () => {
+    const { root, triggers, contents, viewport, controller } = setup();
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    triggers[0]!.getBoundingClientRect = () => rect(120, 100, 120, 40);
+    triggers[1]!.getBoundingClientRect = () => rect(280, 100, 120, 40);
+    contents[0]!.getBoundingClientRect = () => rect(0, 0, 200, 180);
+    contents[1]!.getBoundingClientRect = () => rect(0, 0, 320, 160);
+    Object.defineProperty(contents[0]!, "scrollWidth", {
+      configurable: true,
+      get: () => 200,
+    });
+    Object.defineProperty(contents[0]!, "scrollHeight", {
+      configurable: true,
+      get: () => 180,
+    });
+    Object.defineProperty(contents[1]!, "scrollWidth", {
+      configurable: true,
+      get: () => 320,
+    });
+    Object.defineProperty(contents[1]!, "scrollHeight", {
+      configurable: true,
+      get: () => 160,
+    });
+
+    await withMockTransitionDurations(
+      (el) =>
+        el === getViewportPopup(viewport) ? "0.08s, 0.08s" : "0s",
+      async () => {
+        controller.open("products");
+        await waitForPresenceExit();
+
+        const viewportPopup = getViewportPopup(viewport);
+        const viewportPositioner = getViewportPositioner(viewport);
+        expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe(
+          "200px",
+        );
+        expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe(
+          "180px",
+        );
+
+        controller.open("solutions");
+
+        expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe(
+          "320px",
+        );
+        expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe(
+          "160px",
+        );
+        expect(
+          viewportPositioner.style.getPropertyValue("--positioner-width"),
+        ).toBe("320px");
+        expect(
+          viewportPositioner.style.getPropertyValue("--positioner-height"),
+        ).toBe("160px");
+        expect(viewport.style.getPropertyValue("--viewport-width")).toBe(
+          "320px",
+        );
+        expect(viewport.style.getPropertyValue("--viewport-height")).toBe(
+          "160px",
+        );
+
+        await waitForAnimationFrames(2);
+
+        expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe(
+          "320px",
+        );
+        expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe(
+          "160px",
+        );
+      },
+    );
+
+    controller.destroy();
+  });
+
+  it("keeps popup size vars fixed while the menu stays open", async () => {
+    const { root, triggers, contents, viewport, controller } = setup();
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    triggers[0]!.getBoundingClientRect = () => rect(120, 100, 120, 40);
+    triggers[1]!.getBoundingClientRect = () => rect(280, 100, 120, 40);
+    contents[0]!.getBoundingClientRect = () => rect(0, 0, 200, 180);
+    contents[1]!.getBoundingClientRect = () => rect(0, 0, 320, 160);
+    Object.defineProperty(contents[0]!, "scrollWidth", {
+      configurable: true,
+      get: () => 200,
+    });
+    Object.defineProperty(contents[0]!, "scrollHeight", {
+      configurable: true,
+      get: () => 180,
+    });
+    Object.defineProperty(contents[1]!, "scrollWidth", {
+      configurable: true,
+      get: () => 320,
+    });
+    Object.defineProperty(contents[1]!, "scrollHeight", {
+      configurable: true,
+      get: () => 160,
+    });
+
+    await withMockTransitionDurations(
       (el) =>
         el === getViewportPopup(viewport) ? "0.04s, 0.01s" : "0s",
       async () => {
@@ -2002,18 +2178,28 @@ describe("NavigationMenu", () => {
         await waitForAnimationFrames(2);
 
         const viewportPopup = getViewportPopup(viewport);
+        expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe("200px");
+
+        controller.open("solutions");
+
         expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe(
-          "200px",
+          "320px",
         );
 
-        await waitForMs(35);
+        await waitForAnimationFrames(2);
+
         expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe(
-          "200px",
+          "320px",
         );
 
-        await waitForMs(70);
+        await waitForMs(15);
         expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe(
-          "auto",
+          "320px",
+        );
+
+        await waitForMs(90);
+        expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe(
+          "320px",
         );
       },
     );
@@ -2095,6 +2281,12 @@ describe("NavigationMenu", () => {
         expect(
           viewportPositioner.style.getPropertyValue("--positioner-height"),
         ).toBe("160px");
+        expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe(
+          "320px",
+        );
+        expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe(
+          "160px",
+        );
       },
     );
 
@@ -2144,7 +2336,10 @@ describe("NavigationMenu", () => {
 
     const viewportPopup = getViewportPopup(viewport);
     expect(contents[0]!.style.position).toBe("");
-    expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe("auto");
+    expect(viewportPopup.style.getPropertyValue("--popup-width")).not.toBe("");
+    expect(viewportPopup.style.getPropertyValue("--popup-width")).not.toBe(
+      "auto",
+    );
 
     controller.open("solutions");
 
@@ -2158,7 +2353,10 @@ describe("NavigationMenu", () => {
     expect(contents[0]!.hidden).toBe(true);
     expect(contents[0]!.style.position).toBe("");
     await waitForAnimationFrames(2);
-    expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe("auto");
+    expect(viewportPopup.style.getPropertyValue("--popup-width")).not.toBe("");
+    expect(viewportPopup.style.getPropertyValue("--popup-width")).not.toBe(
+      "auto",
+    );
 
     controller.destroy();
   });
@@ -2220,7 +2418,7 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
-  it("freezes popup size on close after settling to auto", async () => {
+  it("freezes popup size on close while popup vars stay fixed", async () => {
     const { root, triggers, contents, viewport, controller } = setup();
     const rect = (left: number, top: number, width: number, height: number): DOMRect =>
       ({
@@ -2253,8 +2451,8 @@ describe("NavigationMenu", () => {
 
     const viewportPopup = getViewportPopup(viewport);
     const viewportPositioner = getViewportPositioner(viewport);
-    expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe("auto");
-    expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe("auto");
+    expect(viewportPopup.style.getPropertyValue("--popup-width")).toBe("220px");
+    expect(viewportPopup.style.getPropertyValue("--popup-height")).toBe("180px");
 
     controller.close();
 
@@ -2627,6 +2825,152 @@ describe("NavigationMenu", () => {
     expect(viewportPortal.parentElement).toBe(root);
     expect(viewport.parentElement).toBe(viewportPopup);
     expect(viewportPopup.hidden).toBe(true);
+
+    controller.destroy();
+  });
+
+  it("preserves authored inline popup positioning styles for bottom popup stacks", async () => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+        </ul>
+        <div data-slot="navigation-menu-portal">
+          <div data-slot="navigation-menu-positioner">
+            <div
+              data-slot="navigation-menu-popup"
+              id="viewport-popup"
+              style="position: relative; top: 3px; left: 5px;"
+            >
+              <div data-slot="navigation-menu-viewport"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+    const content = root.querySelector('[data-slot="navigation-menu-content"]') as HTMLElement;
+    const viewportPopup = document.getElementById("viewport-popup") as HTMLElement;
+    const controller = createNavigationMenu(root, {
+      delayOpen: 0,
+      delayClose: 0,
+      side: "bottom",
+      align: "start",
+    });
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    trigger.getBoundingClientRect = () => rect(150, 100, 100, 40);
+    content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+
+    controller.open("products");
+
+    expect(viewportPopup.style.position).toBe("relative");
+    expect(viewportPopup.style.top).toBe("3px");
+    expect(viewportPopup.style.left).toBe("5px");
+    expect(viewportPopup.style.right).toBe("");
+    expect(viewportPopup.style.bottom).toBe("");
+
+    controller.close();
+    await waitForPresenceExit();
+
+    expect(viewportPopup.style.position).toBe("relative");
+    expect(viewportPopup.style.top).toBe("3px");
+    expect(viewportPopup.style.left).toBe("5px");
+    expect(viewportPopup.style.right).toBe("");
+    expect(viewportPopup.style.bottom).toBe("");
+
+    controller.destroy();
+
+    expect(viewportPopup.style.position).toBe("relative");
+    expect(viewportPopup.style.top).toBe("3px");
+    expect(viewportPopup.style.left).toBe("5px");
+  });
+
+  it("restores authored inline popup positioning styles after top popup overrides", async () => {
+    document.body.innerHTML = `
+      <nav data-slot="navigation-menu" id="root">
+        <ul data-slot="navigation-menu-list">
+          <li data-slot="navigation-menu-item" data-value="products">
+            <button data-slot="navigation-menu-trigger">Products</button>
+            <div data-slot="navigation-menu-content">Products content</div>
+          </li>
+        </ul>
+        <div data-slot="navigation-menu-portal">
+          <div data-slot="navigation-menu-positioner">
+            <div
+              data-slot="navigation-menu-popup"
+              id="viewport-popup"
+              style="position: relative; top: 3px; left: 5px;"
+            >
+              <div data-slot="navigation-menu-viewport"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    `;
+
+    const root = document.getElementById("root") as HTMLElement;
+    const trigger = root.querySelector('[data-slot="navigation-menu-trigger"]') as HTMLElement;
+    const content = root.querySelector('[data-slot="navigation-menu-content"]') as HTMLElement;
+    const viewportPopup = document.getElementById("viewport-popup") as HTMLElement;
+    const controller = createNavigationMenu(root, {
+      delayOpen: 0,
+      delayClose: 0,
+      side: "top",
+      align: "start",
+    });
+
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({
+        x: left,
+        y: top,
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    root.getBoundingClientRect = () => rect(100, 100, 400, 40);
+    trigger.getBoundingClientRect = () => rect(150, 100, 100, 40);
+    content.getBoundingClientRect = () => rect(0, 0, 300, 180);
+
+    controller.open("products");
+
+    expect(viewportPopup.style.position).toBe("absolute");
+    expect(viewportPopup.style.top).toBe("");
+    expect(viewportPopup.style.right).toBe("");
+    expect(viewportPopup.style.bottom).toBe("0px");
+    expect(viewportPopup.style.left).toBe("0px");
+
+    controller.close();
+    await waitForPresenceExit();
+
+    expect(viewportPopup.style.position).toBe("relative");
+    expect(viewportPopup.style.top).toBe("3px");
+    expect(viewportPopup.style.left).toBe("5px");
+    expect(viewportPopup.style.right).toBe("");
+    expect(viewportPopup.style.bottom).toBe("");
 
     controller.destroy();
   });
@@ -4215,8 +4559,8 @@ describe("NavigationMenu", () => {
       await waitForPresenceExit();
 
       const viewportPositioner = getViewportPositioner(viewport);
-      expect(viewport.hasAttribute("data-instant")).toBe(true);
-      expect(viewportPositioner.hasAttribute("data-instant")).toBe(true);
+      expect(viewport.hasAttribute("data-instant")).toBe(false);
+      expect(viewportPositioner.hasAttribute("data-instant")).toBe(false);
 
       controller.open("solutions");
       expect(viewport.hasAttribute("data-instant")).toBe(false);

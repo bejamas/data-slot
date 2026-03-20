@@ -324,15 +324,17 @@ Legacy `data-motion` and `--motion-direction` are still emitted during panel swi
 compatibility. That includes both root-level and content-level `data-motion` output, but
 `data-activation-direction` is the canonical directional hook.
 
-`--popup-width` / `--popup-height` are the animated shell vars. They transition through fixed pixel
-values and settle back to `auto` once the popup animation completes.
+`--popup-width` / `--popup-height` are the popup shell size vars. While the menu is open, they stay
+at fixed pixel values so CSS can animate panel-to-panel size changes directly between `px` targets.
+Initial open writes the measured size synchronously; the shell does not need an `auto` reset while
+open.
 
 ### CSS Variables
 
 | Variable | Element | Description |
 |----------|---------|-------------|
-| `--popup-width` | popup | Popup width during size transitions; settles back to `auto` at rest |
-| `--popup-height` | popup | Popup height during size transitions; settles back to `auto` at rest |
+| `--popup-width` | popup | Popup width while open; CSS can animate shell width between pixel values |
+| `--popup-height` | popup | Popup height while open; CSS can animate shell height between pixel values |
 | `--positioner-width` | positioner | Measured width of the active panel |
 | `--positioner-height` | positioner | Measured height of the active panel |
 | `--available-width` | positioner | Available width between the active trigger and the viewport edge |

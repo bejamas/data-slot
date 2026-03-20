@@ -25,8 +25,8 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
   </ul>
   <div data-slot="navigation-menu-portal">
     <div data-slot="navigation-menu-positioner" class="nav-menu-positioner">
-      <div data-slot="navigation-menu-popup" class="nav-menu-popup">
-        <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
+      <div data-slot="navigation-menu-popup" class="nav-menu-popup" hidden>
+        <div data-slot="navigation-menu-viewport" class="nav-menu-viewport" hidden></div>
       </div>
     </div>
   </div>
@@ -51,6 +51,10 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
   .nav-menu-trigger-plain::after { content: none; }
 
   .nav-menu-positioner {
+    box-sizing: border-box;
+    width: var(--positioner-width);
+    height: var(--positioner-height);
+    max-width: var(--available-width);
     top: 0;
     left: 0;
     transition: top 0.22s cubic-bezier(0.32, 0.72, 0, 1),
@@ -59,19 +63,18 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
   .nav-menu-positioner[data-instant] { transition: none; }
 
   .nav-menu-popup {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: var(--popup-width, 0px);
-    height: var(--popup-height, 0px);
+    position: relative;
+    box-sizing: border-box;
+    width: var(--popup-width);
+    height: var(--popup-height);
     transform-origin: var(--transform-origin);
     background: #faf9f7;
     border-radius: 8px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.12);
     overflow: hidden;
     transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1),
-                width 0.22s cubic-bezier(0.32, 0.72, 0, 1),
-                height 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+                width 0.16s ease,
+                height 0.16s ease,
                 opacity 0.16s ease;
   }
   .nav-menu-popup[data-instant] {
@@ -87,11 +90,9 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
     pointer-events: none;
   }
 
-  .nav-menu-viewport { width: 100%; height: 100%; }
+  .nav-menu-viewport { position: relative; overflow: hidden; width: 100%; height: 100%; }
   .nav-menu-content {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
     transform: translateX(0);
     transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
                 opacity 0.16s ease;
@@ -135,7 +136,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
       </button>
       <div
         data-slot="navigation-menu-content"
-        class="nav-menu-tw-content absolute left-0 top-0 z-10"
+        class="nav-menu-tw-content z-10"
         hidden
       >
         <div class="grid grid-cols-2 gap-3 w-[380px] p-2">
@@ -170,10 +171,11 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
     <div data-slot="navigation-menu-positioner" class="nav-menu-tw-positioner z-50">
       <div
         data-slot="navigation-menu-popup"
-        class="nav-menu-tw-popup absolute top-0 left-0 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_24px_rgba(0,0,0,0.12)]"
-        style="width: var(--popup-width, 0px); height: var(--popup-height, 0px); transform-origin: var(--transform-origin);"
+        class="nav-menu-tw-popup relative overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_24px_rgba(0,0,0,0.12)]"
+        hidden
+        style="width: var(--popup-width); height: var(--popup-height); transform-origin: var(--transform-origin);"
       >
-        <div data-slot="navigation-menu-viewport" class="h-full w-full"></div>
+        <div data-slot="navigation-menu-viewport" class="relative h-full w-full overflow-hidden" hidden></div>
       </div>
     </div>
   </div>
@@ -181,6 +183,10 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
 
 /* Because the popup stack is portaled, target the moving parts directly. */
 .nav-menu-tw-positioner {
+  box-sizing: border-box;
+  width: var(--positioner-width);
+  height: var(--positioner-height);
+  max-width: var(--available-width);
   transition: top 0.22s cubic-bezier(0.32, 0.72, 0, 1),
               left 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -188,9 +194,11 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
   transition: none;
 }
 .nav-menu-tw-popup {
+  position: relative;
+  box-sizing: border-box;
   transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1),
-              width 0.22s cubic-bezier(0.32, 0.72, 0, 1),
-              height 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+              width 0.16s ease,
+              height 0.16s ease,
               opacity 0.16s ease;
   will-change: transform, width, height;
 }
@@ -211,9 +219,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
   pointer-events: none;
 }
 .nav-menu-tw-content {
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
   transform: translateX(0);
   transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
               opacity 0.16s ease;
@@ -337,8 +343,8 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
   
     <div data-slot="navigation-menu-portal">
       <div data-slot="navigation-menu-positioner" class="nav-menu-positioner">
-        <div data-slot="navigation-menu-popup" class="nav-menu-popup">
-          <div data-slot="navigation-menu-viewport" class="nav-menu-viewport"></div>
+        <div data-slot="navigation-menu-popup" class="nav-menu-popup" hidden>
+          <div data-slot="navigation-menu-viewport" class="nav-menu-viewport" hidden></div>
         </div>
       </div>
     </div>
@@ -356,7 +362,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="nav-menu-tw-content absolute left-0 top-0 z-10"
+          class="nav-menu-tw-content z-10"
           hidden
         >
           <div class="grid grid-cols-2 gap-3 w-[380px] p-2">
@@ -388,7 +394,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="nav-menu-tw-content absolute left-0 top-0 z-10"
+          class="nav-menu-tw-content z-10"
           hidden
         >
           <div class="grid grid-cols-2 gap-2 w-[380px] p-2">
@@ -428,7 +434,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="nav-menu-tw-content absolute left-0 top-0 z-10"
+          class="nav-menu-tw-content z-10"
           hidden
         >
           <div class="grid grid-cols-3 gap-3 p-2 w-[520px]">
@@ -468,7 +474,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         </button>
         <div
           data-slot="navigation-menu-content"
-          class="nav-menu-tw-content absolute left-0 top-0 z-10"
+          class="nav-menu-tw-content z-10"
           hidden
         >
           <div class="w-[140px] p-2">
@@ -489,17 +495,18 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
       <div data-slot="navigation-menu-positioner" class="nav-menu-tw-positioner isolate z-50">
         <div
           data-slot="navigation-menu-popup"
-          class="nav-menu-tw-popup absolute top-0 left-0 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_24px_rgba(0,0,0,0.12)]"
-          style="width: var(--popup-width, 0px); height: var(--popup-height, 0px); transform-origin: var(--transform-origin);"
+          class="nav-menu-tw-popup relative overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_24px_rgba(0,0,0,0.12)]"
+          hidden
+          style="width: var(--popup-width); height: var(--popup-height); transform-origin: var(--transform-origin);"
         >
-          <div data-slot="navigation-menu-viewport" class="h-full w-full"></div>
+          <div data-slot="navigation-menu-viewport" class="relative h-full w-full overflow-hidden" hidden></div>
         </div>
       </div>
     </div>
   </nav>
   <div slot="note">
     <p class="mt-3 text-muted">
-      Hover between items. The popup shell animates on full open and close, and the content only slides when switching between panels.
+      Hover between items. The popup shell animates on full open and close, and panel switches resize the shell with CSS while the content slides.
     </p>
     <p class="mt-3 text-muted">
       CSS variables: <code>--popup-width</code>, <code>--popup-height</code>, <code>--positioner-width</code>, <code>--positioner-height</code>, <code>--available-width</code>, <code>--available-height</code>, <code>--transform-origin</code>.

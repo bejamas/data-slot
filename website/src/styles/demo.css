@@ -839,8 +839,12 @@ html {
 
 /* Canonical popup stack */
 .nav-menu-positioner {
+  box-sizing: border-box;
   isolation: isolate;
   z-index: 50;
+  width: var(--positioner-width);
+  height: var(--positioner-height);
+  max-width: var(--available-width);
   top: 0;
   left: 0;
   transition:
@@ -853,11 +857,10 @@ html {
 }
 
 .nav-menu-popup {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: var(--popup-width, 0);
-  height: var(--popup-height, 0);
+  position: relative;
+  box-sizing: border-box;
+  width: var(--popup-width);
+  height: var(--popup-height);
   transform-origin: var(--transform-origin);
   background: var(--bg);
   border-radius: 8px;
@@ -867,8 +870,8 @@ html {
   overflow: hidden;
   transition:
     transform 0.22s cubic-bezier(0.32, 0.72, 0, 1),
-    width 0.22s cubic-bezier(0.32, 0.72, 0, 1),
-    height 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+    width 0.16s ease,
+    height 0.16s ease,
     opacity 0.16s ease;
   opacity: 1;
   will-change: transform, width, height;
@@ -891,15 +894,15 @@ html {
 }
 
 .nav-menu-viewport {
+  position: relative;
+  overflow: hidden;
   width: 100%;
   height: 100%;
 }
 
 /* Content panels live inside the viewport while active. */
 .nav-menu-content {
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
   opacity: 1;
   transform: translateX(0);
   transition:
@@ -1128,6 +1131,10 @@ html.mode-tailwind .preview-css {
 
 /* Navigation Menu: canonical popup stack transitions */
 .nav-menu-tw-positioner {
+  box-sizing: border-box;
+  width: var(--positioner-width) !important;
+  height: var(--positioner-height) !important;
+  max-width: var(--available-width) !important;
   transition-property: top, left !important;
   transition-duration: 0.22s, 0.22s !important;
   transition-timing-function:
@@ -1139,11 +1146,12 @@ html.mode-tailwind .preview-css {
 }
 
 .nav-menu-tw-popup {
+  position: relative;
+  box-sizing: border-box;
   transition-property: transform, width, height, opacity !important;
-  transition-duration: 0.22s, 0.22s, 0.22s, 0.16s !important;
+  transition-duration: 0.22s, 0.16s, 0.16s, 0.16s !important;
   transition-timing-function:
-    cubic-bezier(0.32, 0.72, 0, 1), cubic-bezier(0.32, 0.72, 0, 1),
-    cubic-bezier(0.32, 0.72, 0, 1), ease !important;
+    cubic-bezier(0.32, 0.72, 0, 1), ease, ease, ease !important;
   will-change: transform, width, height;
 }
 
@@ -1165,15 +1173,15 @@ html.mode-tailwind .preview-css {
 }
 
 .preview-tailwind [data-slot="navigation-menu-viewport"] {
+  position: relative;
+  overflow: hidden;
   width: 100%;
   height: 100%;
 }
 
 /* Navigation Menu: content direction-aware animations */
 .nav-menu-tw-content {
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
   transform: translateX(0);
   transition:
     transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
