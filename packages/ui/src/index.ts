@@ -58,6 +58,12 @@ export type {
 export { createSwitch } from "@data-slot/switch";
 export type { SwitchOptions, SwitchController } from "@data-slot/switch";
 
+export { createRadioGroup } from "@data-slot/radio-group";
+export type {
+  RadioGroupOptions,
+  RadioGroupController,
+} from "@data-slot/radio-group";
+
 export { createCombobox } from "@data-slot/combobox";
 export type {
   ComboboxOptions,

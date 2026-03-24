@@ -1,0 +1,381 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div class="radio-card">
+  <div class="radio-heading" id="plan-css-label">Choose a plan</div>
+  <div
+    data-slot="radio-group"
+    data-default-value="pro"
+    data-name="plan"
+    aria-labelledby="plan-css-label"
+    class="radio-group"
+  >
+    <label class="radio-option">
+      <span data-slot="radio-group-item" data-value="starter" class="radio-item">
+        <span data-slot="radio-group-indicator" class="radio-indicator">
+          <span class="radio-dot"></span>
+        </span>
+      </span>
+      Starter
+    </label>
+
+    <label class="radio-option">
+      <span data-slot="radio-group-item" data-value="pro" class="radio-item">
+        <span data-slot="radio-group-indicator" class="radio-indicator">
+          <span class="radio-dot"></span>
+        </span>
+      </span>
+      Pro
+    </label>
+
+    <label class="radio-option radio-option--disabled">
+      <span
+        data-slot="radio-group-item"
+        data-value="enterprise"
+        data-disabled
+        class="radio-item"
+      >
+        <span data-slot="radio-group-indicator" class="radio-indicator">
+          <span class="radio-dot"></span>
+        </span>
+      </span>
+      Enterprise
+    </label>
+  </div>
+</div>
+
+<style>
+  .radio-card {
+    display: grid;
+    gap: 0.875rem;
+    max-width: 18rem;
+  }
+
+  .radio-heading {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .radio-group {
+    display: grid;
+    gap: 0.625rem;
+    width: 100%;
+  }
+
+  .radio-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #111827;
+  }
+
+  .radio-option--disabled {
+    color: #9ca3af;
+  }
+
+  .radio-item {
+    position: relative;
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    background: #fff;
+    outline: none;
+    transition: border-color 150ms ease, background-color 150ms ease;
+  }
+
+  .radio-item[data-checked] {
+    background: #111827;
+    border-color: #111827;
+  }
+
+  .radio-item[data-disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .radio-item:focus-visible {
+    box-shadow: 0 0 0 3px rgb(17 24 39 / 0.18);
+  }
+
+  .radio-indicator {
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .radio-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: #f9fafb;
+    opacity: 0;
+    transform: scale(0.75);
+    transition: opacity 150ms ease, transform 150ms ease;
+  }
+
+  .radio-indicator[data-checked] .radio-dot {
+    opacity: 1;
+    transform: scale(1);
+  }
+</style>`;
+
+const tailwindCode = `<div class="grid max-w-72 gap-3">
+  <div id="plan-tw-label" class="text-sm font-semibold text-gray-900">Choose a plan</div>
+  <div
+    data-slot="radio-group"
+    data-default-value="pro"
+    data-name="plan"
+    aria-labelledby="plan-tw-label"
+    class="grid w-full gap-2"
+  >
+    <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+      <span
+        data-slot="radio-group-item"
+        data-value="starter"
+        class="border-input data-checked:bg-gray-900 data-checked:border-gray-900 focus-visible:ring-gray-900/20 relative inline-flex size-4 shrink-0 rounded-full border bg-white outline-none focus-visible:ring-3"
+      >
+        <span
+          data-slot="radio-group-indicator"
+          class="data-unchecked:opacity-0 data-checked:opacity-100 inline-flex size-4 items-center justify-center transition-opacity"
+        >
+          <span class="size-2 rounded-full bg-gray-50"></span>
+        </span>
+      </span>
+      Starter
+    </label>
+
+    <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+      <span
+        data-slot="radio-group-item"
+        data-value="pro"
+        class="border-input data-checked:bg-gray-900 data-checked:border-gray-900 focus-visible:ring-gray-900/20 relative inline-flex size-4 shrink-0 rounded-full border bg-white outline-none focus-visible:ring-3"
+      >
+        <span
+          data-slot="radio-group-indicator"
+          class="data-unchecked:opacity-0 data-checked:opacity-100 inline-flex size-4 items-center justify-center transition-opacity"
+        >
+          <span class="size-2 rounded-full bg-gray-50"></span>
+        </span>
+      </span>
+      Pro
+    </label>
+
+    <label class="inline-flex items-center gap-3 text-sm text-gray-400">
+      <span
+        data-slot="radio-group-item"
+        data-value="enterprise"
+        data-disabled
+        class="border-input data-checked:bg-gray-900 data-checked:border-gray-900 relative inline-flex size-4 shrink-0 rounded-full border bg-white opacity-50 outline-none"
+      >
+        <span
+          data-slot="radio-group-indicator"
+          class="data-unchecked:opacity-0 data-checked:opacity-100 inline-flex size-4 items-center justify-center transition-opacity"
+        >
+          <span class="size-2 rounded-full bg-gray-50"></span>
+        </span>
+      </span>
+      Enterprise
+    </label>
+  </div>
+</div>`;
+---
+
+<ExampleBlock>
+  <div slot="preview-css" class="radio-card">
+    <div class="radio-heading" id="plan-css-label">Choose a plan</div>
+    <div
+      data-slot="radio-group"
+      data-default-value="pro"
+      data-name="plan"
+      aria-labelledby="plan-css-label"
+      class="radio-group"
+    >
+      <label class="radio-option">
+        <span data-slot="radio-group-item" data-value="starter" class="radio-item">
+          <span data-slot="radio-group-indicator" class="radio-indicator">
+            <span class="radio-dot"></span>
+          </span>
+        </span>
+        Starter
+      </label>
+
+      <label class="radio-option">
+        <span data-slot="radio-group-item" data-value="pro" class="radio-item">
+          <span data-slot="radio-group-indicator" class="radio-indicator">
+            <span class="radio-dot"></span>
+          </span>
+        </span>
+        Pro
+      </label>
+
+      <label class="radio-option radio-option--disabled">
+        <span
+          data-slot="radio-group-item"
+          data-value="enterprise"
+          data-disabled
+          class="radio-item"
+        >
+          <span data-slot="radio-group-indicator" class="radio-indicator">
+            <span class="radio-dot"></span>
+          </span>
+        </span>
+        Enterprise
+      </label>
+    </div>
+  </div>
+
+  <div slot="preview-tailwind" class="grid max-w-72 gap-3">
+    <div id="plan-tw-label" class="text-sm font-semibold text-gray-900">Choose a plan</div>
+    <div
+      data-slot="radio-group"
+      data-default-value="pro"
+      data-name="plan"
+      aria-labelledby="plan-tw-label"
+      class="grid w-full gap-2"
+    >
+      <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+        <span
+          data-slot="radio-group-item"
+          data-value="starter"
+          class="data-checked:bg-gray-900 data-checked:border-gray-900 focus-visible:ring-gray-900/20 relative inline-flex size-4 shrink-0 rounded-full border border-gray-300 bg-white outline-none focus-visible:ring-3"
+        >
+          <span
+            data-slot="radio-group-indicator"
+            class="data-unchecked:opacity-0 data-checked:opacity-100 inline-flex size-4 items-center justify-center transition-opacity"
+          >
+            <span class="size-2 rounded-full bg-gray-50"></span>
+          </span>
+        </span>
+        Starter
+      </label>
+
+      <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+        <span
+          data-slot="radio-group-item"
+          data-value="pro"
+          class="data-checked:bg-gray-900 data-checked:border-gray-900 focus-visible:ring-gray-900/20 relative inline-flex size-4 shrink-0 rounded-full border border-gray-300 bg-white outline-none focus-visible:ring-3"
+        >
+          <span
+            data-slot="radio-group-indicator"
+            class="data-unchecked:opacity-0 data-checked:opacity-100 inline-flex size-4 items-center justify-center transition-opacity"
+          >
+            <span class="size-2 rounded-full bg-gray-50"></span>
+          </span>
+        </span>
+        Pro
+      </label>
+
+      <label class="inline-flex items-center gap-3 text-sm text-gray-400">
+        <span
+          data-slot="radio-group-item"
+          data-value="enterprise"
+          data-disabled
+          class="data-checked:bg-gray-900 data-checked:border-gray-900 relative inline-flex size-4 shrink-0 rounded-full border border-gray-300 bg-white opacity-50 outline-none"
+        >
+          <span
+            data-slot="radio-group-indicator"
+            class="data-unchecked:opacity-0 data-checked:opacity-100 inline-flex size-4 items-center justify-center transition-opacity"
+          >
+            <span class="size-2 rounded-full bg-gray-50"></span>
+          </span>
+        </span>
+        Enterprise
+      </label>
+    </div>
+  </div>
+
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+
+<style>
+  .radio-card {
+    display: grid;
+    gap: 0.875rem;
+    max-width: 18rem;
+  }
+
+  .radio-heading {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .radio-group {
+    display: grid;
+    gap: 0.625rem;
+    width: 100%;
+  }
+
+  .radio-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #111827;
+  }
+
+  .radio-option--disabled {
+    color: #9ca3af;
+  }
+
+  .radio-item {
+    position: relative;
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    background: #fff;
+    outline: none;
+    transition: border-color 150ms ease, background-color 150ms ease;
+  }
+
+  .radio-item[data-checked] {
+    background: #111827;
+    border-color: #111827;
+  }
+
+  .radio-item[data-disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .radio-item:focus-visible {
+    box-shadow: 0 0 0 3px rgb(17 24 39 / 0.18);
+  }
+
+  .radio-indicator {
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .radio-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: #f9fafb;
+    opacity: 0;
+    transform: scale(0.75);
+    transition: opacity 150ms ease, transform 150ms ease;
+  }
+
+  .radio-indicator[data-checked] .radio-dot {
+    opacity: 1;
+    transform: scale(1);
+  }
+</style>

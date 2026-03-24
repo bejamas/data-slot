@@ -60,6 +60,12 @@
     "description": "Tabbed interfaces, kbd nav"
   },
   {
+    "name": "@data-slot/radio-group",
+    "size": 2366,
+    "sizeFormatted": "2.3 KB",
+    "description": "Single-select radios, form-ready"
+  },
+  {
     "name": "@data-slot/popover",
     "size": 2064,
     "sizeFormatted": "2.0 KB",

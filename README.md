@@ -71,6 +71,7 @@ All packages are independently installable. Each package includes its own README
 | `@data-slot/command`         | 4.7 KB | Command palette with search | [README](packages/command/README.md)         |
 | `@data-slot/hover-card`      | 2.6 KB | Hover/focus preview cards   | [README](packages/hover-card/README.md)      |
 | `@data-slot/tabs`            | 2.3 KB | Tabbed interfaces, kbd nav  | [README](packages/tabs/README.md)            |
+| `@data-slot/radio-group`     | 2.3 KB | Single-select radios, form-ready | [README](packages/radio-group/README.md) |
 | `@data-slot/tooltip`         | 2.2 KB | Hover/focus tooltips        | [README](packages/tooltip/README.md)         |
 | `@data-slot/popover`         | 2.0 KB | Anchored floating content   | [README](packages/popover/README.md)         |
 | `@data-slot/dialog`          | 1.9 KB | Modal dialogs, focus trap   | [README](packages/dialog/README.md)          |

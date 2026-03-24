@@ -86,6 +86,12 @@
       "require": "./dist/switch.cjs",
       "default": "./dist/switch.js"
     },
+    "./radio-group": {
+      "types": "./dist/radio-group.d.ts",
+      "import": "./dist/radio-group.js",
+      "require": "./dist/radio-group.cjs",
+      "default": "./dist/radio-group.js"
+    },
     "./toggle": {
       "types": "./dist/toggle.d.ts",
       "import": "./dist/toggle.js",
@@ -136,6 +142,7 @@
     "@data-slot/navigation-menu": "workspace:*",
     "@data-slot/dropdown-menu": "workspace:*",
     "@data-slot/switch": "workspace:*",
+    "@data-slot/radio-group": "workspace:*",
     "@data-slot/toggle": "workspace:*",
     "@data-slot/toggle-group": "workspace:*",
     "@data-slot/select": "workspace:*",

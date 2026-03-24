@@ -23,6 +23,7 @@ import Combobox from "../components/examples/Combobox.astro";
 import Command from "../components/examples/Command.astro";
 import Slider from "../components/examples/Slider.astro";
 import Switch from "../components/examples/Switch.astro";
+import RadioGroup from "../components/examples/RadioGroup.astro";
 import Toggle from "../components/examples/Toggle.astro";
 import ToggleGroup from "../components/examples/ToggleGroup.astro";
 
@@ -178,6 +179,10 @@ bun add @data-slot/dialog`}
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Switch</h3>
   <Switch />
 
+  <!-- Radio Group -->
+  <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Radio Group</h3>
+  <RadioGroup />
+
   <!-- Toggle -->
   <h3 class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Toggle</h3>
   <Toggle />
@@ -241,6 +246,7 @@ bun add @data-slot/dialog`}
   import { createCommand } from "../../../packages/command/dist/index.js";
   import { createSlider } from "../../../packages/slider/dist/index.js";
   import { createSwitch } from "../../../packages/switch/dist/index.js";
+  import { createRadioGroup } from "../../../packages/radio-group/dist/index.js";
   import { createToggle } from "../../../packages/toggle/dist/index.js";
   import { createToggleGroup } from "../../../packages/toggle-group/dist/index.js";
 
@@ -303,6 +309,9 @@ bun add @data-slot/dialog`}
   );
   document.querySelectorAll('[data-slot="switch"]').forEach((el) =>
     createSwitch(el as HTMLElement)
+  );
+  document.querySelectorAll('[data-slot="radio-group"]').forEach((el) =>
+    createRadioGroup(el as HTMLElement)
   );
   document.querySelectorAll('[data-slot="toggle"]').forEach((el) =>
     createToggle(el as HTMLElement)

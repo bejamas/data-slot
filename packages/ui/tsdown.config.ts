@@ -15,6 +15,7 @@ export default defineConfig({
     "src/navigation-menu.ts",
     "src/dropdown-menu.ts",
     "src/switch.ts",
+    "src/radio-group.ts",
     "src/toggle.ts",
     "src/toggle-group.ts",
     "src/select.ts",
