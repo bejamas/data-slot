@@ -21,7 +21,7 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 | `@data-slot/command` | 4.7 KB | Command palette with ranked search |
 | `@data-slot/combobox` | 4.5 KB | Autocomplete input with filtering |
 | `@data-slot/select` | 4.0 KB | Select input with keyboard navigation |
-| `@data-slot/dropdown-menu` | 2.7 KB | Action menus with keyboard navigation |
+| `@data-slot/dropdown-menu` | 2.7 KB | Action and selection menus with keyboard navigation |
 | `@data-slot/hover-card` | 2.6 KB | Hover/focus preview cards |
 | `@data-slot/tabs` | 2.3 KB | Tabbed interfaces with keyboard nav |
 | `@data-slot/tooltip` | 2.2 KB | Hover/focus tooltips |
@@ -170,6 +170,7 @@ With Tailwind:
 | `createTooltip` | @data-slot/tooltip |
 | `createCollapsible` | @data-slot/collapsible |
 | `createNavigationMenu` | @data-slot/navigation-menu |
+| `createDropdownMenu` | @data-slot/dropdown-menu |
 | `createSwitch` | @data-slot/switch |
 | `createCombobox` | @data-slot/combobox |
 | `createCommand` | @data-slot/command |
@@ -187,6 +188,7 @@ With Tailwind:
 | `TooltipOptions`, `TooltipController` | @data-slot/tooltip |
 | `CollapsibleOptions`, `CollapsibleController` | @data-slot/collapsible |
 | `NavigationMenuOptions`, `NavigationMenuController` | @data-slot/navigation-menu |
+| `DropdownMenuOptions`, `DropdownMenuController` | @data-slot/dropdown-menu |
 | `SwitchOptions`, `SwitchController` | @data-slot/switch |
 | `ComboboxOptions`, `ComboboxController` | @data-slot/combobox |
 | `CommandOptions`, `CommandController`, `CommandFilter` | @data-slot/command |

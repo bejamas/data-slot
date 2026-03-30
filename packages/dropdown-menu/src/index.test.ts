@@ -5,6 +5,8 @@ import { resetScrollLock } from "../../core/src/scroll";
 
 describe("DropdownMenu", () => {
   const ROOT_BINDING_KEY = "@data-slot/dropdown-menu";
+  const ITEM_SELECTOR =
+    '[data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-checkbox-item"]';
 
   const setup = (
     options: Parameters<typeof createDropdownMenu>[1] = {},
@@ -33,7 +35,7 @@ describe("DropdownMenu", () => {
       '[data-slot="dropdown-menu-content"]'
     ) as HTMLElement;
     const items = document.querySelectorAll(
-      '[data-slot="dropdown-menu-item"]'
+      ITEM_SELECTOR
     ) as NodeListOf<HTMLElement>;
     const controller = createDropdownMenu(root, options);
 
@@ -422,6 +424,324 @@ describe("DropdownMenu", () => {
       items[3]?.click(); // Disabled item
 
       expect(selectedValue).toBeUndefined();
+
+      controller.destroy();
+    });
+  });
+
+  describe("selection state", () => {
+    it("initializes radio and checkbox selection without firing commit callbacks", () => {
+      let valueChanges = 0;
+      let valuesChanges = 0;
+
+      const { root, controller } = setup(
+        {
+          defaultValues: ["sms"],
+          onValueChange: () => {
+            valueChanges++;
+          },
+          onValuesChange: () => {
+            valuesChanges++;
+          },
+        },
+        `
+        <div data-slot="dropdown-menu" id="root" data-default-value="pro">
+          <button data-slot="dropdown-menu-trigger">Options</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-radio-item" data-value="starter" data-default-checked>Starter</button>
+            <button data-slot="dropdown-menu-radio-item" data-value="pro">Pro</button>
+            <button data-slot="dropdown-menu-checkbox-item" data-value="email" data-default-checked>Email</button>
+            <button data-slot="dropdown-menu-checkbox-item" data-value="sms">SMS</button>
+          </div>
+        </div>
+      `
+      );
+      const radioItems = root.querySelectorAll(
+        '[data-slot="dropdown-menu-radio-item"]'
+      ) as NodeListOf<HTMLElement>;
+      const checkboxItems = root.querySelectorAll(
+        '[data-slot="dropdown-menu-checkbox-item"]'
+      ) as NodeListOf<HTMLElement>;
+
+      expect(controller.value).toBe("pro");
+      expect(controller.values).toEqual(["sms"]);
+      expect(root.getAttribute("data-value")).toBe("pro");
+      expect(radioItems[0]?.hasAttribute("data-checked")).toBe(false);
+      expect(radioItems[1]?.hasAttribute("data-checked")).toBe(true);
+      expect(checkboxItems[0]?.hasAttribute("data-checked")).toBe(false);
+      expect(checkboxItems[1]?.hasAttribute("data-checked")).toBe(true);
+      expect(valueChanges).toBe(0);
+      expect(valuesChanges).toBe(0);
+
+      controller.destroy();
+    });
+
+    it("ignores non-string checkbox values from defaults and controller.set", () => {
+      const { controller } = setup(
+        {
+          defaultValues: ["email", null, 42, "   "] as unknown as string[],
+        },
+        `
+        <div data-slot="dropdown-menu" id="root">
+          <button data-slot="dropdown-menu-trigger">Options</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-checkbox-item" data-value="email">Email</button>
+            <button data-slot="dropdown-menu-checkbox-item" data-value="sms">SMS</button>
+          </div>
+        </div>
+      `
+      );
+
+      expect(controller.values).toEqual(["email"]);
+
+      controller.set({
+        values: ["sms", null, 7, " "] as unknown as string[],
+      });
+
+      expect(controller.values).toEqual(["sms"]);
+
+      controller.destroy();
+    });
+
+    it("commits radio selection and emits value-change before open-change", () => {
+      const { root, trigger, controller } = setup(
+        {},
+        `
+        <div data-slot="dropdown-menu" id="root">
+          <button data-slot="dropdown-menu-trigger">Options</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-radio-item" data-value="starter">Starter</button>
+            <button data-slot="dropdown-menu-radio-item" data-value="pro">Pro</button>
+          </div>
+        </div>
+      `
+      );
+      const radioItems = root.querySelectorAll(
+        '[data-slot="dropdown-menu-radio-item"]'
+      ) as NodeListOf<HTMLElement>;
+      const order: string[] = [];
+      let valueDetail: CustomEvent["detail"] | undefined;
+
+      root.addEventListener("dropdown-menu:value-change", (event) => {
+        order.push("value-change");
+        valueDetail = (event as CustomEvent).detail;
+      });
+      root.addEventListener("dropdown-menu:open-change", () => {
+        order.push("open-change");
+      });
+
+      trigger.click();
+      order.length = 0;
+      radioItems[1]?.click();
+
+      expect(order).toEqual(["value-change", "open-change"]);
+      expect(valueDetail).toEqual({
+        value: "pro",
+        previousValue: null,
+        item: radioItems[1],
+        previousItem: null,
+        source: "pointer",
+      });
+      expect(controller.value).toBe("pro");
+      expect(root.getAttribute("data-value")).toBe("pro");
+      expect(radioItems[0]?.getAttribute("role")).toBe("menuitemradio");
+      expect(radioItems[0]?.getAttribute("aria-checked")).toBe("false");
+      expect(radioItems[1]?.getAttribute("aria-checked")).toBe("true");
+      expect(radioItems[0]?.hasAttribute("data-checked")).toBe(false);
+      expect(radioItems[1]?.hasAttribute("data-checked")).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("commits checkbox selection without closing when closeOnSelect is false", () => {
+      const { root, trigger, controller } = setup(
+        { closeOnSelect: false },
+        `
+        <div data-slot="dropdown-menu" id="root">
+          <button data-slot="dropdown-menu-trigger">Options</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-checkbox-item" data-value="email">Email</button>
+            <button data-slot="dropdown-menu-checkbox-item" data-value="sms">SMS</button>
+          </div>
+        </div>
+      `
+      );
+      const checkboxItems = root.querySelectorAll(
+        '[data-slot="dropdown-menu-checkbox-item"]'
+      ) as NodeListOf<HTMLElement>;
+      let valuesDetail: CustomEvent["detail"] | undefined;
+
+      root.addEventListener("dropdown-menu:values-change", (event) => {
+        valuesDetail = (event as CustomEvent).detail;
+      });
+
+      trigger.click();
+      checkboxItems[0]?.click();
+
+      expect(valuesDetail).toEqual({
+        values: ["email"],
+        previousValues: [],
+        changedValue: "email",
+        checked: true,
+        item: checkboxItems[0],
+        source: "pointer",
+      });
+      expect(controller.values).toEqual(["email"]);
+      expect(controller.isOpen).toBe(true);
+      expect(checkboxItems[0]?.getAttribute("role")).toBe("menuitemcheckbox");
+      expect(checkboxItems[0]?.getAttribute("aria-checked")).toBe("true");
+      expect(checkboxItems[0]?.hasAttribute("data-checked")).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("supports canceling dropdown-menu:select before commit and close", () => {
+      const { root, trigger, controller } = setup(
+        {},
+        `
+        <div data-slot="dropdown-menu" id="root">
+          <button data-slot="dropdown-menu-trigger">Options</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-radio-item" data-value="starter">Starter</button>
+            <button data-slot="dropdown-menu-radio-item" data-value="pro">Pro</button>
+          </div>
+        </div>
+      `
+      );
+      const radioItems = root.querySelectorAll(
+        '[data-slot="dropdown-menu-radio-item"]'
+      ) as NodeListOf<HTMLElement>;
+      let valueChangeCount = 0;
+
+      root.addEventListener("dropdown-menu:select", (event) => {
+        event.preventDefault();
+      });
+      root.addEventListener("dropdown-menu:value-change", () => {
+        valueChangeCount++;
+      });
+
+      trigger.click();
+      radioItems[1]?.click();
+
+      expect(controller.value).toBeNull();
+      expect(controller.isOpen).toBe(true);
+      expect(valueChangeCount).toBe(0);
+      expect(root.hasAttribute("data-value")).toBe(false);
+
+      controller.destroy();
+    });
+
+    it("emits select for an already-selected radio item without emitting value-change", () => {
+      const { root, trigger, controller } = setup(
+        { defaultValue: "starter", closeOnSelect: false },
+        `
+        <div data-slot="dropdown-menu" id="root">
+          <button data-slot="dropdown-menu-trigger">Options</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-radio-item" data-value="starter">Starter</button>
+            <button data-slot="dropdown-menu-radio-item" data-value="pro">Pro</button>
+          </div>
+        </div>
+      `
+      );
+      const radioItems = root.querySelectorAll(
+        '[data-slot="dropdown-menu-radio-item"]'
+      ) as NodeListOf<HTMLElement>;
+      let selectDetail: CustomEvent["detail"] | undefined;
+      let valueChangeCount = 0;
+
+      root.addEventListener("dropdown-menu:select", (event) => {
+        selectDetail = (event as CustomEvent).detail;
+      });
+      root.addEventListener("dropdown-menu:value-change", () => {
+        valueChangeCount++;
+      });
+
+      trigger.click();
+      radioItems[0]?.click();
+
+      expect(selectDetail).toEqual({
+        value: "starter",
+        item: radioItems[0],
+        itemType: "radio",
+        source: "pointer",
+        checked: true,
+      });
+      expect(valueChangeCount).toBe(0);
+      expect(controller.value).toBe("starter");
+      expect(controller.isOpen).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("emits commit updates when cached items invalidate selection", () => {
+      let callbackValue: string | null | undefined;
+      let callbackValues: string[] | undefined;
+
+      const { root, controller } = setup(
+        {
+          defaultValue: "pro",
+          defaultValues: ["sms"],
+          onValueChange: (value) => {
+            callbackValue = value;
+          },
+          onValuesChange: (values) => {
+            callbackValues = values;
+          },
+        },
+        `
+        <div data-slot="dropdown-menu" id="root">
+          <button data-slot="dropdown-menu-trigger">Options</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-radio-item" data-value="starter">Starter</button>
+            <button data-slot="dropdown-menu-radio-item" data-value="pro">Pro</button>
+            <button data-slot="dropdown-menu-checkbox-item" data-value="email">Email</button>
+            <button data-slot="dropdown-menu-checkbox-item" data-value="sms">SMS</button>
+          </div>
+        </div>
+      `
+      );
+      const removedRadio = root.querySelector(
+        '[data-slot="dropdown-menu-radio-item"][data-value="pro"]'
+      ) as HTMLElement;
+      const removedCheckbox = root.querySelector(
+        '[data-slot="dropdown-menu-checkbox-item"][data-value="sms"]'
+      ) as HTMLElement;
+      let valueDetail: CustomEvent["detail"] | undefined;
+      let valuesDetail: CustomEvent["detail"] | undefined;
+
+      root.addEventListener("dropdown-menu:value-change", (event) => {
+        valueDetail = (event as CustomEvent).detail;
+      });
+      root.addEventListener("dropdown-menu:values-change", (event) => {
+        valuesDetail = (event as CustomEvent).detail;
+      });
+
+      removedRadio.remove();
+      removedCheckbox.remove();
+
+      controller.open();
+
+      expect(valueDetail).toEqual({
+        value: null,
+        previousValue: "pro",
+        item: null,
+        previousItem: removedRadio,
+        source: "programmatic",
+      });
+      expect(valuesDetail).toEqual({
+        values: [],
+        previousValues: ["sms"],
+        changedValue: "sms",
+        checked: false,
+        item: removedCheckbox,
+        source: "programmatic",
+      });
+      expect(callbackValue).toBeNull();
+      expect(callbackValues).toEqual([]);
+      expect(controller.value).toBeNull();
+      expect(controller.values).toEqual([]);
+      expect(root.hasAttribute("data-value")).toBe(false);
 
       controller.destroy();
     });
@@ -822,6 +1142,98 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
 
+    it("emits dropdown-menu:open-change with source and reason", () => {
+      const { root, controller } = setup();
+      const details: Array<Record<string, unknown>> = [];
+
+      root.addEventListener("dropdown-menu:open-change", (event) => {
+        details.push((event as CustomEvent).detail);
+      });
+
+      controller.open();
+      controller.close();
+
+      expect(details).toEqual([
+        {
+          open: true,
+          previousOpen: false,
+          source: "programmatic",
+          reason: "programmatic",
+        },
+        {
+          open: false,
+          previousOpen: true,
+          source: "programmatic",
+          reason: "programmatic",
+        },
+      ]);
+
+      controller.destroy();
+    });
+
+    it("emits highlight-change with null value when highlight clears", () => {
+      const { root, trigger, content, items, controller } = setup();
+      const details: Array<Record<string, unknown>> = [];
+
+      root.addEventListener("dropdown-menu:highlight-change", (event) => {
+        details.push((event as CustomEvent).detail);
+      });
+
+      trigger.click();
+      items[1]?.dispatchEvent(
+        new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })
+      );
+      content.dispatchEvent(
+        new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse" })
+      );
+
+      expect(details).toHaveLength(2);
+      expect(details[0]).toEqual({
+        value: "copy",
+        previousValue: null,
+        item: items[1],
+        previousItem: null,
+        source: "pointer",
+      });
+      expect(details[1]).toEqual({
+        value: null,
+        previousValue: "copy",
+        item: null,
+        previousItem: items[1],
+        source: "pointer",
+      });
+
+      controller.destroy();
+    });
+
+    it("emits init source and reason for defaultOpen", () => {
+      document.body.innerHTML = `
+        <div data-slot="dropdown-menu" id="root">
+          <button data-slot="dropdown-menu-trigger">Open</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-item">Item</button>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      let detail: CustomEvent["detail"] | undefined;
+
+      root.addEventListener("dropdown-menu:open-change", (event) => {
+        detail = (event as CustomEvent).detail;
+      });
+
+      const controller = createDropdownMenu(root, { defaultOpen: true });
+
+      expect(detail).toEqual({
+        open: true,
+        previousOpen: false,
+        source: "init",
+        reason: "init",
+      });
+
+      controller.destroy();
+    });
+
     it("calls onOpenChange callback", () => {
       let lastOpen: boolean | undefined;
       const { controller } = setup({
@@ -835,6 +1247,117 @@ describe("DropdownMenu", () => {
 
       controller.close();
       expect(lastOpen).toBe(false);
+
+      controller.destroy();
+    });
+  });
+
+  describe("programmatic set", () => {
+    it("commits radio selection through controller.set without emitting select", () => {
+      const { root, controller } = setup(
+        {},
+        `
+        <div data-slot="dropdown-menu" id="root">
+          <button data-slot="dropdown-menu-trigger">Options</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-radio-item" data-value="starter">Starter</button>
+            <button data-slot="dropdown-menu-radio-item" data-value="pro">Pro</button>
+          </div>
+        </div>
+      `
+      );
+      let selectCount = 0;
+      let valueDetail: CustomEvent["detail"] | undefined;
+
+      root.addEventListener("dropdown-menu:select", () => {
+        selectCount++;
+      });
+      root.addEventListener("dropdown-menu:value-change", (event) => {
+        valueDetail = (event as CustomEvent).detail;
+      });
+
+      controller.set({ value: "pro" });
+
+      expect(selectCount).toBe(0);
+      expect(valueDetail).toEqual({
+        value: "pro",
+        previousValue: null,
+        item: root.querySelector('[data-slot="dropdown-menu-radio-item"][data-value="pro"]'),
+        previousItem: null,
+        source: "programmatic",
+      });
+      expect(controller.value).toBe("pro");
+      expect(root.getAttribute("data-value")).toBe("pro");
+
+      controller.destroy();
+    });
+
+    it("stays silent for no-op controller.set commits and init callbacks", () => {
+      let valueChanges = 0;
+      let valuesChanges = 0;
+      const { controller } = setup(
+        {
+          defaultValue: "starter",
+          defaultValues: ["email"],
+          onValueChange: () => {
+            valueChanges++;
+          },
+          onValuesChange: () => {
+            valuesChanges++;
+          },
+        },
+        `
+        <div data-slot="dropdown-menu" id="root">
+          <button data-slot="dropdown-menu-trigger">Options</button>
+          <div data-slot="dropdown-menu-content">
+            <button data-slot="dropdown-menu-radio-item" data-value="starter">Starter</button>
+            <button data-slot="dropdown-menu-checkbox-item" data-value="email">Email</button>
+          </div>
+        </div>
+      `
+      );
+
+      controller.set({ value: "starter" });
+      controller.set({ values: ["email"] });
+
+      expect(valueChanges).toBe(0);
+      expect(valuesChanges).toBe(0);
+
+      controller.destroy();
+    });
+
+    it("ignores unknown value and values targets without throwing", () => {
+      const { root, controller } = setup();
+      let valueChangeCount = 0;
+      let valuesChangeCount = 0;
+
+      root.addEventListener("dropdown-menu:value-change", () => {
+        valueChangeCount++;
+      });
+      root.addEventListener("dropdown-menu:values-change", () => {
+        valuesChangeCount++;
+      });
+
+      expect(() => {
+        controller.set({ value: "missing" });
+        controller.set({ values: ["missing"] });
+      }).not.toThrow();
+      expect(valueChangeCount).toBe(0);
+      expect(valuesChangeCount).toBe(0);
+      expect(controller.value).toBeNull();
+      expect(controller.values).toEqual([]);
+
+      controller.destroy();
+    });
+
+    it("supports deprecated dropdown-menu:set { value: boolean } for open state", () => {
+      const { root, controller } = setup();
+
+      root.dispatchEvent(new CustomEvent("dropdown-menu:set", { detail: { value: true } }));
+      expect(controller.isOpen).toBe(true);
+
+      root.dispatchEvent(new CustomEvent("dropdown-menu:set", { detail: { value: false } }));
+      expect(controller.isOpen).toBe(false);
 
       controller.destroy();
     });
@@ -924,8 +1447,18 @@ describe("DropdownMenu", () => {
         open() {},
         close() {},
         toggle() {},
+        set() {},
         get isOpen() {
           return false;
+        },
+        get value() {
+          return null;
+        },
+        get values() {
+          return [];
+        },
+        get highlightedValue() {
+          return null;
         },
         destroy() {
           clearRootBinding(root, ROOT_BINDING_KEY, foreignController);
@@ -959,8 +1492,18 @@ describe("DropdownMenu", () => {
         open() {},
         close() {},
         toggle() {},
+        set() {},
         get isOpen() {
           return false;
+        },
+        get value() {
+          return null;
+        },
+        get values() {
+          return [];
+        },
+        get highlightedValue() {
+          return null;
         },
         destroy() {
           clearRootBinding(root, ROOT_BINDING_KEY, foreignController);

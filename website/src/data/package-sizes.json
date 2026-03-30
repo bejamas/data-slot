@@ -1,8 +1,8 @@
 [
   {
     "name": "@data-slot/navigation-menu",
-    "size": 10274,
-    "sizeFormatted": "10.0 KB",
+    "size": 10508,
+    "sizeFormatted": "10.3 KB",
     "description": "Dropdown navigation menus"
   },
   {
@@ -10,6 +10,12 @@
     "size": 5969,
     "sizeFormatted": "5.8 KB",
     "description": "Shared utilities"
+  },
+  {
+    "name": "@data-slot/dropdown-menu",
+    "size": 4923,
+    "sizeFormatted": "4.8 KB",
+    "description": "Action menus, kbd nav"
   },
   {
     "name": "@data-slot/command",
@@ -42,12 +48,6 @@
     "description": "Hover/focus tooltips"
   },
   {
-    "name": "@data-slot/dropdown-menu",
-    "size": 2772,
-    "sizeFormatted": "2.7 KB",
-    "description": "Action menus, kbd nav"
-  },
-  {
     "name": "@data-slot/slider",
     "size": 2732,
     "sizeFormatted": "2.7 KB",
@@ -58,12 +58,6 @@
     "size": 2368,
     "sizeFormatted": "2.3 KB",
     "description": "Tabbed interfaces, kbd nav"
-  },
-  {
-    "name": "@data-slot/radio-group",
-    "size": 2366,
-    "sizeFormatted": "2.3 KB",
-    "description": "Single-select radios, form-ready"
   },
   {
     "name": "@data-slot/popover",

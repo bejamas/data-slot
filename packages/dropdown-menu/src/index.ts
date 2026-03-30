@@ -1,9 +1,9 @@
 import {
   getPart,
-  getParts,
   getRoots,
   getDataBool,
   getDataNumber,
+  getDataString,
   getDataEnum,
   hasRootBinding,
   reuseRootBinding,
@@ -24,6 +24,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createDismissLayer,
+  containsWithPortals,
 } from "@data-slot/core";
 
 /** Side of the trigger to place the content */
@@ -34,13 +35,83 @@ const SIDES = ["top", "right", "bottom", "left"] as const;
 export type Align = "start" | "center" | "end";
 const ALIGNS = ["start", "center", "end"] as const;
 
+export type DropdownMenuItemType = "item" | "radio" | "checkbox";
+export type DropdownMenuUserSource = "pointer" | "keyboard";
+export type DropdownMenuSetSource = "programmatic" | "restore";
+export type DropdownMenuSelectionSource = DropdownMenuUserSource | DropdownMenuSetSource;
+export type DropdownMenuOpenChangeSource = DropdownMenuSelectionSource | "init";
+export type DropdownMenuOpenChangeReason =
+  | "trigger"
+  | "select"
+  | "outside"
+  | "escape"
+  | "tab"
+  | "programmatic"
+  | "init";
+
+export interface DropdownMenuOpenChangeDetail {
+  open: boolean;
+  previousOpen: boolean;
+  source: DropdownMenuOpenChangeSource;
+  reason: DropdownMenuOpenChangeReason;
+}
+
+export interface DropdownMenuHighlightChangeDetail {
+  value: string | null;
+  previousValue: string | null;
+  item: HTMLElement | null;
+  previousItem: HTMLElement | null;
+  source: DropdownMenuSelectionSource;
+}
+
+export interface DropdownMenuSelectDetail {
+  value: string;
+  item: HTMLElement;
+  itemType: DropdownMenuItemType;
+  source: DropdownMenuUserSource;
+  checked?: boolean;
+}
+
+export interface DropdownMenuValueChangeDetail {
+  value: string | null;
+  previousValue: string | null;
+  item: HTMLElement | null;
+  previousItem: HTMLElement | null;
+  source: DropdownMenuSelectionSource;
+}
+
+export interface DropdownMenuValuesChangeDetail {
+  values: string[];
+  previousValues: string[];
+  changedValue: string | null;
+  checked: boolean | null;
+  item: HTMLElement | null;
+  source: DropdownMenuSelectionSource;
+}
+
+export interface DropdownMenuSetDetail {
+  open?: boolean;
+  value?: string | null;
+  values?: string[];
+  highlightedValue?: string | null;
+  source?: DropdownMenuSetSource;
+}
+
 export interface DropdownMenuOptions {
   /** Initial open state */
   defaultOpen?: boolean;
+  /** Initial radio selection state */
+  defaultValue?: string | null;
+  /** Initial checkbox selection state */
+  defaultValues?: string[];
   /** Callback when open state changes */
   onOpenChange?: (open: boolean) => void;
-  /** Callback when an item is selected */
+  /** Callback when a user activation is accepted */
   onSelect?: (value: string) => void;
+  /** Callback when the committed radio value changes */
+  onValueChange?: (value: string | null) => void;
+  /** Callback when the committed checkbox values change */
+  onValuesChange?: (values: string[]) => void;
   /** Close when clicking outside */
   closeOnClickOutside?: boolean;
   /** Close when pressing Escape */
@@ -100,15 +171,138 @@ export interface DropdownMenuController {
   close(): void;
   /** Toggle the dropdown menu */
   toggle(): void;
+  /** Set one or more dropdown menu state fields programmatically */
+  set(detail: DropdownMenuSetDetail): void;
   /** Current open state */
   readonly isOpen: boolean;
+  /** Current committed radio value */
+  readonly value: string | null;
+  /** Current committed checkbox values */
+  readonly values: string[];
+  /** Current highlighted value */
+  readonly highlightedValue: string | null;
   /** Cleanup all event listeners */
   destroy(): void;
+}
+
+interface DropdownMenuItemRecord {
+  el: HTMLElement;
+  type: DropdownMenuItemType;
+  value: string | null;
+}
+
+interface OpenTransitionOptions {
+  source: DropdownMenuOpenChangeSource;
+  reason: DropdownMenuOpenChangeReason;
+}
+
+interface HighlightUpdateOptions {
+  source: DropdownMenuSelectionSource;
+  focus?: boolean;
+  focusContentOnClear?: boolean;
+}
+
+interface CheckboxDiff {
+  changedValue: string | null;
+  checked: boolean | null;
+  item: HTMLElement | null;
+}
+
+interface CacheItemsOptions {
+  source?: DropdownMenuSelectionSource;
+  emitSelectionInvalidation?: boolean;
 }
 
 const ROOT_BINDING_KEY = "@data-slot/dropdown-menu";
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/dropdown-menu] createDropdownMenu() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
+const ITEM_SELECTOR =
+  '[data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-checkbox-item"]';
+
+const hasOwn = <K extends string>(value: object, key: K): value is Record<K, unknown> =>
+  Object.prototype.hasOwnProperty.call(value, key);
+
+const setPresence = (el: Element, name: string, present: boolean): void => {
+  if (present) {
+    el.setAttribute(name, "");
+  } else {
+    el.removeAttribute(name);
+  }
+};
+
+const arraysEqual = (left: readonly string[], right: readonly string[]): boolean => {
+  if (left.length !== right.length) return false;
+  for (let i = 0; i < left.length; i++) {
+    if (left[i] !== right[i]) return false;
+  }
+  return true;
+};
+
+const dispatchCustomEvent = <T>(
+  el: Element,
+  name: string,
+  detail: T,
+  cancelable = false,
+): boolean => {
+  return el.dispatchEvent(
+    new CustomEvent(name, {
+      bubbles: true,
+      cancelable,
+      detail,
+    }),
+  );
+};
+
+const getItemRole = (type: DropdownMenuItemType): string => {
+  switch (type) {
+    case "radio":
+      return "menuitemradio";
+    case "checkbox":
+      return "menuitemcheckbox";
+    default:
+      return "menuitem";
+  }
+};
+
+const getItemType = (el: HTMLElement): DropdownMenuItemType => {
+  const slot = el.getAttribute("data-slot");
+  if (slot === "dropdown-menu-radio-item") return "radio";
+  if (slot === "dropdown-menu-checkbox-item") return "checkbox";
+  return "item";
+};
+
+const readSelectableValue = (el: HTMLElement): string | null => {
+  const rawValue = el.dataset["value"];
+  if (rawValue === undefined) return null;
+  const trimmed = rawValue.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const readActionValue = (item: DropdownMenuItemRecord): string => {
+  if (item.type !== "item") {
+    return item.value ?? "";
+  }
+  if (item.value) {
+    return item.value;
+  }
+  return item.el.textContent?.trim() ?? "";
+};
+
+const parseDefaultValues = (raw: string | undefined): string[] => {
+  if (raw === undefined) return [];
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+  } catch {
+    return [];
+  }
+};
 
 /**
  * Create a dropdown menu controller for a root element.
@@ -122,19 +316,28 @@ const DUPLICATE_BINDING_WARNING =
  * - `collisionPadding`: viewport edge padding in px (default: 8)
  *
  * ## Events
- * - **Outbound** `dropdown-menu:change` (on root): Fires when menu opens/closes.
- *   `event.detail: { open: boolean }`
- * - **Outbound** `dropdown-menu:select` (on root): Fires when an item is selected.
- *   `event.detail: { value: string }`
+ * - **Outbound** `dropdown-menu:open-change` (on root): Fires when menu opens/closes.
+ *   `event.detail: DropdownMenuOpenChangeDetail`
+ * - **Outbound** `dropdown-menu:change` (on root): Deprecated alias for `dropdown-menu:open-change`.
+ * - **Outbound** `dropdown-menu:highlight-change` (on root): Fires when highlight changes.
+ *   `event.detail: DropdownMenuHighlightChangeDetail`
+ * - **Outbound** `dropdown-menu:select` (on root): Cancelable user activation event fired before commit.
+ *   `event.detail: DropdownMenuSelectDetail`
+ * - **Outbound** `dropdown-menu:value-change` (on root): Fires when radio selection changes.
+ *   `event.detail: DropdownMenuValueChangeDetail`
+ * - **Outbound** `dropdown-menu:values-change` (on root): Fires when checkbox selection changes.
+ *   `event.detail: DropdownMenuValuesChangeDetail`
+ * - **Inbound** `dropdown-menu:set` (on root): Set open/highlight/selection state programmatically.
+ *   `event.detail: DropdownMenuSetDetail`
  */
 export function createDropdownMenu(
   root: Element,
-  options: DropdownMenuOptions = {}
+  options: DropdownMenuOptions = {},
 ): DropdownMenuController {
   const existingController = reuseRootBinding<DropdownMenuController>(
     root,
     ROOT_BINDING_KEY,
-    DUPLICATE_BINDING_WARNING
+    DUPLICATE_BINDING_WARNING,
   );
   if (existingController) {
     return existingController;
@@ -157,16 +360,15 @@ export function createDropdownMenu(
     throw new Error("DropdownMenu requires trigger and content slots");
   }
 
-  // Resolve options with explicit precedence: JS > data-* > default
-  // Behavior options from root
   const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
   const onOpenChange = options.onOpenChange;
   const onSelect = options.onSelect;
+  const onValueChange = options.onValueChange;
+  const onValuesChange = options.onValuesChange;
   const closeOnClickOutside = options.closeOnClickOutside ?? getDataBool(root, "closeOnClickOutside") ?? true;
   const closeOnEscape = options.closeOnEscape ?? getDataBool(root, "closeOnEscape") ?? true;
   const closeOnSelect = options.closeOnSelect ?? getDataBool(root, "closeOnSelect") ?? true;
 
-  // Placement precedence: JS option > content > authored positioner > root
   const getPlacementEnum = <T extends string>(key: string, allowed: readonly T[]): T | undefined =>
     getDataEnum(content, key, allowed) ??
     (authoredPositioner ? getDataEnum(authoredPositioner, key, allowed) : undefined) ??
@@ -180,47 +382,44 @@ export function createDropdownMenu(
     (authoredPositioner ? getDataBool(authoredPositioner, key) : undefined) ??
     getDataBool(root, key);
 
-  // Placement options
-  const preferredSide =
-    options.side ??
-    getPlacementEnum("side", SIDES) ??
-    "bottom";
-  const preferredAlign =
-    options.align ??
-    getPlacementEnum("align", ALIGNS) ??
-    "start";
-  const sideOffset =
-    options.sideOffset ??
-    getPlacementNumber("sideOffset") ??
-    4;
-  const alignOffset =
-    options.alignOffset ??
-    getPlacementNumber("alignOffset") ??
-    0;
-  const avoidCollisions =
-    options.avoidCollisions ??
-    getPlacementBool("avoidCollisions") ??
-    true;
-  const collisionPadding =
-    options.collisionPadding ??
-    getPlacementNumber("collisionPadding") ??
-    8;
+  const preferredSide = options.side ?? getPlacementEnum("side", SIDES) ?? "bottom";
+  const preferredAlign = options.align ?? getPlacementEnum("align", ALIGNS) ?? "start";
+  const sideOffset = options.sideOffset ?? getPlacementNumber("sideOffset") ?? 4;
+  const alignOffset = options.alignOffset ?? getPlacementNumber("alignOffset") ?? 0;
+  const avoidCollisions = options.avoidCollisions ?? getPlacementBool("avoidCollisions") ?? true;
+  const collisionPadding = options.collisionPadding ?? getPlacementNumber("collisionPadding") ?? 8;
   const lockScrollOption = options.lockScroll ?? getDataBool(root, "lockScroll") ?? true;
   const highlightItemOnHover =
     options.highlightItemOnHover ?? getDataBool(root, "highlightItemOnHover") ?? true;
 
+  const optionsHasDefaultValue = hasOwn(options, "defaultValue");
+  const optionsHasDefaultValues = hasOwn(options, "defaultValues");
+  const rootHasDefaultValue = root.hasAttribute("data-default-value");
+  const rootHasDefaultValues = root.hasAttribute("data-default-values");
+  const requestedDefaultValue = optionsHasDefaultValue
+    ? options.defaultValue ?? null
+    : rootHasDefaultValue
+      ? getDataString(root, "defaultValue") ?? null
+      : null;
+  const requestedDefaultValues = optionsHasDefaultValues
+    ? options.defaultValues ?? []
+    : rootHasDefaultValues
+      ? parseDefaultValues(getDataString(root, "defaultValues"))
+      : [];
+
   let isOpen = false;
+  let currentValue: string | null = null;
+  let currentValues: string[] = [];
+  let highlightedItem: HTMLElement | null = null;
   let previousActiveElement: HTMLElement | null = null;
-  let highlightedIndex = -1;
   let typeaheadBuffer = "";
   let typeaheadTimeout: ReturnType<typeof setTimeout> | null = null;
-  let keyboardMode = false; // Ignore pointer after keyboard nav
+  let keyboardMode = false;
+  let didLockScroll = false;
+  let isDestroyed = false;
+  let pendingDismissMeta: Pick<DropdownMenuOpenChangeDetail, "source" | "reason"> | null = null;
   const cleanups: Array<() => void> = [];
 
-  // Track if this instance locked scroll
-  let didLockScroll = false;
-
-  // Portal lifecycle for moving content to body
   const portal = createPortalLifecycle({
     content,
     root,
@@ -228,52 +427,230 @@ export function createDropdownMenu(
     container: authoredPositioner ?? undefined,
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
-  let isDestroyed = false;
 
-  // Cached on open - avoids repeated DOM queries
-  let items: HTMLElement[] = [];
-  let enabledItems: HTMLElement[] = [];
-  let itemToIndex = new Map<HTMLElement, number>();
+  let items: DropdownMenuItemRecord[] = [];
+  let enabledItems: DropdownMenuItemRecord[] = [];
+  let itemToEnabledIndex = new Map<HTMLElement, number>();
 
-  const isDisabled = (el: HTMLElement) =>
+  const isDisabledEl = (el: HTMLElement): boolean =>
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
   const isHoverPointer = (e: PointerEvent) => e.pointerType !== "touch";
+  const closestItem = (target: EventTarget | null): HTMLElement | null =>
+    target instanceof Element ? (target.closest(ITEM_SELECTOR) as HTMLElement | null) : null;
+  const getItemRecord = (el: HTMLElement | null): DropdownMenuItemRecord | null =>
+    el ? items.find((item) => item.el === el) ?? null : null;
+  const getRadioItems = (): DropdownMenuItemRecord[] => items.filter((item) => item.type === "radio");
+  const getCheckboxItems = (): DropdownMenuItemRecord[] => items.filter((item) => item.type === "checkbox");
+  const findRadioItemByValueIn = (
+    records: readonly DropdownMenuItemRecord[],
+    value: string,
+  ): DropdownMenuItemRecord | null =>
+    records.find((item) => item.type === "radio" && item.value === value) ?? null;
+  const getResolvedValue = (item: DropdownMenuItemRecord | null): string | null => {
+    if (!item) return null;
+    if (item.type === "item") {
+      return readActionValue(item);
+    }
+    return item.value;
+  };
+  const isInvalidSelectableItem = (item: DropdownMenuItemRecord): boolean =>
+    (item.type === "radio" || item.type === "checkbox") && item.value === null;
+  const isItemDisabled = (item: DropdownMenuItemRecord): boolean =>
+    isDisabledEl(item.el) || isInvalidSelectableItem(item);
+  const findRadioItemByValue = (value: string): DropdownMenuItemRecord | null =>
+    getRadioItems().find((item) => item.value === value) ?? null;
+  const findItemByResolvedValue = (value: string): DropdownMenuItemRecord | null =>
+    enabledItems.find((item) => getResolvedValue(item) === value) ?? null;
 
-  // ARIA setup (minimal - just essential attributes)
-  const triggerId = ensureId(trigger, "dropdown-menu-trigger");
-  const contentId = ensureId(content, "dropdown-menu-content");
-  trigger.setAttribute("aria-haspopup", "menu");
-  trigger.setAttribute("aria-controls", contentId);
-  content.setAttribute("role", "menu");
-  content.setAttribute("aria-labelledby", triggerId);
-  content.tabIndex = -1;
+  const getCheckboxDiff = (
+    previousValues: readonly string[],
+    nextValues: readonly string[],
+    checkboxItems: readonly DropdownMenuItemRecord[] = getCheckboxItems(),
+  ): CheckboxDiff => {
+    const previousSet = new Set(previousValues);
+    const nextSet = new Set(nextValues);
+    let changedValue: string | null = null;
+    let checked: boolean | null = null;
+    let item: HTMLElement | null = null;
 
-  // Cache items on open (also sets ARIA/tabIndex - handles dynamic content)
-  const cacheItems = () => {
-    items = getParts<HTMLElement>(content, "dropdown-menu-item");
-
-    for (const item of items) {
-      item.setAttribute("role", "menuitem");
-      if (item.hasAttribute("data-disabled") || item.hasAttribute("disabled")) {
-        item.setAttribute("aria-disabled", "true");
-      } else {
-        item.removeAttribute("aria-disabled");
+    for (const checkboxItem of checkboxItems) {
+      if (checkboxItem.type !== "checkbox") continue;
+      const value = checkboxItem.value;
+      if (!value) continue;
+      const wasChecked = previousSet.has(value);
+      const isChecked = nextSet.has(value);
+      if (wasChecked === isChecked) continue;
+      if (changedValue !== null) {
+        return { changedValue: null, checked: null, item: null };
       }
-      item.tabIndex = -1;
+      changedValue = value;
+      checked = isChecked;
+      item = checkboxItem.el;
     }
 
-    enabledItems = items.filter((el) => !isDisabled(el));
-    itemToIndex = new Map(enabledItems.map((el, i) => [el, i]));
+    return { changedValue, checked, item };
+  };
+
+  const canonicalizeCheckboxValues = (
+    rawValues: readonly unknown[],
+    mode: "init" | "set",
+  ): string[] | null => {
+    const checkboxItems = getCheckboxItems().filter((item) => item.value !== null);
+    if (checkboxItems.length === 0) return null;
+    if (rawValues.length === 0) return [];
+
+    const requested = new Set(
+      rawValues
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0),
+    );
+    if (requested.size === 0) {
+      return mode === "init" ? [] : null;
+    }
+
+    const canonical: string[] = [];
+    for (const item of checkboxItems) {
+      if (item.value && requested.has(item.value)) {
+        canonical.push(item.value);
+      }
+    }
+
+    if (canonical.length === 0) {
+      return mode === "init" ? [] : null;
+    }
+
+    return canonical;
+  };
+
+  const syncItems = () => {
+    for (const item of items) {
+      const disabled = isItemDisabled(item);
+      item.el.setAttribute("role", getItemRole(item.type));
+      item.el.tabIndex = -1;
+      if (disabled) {
+        item.el.setAttribute("aria-disabled", "true");
+      } else {
+        item.el.removeAttribute("aria-disabled");
+      }
+
+      if (item.type === "radio") {
+        const checked = item.value !== null && currentValue === item.value;
+        setPresence(item.el, "data-checked", checked);
+        setAria(item.el, "checked", item.value !== null ? checked : null);
+      } else if (item.type === "checkbox") {
+        const checked = item.value !== null && currentValues.includes(item.value);
+        setPresence(item.el, "data-checked", checked);
+        setAria(item.el, "checked", item.value !== null ? checked : null);
+      } else {
+        item.el.removeAttribute("data-checked");
+        item.el.removeAttribute("aria-checked");
+      }
+    }
+
+    if (getRadioItems().length > 0 && currentValue !== null) {
+      root.setAttribute("data-value", currentValue);
+    } else {
+      root.removeAttribute("data-value");
+    }
+  };
+
+  const syncHighlightState = () => {
+    for (const item of items) {
+      setPresence(item.el, "data-highlighted", item.el === highlightedItem);
+    }
+  };
+
+  const cacheItems = ({
+    source = "programmatic",
+    emitSelectionInvalidation = false,
+  }: CacheItemsOptions = {}) => {
+    const previousItems = items;
+    const previousValue = currentValue;
+    const previousValues = [...currentValues];
+
+    items = Array.from(content.querySelectorAll<HTMLElement>(ITEM_SELECTOR)).map((el) => ({
+      el,
+      type: getItemType(el),
+      value: readSelectableValue(el),
+    }));
+
+    const nextValue =
+      previousValue !== null && findRadioItemByValue(previousValue) ? previousValue : null;
+    const nextValues =
+      previousValues.length > 0 ? canonicalizeCheckboxValues(previousValues, "init") ?? [] : [];
+
+    currentValue = nextValue;
+    currentValues = nextValues;
+
+    enabledItems = items.filter((item) => !isItemDisabled(item));
+    itemToEnabledIndex = new Map(enabledItems.map((item, index) => [item.el, index]));
+
+    if (highlightedItem && !itemToEnabledIndex.has(highlightedItem)) {
+      highlightedItem = null;
+    }
+
+    syncItems();
+    syncHighlightState();
+
+    if (emitSelectionInvalidation) {
+      if (previousValue !== currentValue) {
+        emitValueChange({
+          value: currentValue,
+          previousValue,
+          item: currentValue === null ? null : findRadioItemByValue(currentValue)?.el ?? null,
+          previousItem: previousValue === null ? null : findRadioItemByValueIn(previousItems, previousValue)?.el ?? null,
+          source,
+        });
+      }
+
+      if (!arraysEqual(previousValues, currentValues)) {
+        const diff = getCheckboxDiff(
+          previousValues,
+          currentValues,
+          previousItems.filter((item) => item.type === "checkbox"),
+        );
+        emitValuesChange({
+          values: [...currentValues],
+          previousValues,
+          changedValue: diff.changedValue,
+          checked: diff.checked,
+          item: diff.item,
+          source,
+        });
+      }
+    }
+  };
+
+  const emitOpenChange = (detail: DropdownMenuOpenChangeDetail) => {
+    emit(root, "dropdown-menu:open-change", detail);
+    // TODO(next-major): remove deprecated dropdown-menu:change alias.
+    emit(root, "dropdown-menu:change", detail);
+    onOpenChange?.(detail.open);
+  };
+
+  const emitHighlightChange = (detail: DropdownMenuHighlightChangeDetail) => {
+    emit(root, "dropdown-menu:highlight-change", detail);
+  };
+
+  const emitValueChange = (detail: DropdownMenuValueChangeDetail) => {
+    emit(root, "dropdown-menu:value-change", detail);
+    onValueChange?.(detail.value);
+  };
+
+  const emitValuesChange = (detail: DropdownMenuValuesChangeDetail) => {
+    emit(root, "dropdown-menu:values-change", detail);
+    onValuesChange?.([...detail.values]);
   };
 
   const updatePosition = () => {
     const positioner = portal.container as HTMLElement;
     const win = root.ownerDocument.defaultView ?? window;
-    const tr = trigger.getBoundingClientRect();
-    const cr = measurePopupContentRect(content);
-    const pos = computeFloatingPosition({
-      anchorRect: tr,
-      contentRect: cr,
+    const triggerRect = trigger.getBoundingClientRect();
+    const contentRect = measurePopupContentRect(content);
+    const position = computeFloatingPosition({
+      anchorRect: triggerRect,
+      contentRect,
       side: preferredSide,
       align: preferredAlign,
       sideOffset,
@@ -282,32 +659,33 @@ export function createDropdownMenu(
       collisionPadding,
     });
     const transformOrigin = computeFloatingTransformOrigin({
-      side: pos.side,
-      align: pos.align,
-      anchorRect: tr,
-      popupX: pos.x,
-      popupY: pos.y,
+      side: position.side,
+      align: position.align,
+      anchorRect: triggerRect,
+      popupX: position.x,
+      popupY: position.y,
     });
 
     if (lockScrollOption) {
       positioner.style.position = "fixed";
       positioner.style.top = "0px";
       positioner.style.left = "0px";
-      positioner.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+      positioner.style.transform = `translate3d(${position.x}px, ${position.y}px, 0)`;
     } else {
       positioner.style.position = "absolute";
       positioner.style.top = "0px";
       positioner.style.left = "0px";
-      positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+      positioner.style.transform = `translate3d(${position.x + win.scrollX}px, ${position.y + win.scrollY}px, 0)`;
     }
+
     positioner.style.setProperty("--transform-origin", transformOrigin);
     positioner.style.willChange = "transform";
     positioner.style.margin = "0";
-    content.setAttribute("data-side", pos.side);
-    content.setAttribute("data-align", pos.align);
+    content.setAttribute("data-side", position.side);
+    content.setAttribute("data-align", position.align);
     if (positioner !== content) {
-      positioner.setAttribute("data-side", pos.side);
-      positioner.setAttribute("data-align", pos.align);
+      positioner.setAttribute("data-side", position.side);
+      positioner.setAttribute("data-align", position.align);
     }
   };
 
@@ -318,28 +696,26 @@ export function createDropdownMenu(
     onUpdate: updatePosition,
   });
 
-  const updateHighlight = (index: number, focus = true) => {
-    for (let i = 0; i < enabledItems.length; i++) {
-      const el = enabledItems[i]!;
-      if (i === index) {
-        el.setAttribute("data-highlighted", "");
-        ensureItemVisibleInContainer(el, content);
-        if (focus) el.focus();
-      } else {
-        el.removeAttribute("data-highlighted");
+  const restoreFocus = () => {
+    requestAnimationFrame(() => {
+      if (previousActiveElement && document.contains(previousActiveElement)) {
+        focusElement(previousActiveElement);
+      } else if (document.contains(trigger)) {
+        focusElement(trigger);
       }
-    }
-    highlightedIndex = index;
+      previousActiveElement = null;
+    });
   };
 
-  const clearHighlight = () => {
-    for (const el of items) el.removeAttribute("data-highlighted");
-    highlightedIndex = -1;
-  };
-  const clearHighlightAndFocusContent = () => {
-    clearHighlight();
-    focusElement(content);
-  };
+  const presence = createPresenceLifecycle({
+    element: content,
+    onExitComplete: () => {
+      if (isDestroyed) return;
+      portal.restore();
+      content.hidden = true;
+      restoreFocus();
+    },
+  });
 
   const setDataState = (state: "open" | "closed") => {
     root.setAttribute("data-state", state);
@@ -357,32 +733,144 @@ export function createDropdownMenu(
     }
   };
 
-  const restoreFocus = () => {
-    requestAnimationFrame(() => {
-      if (previousActiveElement && document.contains(previousActiveElement)) {
-        focusElement(previousActiveElement);
-      } else if (trigger && document.contains(trigger)) {
-        focusElement(trigger);
+  const updateHighlight = (
+    nextItem: HTMLElement | null,
+    { source, focus = true, focusContentOnClear = false }: HighlightUpdateOptions,
+  ): boolean => {
+    if (nextItem && !itemToEnabledIndex.has(nextItem)) {
+      return false;
+    }
+
+    const previousItem = highlightedItem;
+    if (previousItem === nextItem) {
+      if (nextItem && focus) {
+        ensureItemVisibleInContainer(nextItem, content);
+        focusElement(nextItem);
+      } else if (!nextItem && focusContentOnClear) {
+        focusElement(content);
       }
-      previousActiveElement = null;
+      return false;
+    }
+
+    highlightedItem = nextItem;
+    syncHighlightState();
+
+    if (nextItem) {
+      ensureItemVisibleInContainer(nextItem, content);
+      if (focus) {
+        focusElement(nextItem);
+      }
+    } else if (focusContentOnClear) {
+      focusElement(content);
+    }
+
+    emitHighlightChange({
+      value: getResolvedValue(getItemRecord(nextItem)),
+      previousValue: getResolvedValue(getItemRecord(previousItem)),
+      item: nextItem,
+      previousItem,
+      source,
     });
+    return true;
   };
 
-  const presence = createPresenceLifecycle({
-    element: content,
-    onExitComplete: () => {
-      if (isDestroyed) return;
-      portal.restore();
-      content.hidden = true;
-      restoreFocus();
-    },
-  });
+  const applyRadioValue = (
+    value: string | null,
+    source: DropdownMenuSelectionSource,
+    emitChange = true,
+  ): boolean => {
+    cacheItems({ source, emitSelectionInvalidation: emitChange });
+    if (getRadioItems().length === 0) return false;
 
-  const updateState = (open: boolean) => {
+    const nextItem = value === null ? null : findRadioItemByValue(value);
+    if (value !== null && !nextItem) return false;
+    if (currentValue === value) return false;
+
+    const previousValue = currentValue;
+    const previousItem = previousValue === null ? null : findRadioItemByValue(previousValue);
+    currentValue = value;
+    syncItems();
+
+    if (emitChange) {
+      emitValueChange({
+        value: currentValue,
+        previousValue,
+        item: nextItem?.el ?? null,
+        previousItem: previousItem?.el ?? null,
+        source,
+      });
+    }
+
+    return true;
+  };
+
+  const applyCheckboxValues = (
+    values: readonly string[],
+    source: DropdownMenuSelectionSource,
+    emitChange = true,
+  ): boolean => {
+    cacheItems({ source, emitSelectionInvalidation: emitChange });
+    const nextValues = canonicalizeCheckboxValues(values, emitChange ? "set" : "init");
+    if (nextValues === null) return false;
+    if (arraysEqual(currentValues, nextValues)) return false;
+
+    const previousValues = [...currentValues];
+    const diff = getCheckboxDiff(previousValues, nextValues);
+    currentValues = nextValues;
+    syncItems();
+
+    if (emitChange) {
+      emitValuesChange({
+        values: [...currentValues],
+        previousValues,
+        changedValue: diff.changedValue,
+        checked: diff.checked,
+        item: diff.item,
+        source,
+      });
+    }
+
+    return true;
+  };
+
+  const initializeSelectionState = () => {
+    cacheItems();
+
+    if (optionsHasDefaultValue || rootHasDefaultValue) {
+      if (requestedDefaultValue !== null) {
+        applyRadioValue(requestedDefaultValue, "programmatic", false);
+      } else {
+        currentValue = null;
+      }
+    } else {
+      for (const radioItem of getRadioItems()) {
+        if (radioItem.value !== null && getDataBool(radioItem.el, "defaultChecked")) {
+          currentValue = radioItem.value;
+          break;
+        }
+      }
+    }
+
+    if (optionsHasDefaultValues || rootHasDefaultValues) {
+      const resolvedDefaults = canonicalizeCheckboxValues(requestedDefaultValues, "init");
+      currentValues = resolvedDefaults ?? [];
+    } else {
+      const itemDefaults = getCheckboxItems()
+        .filter((item) => item.value !== null && getDataBool(item.el, "defaultChecked"))
+        .map((item) => item.value as string);
+      currentValues = canonicalizeCheckboxValues(itemDefaults, "init") ?? [];
+    }
+
+    syncItems();
+  };
+
+  const updateOpenState = (open: boolean, { source, reason }: OpenTransitionOptions) => {
     if (isOpen === open) return;
+    pendingDismissMeta = null;
 
+    const previousOpen = isOpen;
     if (open) {
-      previousActiveElement = document.activeElement as HTMLElement;
+      previousActiveElement = document.activeElement as HTMLElement | null;
       isOpen = true;
       setAria(trigger, "expanded", true);
       portal.mount();
@@ -390,7 +878,6 @@ export function createDropdownMenu(
       setDataState("open");
       presence.enter();
 
-      // Lock scroll
       if (lockScrollOption && !didLockScroll) {
         lockScroll();
         didLockScroll = true;
@@ -398,21 +885,25 @@ export function createDropdownMenu(
 
       cacheItems();
       keyboardMode = false;
-      clearHighlight(); // Ensure no stale data-highlighted
+      typeaheadBuffer = "";
       positionSync.start();
       updatePosition();
       positionSync.update();
-
-      content.focus();
+      focusElement(content);
     } else {
       isOpen = false;
       setAria(trigger, "expanded", false);
       setDataState("closed");
-      clearHighlight();
+      if (highlightedItem) {
+        updateHighlight(null, {
+          source: source === "init" ? "programmatic" : source,
+          focus: false,
+          focusContentOnClear: false,
+        });
+      }
       typeaheadBuffer = "";
       keyboardMode = false;
 
-      // Unlock scroll
       if (didLockScroll) {
         unlockScroll();
         didLockScroll = false;
@@ -422,75 +913,88 @@ export function createDropdownMenu(
       presence.exit();
     }
 
-    emit(root, "dropdown-menu:change", { open: isOpen });
-    onOpenChange?.(isOpen);
+    emitOpenChange({
+      open: isOpen,
+      previousOpen,
+      source,
+      reason,
+    });
   };
 
-  const selectItem = (item: HTMLElement) => {
-    if (isDisabled(item)) return;
-    const value = item.dataset["value"] || item.textContent?.trim() || "";
-    emit(root, "dropdown-menu:select", { value });
+  const setPendingDismissReason = (source: DropdownMenuUserSource, reason: "outside" | "escape") => {
+    const nextMeta: Pick<DropdownMenuOpenChangeDetail, "source" | "reason"> = { source, reason };
+    pendingDismissMeta = nextMeta;
+    queueMicrotask(() => {
+      if (pendingDismissMeta === nextMeta) {
+        pendingDismissMeta = null;
+      }
+    });
+  };
+
+  const activateItem = (item: DropdownMenuItemRecord, source: DropdownMenuUserSource) => {
+    if (isItemDisabled(item)) return;
+    const value = getResolvedValue(item);
+    if (value === null) return;
+
+    let checked: boolean | undefined;
+    if (item.type === "radio") {
+      checked = true;
+    } else if (item.type === "checkbox" && item.value !== null) {
+      checked = !currentValues.includes(item.value);
+    }
+
+    const proceed = dispatchCustomEvent<DropdownMenuSelectDetail>(
+      root,
+      "dropdown-menu:select",
+      {
+        value,
+        item: item.el,
+        itemType: item.type,
+        source,
+        checked,
+      },
+      true,
+    );
+    if (!proceed) return;
+
     onSelect?.(value);
-    if (closeOnSelect) updateState(false);
-  };
 
-  const handleKeydown = (e: KeyboardEvent) => {
-    const len = enabledItems.length;
-    if (len === 0) return;
+    if (item.type === "radio") {
+      applyRadioValue(item.value, source, true);
+    } else if (item.type === "checkbox" && item.value !== null) {
+      const nextValues = new Set(currentValues);
+      if (nextValues.has(item.value)) {
+        nextValues.delete(item.value);
+      } else {
+        nextValues.add(item.value);
+      }
+      applyCheckboxValues([...nextValues], source, true);
+    }
 
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        keyboardMode = true;
-        updateHighlight(highlightedIndex === -1 ? 0 : (highlightedIndex + 1) % len);
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        keyboardMode = true;
-        updateHighlight(highlightedIndex === -1 ? len - 1 : (highlightedIndex - 1 + len) % len);
-        break;
-      case "Home":
-        e.preventDefault();
-        keyboardMode = true;
-        updateHighlight(0);
-        break;
-      case "End":
-        e.preventDefault();
-        keyboardMode = true;
-        updateHighlight(len - 1);
-        break;
-      case "Enter":
-      case " ":
-        e.preventDefault();
-        if (highlightedIndex >= 0) selectItem(enabledItems[highlightedIndex]!);
-        break;
-      case "Tab":
-        updateState(false);
-        break;
-      default:
-        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-          e.preventDefault();
-          handleTypeahead(e.key.toLowerCase());
-        }
+    if (closeOnSelect) {
+      updateOpenState(false, { source, reason: "select" });
     }
   };
 
   const handleTypeahead = (char: string) => {
     if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
-    typeaheadTimeout = setTimeout(() => { typeaheadBuffer = ""; }, 500);
+    typeaheadTimeout = setTimeout(() => {
+      typeaheadBuffer = "";
+    }, 500);
 
     typeaheadBuffer += char;
 
-    let matchIndex = enabledItems.findIndex((el) =>
-      (el.textContent?.trim().toLowerCase() || "").startsWith(typeaheadBuffer)
+    let matchIndex = enabledItems.findIndex((item) =>
+      (item.el.textContent?.trim().toLowerCase() ?? "").startsWith(typeaheadBuffer),
     );
 
     if (matchIndex === -1 && typeaheadBuffer.length === 1) {
-      const start = highlightedIndex + 1;
+      const start = highlightedItem ? (itemToEnabledIndex.get(highlightedItem) ?? -1) + 1 : 0;
       for (let i = 0; i < enabledItems.length; i++) {
-        const idx = (start + i) % enabledItems.length;
-        if ((enabledItems[idx]!.textContent?.trim().toLowerCase() || "").startsWith(char)) {
-          matchIndex = idx;
+        const index = (start + i) % enabledItems.length;
+        const item = enabledItems[index];
+        if ((item?.el.textContent?.trim().toLowerCase() ?? "").startsWith(char)) {
+          matchIndex = index;
           break;
         }
       }
@@ -498,103 +1002,330 @@ export function createDropdownMenu(
 
     if (matchIndex !== -1) {
       keyboardMode = true;
-      updateHighlight(matchIndex);
+      updateHighlight(enabledItems[matchIndex]?.el ?? null, {
+        source: "keyboard",
+        focus: true,
+      });
     }
   };
 
-  // Initialize
+  const applySet = (detail: DropdownMenuSetDetail) => {
+    const source = detail.source ?? "programmatic";
+    if (detail.value !== undefined) {
+      applyRadioValue(detail.value, source, true);
+    }
+    if (detail.values !== undefined) {
+      applyCheckboxValues(detail.values, source, true);
+    }
+    if (detail.open !== undefined) {
+      updateOpenState(detail.open, {
+        source,
+        reason: source === "restore" ? "programmatic" : "programmatic",
+      });
+    }
+    if (detail.highlightedValue !== undefined) {
+      if (!isOpen) return;
+      if (detail.highlightedValue === null) {
+        updateHighlight(null, {
+          source,
+          focus: false,
+          focusContentOnClear: true,
+        });
+      } else {
+        const nextItem = findItemByResolvedValue(detail.highlightedValue);
+        if (nextItem) {
+          updateHighlight(nextItem.el, {
+            source,
+            focus: true,
+          });
+        }
+      }
+    }
+  };
+
+  const triggerId = ensureId(trigger, "dropdown-menu-trigger");
+  const contentId = ensureId(content, "dropdown-menu-content");
+  trigger.setAttribute("aria-haspopup", "menu");
+  trigger.setAttribute("aria-controls", contentId);
+  content.setAttribute("role", "menu");
+  content.setAttribute("aria-labelledby", triggerId);
+  content.tabIndex = -1;
   setAria(trigger, "expanded", false);
   content.hidden = true;
   setDataState("closed");
 
-  // Trigger events
+  initializeSelectionState();
+
   cleanups.push(
-    on(trigger, "click", () => updateState(!isOpen)),
-    on(trigger, "keydown", (e) => {
-      if ((e.key === "Enter" || e.key === " " || e.key === "ArrowDown") && !isOpen) {
-        e.preventDefault();
-        updateState(true);
+    on(trigger, "click", () => {
+      updateOpenState(!isOpen, {
+        source: "pointer",
+        reason: "trigger",
+      });
+    }),
+    on(trigger, "keydown", (event) => {
+      if ((event.key === "Enter" || event.key === " " || event.key === "ArrowDown") && !isOpen) {
+        event.preventDefault();
+        updateOpenState(true, {
+          source: "keyboard",
+          reason: "trigger",
+        });
       }
-    })
+    }),
   );
 
-  // Content events
   cleanups.push(
-    on(content, "keydown", handleKeydown),
-    on(content, "click", (e) => {
-      const item = (e.target as HTMLElement).closest?.('[data-slot="dropdown-menu-item"]') as HTMLElement | null;
-      if (item) selectItem(item);
+    on(content, "keydown", (event) => {
+      if (event.key === "Tab") {
+        updateOpenState(false, {
+          source: "keyboard",
+          reason: "tab",
+        });
+        return;
+      }
+
+      const itemCount = enabledItems.length;
+      if (itemCount === 0) return;
+
+      switch (event.key) {
+        case "ArrowDown":
+          event.preventDefault();
+          keyboardMode = true;
+          updateHighlight(
+            enabledItems[
+              highlightedItem ? ((itemToEnabledIndex.get(highlightedItem) ?? -1) + 1) % itemCount : 0
+            ]?.el ?? null,
+            { source: "keyboard", focus: true },
+          );
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          keyboardMode = true;
+          updateHighlight(
+            enabledItems[
+              highlightedItem
+                ? (itemToEnabledIndex.get(highlightedItem)! - 1 + itemCount) % itemCount
+                : itemCount - 1
+            ]?.el ?? null,
+            { source: "keyboard", focus: true },
+          );
+          break;
+        case "Home":
+          event.preventDefault();
+          keyboardMode = true;
+          updateHighlight(enabledItems[0]?.el ?? null, {
+            source: "keyboard",
+            focus: true,
+          });
+          break;
+        case "End":
+          event.preventDefault();
+          keyboardMode = true;
+          updateHighlight(enabledItems[itemCount - 1]?.el ?? null, {
+            source: "keyboard",
+            focus: true,
+          });
+          break;
+        case "Enter":
+        case " ":
+          event.preventDefault();
+          if (highlightedItem) {
+            const highlightedRecord = getItemRecord(highlightedItem);
+            if (highlightedRecord) {
+              activateItem(highlightedRecord, "keyboard");
+            }
+          }
+          break;
+        default:
+          if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+            event.preventDefault();
+            handleTypeahead(event.key.toLowerCase());
+          }
+      }
     }),
-    on(content, "pointermove", (e) => {
-      if (!highlightItemOnHover || !isHoverPointer(e)) return;
+    on(content, "click", (event) => {
+      const itemEl = closestItem(event.target);
+      const item = getItemRecord(itemEl);
+      if (!item) return;
+      activateItem(item, "pointer");
+    }),
+    on(content, "pointermove", (event) => {
+      if (!highlightItemOnHover || !isHoverPointer(event)) return;
 
-      const item = (e.target as HTMLElement).closest?.('[data-slot="dropdown-menu-item"]') as HTMLElement | null;
-
+      const itemEl = closestItem(event.target);
       if (keyboardMode) {
         keyboardMode = false;
-        // Only ignore if pointer is still on the item we just focused
-        if (item && itemToIndex.get(item) === highlightedIndex) return;
+        if (itemEl && itemEl === highlightedItem) {
+          return;
+        }
       }
 
-      if (item && !isDisabled(item)) {
-        const index = itemToIndex.get(item);
-        if (index !== undefined && index !== highlightedIndex) {
-          updateHighlight(index, true);
-        }
-      } else {
-        // Clear highlight when moving to label, separator, or disabled item
-        clearHighlightAndFocusContent();
+      if (itemEl && itemToEnabledIndex.has(itemEl)) {
+        updateHighlight(itemEl, {
+          source: "pointer",
+          focus: true,
+        });
+      } else if (highlightedItem) {
+        updateHighlight(null, {
+          source: "pointer",
+          focus: false,
+          focusContentOnClear: true,
+        });
       }
     }),
-    on(content, "pointerleave", (e) => {
-      if (!highlightItemOnHover || !isHoverPointer(e) || keyboardMode) return;
-      clearHighlightAndFocusContent();
-    })
+    on(content, "pointerleave", (event) => {
+      if (!highlightItemOnHover || !isHoverPointer(event) || keyboardMode || !highlightedItem) return;
+      updateHighlight(null, {
+        source: "pointer",
+        focus: false,
+        focusContentOnClear: true,
+      });
+    }),
+  );
+
+  const doc = root.ownerDocument ?? document;
+  cleanups.push(
+    on(
+      doc,
+      "pointerdown",
+      (event) => {
+        if (!isOpen || !closeOnClickOutside) return;
+        const pointerEvent = event as PointerEvent;
+        if (pointerEvent.pointerType === "touch") return;
+        const target = event.target as Node | null;
+        if (containsWithPortals(root, target)) return;
+        setPendingDismissReason("pointer", "outside");
+      },
+      { capture: true },
+    ),
+    on(
+      doc,
+      "click",
+      (event) => {
+        if (!isOpen || !closeOnClickOutside) return;
+        const target = event.target as Node | null;
+        if (containsWithPortals(root, target)) return;
+        setPendingDismissReason("pointer", "outside");
+      },
+      { capture: true },
+    ),
+    on(
+      doc,
+      "keydown",
+      (event) => {
+        if (!isOpen || !closeOnEscape || event.key !== "Escape" || event.defaultPrevented) return;
+        setPendingDismissReason("keyboard", "escape");
+      },
+      { capture: true },
+    ),
   );
 
   cleanups.push(
     createDismissLayer({
       root,
       isOpen: () => isOpen,
-      onDismiss: () => updateState(false),
+      onDismiss: () => {
+        const meta = pendingDismissMeta;
+        pendingDismissMeta = null;
+        if (meta?.reason === "escape") {
+          updateOpenState(false, {
+            source: meta.source as DropdownMenuOpenChangeSource,
+            reason: "escape",
+          });
+          return;
+        }
+        updateOpenState(false, {
+          source: meta?.source ?? "pointer",
+          reason: meta?.reason ?? "outside",
+        });
+      },
       closeOnClickOutside,
       closeOnEscape,
-    })
+    }),
   );
 
-  // Inbound event
   cleanups.push(
-    on(root, "dropdown-menu:set", (e) => {
-      const detail = (e as CustomEvent).detail;
-      // Preferred: { open: boolean }
-      // Deprecated: { value: boolean }
-      let open: boolean | undefined;
-      if (detail?.open !== undefined) {
-        open = detail.open;
-      } else if (detail?.value !== undefined) {
-        open = detail.value;
+    on(root, "dropdown-menu:set", (event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!detail || typeof detail !== "object") return;
+
+      const nextDetail: DropdownMenuSetDetail = {
+        source:
+          detail.source === "restore" || detail.source === "programmatic"
+            ? detail.source
+            : undefined,
+      };
+
+      if (detail.open !== undefined) {
+        nextDetail.open = detail.open;
       }
-      if (typeof open === "boolean") updateState(open);
-    })
+      if (detail.values !== undefined) {
+        nextDetail.values = Array.isArray(detail.values)
+          ? detail.values.filter((value: unknown): value is string => typeof value === "string")
+          : undefined;
+      }
+      if (detail.highlightedValue !== undefined) {
+        nextDetail.highlightedValue =
+          detail.highlightedValue === null || typeof detail.highlightedValue === "string"
+            ? detail.highlightedValue
+            : undefined;
+      }
+
+      if (detail.value !== undefined) {
+        if (typeof detail.value === "boolean" && detail.open === undefined) {
+          // TODO(next-major): remove deprecated dropdown-menu:set { value: boolean } compatibility.
+          nextDetail.open = detail.value;
+        } else if (detail.value === null || typeof detail.value === "string") {
+          nextDetail.value = detail.value;
+        }
+      }
+
+      applySet(nextDetail);
+    }),
   );
 
   const controller: DropdownMenuController = {
-    open: () => updateState(true),
-    close: () => updateState(false),
-    toggle: () => updateState(!isOpen),
-    get isOpen() { return isOpen; },
+    open: () =>
+      updateOpenState(true, {
+        source: "programmatic",
+        reason: "programmatic",
+      }),
+    close: () =>
+      updateOpenState(false, {
+        source: "programmatic",
+        reason: "programmatic",
+      }),
+    toggle: () =>
+      updateOpenState(!isOpen, {
+        source: "programmatic",
+        reason: "programmatic",
+      }),
+    set: (detail) => {
+      applySet(detail);
+    },
+    get isOpen() {
+      return isOpen;
+    },
+    get value() {
+      return currentValue;
+    },
+    get values() {
+      return [...currentValues];
+    },
+    get highlightedValue() {
+      return getResolvedValue(getItemRecord(highlightedItem));
+    },
     destroy: () => {
       isDestroyed = true;
       if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
       positionSync.stop();
       presence.cleanup();
       portal.cleanup();
-      // Unlock scroll if still locked
       if (didLockScroll) {
         unlockScroll();
         didLockScroll = false;
       }
-      cleanups.forEach((fn) => fn());
+      cleanups.forEach((cleanup) => cleanup());
       cleanups.length = 0;
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
@@ -602,14 +1333,19 @@ export function createDropdownMenu(
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
 
-  if (defaultOpen) updateState(true);
+  if (defaultOpen) {
+    updateOpenState(true, {
+      source: "init",
+      reason: "init",
+    });
+  }
 
   return controller;
 }
 
 /**
- * Find and bind all dropdown menu components in a scope
- * Returns array of controllers for programmatic access
+ * Find and bind all dropdown menu components in a scope.
+ * Returns array of controllers for programmatic access.
  */
 export function create(scope: ParentNode = document): DropdownMenuController[] {
   const controllers: DropdownMenuController[] = [];
