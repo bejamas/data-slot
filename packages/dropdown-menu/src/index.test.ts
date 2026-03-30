@@ -717,33 +717,35 @@ describe("DropdownMenu", () => {
         valuesDetail = (event as CustomEvent).detail;
       });
 
-      removedRadio.remove();
-      removedCheckbox.remove();
+      try {
+        removedRadio.remove();
+        removedCheckbox.remove();
 
-      controller.open();
+        controller.open();
 
-      expect(valueDetail).toEqual({
-        value: null,
-        previousValue: "pro",
-        item: null,
-        previousItem: removedRadio,
-        source: "programmatic",
-      });
-      expect(valuesDetail).toEqual({
-        values: [],
-        previousValues: ["sms"],
-        changedValue: "sms",
-        checked: false,
-        item: removedCheckbox,
-        source: "programmatic",
-      });
-      expect(callbackValue).toBeNull();
-      expect(callbackValues).toEqual([]);
-      expect(controller.value).toBeNull();
-      expect(controller.values).toEqual([]);
-      expect(root.hasAttribute("data-value")).toBe(false);
-
-      controller.destroy();
+        expect(valueDetail).toEqual({
+          value: null,
+          previousValue: "pro",
+          item: null,
+          previousItem: removedRadio,
+          source: "programmatic",
+        });
+        expect(valuesDetail).toEqual({
+          values: [],
+          previousValues: ["sms"],
+          changedValue: "sms",
+          checked: false,
+          item: removedCheckbox,
+          source: "programmatic",
+        });
+        expect(callbackValue).toBeNull();
+        expect(callbackValues).toEqual([]);
+        expect(controller.value).toBeNull();
+        expect(controller.values).toEqual([]);
+        expect(root.hasAttribute("data-value")).toBe(false);
+      } finally {
+        controller.destroy();
+      }
     });
   });
 

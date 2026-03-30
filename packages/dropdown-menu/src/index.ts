@@ -883,7 +883,10 @@ export function createDropdownMenu(
         didLockScroll = true;
       }
 
-      cacheItems();
+      cacheItems({
+        source: source === "restore" ? "restore" : "programmatic",
+        emitSelectionInvalidation: source !== "init",
+      });
       keyboardMode = false;
       typeaheadBuffer = "";
       positionSync.start();
