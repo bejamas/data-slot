@@ -57,6 +57,7 @@ const slider = createSlider(element, {
   min: 0,
   max: 100,
   step: 1,
+  thumbAlignment: "edge",
   onValueChange: (value) => console.log("Changed:", value),
   onValueCommit: (value) => console.log("Committed:", value),
 });
@@ -79,7 +80,35 @@ slider.destroy();
 | `data-step` | Step increment | `1` |
 | `data-large-step` | Large step for PageUp/PageDown | `step * 10` |
 | `data-orientation` | `horizontal` or `vertical` | `horizontal` |
+| `data-thumb-alignment` | `center`, `edge`, or `edge-client-only` | `center` |
 | `data-disabled` | Disable the slider | - |
+
+## Thumb Alignment
+
+By default, slider thumbs are centered on the active value. That means the thumb can
+extend beyond the track when the value is at `min` or `max`.
+
+Use `thumbAlignment` or `data-thumb-alignment` to change that behavior:
+
+- `"center"` - Default. The thumb is centered on the value and may overflow the track edges.
+- `"edge"` - Insets the thumb so its edge aligns with the track edge at `min` and `max`.
+- `"edge-client-only"` - Accepted for Base UI API parity. In this vanilla package it behaves the same as `"edge"`.
+
+```html
+<div data-slot="slider" data-default-value="25" data-thumb-alignment="edge">
+  <div data-slot="slider-track">
+    <div data-slot="slider-range"></div>
+  </div>
+  <div data-slot="slider-thumb"></div>
+</div>
+```
+
+```javascript
+createSlider(element, {
+  defaultValue: 25,
+  thumbAlignment: "edge",
+});
+```
 
 ## Events
 
@@ -171,7 +200,7 @@ The component sets data attributes and inline styles for CSS hooks:
 [data-slot="slider-thumb"] {
   position: absolute;
   /* --position: X%; inset-inline-start/top or bottom/left are applied inline */
-  /* translate is applied inline to center the thumb on the active value */
+  /* translate is applied inline to center the thumb on the resolved visual position */
 }
 
 /* Range thumbs expose their index */
@@ -193,6 +222,11 @@ styles from the controller. The runtime owns the track's `position: relative`, t
 range's start/size positioning, and the thumb's absolute position / translate, so
 authors only need to supply visual styles unless they intentionally want to override
 that layout behavior.
+
+When `thumbAlignment` is `"edge"` or `"edge-client-only"`, the runtime measures the
+track and thumb size to keep the thumb inside the visible track. In those modes,
+`--position` and the range start/size vars represent rendered layout positions rather
+than raw value percentages.
 
 ## Accessibility
 

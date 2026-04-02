@@ -13,7 +13,7 @@
   },
   {
     "name": "@data-slot/dropdown-menu",
-    "size": 4923,
+    "size": 4939,
     "sizeFormatted": "4.8 KB",
     "description": "Action menus, kbd nav"
   },
@@ -42,16 +42,16 @@
     "description": "Collapsible sections"
   },
   {
+    "name": "@data-slot/slider",
+    "size": 3456,
+    "sizeFormatted": "3.4 KB",
+    "description": "Single/range value sliders"
+  },
+  {
     "name": "@data-slot/tooltip",
     "size": 2784,
     "sizeFormatted": "2.7 KB",
     "description": "Hover/focus tooltips"
-  },
-  {
-    "name": "@data-slot/slider",
-    "size": 2732,
-    "sizeFormatted": "2.7 KB",
-    "description": "Single/range value sliders"
   },
   {
     "name": "@data-slot/tabs",

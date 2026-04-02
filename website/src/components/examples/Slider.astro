@@ -57,6 +57,28 @@ const tailwindCodeBasic = `<div data-slot="slider" data-default-value="50" class
   ></div>
 </div>`;
 
+const cssCodeEdgeAlignment = `<div data-slot="slider" data-default-value="25" data-thumb-alignment="edge" class="slider">
+  <div data-slot="slider-track" class="slider-track">
+    <div data-slot="slider-range" class="slider-range"></div>
+  </div>
+  <div data-slot="slider-thumb" class="slider-thumb"></div>
+</div>
+
+<style>
+  /* Same styles as basic slider */
+</style>`;
+
+const tailwindCodeEdgeAlignment = `<div data-slot="slider" data-default-value="25" data-thumb-alignment="edge" class="relative flex h-5 w-full items-center">
+  <div data-slot="slider-track" class="h-1 w-full rounded bg-gray-200">
+    <div data-slot="slider-range" class="rounded bg-gray-900"></div>
+  </div>
+  <div
+    data-slot="slider-thumb"
+    class="h-5 w-5 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2
+           focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+  ></div>
+</div>`;
+
 const cssCodeRange = `<div data-slot="slider" data-default-value="25,75" class="slider">
   <div data-slot="slider-track" class="slider-track">
     <div data-slot="slider-range" class="slider-range"></div>
@@ -107,6 +129,43 @@ const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" cl
 
   <Code slot="code-css" code={cssCodeBasic} lang="html" theme="vitesse-light" />
   <Code slot="code-tailwind" code={tailwindCodeBasic} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+
+<!-- Edge Alignment -->
+<ExampleBlock label="Edge Alignment">
+  <div
+    slot="preview-css"
+    data-slot="slider"
+    data-default-value="25"
+    data-thumb-alignment="edge"
+    id="slider-edge-css"
+    class="slider-css"
+  >
+    <div data-slot="slider-track" class="slider-track-css">
+      <div data-slot="slider-range" class="slider-range-css"></div>
+    </div>
+    <div data-slot="slider-thumb" class="slider-thumb-css"></div>
+  </div>
+
+  <div
+    slot="preview-tailwind"
+    data-slot="slider"
+    data-default-value="25"
+    data-thumb-alignment="edge"
+    id="slider-edge-tw"
+    class="relative flex h-5 w-full items-center"
+  >
+    <div data-slot="slider-track" class="h-1 w-full rounded bg-gray-200">
+      <div data-slot="slider-range" class="rounded bg-gray-900"></div>
+    </div>
+    <div
+      data-slot="slider-thumb"
+      class="h-5 w-5 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+    ></div>
+  </div>
+
+  <Code slot="code-css" code={cssCodeEdgeAlignment} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCodeEdgeAlignment} lang="html" theme="vitesse-light" />
 </ExampleBlock>
 
 <!-- Range Slider -->

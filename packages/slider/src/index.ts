@@ -15,6 +15,14 @@ import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
+const THUMB_ALIGNMENTS = ["center", "edge", "edge-client-only"] as const;
+
+type ThumbAlignment = (typeof THUMB_ALIGNMENTS)[number];
+type SliderValue = number | [number, number];
+type VisualPercents = {
+  thumbPercent: number;
+  trackPercent: number;
+};
 
 export interface SliderOptions {
   /** Initial value(s) - number or [min, max] for range */
@@ -29,6 +37,11 @@ export interface SliderOptions {
   largeStep?: number;
   /** Slider orientation */
   orientation?: "horizontal" | "vertical";
+  /**
+   * Thumb alignment when the value is at the track edges.
+   * "edge-client-only" is accepted for Base UI compatibility and behaves the same as "edge".
+   */
+  thumbAlignment?: ThumbAlignment;
   /** Disable the slider */
   disabled?: boolean;
   /** Callback when value changes during interaction */
@@ -55,8 +68,6 @@ export interface SliderController {
 const ROOT_BINDING_KEY = "@data-slot/slider";
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/slider] createSlider() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
-
-type SliderValue = number | [number, number];
 
 /**
  * Parse a default value from string (e.g., "50" or "25,75")
@@ -108,6 +119,10 @@ function valueToPercent(val: number, min: number, max: number): number {
  */
 function percentToValue(percent: number, min: number, max: number): number {
   return (percent / 100) * (max - min) + min;
+}
+
+function clampPercent(percent: number): number {
+  return Math.max(0, Math.min(100, percent));
 }
 
 /**
@@ -198,6 +213,10 @@ export function createSlider(
     options.orientation ??
     getDataEnum(root, "orientation", ORIENTATIONS) ??
     "horizontal";
+  const thumbAlignment =
+    options.thumbAlignment ??
+    getDataEnum(root, "thumbAlignment", THUMB_ALIGNMENTS) ??
+    "center";
   const disabled = options.disabled ?? getDataBool(root, "disabled") ?? false;
   const onValueChange = options.onValueChange;
   const onValueCommit = options.onValueCommit;
@@ -235,6 +254,8 @@ export function createSlider(
   let valueAtInteractionStart: SliderValue | null = null;
   // Store original touchAction to restore later
   let prevTouchAction: string | null = null;
+  let pressedThumbCenterOffset = 0;
+  let layoutResizeObserver: ResizeObserver | null = null;
 
   const stateParts = Array.from(
     new Set(
@@ -298,6 +319,14 @@ export function createSlider(
   }
 
   const isHorizontal = orientation === "horizontal";
+  const usesInsetThumbAlignment = thumbAlignment !== "center";
+  const layoutObservedParts = Array.from(
+    new Set(
+      [rootElement, control, track, ...thumbs].filter(
+        (part): part is HTMLElement => part instanceof HTMLElement,
+      ),
+    ),
+  );
 
   const applyTrackLayoutStyles = () => {
     track.style.position = "relative";
@@ -364,12 +393,167 @@ export function createSlider(
 
   applyTrackLayoutStyles();
 
+  const getAxisSize = (rect: DOMRect | DOMRectReadOnly): number =>
+    isHorizontal ? rect.width : rect.height;
+
+  const getTrackOffsetWithinContainer = (
+    containerRect: DOMRect | DOMRectReadOnly,
+    trackRect: DOMRect | DOMRectReadOnly,
+  ): number =>
+    isHorizontal
+      ? trackRect.left - containerRect.left
+      : containerRect.bottom - trackRect.bottom;
+
+  const getThumbContainer = (thumb: HTMLElement): HTMLElement =>
+    thumb.offsetParent instanceof HTMLElement ? thumb.offsetParent : control;
+
+  const getInsetTrackPercent = (
+    rawPercent: number,
+    trackSize: number,
+    thumbSize: number,
+  ): number | undefined => {
+    if (
+      !Number.isFinite(trackSize) ||
+      !Number.isFinite(thumbSize) ||
+      trackSize <= 0
+    ) {
+      return undefined;
+    }
+
+    const effectiveThumbSize = Math.min(trackSize, thumbSize);
+    const availableTravel = Math.max(0, trackSize - effectiveThumbSize);
+    const centerOffsetWithinTrack =
+      effectiveThumbSize / 2 + (availableTravel * rawPercent) / 100;
+    const trackPercent = clampPercent((centerOffsetWithinTrack / trackSize) * 100);
+
+    return Number.isFinite(trackPercent) ? trackPercent : undefined;
+  };
+
+  const getVisualPercents = (
+    thumb: HTMLElement | undefined,
+    rawPercent: number,
+  ): VisualPercents => {
+    const fallback = {
+      thumbPercent: rawPercent,
+      trackPercent: rawPercent,
+    };
+
+    if (!thumb || !usesInsetThumbAlignment) {
+      return fallback;
+    }
+
+    const trackRect = track.getBoundingClientRect();
+    const thumbRect = thumb.getBoundingClientRect();
+    const containerRect = getThumbContainer(thumb).getBoundingClientRect();
+
+    const trackSize = getAxisSize(trackRect);
+    const thumbSize = getAxisSize(thumbRect);
+    const containerSize = getAxisSize(containerRect);
+
+    if (
+      !Number.isFinite(trackSize) ||
+      !Number.isFinite(thumbSize) ||
+      !Number.isFinite(containerSize) ||
+      trackSize <= 0 ||
+      containerSize <= 0
+    ) {
+      return fallback;
+    }
+
+    const trackPercent = getInsetTrackPercent(rawPercent, trackSize, thumbSize);
+
+    if (trackPercent === undefined) {
+      return fallback;
+    }
+
+    const effectiveThumbSize = Math.min(trackSize, thumbSize);
+    const availableTravel = Math.max(0, trackSize - effectiveThumbSize);
+    const centerOffsetWithinTrack =
+      effectiveThumbSize / 2 + (availableTravel * rawPercent) / 100;
+    const trackOffsetWithinContainer = getTrackOffsetWithinContainer(
+      containerRect,
+      trackRect,
+    );
+    const centerOffsetWithinContainer = trackOffsetWithinContainer + centerOffsetWithinTrack;
+    const thumbPercent = clampPercent(
+      (centerOffsetWithinContainer / containerSize) * 100,
+    );
+
+    if (!Number.isFinite(trackPercent) || !Number.isFinite(thumbPercent)) {
+      return fallback;
+    }
+
+    return { thumbPercent, trackPercent };
+  };
+
+  const getRangeLayoutPercents = (
+    minRawPercent: number,
+    maxRawPercent: number,
+  ) => {
+    const fallback = {
+      startPercent: minRawPercent,
+      sizePercent: Math.max(0, maxRawPercent - minRawPercent),
+    };
+
+    if (!usesInsetThumbAlignment) {
+      return fallback;
+    }
+
+    const trackRect = track.getBoundingClientRect();
+    const trackSize = getAxisSize(trackRect);
+
+    if (!Number.isFinite(trackSize) || trackSize <= 0) {
+      return fallback;
+    }
+
+    const thumbSizes = thumbs.slice(0, 2).map((thumb) => {
+      if (!(thumb instanceof HTMLElement)) {
+        return NaN;
+      }
+
+      return getAxisSize(thumb.getBoundingClientRect());
+    });
+
+    if (
+      thumbSizes.length < 2 ||
+      thumbSizes.some((thumbSize) => !Number.isFinite(thumbSize) || thumbSize <= 0)
+    ) {
+      return fallback;
+    }
+
+    // Use a single inset corridor for the filled segment so it remains ordered
+    // even when range thumbs have different sizes or grow during interaction.
+    const sharedThumbSize = Math.max(...thumbSizes);
+    const startPercent = getInsetTrackPercent(
+      minRawPercent,
+      trackSize,
+      sharedThumbSize,
+    );
+    const endPercent = getInsetTrackPercent(
+      maxRawPercent,
+      trackSize,
+      sharedThumbSize,
+    );
+
+    if (startPercent === undefined || endPercent === undefined) {
+      return fallback;
+    }
+
+    return {
+      startPercent,
+      sizePercent: Math.max(0, endPercent - startPercent),
+    };
+  };
+
   // Update visual state (CSS positioning, ARIA values)
   const updateVisualState = () => {
     if (isRange(currentValue)) {
       const [minVal, maxVal] = currentValue;
-      const minPercent = valueToPercent(minVal, min, max);
-      const maxPercent = valueToPercent(maxVal, min, max);
+      const minRawPercent = valueToPercent(minVal, min, max);
+      const maxRawPercent = valueToPercent(maxVal, min, max);
+      const minVisual = getVisualPercents(thumbs[0], minRawPercent);
+      const maxVisual = getVisualPercents(thumbs[1], maxRawPercent);
+      const rangeLayout = getRangeLayoutPercents(minRawPercent, maxRawPercent);
 
       // Update thumbs with dynamic ARIA bounds
       if (thumbs[0]) {
@@ -377,31 +561,36 @@ export function createSlider(
         setAria(thumbs[0], "valuemin", String(min));
         // Min thumb's max is constrained by max thumb's value
         setAria(thumbs[0], "valuemax", String(maxVal));
-        applyThumbLayoutStyles(thumbs[0], minPercent);
+        applyThumbLayoutStyles(thumbs[0], minVisual.thumbPercent);
       }
       if (thumbs[1]) {
         setAria(thumbs[1], "valuenow", String(maxVal));
         // Max thumb's min is constrained by min thumb's value
         setAria(thumbs[1], "valuemin", String(minVal));
         setAria(thumbs[1], "valuemax", String(max));
-        applyThumbLayoutStyles(thumbs[1], maxPercent);
+        applyThumbLayoutStyles(thumbs[1], maxVisual.thumbPercent);
       }
 
       // Update range
-      applyRangeLayoutStyles(minPercent, maxPercent - minPercent, true);
+      applyRangeLayoutStyles(
+        rangeLayout.startPercent,
+        rangeLayout.sizePercent,
+        true,
+      );
     } else {
-      const percent = valueToPercent(currentValue, min, max);
+      const rawPercent = valueToPercent(currentValue, min, max);
+      const visual = getVisualPercents(thumbs[0], rawPercent);
 
       // Update thumb
       if (thumbs[0]) {
         setAria(thumbs[0], "valuenow", String(currentValue));
         setAria(thumbs[0], "valuemin", String(min));
         setAria(thumbs[0], "valuemax", String(max));
-        applyThumbLayoutStyles(thumbs[0], percent);
+        applyThumbLayoutStyles(thumbs[0], visual.thumbPercent);
       }
 
       // Update range (from start to thumb)
-      applyRangeLayoutStyles(0, percent, false);
+      applyRangeLayoutStyles(0, visual.trackPercent, false);
     }
 
     // Update root data-value
@@ -456,24 +645,83 @@ export function createSlider(
   // Initialize visual state
   updateVisualState();
 
-  // Get position from pointer event - use track for geometry
-  const getValueFromPointer = (e: PointerEvent): number | null => {
-    const rect = track.getBoundingClientRect();
+  const syncLayoutResizeObserver = () => {
+    layoutResizeObserver?.disconnect();
+    layoutResizeObserver = null;
 
-    // Bail if track has zero size
-    if (isHorizontal && rect.width === 0) return null;
-    if (!isHorizontal && rect.height === 0) return null;
-
-    let percent: number;
-    if (isHorizontal) {
-      percent = ((e.clientX - rect.left) / rect.width) * 100;
-    } else {
-      // Vertical: bottom is min, top is max
-      percent = ((rect.bottom - e.clientY) / rect.height) * 100;
+    if (!usesInsetThumbAlignment || typeof ResizeObserver !== "function") {
+      return;
     }
 
-    percent = Math.max(0, Math.min(100, percent));
+    layoutResizeObserver = new ResizeObserver(() => {
+      updateVisualState();
+    });
+
+    for (const part of layoutObservedParts) {
+      layoutResizeObserver.observe(part);
+    }
+  };
+
+  syncLayoutResizeObserver();
+  cleanups.push(() => {
+    layoutResizeObserver?.disconnect();
+    layoutResizeObserver = null;
+  });
+
+  // Get position from pointer event - use track for geometry
+  const getValueFromPointer = (
+    e: PointerEvent,
+    thumbIndex: number | null = null,
+  ): number | null => {
+    const rect = track.getBoundingClientRect();
+    const trackSize = getAxisSize(rect);
+
+    // Bail if track has zero size
+    if (trackSize === 0) return null;
+
+    const adjustedPointerCoord = (isHorizontal ? e.clientX : e.clientY) - pressedThumbCenterOffset;
+    const distanceFromTrackStart = isHorizontal
+      ? adjustedPointerCoord - rect.left
+      : rect.bottom - adjustedPointerCoord;
+
+    let percent = (distanceFromTrackStart / trackSize) * 100;
+
+    if (usesInsetThumbAlignment && thumbIndex !== null) {
+      const thumb = thumbs[thumbIndex];
+      const thumbRect = thumb?.getBoundingClientRect();
+      const thumbSize = thumbRect ? getAxisSize(thumbRect) : 0;
+      const availableTravel = trackSize - thumbSize;
+
+      if (Number.isFinite(thumbSize) && thumbSize > 0 && availableTravel > 0) {
+        percent = ((distanceFromTrackStart - thumbSize / 2) / availableTravel) * 100;
+      }
+    }
+
+    percent = clampPercent(percent);
     return percentToValue(percent, min, max);
+  };
+
+  const getThumbPressOffset = (
+    thumbIndex: number | null,
+    e: PointerEvent,
+  ): number => {
+    if (!usesInsetThumbAlignment || thumbIndex === null) {
+      return 0;
+    }
+
+    const thumb = thumbs[thumbIndex];
+    const rect = thumb?.getBoundingClientRect();
+    const thumbSize = rect ? getAxisSize(rect) : 0;
+
+    if (!thumb || !Number.isFinite(thumbSize) || thumbSize <= 0) {
+      return 0;
+    }
+
+    const thumbCenter = isHorizontal
+      ? rect.left + rect.width / 2
+      : rect.top + rect.height / 2;
+
+    return (isHorizontal ? e.clientX : e.clientY) - thumbCenter;
   };
 
   // Find thumb index from element
@@ -533,15 +781,23 @@ export function createSlider(
 
     e.preventDefault();
 
-    const value = getValueFromPointer(e);
-    if (value === null) return;
-
     // Check if user clicked directly on a thumb
     let thumbIndex = getThumbIndexFromTarget(e.target);
+    pressedThumbCenterOffset = getThumbPressOffset(thumbIndex, e);
+
+    let value = getValueFromPointer(e, thumbIndex);
+    if (value === null) {
+      pressedThumbCenterOffset = 0;
+      return;
+    }
 
     // If not on a thumb, find closest thumb
     if (thumbIndex === null) {
       thumbIndex = getClosestThumbIndex(value);
+      const adjustedValue = getValueFromPointer(e, thumbIndex);
+      if (adjustedValue !== null) {
+        value = adjustedValue;
+      }
     }
 
     draggingThumbIndex = thumbIndex;
@@ -567,7 +823,7 @@ export function createSlider(
     if (draggingThumbIndex === null || disabled) return;
 
     e.preventDefault();
-    const value = getValueFromPointer(e);
+    const value = getValueFromPointer(e, draggingThumbIndex);
     if (value === null) return;
 
     updateThumbValue(draggingThumbIndex, value);
@@ -591,6 +847,7 @@ export function createSlider(
     onValueCommit?.(currentValue);
 
     draggingThumbIndex = null;
+    pressedThumbCenterOffset = 0;
 
     // Safe release - can throw if capture wasn't properly set
     try {
@@ -745,6 +1002,7 @@ export function createSlider(
       return disabled;
     },
     destroy: () => {
+      pressedThumbCenterOffset = 0;
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       clearRootBinding(root, ROOT_BINDING_KEY, controller);

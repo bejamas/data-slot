@@ -4,12 +4,65 @@ import { clearRootBinding, setRootBinding } from "../../core/src/index";
 
 describe("Slider", () => {
   const ROOT_BINDING_KEY = "@data-slot/slider";
+  const rect = (left: number, top: number, width: number, height: number) =>
+    ({
+      left,
+      top,
+      right: left + width,
+      bottom: top + height,
+      width,
+      height,
+      x: left,
+      y: top,
+      toJSON() {},
+    }) as DOMRect;
+
+  const mockOffsetParent = (
+    element: HTMLElement,
+    value: HTMLElement | null,
+  ) => {
+    Object.defineProperty(element, "offsetParent", {
+      configurable: true,
+      value,
+    });
+  };
+
+  const mockSliderGeometry = ({
+    root,
+    control,
+    track,
+    thumbs,
+    rootRect = rect(0, 0, 100, 20),
+    controlRect = rootRect,
+    trackRect = rect(0, 8, 100, 4),
+    thumbRects = [rect(0, 0, 20, 20)],
+    offsetParent = control,
+  }: {
+    root: HTMLElement;
+    control: HTMLElement;
+    track: HTMLElement;
+    thumbs: HTMLElement[];
+    rootRect?: DOMRect;
+    controlRect?: DOMRect;
+    trackRect?: DOMRect;
+    thumbRects?: DOMRect[];
+    offsetParent?: HTMLElement | null;
+  }) => {
+    root.getBoundingClientRect = () => rootRect;
+    control.getBoundingClientRect = () => controlRect;
+    track.getBoundingClientRect = () => trackRect;
+
+    thumbs.forEach((thumb, index) => {
+      thumb.getBoundingClientRect = () => thumbRects[index] ?? thumbRects[0]!;
+      mockOffsetParent(thumb, offsetParent);
+    });
+  };
 
   beforeEach(() => {
     document.body.innerHTML = "";
   });
 
-  const setupSingle = (attrs = "", defaultValue?: number) => {
+  const mountSingle = (attrs = "") => {
     document.body.innerHTML = `
       <div data-slot="slider" id="root" ${attrs}>
         <div class="slider-control">
@@ -25,12 +78,18 @@ describe("Slider", () => {
     const range = root.querySelector('[data-slot="slider-range"]') as HTMLElement;
     const thumb = root.querySelector('[data-slot="slider-thumb"]') as HTMLElement;
     const control = track.parentElement as HTMLElement;
+
+    return { root, track, range, thumb, control };
+  };
+
+  const setupSingle = (attrs = "", defaultValue?: number) => {
+    const { root, track, range, thumb, control } = mountSingle(attrs);
     const controller = createSlider(root, defaultValue !== undefined ? { defaultValue } : {});
 
     return { root, track, range, thumb, control, controller };
   };
 
-  const setupRange = (attrs = "", defaultValue?: [number, number]) => {
+  const mountRange = (attrs = "") => {
     document.body.innerHTML = `
       <div data-slot="slider" id="root" ${attrs}>
         <div class="slider-control">
@@ -47,6 +106,12 @@ describe("Slider", () => {
     const range = root.querySelector('[data-slot="slider-range"]') as HTMLElement;
     const thumbs = [...root.querySelectorAll('[data-slot="slider-thumb"]')] as HTMLElement[];
     const control = track.parentElement as HTMLElement;
+
+    return { root, track, range, thumbs, control };
+  };
+
+  const setupRange = (attrs = "", defaultValue?: [number, number]) => {
+    const { root, track, range, thumbs, control } = mountRange(attrs);
     const controller = createSlider(root, defaultValue !== undefined ? { defaultValue } : {});
 
     return { root, track, range, thumbs, control, controller };
@@ -1097,6 +1162,279 @@ describe("Slider", () => {
       expect(range.style.left).toBe("");
       expect(range.style.getPropertyValue("inset-inline-start")).toBe("");
       expect(range.style.width).toBe("inherit");
+    });
+  });
+
+  describe("Thumb Alignment", () => {
+    it("reads data-thumb-alignment", () => {
+      const { root, control, track, range, thumb } = mountSingle(
+        'data-default-value="50" data-thumb-alignment="edge"',
+      );
+      mockSliderGeometry({
+        root,
+        control,
+        track,
+        thumbs: [thumb],
+      });
+
+      const controller = createSlider(root);
+      controller.setValue(0);
+
+      expect(thumb.style.getPropertyValue("--position")).toBe("10%");
+      expect(range.style.getPropertyValue("--start-position")).toBe("10%");
+    });
+
+    it("lets JS thumbAlignment override the data attribute", () => {
+      const { root, control, track, range, thumb } = mountSingle(
+        'data-default-value="50" data-thumb-alignment="edge"',
+      );
+      mockSliderGeometry({
+        root,
+        control,
+        track,
+        thumbs: [thumb],
+      });
+
+      const controller = createSlider(root, {
+        thumbAlignment: "center",
+      });
+      controller.setValue(0);
+
+      expect(thumb.style.getPropertyValue("--position")).toBe("0%");
+      expect(range.style.getPropertyValue("--start-position")).toBe("0%");
+    });
+
+    it("supports edge-client-only as an alias of edge", () => {
+      const { root, control, track, range, thumb } = mountSingle(
+        'data-default-value="0"',
+      );
+      mockSliderGeometry({
+        root,
+        control,
+        track,
+        thumbs: [thumb],
+      });
+
+      createSlider(root, {
+        thumbAlignment: "edge-client-only",
+      });
+
+      expect(thumb.style.getPropertyValue("--position")).toBe("10%");
+      expect(range.style.getPropertyValue("--start-position")).toBe("10%");
+    });
+
+    it("keeps a single horizontal thumb inside the track in edge mode", () => {
+      const { root, control, track, range, thumb } = mountSingle(
+        'data-default-value="0"',
+      );
+      mockSliderGeometry({
+        root,
+        control,
+        track,
+        thumbs: [thumb],
+      });
+
+      const controller = createSlider(root, {
+        thumbAlignment: "edge",
+      });
+
+      expect(thumb.style.getPropertyValue("--position")).toBe("10%");
+      expect(range.style.getPropertyValue("--start-position")).toBe("10%");
+
+      controller.setValue(100);
+
+      expect(thumb.style.getPropertyValue("--position")).toBe("90%");
+      expect(range.style.getPropertyValue("--start-position")).toBe("90%");
+    });
+
+    it("keeps a vertical thumb inside the track in edge mode", () => {
+      const { root, control, track, range, thumb } = mountSingle(
+        'data-default-value="100" data-orientation="vertical"',
+      );
+      mockSliderGeometry({
+        root,
+        control,
+        track,
+        thumbs: [thumb],
+        rootRect: rect(0, 0, 20, 100),
+        controlRect: rect(0, 0, 20, 100),
+        trackRect: rect(8, 0, 4, 100),
+      });
+
+      createSlider(root, {
+        thumbAlignment: "edge",
+      });
+
+      expect(thumb.style.getPropertyValue("--position")).toBe("90%");
+      expect(thumb.style.bottom).toBe("var(--position)");
+      expect(range.style.getPropertyValue("--start-position")).toBe("90%");
+      expect(range.style.height).toBe("var(--start-position)");
+    });
+
+    it("keeps range thumbs and the filled segment visually aligned in edge mode", () => {
+      const { root, control, track, range, thumbs } = mountRange(
+        'data-default-value="25,75"',
+      );
+      mockSliderGeometry({
+        root,
+        control,
+        track,
+        thumbs,
+      });
+
+      createSlider(root, {
+        thumbAlignment: "edge",
+      });
+
+      expect(thumbs[0]!.style.getPropertyValue("--position")).toBe("30%");
+      expect(thumbs[1]!.style.getPropertyValue("--position")).toBe("70%");
+      expect(range.style.getPropertyValue("--start-position")).toBe("30%");
+      expect(range.style.getPropertyValue("--relative-size")).toBe("40%");
+    });
+
+    it("keeps the range fill ordered when thumbs have different sizes", () => {
+      const { root, control, track, range, thumbs } = mountRange(
+        'data-default-value="45,46"',
+      );
+      mockSliderGeometry({
+        root,
+        control,
+        track,
+        thumbs,
+        rootRect: rect(0, 0, 100, 30),
+        controlRect: rect(0, 0, 100, 30),
+        trackRect: rect(0, 13, 100, 4),
+        thumbRects: [rect(0, 0, 30, 30), rect(0, 0, 10, 10)],
+      });
+
+      createSlider(root, {
+        thumbAlignment: "edge",
+      });
+
+      expect(parseFloat(range.style.getPropertyValue("--start-position"))).toBeCloseTo(
+        46.5,
+        5,
+      );
+      expect(parseFloat(range.style.getPropertyValue("--relative-size"))).toBeCloseTo(
+        0.7,
+        5,
+      );
+    });
+
+    it("converts track positions into the thumb offset parent's coordinate space", () => {
+      const { root, control, track, thumb } = mountSingle(
+        'data-default-value="0"',
+      );
+      mockSliderGeometry({
+        root,
+        control,
+        track,
+        thumbs: [thumb],
+        rootRect: rect(0, 0, 200, 20),
+        controlRect: rect(0, 0, 200, 20),
+        trackRect: rect(50, 8, 100, 4),
+        thumbRects: [rect(50, 0, 20, 20)],
+        offsetParent: root,
+      });
+
+      createSlider(root, {
+        thumbAlignment: "edge",
+      });
+
+      expect(thumb.style.getPropertyValue("--position")).toBe("30%");
+    });
+
+    it("recomputes inset positions when ResizeObserver fires", () => {
+      const OriginalResizeObserver = globalThis.ResizeObserver;
+      let resizeCallback: ResizeObserverCallback | null = null;
+
+      class MockResizeObserver {
+        constructor(callback: ResizeObserverCallback) {
+          resizeCallback = callback;
+        }
+
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      }
+
+      ;(globalThis as unknown as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver =
+        MockResizeObserver as unknown as typeof ResizeObserver;
+
+      try {
+        const { root, control, track, range, thumb } = mountSingle(
+          'data-default-value="25"',
+        );
+        let thumbRect = rect(0, 0, 20, 20);
+
+        mockSliderGeometry({
+          root,
+          control,
+          track,
+          thumbs: [thumb],
+          thumbRects: [thumbRect],
+        });
+
+        const controller = createSlider(root, {
+          thumbAlignment: "edge",
+        });
+
+        expect(thumb.style.getPropertyValue("--position")).toBe("30%");
+        expect(range.style.getPropertyValue("--start-position")).toBe("30%");
+
+        thumbRect = rect(0, 0, 40, 20);
+        mockSliderGeometry({
+          root,
+          control,
+          track,
+          thumbs: [thumb],
+          thumbRects: [thumbRect],
+        });
+
+        resizeCallback?.([], {} as ResizeObserver);
+
+        expect(thumb.style.getPropertyValue("--position")).toBe("35%");
+        expect(range.style.getPropertyValue("--start-position")).toBe("35%");
+
+        controller.destroy();
+      } finally {
+        if (OriginalResizeObserver) {
+          ;(globalThis as unknown as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver =
+            OriginalResizeObserver;
+        } else {
+          delete (globalThis as unknown as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+        }
+      }
+    });
+
+    it("does not jump when pressing an inset thumb directly", () => {
+      const { root, control, track, thumb } = mountSingle(
+        'data-default-value="0"',
+      );
+      mockSliderGeometry({
+        root,
+        control,
+        track,
+        thumbs: [thumb],
+        thumbRects: [rect(0, 0, 20, 20)],
+      });
+      control.setPointerCapture = () => {};
+      control.releasePointerCapture = () => {};
+
+      const controller = createSlider(root, {
+        thumbAlignment: "edge",
+      });
+
+      const pointerEvent = new PointerEvent("pointerdown", {
+        clientX: 10,
+        clientY: 10,
+        pointerId: 1,
+        bubbles: true,
+      });
+      Object.defineProperty(pointerEvent, "target", { value: thumb });
+      control.dispatchEvent(pointerEvent);
+
+      expect(controller.value).toBe(0);
     });
   });
 
