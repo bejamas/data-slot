@@ -1,0 +1,153 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div data-slot="resizable" class="resizable-root">
+  <div data-slot="resizable-panel" data-default-size="50" data-min-size="20" class="resizable-panel resizable-panel-dark">
+    <p><strong>Panel A</strong></p>
+    <p>Drag the handle to resize.</p>
+  </div>
+  <div data-slot="resizable-handle" class="resizable-handle"></div>
+  <div data-slot="resizable-panel" data-default-size="50" data-min-size="20" class="resizable-panel resizable-panel-light">
+    <p><strong>Panel B</strong></p>
+    <p>Keyboard: arrow keys adjust size.</p>
+  </div>
+</div>
+
+<style>
+  .resizable-root {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 10rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .resizable-panel {
+    padding: 1rem;
+    background: #f0eeeb;
+    overflow: auto;
+  }
+  .resizable-panel-light {
+    background: #fff;
+  }
+  .resizable-panel p {
+    margin: 0 0 0.5rem;
+    font-size: 0.875rem;
+    color: #666;
+  }
+  .resizable-panel p strong {
+    color: #1a1a1a;
+  }
+  .resizable-handle {
+    width: 6px;
+    background: #e5e5e5;
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .resizable-handle:hover,
+  .resizable-handle[data-active] {
+    background: #1a1a1a;
+  }
+  .resizable-handle:focus-visible {
+    outline: 2px solid #1a1a1a;
+    outline-offset: -2px;
+  }
+</style>`;
+
+const tailwindCode = `<div data-slot="resizable" class="flex w-full h-40 border border-gray-300 rounded-md overflow-hidden">
+  <div data-slot="resizable-panel" data-default-size="50" data-min-size="20" class="p-4 bg-code-bg overflow-auto">
+    <p class="text-sm text-gray-500 mb-1"><strong class="text-gray-900">Panel A</strong></p>
+    <p class="text-sm text-gray-500">Drag the handle to resize.</p>
+  </div>
+  <div
+    data-slot="resizable-handle"
+    class="w-1.5 shrink-0 bg-gray-200 cursor-col-resize transition-colors
+           hover:bg-gray-900 data-[active]:bg-gray-900
+           focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-[-2px]"
+  ></div>
+  <div data-slot="resizable-panel" data-default-size="50" data-min-size="20" class="p-4 bg-white overflow-auto">
+    <p class="text-sm text-gray-500 mb-1"><strong class="text-gray-900">Panel B</strong></p>
+    <p class="text-sm text-gray-500">Keyboard: arrow keys adjust size.</p>
+  </div>
+</div>`;
+---
+
+<ExampleBlock label="Two panels with handle">
+  <div slot="preview-css" data-slot="resizable" id="resizable-css" class="resizable-root-css">
+    <div data-slot="resizable-panel" data-default-size="50" data-min-size="20" class="resizable-panel-css">
+      <p class="resizable-panel-text"><strong>Panel A</strong></p>
+      <p class="resizable-panel-text">Drag the handle to resize.</p>
+    </div>
+    <div data-slot="resizable-handle" class="resizable-handle-css"></div>
+    <div data-slot="resizable-panel" data-default-size="50" data-min-size="20" class="resizable-panel-css">
+      <p class="resizable-panel-text"><strong>Panel B</strong></p>
+      <p class="resizable-panel-text">Keyboard: arrow keys adjust size.</p>
+    </div>
+  </div>
+
+  <div slot="preview-tailwind" data-slot="resizable" id="resizable-tw" class="flex w-full h-40 border border-gray-300 rounded-md overflow-hidden">
+    <div data-slot="resizable-panel" data-default-size="50" data-min-size="20" class="p-4 bg-code-bg overflow-auto">
+      <p class="text-sm text-gray-500 mb-1"><strong class="text-gray-900">Panel A</strong></p>
+      <p class="text-sm text-gray-500">Drag the handle to resize.</p>
+    </div>
+    <div
+      data-slot="resizable-handle"
+      class="w-1.5 shrink-0 bg-gray-200 cursor-col-resize transition-colors
+             hover:bg-gray-900 data-[active]:bg-gray-900
+             focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-[-2px]"
+    ></div>
+    <div data-slot="resizable-panel" data-default-size="50" data-min-size="20" class="p-4 bg-white overflow-auto">
+      <p class="text-sm text-gray-500 mb-1"><strong class="text-gray-900">Panel B</strong></p>
+      <p class="text-sm text-gray-500">Keyboard: arrow keys adjust size.</p>
+    </div>
+  </div>
+
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
+
+<style>
+  .resizable-root-css {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 10rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .resizable-panel-css {
+    padding: 1rem;
+    background: #f0eeeb;
+    overflow: auto;
+  }
+  .resizable-panel-css + .resizable-handle-css + .resizable-panel-css {
+    background: #fff;
+  }
+  .resizable-panel-text {
+    margin: 0 0 0.5rem;
+    font-size: 0.875rem;
+    color: #666;
+  }
+  .resizable-panel-text strong {
+    color: #1a1a1a;
+  }
+  .resizable-handle-css {
+    width: 6px;
+    background: #e5e5e5;
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .resizable-handle-css:hover,
+  .resizable-handle-css[data-active] {
+    background: #1a1a1a;
+  }
+  .resizable-handle-css:focus-visible {
+    outline: 2px solid #1a1a1a;
+    outline-offset: -2px;
+  }
+</style>
