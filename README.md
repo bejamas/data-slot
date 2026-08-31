@@ -216,9 +216,31 @@ bun run typecheck
 
 # Build all packages
 bun run build
+
+# Build the documentation website
+bun run build:website
+
+# Preview the website in the Cloudflare Workers runtime
+bun run preview:website
 ```
 
 Each package has its own directory in `packages/` with its own `package.json`, source code, and tests.
+
+### Cloudflare Workers deployment
+
+The documentation website is served from the `data-slot` Worker in the Bejamas OSS Cloudflare account (`705e6a1ce1620c4ac2ce279a064dec41`) at `https://data-slot.com`. The Worker custom domain is managed in `wrangler.jsonc`. A local deployment can be created with:
+
+```bash
+bun run deploy:website
+```
+
+For Cloudflare Workers Builds, connect `bejamas/data-slot`, leave the root directory blank (the repository root), and use `main` as the production branch. Use these commands:
+
+- Build command: `bun run build:website`
+- Deploy command: `bunx wrangler deploy`
+- Non-production branch deploy command: `bunx wrangler versions upload`
+
+Set the build variable `BUN_VERSION` to `1.3.14`. No application secrets or runtime variables are required.
 
 ## License
 

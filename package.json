@@ -10,15 +10,19 @@
     "test:parity": "bun test packages/dialog/src/index.test.ts packages/select/src/index.test.ts packages/tooltip/src/index.test.ts packages/hover-card/src/index.test.ts packages/combobox/src/index.test.ts",
     "typecheck": "tsc --noEmit",
     "build": "bun run --filter './packages/*' build",
+    "build:website": "bun run build && bun run --cwd website build",
+    "preview:website": "bun run build:website && wrangler dev",
+    "deploy:website": "bun run build:website && wrangler deploy",
     "version": "bun run scripts/version.ts",
     "release": "bun run version"
   },
   "devDependencies": {
     "@ai-sdk/openai": "^1.3.24",
+    "@happy-dom/global-registrator": "^16.8.1",
     "@types/bun": "latest",
     "ai": "^4.3.19",
-    "@happy-dom/global-registrator": "^16.8.1",
     "tsdown": "^0.12.9",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "4.127.1"
   }
 }

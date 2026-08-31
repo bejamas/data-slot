@@ -1,91 +1,91 @@
 [
   {
     "name": "@data-slot/navigation-menu",
-    "size": 10508,
+    "size": 10561,
     "sizeFormatted": "10.3 KB",
     "description": "Dropdown navigation menus"
   },
   {
     "name": "@data-slot/core",
-    "size": 5969,
-    "sizeFormatted": "5.8 KB",
+    "size": 6001,
+    "sizeFormatted": "5.9 KB",
     "description": "Shared utilities"
   },
   {
     "name": "@data-slot/dropdown-menu",
-    "size": 4939,
-    "sizeFormatted": "4.8 KB",
+    "size": 4968,
+    "sizeFormatted": "4.9 KB",
     "description": "Action menus, kbd nav"
   },
   {
     "name": "@data-slot/command",
-    "size": 4811,
+    "size": 4829,
     "sizeFormatted": "4.7 KB",
     "description": "Command palette, ranked search"
   },
   {
     "name": "@data-slot/select",
-    "size": 4639,
+    "size": 4643,
     "sizeFormatted": "4.5 KB",
     "description": "Dropdown select, form-ready"
   },
   {
     "name": "@data-slot/combobox",
-    "size": 4616,
+    "size": 4617,
     "sizeFormatted": "4.5 KB",
     "description": "Autocomplete input"
   },
   {
     "name": "@data-slot/accordion",
-    "size": 3634,
-    "sizeFormatted": "3.5 KB",
+    "size": 3647,
+    "sizeFormatted": "3.6 KB",
     "description": "Collapsible sections"
   },
   {
     "name": "@data-slot/slider",
-    "size": 3456,
+    "size": 3466,
     "sizeFormatted": "3.4 KB",
     "description": "Single/range value sliders"
   },
   {
     "name": "@data-slot/tooltip",
-    "size": 2784,
+    "size": 2796,
     "sizeFormatted": "2.7 KB",
     "description": "Hover/focus tooltips"
   },
   {
     "name": "@data-slot/tabs",
-    "size": 2368,
+    "size": 2369,
     "sizeFormatted": "2.3 KB",
     "description": "Tabbed interfaces, kbd nav"
   },
   {
     "name": "@data-slot/popover",
-    "size": 2064,
+    "size": 2068,
     "sizeFormatted": "2.0 KB",
     "description": "Anchored floating content"
   },
   {
     "name": "@data-slot/dialog",
-    "size": 1911,
+    "size": 1903,
     "sizeFormatted": "1.9 KB",
     "description": "Modal dialogs, focus trap"
   },
   {
     "name": "@data-slot/switch",
-    "size": 1890,
+    "size": 1892,
     "sizeFormatted": "1.8 KB",
     "description": "Form-ready on/off switch"
   },
   {
     "name": "@data-slot/alert-dialog",
-    "size": 1858,
+    "size": 1852,
     "sizeFormatted": "1.8 KB",
     "description": "Blocking confirmation dialogs"
   },
   {
     "name": "@data-slot/collapsible",
-    "size": 1678,
+    "size": 1683,
     "sizeFormatted": "1.6 KB",
     "description": "Simple show/hide toggle"
   }
