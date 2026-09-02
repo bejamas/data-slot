@@ -539,6 +539,30 @@ export interface PortalLifecycleController {
   cleanup(): void;
 }
 
+/**
+ * Shared terminal gate for controllers whose DOM and asynchronous work must
+ * become permanently inert after destroy().
+ */
+export interface TerminalLifecycleController {
+  readonly isDestroyed: boolean;
+  /** Returns false when destruction has already run. */
+  destroy(): boolean;
+}
+
+export function createTerminalLifecycle(): TerminalLifecycleController {
+  let isDestroyed = false;
+  return {
+    get isDestroyed() {
+      return isDestroyed;
+    },
+    destroy() {
+      if (isDestroyed) return false;
+      isDestroyed = true;
+      return true;
+    },
+  };
+}
+
 export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLifecycleController {
   const enabled = options.enabled ?? true;
   const wrapperSlot = options.wrapperSlot;

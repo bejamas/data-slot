@@ -16,6 +16,7 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
+  createTerminalLifecycle,
   createDismissLayer,
   createFormFieldAdapter,
 } from "@data-slot/core";
@@ -131,6 +132,7 @@ export function createCombobox(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
 
   const matchesMediaQuery = (query: string): boolean => {
     if (typeof win.matchMedia !== "function") return false;
@@ -778,7 +780,7 @@ export function createCombobox(
       updateValue(currentValue, true);
     },
     destroy: () => {
-      if (isDestroyed) return;
+      if (!terminalLifecycle.destroy()) return;
       isDestroyed = true;
       isOpen = false;
       setAria(input, "expanded", false);

@@ -126,6 +126,18 @@ describe('Tooltip', () => {
     controller.destroy()
   })
 
+  it('removes accessibility wiring when destroyed while open', () => {
+    const { trigger, content, controller } = setup()
+    controller.show()
+    expect(trigger.hasAttribute('aria-describedby')).toBe(true)
+
+    controller.destroy()
+
+    expect(trigger.hasAttribute('aria-describedby')).toBe(false)
+    expect(content.getAttribute('aria-hidden')).toBe('true')
+    expect(content.hidden).toBe(true)
+  })
+
   it('shows immediately via controller.show()', () => {
     const { root, controller } = setup()
 

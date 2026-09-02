@@ -34,6 +34,7 @@ export {
   createModalStackItem,
   createDismissLayer,
   createPortalLifecycle,
+  createTerminalLifecycle,
   createPresenceLifecycle,
   createPositionSync,
 } from "./popup.ts";
@@ -53,6 +54,7 @@ export type {
   DismissLayerOptions,
   PortalLifecycleOptions,
   PortalLifecycleController,
+  TerminalLifecycleController,
   PresenceLifecycleOptions,
   PresenceLifecycleController,
 } from "./popup.ts";

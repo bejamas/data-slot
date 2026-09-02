@@ -21,6 +21,7 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
+  createTerminalLifecycle,
   createDismissLayer,
   containsWithPortals,
   createTypeahead,
@@ -139,6 +140,7 @@ export function createDropdownMenu(
   let keyboardMode = false;
   let didLockScroll = false;
   let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
   let pendingDismissMeta: Pick<DropdownMenuOpenChangeDetail, "source" | "reason"> | null = null;
   const cleanups: Array<() => void> = [];
   const portal = createPortalLifecycle({
@@ -817,7 +819,7 @@ export function createDropdownMenu(
       return itemCollection.valueFor(itemCollection.recordFor(highlightedItem));
     },
     destroy: () => {
-      if (isDestroyed) return;
+      if (!terminalLifecycle.destroy()) return;
       isDestroyed = true;
       typeahead.destroy();
       isOpen = false;

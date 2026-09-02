@@ -65,6 +65,16 @@ describe('HoverCard', () => {
     await waitForRaf()
   }
 
+  it('does not open from a pending hover timer after destroy', async () => {
+    const { trigger, content, controller } = setup({ delay: 10 })
+    trigger.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true, pointerType: 'mouse' }))
+    controller.destroy()
+    await wait(20)
+
+    expect(controller.isOpen).toBe(false)
+    expect(content.hidden).toBe(true)
+  })
+
   const getPositioner = (content: HTMLElement): HTMLElement => {
     const parent = content.parentElement
     if (parent && parent.getAttribute('data-slot') === 'hover-card-positioner') {

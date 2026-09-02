@@ -16,6 +16,7 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
+  createTerminalLifecycle,
 } from "@data-slot/core";
 import { ensureId } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -218,6 +219,7 @@ export function createTooltip(
   let instantType: TooltipInstantType = null;
   let hasFocus = false;
   let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
   const cleanups: Array<() => void> = [];
 
@@ -619,7 +621,7 @@ export function createTooltip(
       return isOpen;
     },
     destroy: () => {
-      if (isDestroyed) return;
+      if (!terminalLifecycle.destroy()) return;
       isDestroyed = true;
       if (showTimeout) clearTimeout(showTimeout);
       showTimeout = null;

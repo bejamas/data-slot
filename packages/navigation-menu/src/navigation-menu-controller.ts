@@ -10,6 +10,7 @@ import {
   setRootBinding,
   clearRootBinding,
   getTabbables,
+  createTerminalLifecycle,
 } from "@data-slot/core";
 import { createPresenceLifecycle, setAria } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -142,6 +143,7 @@ export function createNavigationMenu(
   let pointerActivationTrigger: HTMLElement | null = null;
   let isRootHovered: boolean = false; // Track if pointer is over root
   let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
 
   const cleanups: Array<() => void> = [];
   const presences = new Map<
@@ -1174,7 +1176,7 @@ export function createNavigationMenu(
     open: (value: string) => { if (!isDestroyed) updateState(value, true); },
     close: () => { if (!isDestroyed) closeMenuAndUnlock(); },
     destroy: () => {
-      if (isDestroyed) return;
+      if (!terminalLifecycle.destroy()) return;
       isDestroyed = true;
       resetPendingInteraction();
       resetPointerIntent();

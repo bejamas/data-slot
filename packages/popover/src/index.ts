@@ -17,6 +17,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   getAutofocusOrFirstFocusable,
+  createTerminalLifecycle,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -192,6 +193,7 @@ export function createPopover(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
 
   // Focus management state
   let previousActiveElement: HTMLElement | null = null;
@@ -418,7 +420,7 @@ export function createPopover(
       return isOpen;
     },
     destroy: () => {
-      if (isDestroyed) return;
+      if (!terminalLifecycle.destroy()) return;
       isDestroyed = true;
       isOpen = false;
       setAria(trigger, "expanded", false);

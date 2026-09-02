@@ -16,6 +16,7 @@ import {
   focusElement,
   createPortalLifecycle,
   createPresenceLifecycle,
+  createTerminalLifecycle,
   createDismissLayer,
 } from "@data-slot/core";
 import type { SelectController, SelectOptions } from "./types";
@@ -112,6 +113,7 @@ export function createSelect(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
   let shouldRestoreFocusOnClose = true;
 
   const isItemDisabled = (el: HTMLElement) =>
@@ -650,7 +652,7 @@ export function createSelect(
     open: () => { if (!isDestroyed) updateOpenState(true); },
     close: () => { if (!isDestroyed) updateOpenState(false); },
     destroy: () => {
-      if (isDestroyed) return;
+      if (!terminalLifecycle.destroy()) return;
       isDestroyed = true;
       typeahead.destroy();
       isOpen = false;
