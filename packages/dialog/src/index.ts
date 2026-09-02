@@ -16,7 +16,7 @@ import {
   createDismissLayer,
   createPresenceLifecycle,
   focusElement,
-  getFocusable,
+  getAutofocusOrFirstFocusable,
   getTabbables,
 } from "@data-slot/core";
 
@@ -159,11 +159,8 @@ export function createDialog(
   };
 
   const focusFirst = () => {
-    const autofocusEl = getFocusable(content).find((element) => element.hasAttribute("autofocus"));
-    if (autofocusEl) return autofocusEl.focus();
-
-    const first = getFocusable(content)[0];
-    if (first) return first.focus();
+    const initialFocus = getAutofocusOrFirstFocusable(content);
+    if (initialFocus) return initialFocus.focus();
 
     ensureContentFocusable();
     content.focus();

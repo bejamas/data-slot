@@ -16,7 +16,7 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
-  getFocusable,
+  getAutofocusOrFirstFocusable,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -206,11 +206,8 @@ export function createPopover(
 
   const focusFirst = () => {
     // Priority: [autofocus] > first focusable > content itself
-    const autofocusEl = getFocusable(content).find((element) => element.hasAttribute("autofocus"));
-    if (autofocusEl) return autofocusEl.focus();
-
-    const first = getFocusable(content)[0];
-    if (first) return first.focus();
+    const initialFocus = getAutofocusOrFirstFocusable(content);
+    if (initialFocus) return initialFocus.focus();
 
     // No focusable elements — make content itself focusable temporarily
     if (!content.getAttribute("tabindex")) {

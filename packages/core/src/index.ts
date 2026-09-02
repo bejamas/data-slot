@@ -22,7 +22,7 @@ export { on, emit, composeHandlers } from "./events.ts";
 export { createFormFieldAdapter, observeFormReset } from "./form-field.ts";
 export type { FormFieldAdapter, FormResetObserver } from "./form-field.ts";
 export { lockScroll, unlockScroll } from "./scroll.ts";
-export { getFocusable, getTabbables } from "./focus.ts";
+export { getAutofocusOrFirstFocusable, getFocusable, getTabbables } from "./focus.ts";
 export {
   computeFloatingPosition,
   computeFloatingTransformOrigin,

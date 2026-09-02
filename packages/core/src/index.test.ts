@@ -18,7 +18,7 @@ import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
 import { createTypeahead } from './index'
-import { getFocusable, getTabbables } from './index'
+import { getAutofocusOrFirstFocusable, getFocusable, getTabbables } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
 import {
   computeFloatingPosition,
@@ -76,6 +76,44 @@ describe('core/focusability', () => {
     expect(getTabbables(root).map((element) => element.id)).toEqual(['selected'])
     root.setAttribute('inert', '')
     expect(getFocusable(root)).toEqual([])
+  })
+
+  it('groups radios by form owner or tree, including form-associated controls outside the form', () => {
+    document.body.innerHTML = `
+      <form id="first-form"><input id="first-form-radio" type="radio" name="plan"></form>
+      <form id="second-form"><input id="second-form-radio" type="radio" name="plan" checked></form>
+      <input id="associated-radio" type="radio" name="plan" form="first-form" checked>
+      <div id="root"><input id="unowned-radio" type="radio" name="plan"></div>
+    `
+    const root = document.getElementById('root')!
+    const firstForm = document.getElementById('first-form')!
+
+    expect(getTabbables(firstForm).map((element) => element.id)).toEqual([])
+    expect(getTabbables(root).map((element) => element.id)).toEqual(['unowned-radio'])
+  })
+
+  it('excludes descendants of closed details except its first summary', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <details><summary id="summary">Summary</summary><button id="closed-control">Closed</button></details>
+        <details open><summary id="open-summary">Open summary</summary><button id="open-control">Open</button></details>
+      </div>
+    `
+    const root = document.getElementById('root')!
+
+    expect(getFocusable(root).map((element) => element.id)).toEqual(['summary', 'open-summary', 'open-control'])
+  })
+
+  it('prefers a valid autofocus target over the first focusable descendant', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <button id="first">First</button>
+        <button id="hidden-autofocus" hidden autofocus>Hidden</button>
+        <button id="autofocus" autofocus>Autofocus</button>
+      </div>
+    `
+
+    expect(getAutofocusOrFirstFocusable(document.getElementById('root')!)?.id).toBe('autofocus')
   })
 })
 
