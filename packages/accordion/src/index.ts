@@ -494,12 +494,12 @@ export function createAccordion(
 
     if (item.disabled) {
       item.trigger.setAttribute("aria-disabled", "true");
-      if (item.trigger instanceof HTMLButtonElement) {
+      if (item.trigger instanceof win.HTMLButtonElement) {
         item.trigger.disabled = true;
       }
     } else {
       item.trigger.removeAttribute("aria-disabled");
-      if (item.trigger instanceof HTMLButtonElement) {
+      if (item.trigger instanceof win.HTMLButtonElement) {
         item.trigger.disabled = false;
       }
     }

@@ -111,11 +111,12 @@ const getTransformOriginAnchor = (
 };
 
 const getCssDimensions = (element: Element): Size => {
-  const css = getComputedStyle(element);
+  const win = getWindow(element);
+  const css = win.getComputedStyle(element);
   let width = parseFloat(css.width) || 0;
   let height = parseFloat(css.height) || 0;
 
-  if (element instanceof HTMLElement) {
+  if (element instanceof win.HTMLElement) {
     const offsetWidth = element.offsetWidth || width;
     const offsetHeight = element.offsetHeight || height;
     if (
@@ -1184,7 +1185,7 @@ export function createNavigationMenu(
   const getNavigableByTarget = (
     target: EventTarget | null,
   ): TopLevelNavigable | null => {
-    const el = target instanceof HTMLElement ? target : null;
+    const el = target instanceof win.HTMLElement ? target : null;
     if (!el) return null;
 
     let current: HTMLElement | null = el;
@@ -1315,8 +1316,8 @@ export function createNavigationMenu(
   };
 
   const isNonSubmenuListTarget = (target: EventTarget | null): boolean => {
-    if (!(target instanceof Node) || !list.contains(target)) return false;
-    const el = target instanceof HTMLElement ? target : target.parentElement;
+    if (!(target instanceof win.Node) || !list.contains(target)) return false;
+    const el = target instanceof win.HTMLElement ? target : target.parentElement;
     if (!el) return false;
     if (el.closest('[data-slot="navigation-menu-indicator"]')) return false;
     if (getManagedItemByElement(el)) return false;
@@ -1435,7 +1436,7 @@ export function createNavigationMenu(
     if (positioner) return positioner;
     const popup = getCurrentPopup();
     if (popup) return popup;
-    return viewport.parentElement instanceof HTMLElement
+    return viewport.parentElement instanceof win.HTMLElement
       ? viewport.parentElement
       : viewport;
   };
@@ -1882,8 +1883,8 @@ export function createNavigationMenu(
 
     const firstChild = content.firstElementChild as HTMLElement | null;
     const lastChild = content.lastElementChild as HTMLElement | null;
-    const firstStyle = firstChild ? getComputedStyle(firstChild) : null;
-    const lastStyle = lastChild ? getComputedStyle(lastChild) : null;
+    const firstStyle = firstChild ? win.getComputedStyle(firstChild) : null;
+    const lastStyle = lastChild ? win.getComputedStyle(lastChild) : null;
     const firstMarginTop = firstStyle
       ? parseFloat(firstStyle.marginTop) || 0
       : 0;
@@ -1953,7 +1954,7 @@ export function createNavigationMenu(
     };
 
     // Get viewport margin-top for hover bridge calculation
-    const viewportStyle = getComputedStyle(viewport);
+    const viewportStyle = win.getComputedStyle(viewport);
     const viewportMarginTop = parseFloat(viewportStyle.marginTop) || 0;
 
     setViewportLegacySizeVars(contentWidth, contentHeight);
@@ -2230,7 +2231,7 @@ export function createNavigationMenu(
 
     // Get viewport's margin-top to determine if there's visual separation
     const viewportMarginTop = viewport
-      ? parseFloat(getComputedStyle(viewport).marginTop) || 0
+      ? parseFloat(win.getComputedStyle(viewport).marginTop) || 0
       : 0;
 
     // If viewport has no margin, its 1px box-shadow border needs visual clearance
@@ -2742,7 +2743,7 @@ export function createNavigationMenu(
     const hoveredNavigable = getInitiallyHoveredNavigable();
     isRootHovered =
       hoveredNavigable !== null ||
-      (root instanceof HTMLElement && matchesHover(root));
+      (root instanceof win.HTMLElement && matchesHover(root));
 
     if (!hoveredNavigable) return;
 

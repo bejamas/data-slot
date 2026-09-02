@@ -1,4 +1,4 @@
-import { getDocument } from "./realm.ts";
+import { getDocument, getWindow } from "./realm.ts";
 
 /**
  * Query a single part/slot within a component root
@@ -261,7 +261,8 @@ function _containsWithPortals(
   visited: Set<Element>
 ): boolean {
   if (!target) return false;
-  const el = target instanceof Element ? target : target.parentElement;
+  const win = getWindow(root);
+  const el = target instanceof win.Element ? target : target?.parentElement;
   if (!el) return false;
   if (root.contains(el)) return true;
   // Walk up ancestors, following portal-owner chain recursively

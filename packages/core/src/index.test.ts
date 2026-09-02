@@ -1256,14 +1256,14 @@ describe('core/popup', () => {
       if (type === 'scroll') documentRemoved += 1
       originalDocumentRemove(type, listener, options)
     } })
-    outer.addEventListener = ((type: string, ...args: Parameters<typeof outer.addEventListener>) => {
+    Object.defineProperty(outer, 'addEventListener', { configurable: true, value(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
       if (type === 'scroll') added += 1
-      return originalAdd(type, ...args)
-    }) as typeof outer.addEventListener
-    outer.removeEventListener = ((type: string, ...args: Parameters<typeof outer.removeEventListener>) => {
+      originalAdd(type, listener, options)
+    } })
+    Object.defineProperty(outer, 'removeEventListener', { configurable: true, value(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) {
       if (type === 'scroll') removed += 1
-      return originalRemove(type, ...args)
-    }) as typeof outer.removeEventListener
+      originalRemove(type, listener, options)
+    } })
     Object.defineProperty(secondaryWindow, 'ResizeObserver', { configurable: true, value: class { constructor() { resizeConstructed += 1 } observe() {} disconnect() {} } })
     Object.defineProperty(secondaryWindow, 'IntersectionObserver', { configurable: true, value: class { constructor() { intersectionConstructed += 1 } observe() {} disconnect() {} } })
     const sync = createPositionSync({ observedElements: [anchor], onUpdate() {}, win: secondaryWindow, layoutShift: true })
@@ -1272,7 +1272,7 @@ describe('core/popup', () => {
     expect(intersectionConstructed).toBeGreaterThan(0)
     expect(added).toBeGreaterThan(0)
     expect(documentAdded).toBeGreaterThan(0)
-    outer.dispatchEvent(new secondaryWindow.Event('scroll'))
+    outer.dispatchEvent(new Event('scroll'))
     expect(primaryScrolls).toBe(0)
     expect(document.body.contains(anchor)).toBe(false)
     const position = computeFloatingPosition({

@@ -133,7 +133,7 @@ const parseKeywords = (value: string | undefined): string[] => {
 
 const getDirectChildrenBySlot = <T extends HTMLElement>(parent: HTMLElement, slot: string): T[] =>
   Array.from(parent.children).filter(
-    (child): child is T => child instanceof HTMLElement && child.getAttribute("data-slot") === slot
+    (child): child is T => child instanceof getWindow(parent).HTMLElement && child.getAttribute("data-slot") === slot
   );
 
 const getDirectChildWithinContainer = (el: HTMLElement, container: HTMLElement): HTMLElement | null => {
@@ -154,14 +154,16 @@ const getOwnedElements = <T extends HTMLElement>(
   );
 
 const getElementChildren = (container: HTMLElement): HTMLElement[] =>
-  Array.from(container.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+  Array.from(container.children).filter(
+    (child): child is HTMLElement => child instanceof getWindow(container).HTMLElement
+  );
 
 const getItemText = (item: HTMLElement): string => {
   const collectText = (node: Node): string => {
     if (node.nodeType === Node.TEXT_NODE) {
       return node.textContent ?? "";
     }
-    if (!(node instanceof HTMLElement)) {
+    if (!(node instanceof getWindow(item).HTMLElement)) {
       return "";
     }
     const slot = node.getAttribute("data-slot");
@@ -313,7 +315,7 @@ export function createCommand(
   const getInteractiveDescendant = (target: EventTarget | null): HTMLElement | null => {
     if (!(target instanceof win.HTMLElement) || !rootEl.contains(target)) return null;
     const interactive = target.closest(INTERACTIVE_DESCENDANT_SELECTOR);
-    return interactive instanceof HTMLElement && rootEl.contains(interactive) ? interactive : null;
+    return interactive instanceof win.HTMLElement && rootEl.contains(interactive) ? interactive : null;
   };
 
   const pauseMutationObserver = <T>(fn: () => T): T => {
@@ -579,7 +581,7 @@ export function createCommand(
     for (const itemEl of getOwnedElements<HTMLElement>(list, ITEM_SELECTOR, rootEl)) {
       const groupEl = itemEl.closest(GROUP_SELECTOR);
       const group =
-        groupEl instanceof HTMLElement && groupEl.closest('[data-slot="command"]') === rootEl
+        groupEl instanceof win.HTMLElement && groupEl.closest('[data-slot="command"]') === rootEl
           ? groupMetaByElement.get(groupEl) ?? null
           : null;
       const resolved = resolveValueSource(
@@ -849,7 +851,7 @@ export function createCommand(
       let sibling = change > 0 ? group.nextElementSibling : group.previousElementSibling;
       let nextGroup: HTMLElement | null = null;
       while (sibling) {
-        if (sibling instanceof HTMLElement && sibling.getAttribute("data-slot") === "command-group" && !sibling.hidden) {
+        if (sibling instanceof win.HTMLElement && sibling.getAttribute("data-slot") === "command-group" && !sibling.hidden) {
           nextGroup = sibling;
           break;
         }
@@ -1015,8 +1017,8 @@ export function createCommand(
     on(list, "pointermove", (event) => {
       if (disablePointerSelection) return;
       const target = event.target as Node | null;
-      const item = target instanceof HTMLElement ? target.closest(ITEM_SELECTOR) : null;
-      if (!(item instanceof HTMLElement)) return;
+      const item = target instanceof win.HTMLElement ? target.closest(ITEM_SELECTOR) : null;
+      if (!(item instanceof win.HTMLElement)) return;
       const meta = getLiveItemMeta(item);
       if (!meta || meta.disabled || item.hidden || meta.group?.el.hidden) return;
       setValue(meta.value, { emit: true });
@@ -1027,9 +1029,9 @@ export function createCommand(
     on(list, "click", (event) => {
       const target = event.target as HTMLElement | null;
       const interactiveTarget = getInteractiveDescendant(target);
-      const item = target instanceof HTMLElement ? target.closest(ITEM_SELECTOR) : null;
+      const item = target instanceof win.HTMLElement ? target.closest(ITEM_SELECTOR) : null;
       if (interactiveTarget && interactiveTarget !== item) return;
-      if (!(item instanceof HTMLElement)) return;
+      if (!(item instanceof win.HTMLElement)) return;
       const meta = getLiveItemMeta(item);
       if (!meta || meta.disabled || meta.value === null || item.hidden || meta.group?.el.hidden) return;
       triggerSelection(meta);

@@ -11,6 +11,7 @@ import {
   ensureId,
   on,
   emit,
+  getWindow,
 } from "@data-slot/core";
 import { getDocument } from "@data-slot/core";
 
@@ -129,7 +130,7 @@ function isNaturallyFocusable(el: HTMLElement): boolean {
 function getRootLabels(root: HTMLElement): HTMLLabelElement[] {
   const labels: HTMLLabelElement[] = [];
   const wrappingLabel = root.closest("label");
-  if (wrappingLabel instanceof HTMLLabelElement) {
+  if (wrappingLabel instanceof getWindow(root).HTMLLabelElement) {
     labels.push(wrappingLabel);
   }
 
@@ -163,6 +164,7 @@ export function createSwitch(
   root: Element,
   options: SwitchOptions = {},
 ): SwitchController {
+  const win = getWindow(root);
   const existingController = reuseRootBinding<SwitchController>(
     root,
     ROOT_BINDING_KEY,
@@ -312,7 +314,7 @@ export function createSwitch(
 
   const form =
     hiddenInput.form ??
-    (rootElement.closest("form") instanceof HTMLFormElement
+    (rootElement.closest("form") instanceof win.HTMLFormElement
       ? rootElement.closest("form")
       : null);
   if (form) {

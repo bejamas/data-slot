@@ -12,6 +12,7 @@ import {
   on,
   emit,
   getDocument,
+  getWindow,
 } from "@data-slot/core";
 
 export interface RadioGroupOptions {
@@ -118,7 +119,7 @@ function isNativeButton(el: HTMLElement): el is HTMLButtonElement {
 function getRootLabels(root: HTMLElement): HTMLLabelElement[] {
   const labels: HTMLLabelElement[] = [];
   const wrappingLabel = root.closest("label");
-  if (wrappingLabel instanceof HTMLLabelElement) {
+  if (wrappingLabel instanceof getWindow(root).HTMLLabelElement) {
     labels.push(wrappingLabel);
   }
 
@@ -155,6 +156,7 @@ export function createRadioGroup(
   options: RadioGroupOptions = {},
 ): RadioGroupController {
   const doc = getDocument(root);
+  const win = getWindow(root);
   const existingController = reuseRootBinding<RadioGroupController>(
     root,
     ROOT_BINDING_KEY,
@@ -503,7 +505,7 @@ export function createRadioGroup(
 
   const form =
     items.find((item) => item.hiddenInput.form)?.hiddenInput.form ??
-    (rootElement.closest("form") instanceof HTMLFormElement
+    (rootElement.closest("form") instanceof win.HTMLFormElement
       ? rootElement.closest("form")
       : null);
 

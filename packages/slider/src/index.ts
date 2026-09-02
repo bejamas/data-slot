@@ -193,7 +193,7 @@ export function createSlider(
   // then preserve the historical parent-of-track fallback, finally use the root.
   const control =
     explicitControl ??
-    (track.parentElement instanceof HTMLElement ? track.parentElement : null) ??
+    (track.parentElement instanceof win.HTMLElement ? track.parentElement : null) ??
     rootElement;
 
   // Resolve options with explicit precedence: JS > data-* > default
@@ -262,7 +262,7 @@ export function createSlider(
   const stateParts = Array.from(
     new Set(
       [rootElement, control, track, range, ...thumbs].filter(
-        (part): part is HTMLElement => part instanceof HTMLElement,
+        (part): part is HTMLElement => part instanceof win.HTMLElement,
       ),
     ),
   );
@@ -325,7 +325,7 @@ export function createSlider(
   const layoutObservedParts = Array.from(
     new Set(
       [rootElement, control, track, ...thumbs].filter(
-        (part): part is HTMLElement => part instanceof HTMLElement,
+        (part): part is HTMLElement => part instanceof win.HTMLElement,
       ),
     ),
   );
@@ -407,7 +407,7 @@ export function createSlider(
       : containerRect.bottom - trackRect.bottom;
 
   const getThumbContainer = (thumb: HTMLElement): HTMLElement =>
-    thumb.offsetParent instanceof HTMLElement ? thumb.offsetParent : control;
+    thumb.offsetParent instanceof win.HTMLElement ? thumb.offsetParent : control;
 
   const getInsetTrackPercent = (
     rawPercent: number,
@@ -509,7 +509,7 @@ export function createSlider(
     }
 
     const thumbSizes = thumbs.slice(0, 2).map((thumb) => {
-      if (!(thumb instanceof HTMLElement)) {
+      if (!(thumb instanceof win.HTMLElement)) {
         return NaN;
       }
 
@@ -731,7 +731,7 @@ export function createSlider(
   const getThumbIndexFromTarget = (
     target: EventTarget | null,
   ): number | null => {
-    if (!target || !(target instanceof HTMLElement)) return null;
+    if (!target || !(target instanceof win.HTMLElement)) return null;
 
     // Check if target is a thumb
     const thumbIndex = thumbs.indexOf(target);
