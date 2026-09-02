@@ -14,6 +14,8 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
+  getDocument,
+  getWindow,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -199,6 +201,8 @@ export function createNavigationMenu(
   root: Element,
   options: NavigationMenuOptions = {},
 ): NavigationMenuController {
+  const doc = getDocument(root);
+  const win = getWindow(root);
   const existingController = reuseRootBinding<NavigationMenuController>(
     root,
     ROOT_BINDING_KEY,
@@ -425,7 +429,7 @@ export function createNavigationMenu(
   };
   const clearActiveContentMeasureRaf = () => {
     if (activeContentMeasureRaf !== null) {
-      cancelAnimationFrame(activeContentMeasureRaf);
+      win.cancelAnimationFrame(activeContentMeasureRaf);
       activeContentMeasureRaf = null;
     }
   };
@@ -637,8 +641,9 @@ export function createNavigationMenu(
   const observePopupSize = (popup: HTMLElement | null) => {
     popupSizeResizeObserver?.disconnect();
     popupSizeResizeObserver = null;
-    if (!popup || typeof ResizeObserver !== "function") return;
-    popupSizeResizeObserver = new ResizeObserver((entries) => {
+    const ResizeObserverConstructor = win.ResizeObserver;
+    if (!popup || !ResizeObserverConstructor) return;
+    popupSizeResizeObserver = new ResizeObserverConstructor((entries) => {
       const entry = entries[0];
       const inlineSize = Array.isArray(entry?.borderBoxSize)
         ? entry?.borderBoxSize[0]?.inlineSize
@@ -655,7 +660,6 @@ export function createNavigationMenu(
   };
 
   const wrapWithGeneratedSlot = (child: HTMLElement, slot: string) => {
-    const doc = root.ownerDocument ?? document;
     const wrapper = doc.createElement("div");
     wrapper.setAttribute("data-slot", slot);
     if (slot === "navigation-menu-positioner") {
@@ -720,7 +724,7 @@ export function createNavigationMenu(
   };
   const clearViewportTrackingInstantRaf = () => {
     if (viewportTrackingInstantRaf !== null) {
-      cancelAnimationFrame(viewportTrackingInstantRaf);
+      win.cancelAnimationFrame(viewportTrackingInstantRaf);
       viewportTrackingInstantRaf = null;
     }
   };
@@ -743,7 +747,7 @@ export function createNavigationMenu(
   };
   const scheduleViewportTrackingInstantClear = () => {
     clearViewportTrackingInstantRaf();
-    viewportTrackingInstantRaf = requestAnimationFrame(() => {
+    viewportTrackingInstantRaf = win.requestAnimationFrame(() => {
       viewportTrackingInstantRaf = null;
       if (viewportInitialInstant && viewportInitialInstantFramesRemaining > 0) {
         viewportInitialInstantFramesRemaining -= 1;
@@ -924,7 +928,6 @@ export function createNavigationMenu(
     if (!viewport) return;
     const positioner = getCurrentPositioner();
     if (!positioner) return;
-    const win = root.ownerDocument.defaultView ?? window;
     const rootRect = (root as HTMLElement).getBoundingClientRect();
     const isFixed = rootPositionMethod === "fixed";
     const positionerTop =
@@ -950,7 +953,7 @@ export function createNavigationMenu(
     },
   ) => {
     clearActiveContentMeasureRaf();
-    activeContentMeasureRaf = requestAnimationFrame(() => {
+    activeContentMeasureRaf = win.requestAnimationFrame(() => {
       activeContentMeasureRaf = null;
       if (!viewport || currentValue === null) return;
       const activeData = getActiveData();
@@ -990,12 +993,15 @@ export function createNavigationMenu(
     activeMutationObserver = null;
     clearActiveContentMeasureRaf();
     if (!viewport || !data) return;
-    activeRO = new ResizeObserver(() => {
+    const ResizeObserverConstructor = win.ResizeObserver;
+    if (!ResizeObserverConstructor) return;
+    activeRO = new ResizeObserverConstructor(() => {
       scheduleActiveContentLayoutSync(data);
     });
     activeRO.observe(data.content);
-    if (typeof MutationObserver === "function") {
-      activeMutationObserver = new MutationObserver(() => {
+    const MutationObserverConstructor = win.MutationObserver;
+    if (MutationObserverConstructor) {
+      activeMutationObserver = new MutationObserverConstructor(() => {
         scheduleActiveContentLayoutSync(data);
       });
       activeMutationObserver.observe(data.content, {
@@ -1369,7 +1375,7 @@ export function createNavigationMenu(
       if (isWithinThisMenu(candidate)) continue;
       if (
         ((root as Node).compareDocumentPosition(candidate) &
-          Node.DOCUMENT_POSITION_FOLLOWING) ===
+          win.Node.DOCUMENT_POSITION_FOLLOWING) ===
         0
       ) {
         continue;
@@ -1382,7 +1388,7 @@ export function createNavigationMenu(
   };
 
   const focusContentForValue = (value: string): void => {
-    requestAnimationFrame(() => {
+    win.requestAnimationFrame(() => {
       if (currentValue !== value) return;
       const data = itemMap.get(value);
       if (!data) return;
@@ -1416,7 +1422,7 @@ export function createNavigationMenu(
 
   const clearIndicatorInstantRaf = () => {
     if (indicatorInstantRaf !== null) {
-      cancelAnimationFrame(indicatorInstantRaf);
+      win.cancelAnimationFrame(indicatorInstantRaf);
       indicatorInstantRaf = null;
     }
   };
@@ -1437,7 +1443,7 @@ export function createNavigationMenu(
   const getOrCreateHoverBridge = (): HTMLElement => {
     const host = getBridgeHost();
     if (!hoverBridge) {
-      hoverBridge = document.createElement("div");
+      hoverBridge = doc.createElement("div");
       hoverBridge.setAttribute("data-slot", "navigation-menu-bridge");
       hoverBridge.style.cssText =
         "position: absolute; pointer-events: auto; z-index: 0; display: none;";
@@ -1477,10 +1483,10 @@ export function createNavigationMenu(
 
   const getOrCreateHoverSafeTriangleOverlay = (): HTMLElement | null => {
     if (!debugSafeTriangle) return null;
-    const host = root.ownerDocument.body;
+    const host = doc.body;
     if (!host) return null;
     if (!hoverSafeTriangleOverlay) {
-      hoverSafeTriangleOverlay = root.ownerDocument.createElement("div");
+      hoverSafeTriangleOverlay = doc.createElement("div");
       hoverSafeTriangleOverlay.setAttribute(
         "data-slot",
         "navigation-menu-safe-triangle",
@@ -1822,7 +1828,6 @@ export function createNavigationMenu(
     width: number,
     height: number,
   ) => {
-    const win = root.ownerDocument.defaultView ?? window;
     const visualViewport = win.visualViewport;
     const viewportX = visualViewport?.offsetLeft ?? 0;
     const viewportY = visualViewport?.offsetTop ?? 0;
@@ -2134,7 +2139,7 @@ export function createNavigationMenu(
     }
 
     // Measure after content is visible.
-    requestAnimationFrame(() => {
+    win.requestAnimationFrame(() => {
       if (
         viewport.getAttribute("data-state") !== "open" ||
         content.getAttribute("data-state") !== "active"
@@ -2201,8 +2206,8 @@ export function createNavigationMenu(
     if (wasHidden) {
       clearIndicatorInstantRaf();
       indicator.setAttribute("data-instant", "");
-      indicatorInstantRaf = requestAnimationFrame(() => {
-        indicatorInstantRaf = requestAnimationFrame(() => {
+      indicatorInstantRaf = win.requestAnimationFrame(() => {
+        indicatorInstantRaf = win.requestAnimationFrame(() => {
           indicator.removeAttribute("data-instant");
           indicatorInstantRaf = null;
         });
@@ -2288,7 +2293,7 @@ export function createNavigationMenu(
         isSwitching && newData ? getMotionDirection(newData.index) : null;
 
       // If closing while focus is inside the active content panel, restore focus to its trigger.
-      const active = document.activeElement as HTMLElement | null;
+      const active = doc.activeElement as HTMLElement | null;
       if (value === null && active && prevValue) {
         const previousData = itemMap.get(prevValue);
         if (previousData && containsWithPortals(previousData.content, active)) {
@@ -2924,7 +2929,7 @@ export function createNavigationMenu(
 
   // Helper to check if this menu instance is active (focused, hovered, or locked)
   const isMenuActive = () =>
-    containsWithPortals(root, document.activeElement) ||
+    containsWithPortals(root, doc.activeElement) ||
     isRootHovered ||
     clickLocked;
 
@@ -2940,7 +2945,7 @@ export function createNavigationMenu(
 
   // Close when focus leaves root (and unlock clickLocked)
   cleanups.push(
-    on(document, "focusin", (e) => {
+    on(doc, "focusin", (e) => {
       const target = e.target as Node;
       if (containsWithPortals(root, target)) return;
 
@@ -2967,14 +2972,14 @@ export function createNavigationMenu(
 
   // Recompute indicator position on window resize or list scroll
   cleanups.push(
-    on(window, "resize", () => {
+    on(win, "resize", () => {
       if (currentValue || hoveredTrigger) {
-        requestAnimationFrame(() => syncIndicator(hoveredTrigger));
+        win.requestAnimationFrame(() => syncIndicator(hoveredTrigger));
       }
     }),
     on(list, "scroll", () => {
       if (currentValue || hoveredTrigger) {
-        requestAnimationFrame(() => syncIndicator(hoveredTrigger));
+        win.requestAnimationFrame(() => syncIndicator(hoveredTrigger));
       }
     }),
   );

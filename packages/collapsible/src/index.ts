@@ -11,6 +11,7 @@ import {
   on,
   emit,
   createPresenceLifecycle,
+  getWindow,
 } from "@data-slot/core";
 
 export interface CollapsibleOptions {
@@ -117,7 +118,7 @@ export function createCollapsible(
     throw new Error("Collapsible requires trigger and content slots");
   }
 
-  const win = root.ownerDocument?.defaultView ?? window;
+  const win = getWindow(root);
   let isOpen = defaultOpen;
   const cleanups: Array<() => void> = [];
   let sizeObserver: ResizeObserver | null = null;
@@ -295,8 +296,9 @@ export function createCollapsible(
   }
   setDataState(isOpen ? "open" : "closed");
 
-  if (typeof ResizeObserver !== "undefined") {
-    sizeObserver = new ResizeObserver(() => {
+  const ResizeObserverConstructor = win.ResizeObserver;
+  if (ResizeObserverConstructor) {
+    sizeObserver = new ResizeObserverConstructor(() => {
       if (!isOpen || presence.isExiting) return;
       if (hasAutoPanelSize()) return;
       syncPanelSizePx();

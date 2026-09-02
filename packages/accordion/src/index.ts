@@ -10,6 +10,7 @@ import {
   setRootBinding,
   clearRootBinding,
   createPresenceLifecycle,
+  getWindow,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -241,7 +242,7 @@ export function createAccordion(
     throw new Error("Accordion requires at least one accordion-item");
   }
 
-  const win = root.ownerDocument?.defaultView ?? window;
+  const win = getWindow(root);
 
   const multiple = options.multiple ?? getDataBool(root, "multiple") ?? false;
   const onValueChange = options.onValueChange;
@@ -710,8 +711,9 @@ export function createAccordion(
       suppressClickTimeoutId: null,
     };
 
-    if (typeof ResizeObserver !== "undefined") {
-      record.sizeObserver = new ResizeObserver(() => {
+    const ResizeObserverConstructor = win.ResizeObserver;
+    if (ResizeObserverConstructor) {
+      record.sizeObserver = new ResizeObserverConstructor(() => {
         if (!expandedValues.has(record.value) || record.presence.isExiting) return;
         if (hasAutoPanelSize(record)) return;
         syncPanelSizePx(record);

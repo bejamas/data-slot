@@ -13,6 +13,7 @@ import {
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+import { getWindow } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
 const THUMB_ALIGNMENTS = ["center", "edge", "edge-client-only"] as const;
@@ -168,6 +169,7 @@ export function createSlider(
   root: Element,
   options: SliderOptions = {},
 ): SliderController {
+  const win = getWindow(root);
   const existingController = reuseRootBinding<SliderController>(
     root,
     ROOT_BINDING_KEY,
@@ -649,11 +651,12 @@ export function createSlider(
     layoutResizeObserver?.disconnect();
     layoutResizeObserver = null;
 
-    if (!usesInsetThumbAlignment || typeof ResizeObserver !== "function") {
+    const ResizeObserverConstructor = win.ResizeObserver;
+    if (!usesInsetThumbAlignment || !ResizeObserverConstructor) {
       return;
     }
 
-    layoutResizeObserver = new ResizeObserver(() => {
+    layoutResizeObserver = new ResizeObserverConstructor(() => {
       updateVisualState();
     });
 

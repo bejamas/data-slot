@@ -335,4 +335,17 @@ describe("AlertDialog", () => {
 
     alertController.destroy();
   });
+
+  it("isolates modal focus and scroll state in a secondary document", () => {
+    const secondary = document.implementation.createHTMLDocument("secondary");
+    secondary.body.innerHTML = `<div data-slot="alert-dialog"><button data-slot="alert-dialog-trigger">Open</button><div data-slot="alert-dialog-overlay"></div><div data-slot="alert-dialog-content"><button>Inside</button></div></div>`;
+    const root = secondary.querySelector('[data-slot="alert-dialog"]')!;
+    const controller = createAlertDialog(root);
+    controller.open();
+    expect(secondary.documentElement.style.overflow).toBe("hidden");
+    expect(document.documentElement.style.overflow).toBe("");
+    controller.close();
+    expect(secondary.documentElement.style.overflow).toBe("");
+    controller.destroy();
+  });
 });

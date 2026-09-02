@@ -1230,14 +1230,15 @@ const getMaxTimingMs = (durationsRaw: string, delaysRaw: string): number => {
 };
 
 const getMaxExitDurationMs = (element: HTMLElement): number => {
-  const style = getComputedStyle(element);
+  const win = element.ownerDocument.defaultView ?? window;
+  const style = win.getComputedStyle(element);
   const transitionMs = getMaxTimingMs(style.transitionDuration, style.transitionDelay);
   const animationMs = getMaxTimingMs(style.animationDuration, style.animationDelay);
   return Math.max(transitionMs, animationMs);
 };
 
 export function createPresenceLifecycle(options: PresenceLifecycleOptions): PresenceLifecycleController {
-  const win = options.win ?? window;
+  const win = options.win ?? options.element.ownerDocument.defaultView ?? window;
   let exiting = false;
   let enterRafId: number | null = null;
   let enterRafId2: number | null = null;
