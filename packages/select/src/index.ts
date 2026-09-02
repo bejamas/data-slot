@@ -1,15 +1,9 @@
 import {
   getPart,
   getParts,
-  getRoots,
-  hasRootBinding,
   reuseRootBinding,
   setRootBinding,
   clearRootBinding,
-  getDataBool,
-  getDataNumber,
-  getDataString,
-  getDataEnum,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -25,120 +19,24 @@ import {
   createPresenceLifecycle,
   createDismissLayer,
 } from "@data-slot/core";
+import type { Align, Position, SelectController, SelectOptions, Side } from "./types";
+import { resolveSelectConfiguration } from "./configuration";
+import { discoverSelects } from "./discovery";
 
-/** Side of the trigger to place the content */
-export type Side = "top" | "bottom";
-const SIDES = ["top", "bottom"] as const;
-
-/** Alignment of the content relative to the trigger */
-export type Align = "start" | "center" | "end";
-const ALIGNS = ["start", "center", "end"] as const;
-
-/** Positioning mode for the content */
-export type Position = "item-aligned" | "popper";
-const POSITIONS = ["item-aligned", "popper"] as const;
-
-export interface SelectOptions {
-  /** Initial selected value */
-  defaultValue?: string;
-  /** Callback when value changes */
-  onValueChange?: (value: string | null) => void;
-  /** Initial open state */
-  defaultOpen?: boolean;
-  /** Callback when open state changes */
-  onOpenChange?: (open: boolean) => void;
-  /** Placeholder text when no value selected */
-  placeholder?: string;
-  /** Disable interaction */
-  disabled?: boolean;
-  /** Form validation required */
-  required?: boolean;
-  /** Form field name (auto-creates hidden input) */
-  name?: string;
-
-  /**
-   * Positioning mode for the content.
-   * - "item-aligned": Positions content so selected item aligns with trigger (like native select)
-   * - "popper": Positions content below/above trigger like a dropdown
-   * @default "item-aligned"
-   */
-  position?: Position;
-
-  // Positioning props (Radix-compatible, used when position="popper")
-  /**
-   * The preferred side of the trigger to render against.
-   * Will be reversed when collisions occur and `avoidCollisions` is enabled.
-   * @default "bottom"
-   */
-  side?: Side;
-  /**
-   * The preferred alignment against the trigger.
-   * May change when collisions occur.
-   * @default "start"
-   */
-  align?: Align;
-  /**
-   * The distance in pixels from the trigger.
-   * @default 4
-   */
-  sideOffset?: number;
-  /**
-   * An offset in pixels from the "start" or "end" alignment options.
-   * @default 0
-   */
-  alignOffset?: number;
-  /**
-   * When true, overrides side/align preferences to prevent collisions with viewport edges.
-   * @default true
-   */
-  avoidCollisions?: boolean;
-  /**
-   * The padding between the content and the viewport edges when avoiding collisions.
-   * @default 8
-   */
-  collisionPadding?: number;
-  /**
-   * Lock body scroll when open.
-   * @default true
-   */
-  lockScroll?: boolean;
-  /**
-   * Whether moving the pointer over items should highlight and focus them.
-   * @default true
-   */
-  highlightItemOnHover?: boolean;
-}
-
-export interface SelectController {
-  /** Current selected value */
-  readonly value: string | null;
-  /** Current open state */
-  readonly isOpen: boolean;
-  /** Select a value programmatically */
-  select(value: string): void;
-  /** Open the popup */
-  open(): void;
-  /** Close the popup */
-  close(): void;
-  /** Cleanup all event listeners */
-  destroy(): void;
-}
+export type { Align, Position, SelectController, SelectOptions, Side } from "./types";
 
 const ROOT_BINDING_KEY = "@data-slot/select";
+const SIDES = ["top", "bottom"] as const;
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/select] createSelect() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
-/**
- * Create a select controller for a root element.
- *
- * Supports Radix-compatible positioning props for precise placement:
+/** Creates a select controller for a root element. Positioning supports:
  * - `side`: "top" | "bottom" (default: "bottom")
  * - `align`: "start" | "center" | "end" (default: "start")
  * - `sideOffset`: distance from trigger in px (default: 4)
  * - `alignOffset`: offset from alignment edge in px (default: 0)
  * - `avoidCollisions`: flip/shift to stay in viewport (default: true)
  * - `collisionPadding`: viewport edge padding in px (default: 8)
- *
  * ## Events
  * - **Outbound** `select:change` (on root): Fires when value changes.
  *   `event.detail: { value: string | null }`
@@ -178,65 +76,11 @@ export function createSelect(
     throw new Error("Select requires trigger and content slots");
   }
 
-  // Resolve options with explicit precedence: JS > data-* (root, then valueSlot) > default
-  const defaultValue = options.defaultValue ?? getDataString(root, "defaultValue") ?? null;
-  const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
-  // Check root first, then valueSlot for placeholder (some implementations put it on the span)
-  const placeholder = options.placeholder ?? getDataString(root, "placeholder") ?? (valueSlot ? getDataString(valueSlot, "placeholder") : undefined) ?? "";
-  const disabled = options.disabled ?? getDataBool(root, "disabled") ?? false;
-  const required = options.required ?? getDataBool(root, "required") ?? false;
-  const name = options.name ?? getDataString(root, "name") ?? null;
-  const onValueChange = options.onValueChange;
-  const onOpenChange = options.onOpenChange;
-
-  // Placement precedence: JS option > content > authored positioner > root
-  const getPlacementEnum = <T extends string>(key: string, allowed: readonly T[]): T | undefined =>
-    getDataEnum(content, key, allowed) ??
-    (authoredPositioner ? getDataEnum(authoredPositioner, key, allowed) : undefined) ??
-    getDataEnum(root, key, allowed);
-  const getPlacementNumber = (key: string): number | undefined =>
-    getDataNumber(content, key) ??
-    (authoredPositioner ? getDataNumber(authoredPositioner, key) : undefined) ??
-    getDataNumber(root, key);
-  const getPlacementBool = (key: string): boolean | undefined =>
-    getDataBool(content, key) ??
-    (authoredPositioner ? getDataBool(authoredPositioner, key) : undefined) ??
-    getDataBool(root, key);
-
-  // Position mode
-  const position =
-    options.position ??
-    getPlacementEnum("position", POSITIONS) ??
-    "item-aligned";
-
-  // Placement options (used for popper mode)
-  const preferredSide =
-    options.side ??
-    getPlacementEnum("side", SIDES) ??
-    "bottom";
-  const preferredAlign =
-    options.align ??
-    getPlacementEnum("align", ALIGNS) ??
-    "start";
-  const sideOffset =
-    options.sideOffset ??
-    getPlacementNumber("sideOffset") ??
-    4;
-  const alignOffset =
-    options.alignOffset ??
-    getPlacementNumber("alignOffset") ??
-    0;
-  const avoidCollisions =
-    options.avoidCollisions ??
-    getPlacementBool("avoidCollisions") ??
-    true;
-  const collisionPadding =
-    options.collisionPadding ??
-    getPlacementNumber("collisionPadding") ??
-    8;
-  const lockScrollOption = options.lockScroll ?? getDataBool(root, "lockScroll") ?? true;
-  const highlightItemOnHover =
-    options.highlightItemOnHover ?? getDataBool(root, "highlightItemOnHover") ?? true;
+  const {
+    defaultValue, defaultOpen, placeholder, disabled, required, name, onValueChange, onOpenChange,
+    position, preferredSide, preferredAlign, sideOffset, alignOffset, avoidCollisions,
+    collisionPadding, lockScrollOption, highlightItemOnHover,
+  } = resolveSelectConfiguration(root, content, valueSlot, authoredPositioner, options);
 
   let isOpen = false;
   let currentValue: string | null = defaultValue;
@@ -1150,15 +994,6 @@ export function createSelect(
   return controller;
 }
 
-/**
- * Find and bind all select components in a scope
- * Returns array of controllers for programmatic access
- */
 export function create(scope: ParentNode = document): SelectController[] {
-  const controllers: SelectController[] = [];
-  for (const root of getRoots(scope, "select")) {
-    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
-    controllers.push(createSelect(root));
-  }
-  return controllers;
+  return discoverSelects(scope, createSelect);
 }

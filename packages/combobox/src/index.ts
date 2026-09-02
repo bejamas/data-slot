@@ -1,14 +1,8 @@
 import {
   getPart,
   getParts,
-  getRoots,
   containsWithPortals,
-  getDataBool,
-  getDataNumber,
-  getDataString,
-  getDataEnum,
   reuseRootBinding,
-  hasRootBinding,
   setRootBinding,
   clearRootBinding,
   setAria,
@@ -24,82 +18,26 @@ import {
   createPresenceLifecycle,
   createDismissLayer,
 } from "@data-slot/core";
+import type {
+  ComboboxController,
+  ComboboxItemToStringValue,
+  ComboboxOptions,
+  Side,
+} from "./types";
+import { resolveComboboxConfiguration } from "./configuration";
+import { discoverComboboxes } from "./discovery";
 
-/** Side of the input to place the content */
-export type Side = "top" | "bottom";
-const SIDES = ["top", "bottom"] as const;
+export type {
+  Align,
+  ComboboxController,
+  ComboboxItemToStringValue,
+  ComboboxOptions,
+  Side,
+} from "./types";
 
-/** Alignment of the content relative to the input */
-export type Align = "start" | "center" | "end";
-const ALIGNS = ["start", "center", "end"] as const;
-
-export type ComboboxItemToStringValue = (item: HTMLElement | null, value: string | null) => string;
-
-export interface ComboboxOptions {
-  /** Initial selected value */
-  defaultValue?: string;
-  /** Callback when value changes */
-  onValueChange?: (value: string | null) => void;
-  /** Initial open state */
-  defaultOpen?: boolean;
-  /** Callback when open state changes */
-  onOpenChange?: (open: boolean) => void;
-  /** Callback when user types in the input (not on programmatic syncs) */
-  onInputValueChange?: (inputValue: string) => void;
-  /** Placeholder text for the input */
-  placeholder?: string;
-  /** Disable interaction */
-  disabled?: boolean;
-  /** Form validation required */
-  required?: boolean;
-  /** Form field name (auto-creates hidden input) */
-  name?: string;
-  /** Open popup when input receives focus @default true */
-  openOnFocus?: boolean;
-  /** Auto-highlight first visible item when filtering @default false */
-  autoHighlight?: boolean;
-  /** Custom filter function. Return true to show item. */
-  filter?: (inputValue: string, itemValue: string, itemLabel: string) => boolean;
-  /** Custom text resolver for committed selected-value text (input in inline mode, combobox-value in popup-input mode) */
-  itemToStringValue?: ComboboxItemToStringValue;
-
-  // Positioning props
-  /** @default "bottom" */
-  side?: Side;
-  /** @default "start" */
-  align?: Align;
-  /** @default 4 */
-  sideOffset?: number;
-  /** @default 0 */
-  alignOffset?: number;
-  /** @default true */
-  avoidCollisions?: boolean;
-  /** @default 8 */
-  collisionPadding?: number;
-}
-
-export interface ComboboxController {
-  /** Current selected value */
-  readonly value: string | null;
-  /** Current input text */
-  readonly inputValue: string;
-  /** Current open state */
-  readonly isOpen: boolean;
-  /** Select a value programmatically */
-  select(value: string): void;
-  /** Clear selected value */
-  clear(): void;
-  /** Open the popup */
-  open(): void;
-  /** Close the popup */
-  close(): void;
-  /** Set or clear runtime selected-value text resolver */
-  setItemToStringValue(itemToStringValue: ComboboxItemToStringValue | null): void;
-  /** Cleanup all event listeners */
-  destroy(): void;
-}
 
 const ROOT_BINDING_KEY = "@data-slot/combobox";
+const SIDES = ["top", "bottom"] as const;
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/combobox] createCombobox() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
@@ -152,59 +90,12 @@ export function createCombobox(
   const valueSlotPlaceholder = valueSlot?.textContent?.trim() ?? "";
 
   // Resolve options: JS > data-* > defaults
-  const defaultValue = options.defaultValue ?? getDataString(root, "defaultValue") ?? null;
-  const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
-  const placeholder = options.placeholder ?? getDataString(root, "placeholder") ?? "";
-  const disabled = options.disabled ?? getDataBool(root, "disabled") ?? false;
-  const required = options.required ?? getDataBool(root, "required") ?? false;
-  const name = options.name ?? getDataString(root, "name") ?? null;
-  const openOnFocus = options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? true;
-  const autoHighlight = options.autoHighlight ?? getDataBool(root, "autoHighlight") ?? false;
-  const customFilter = options.filter ?? null;
-  const onValueChange = options.onValueChange;
-  const onOpenChange = options.onOpenChange;
-  const onInputValueChange = options.onInputValueChange;
+  const {
+    defaultValue, defaultOpen, placeholder, disabled, required, name, openOnFocus, autoHighlight,
+    customFilter, onValueChange, onOpenChange, onInputValueChange, preferredSide, preferredAlign,
+    sideOffset, alignOffset, avoidCollisions, collisionPadding,
+  } = resolveComboboxConfiguration(root, content, authoredPositioner, options);
   let itemToStringValue = options.itemToStringValue ?? null;
-
-  // Placement precedence: JS option > content > authored positioner > root
-  const getPlacementEnum = <T extends string>(key: string, allowed: readonly T[]): T | undefined =>
-    getDataEnum(content, key, allowed) ??
-    (authoredPositioner ? getDataEnum(authoredPositioner, key, allowed) : undefined) ??
-    getDataEnum(root, key, allowed);
-  const getPlacementNumber = (key: string): number | undefined =>
-    getDataNumber(content, key) ??
-    (authoredPositioner ? getDataNumber(authoredPositioner, key) : undefined) ??
-    getDataNumber(root, key);
-  const getPlacementBool = (key: string): boolean | undefined =>
-    getDataBool(content, key) ??
-    (authoredPositioner ? getDataBool(authoredPositioner, key) : undefined) ??
-    getDataBool(root, key);
-
-  // Positioning options
-  const preferredSide =
-    options.side ??
-    getPlacementEnum("side", SIDES) ??
-    "bottom";
-  const preferredAlign =
-    options.align ??
-    getPlacementEnum("align", ALIGNS) ??
-    "start";
-  const sideOffset =
-    options.sideOffset ??
-    getPlacementNumber("sideOffset") ??
-    4;
-  const alignOffset =
-    options.alignOffset ??
-    getPlacementNumber("alignOffset") ??
-    0;
-  const avoidCollisions =
-    options.avoidCollisions ??
-    getPlacementBool("avoidCollisions") ??
-    true;
-  const collisionPadding =
-    options.collisionPadding ??
-    getPlacementNumber("collisionPadding") ??
-    8;
 
   // State
   let isOpen = false;
@@ -1100,15 +991,6 @@ export function createCombobox(
   return controller;
 }
 
-/**
- * Find and bind all combobox components in a scope
- * Returns array of controllers for programmatic access
- */
 export function create(scope: ParentNode = document): ComboboxController[] {
-  const controllers: ComboboxController[] = [];
-  for (const root of getRoots(scope, "combobox")) {
-    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
-    controllers.push(createCombobox(root));
-  }
-  return controllers;
+  return discoverComboboxes(scope, createCombobox);
 }
