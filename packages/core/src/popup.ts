@@ -596,13 +596,14 @@ const collectOverflowAncestors = (el: Element, win: Window): EventTarget[] => {
       continue;
     }
 
-    if (current instanceof Document) {
-      if (current.scrollingElement) targets.add(current.scrollingElement);
-      targets.add(current);
-      if (current.defaultView) {
-        targets.add(current.defaultView);
-        if (current.defaultView.visualViewport) {
-          targets.add(current.defaultView.visualViewport);
+    if (current.nodeType === 9) {
+      const doc = current as Document;
+      if (doc.scrollingElement) targets.add(doc.scrollingElement);
+      targets.add(doc);
+      if (doc.defaultView) {
+        targets.add(doc.defaultView);
+        if (doc.defaultView.visualViewport) {
+          targets.add(doc.defaultView.visualViewport);
         }
       }
       break;

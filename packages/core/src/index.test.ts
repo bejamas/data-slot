@@ -1239,11 +1239,23 @@ describe('core/popup', () => {
     let intersectionConstructed = 0
     let added = 0
     let removed = 0
+    let documentAdded = 0
+    let documentRemoved = 0
     let primaryScrolls = 0
     const onPrimaryScroll = () => { primaryScrolls += 1 }
     window.addEventListener('scroll', onPrimaryScroll)
     const originalAdd = outer.addEventListener.bind(outer)
     const originalRemove = outer.removeEventListener.bind(outer)
+    const originalDocumentAdd = secondary.addEventListener.bind(secondary)
+    const originalDocumentRemove = secondary.removeEventListener.bind(secondary)
+    Object.defineProperty(secondary, 'addEventListener', { configurable: true, value(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
+      if (type === 'scroll') documentAdded += 1
+      originalDocumentAdd(type, listener, options)
+    } })
+    Object.defineProperty(secondary, 'removeEventListener', { configurable: true, value(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) {
+      if (type === 'scroll') documentRemoved += 1
+      originalDocumentRemove(type, listener, options)
+    } })
     outer.addEventListener = ((type: string, ...args: Parameters<typeof outer.addEventListener>) => {
       if (type === 'scroll') added += 1
       return originalAdd(type, ...args)
@@ -1259,6 +1271,7 @@ describe('core/popup', () => {
     expect(resizeConstructed).toBeGreaterThan(0)
     expect(intersectionConstructed).toBeGreaterThan(0)
     expect(added).toBeGreaterThan(0)
+    expect(documentAdded).toBeGreaterThan(0)
     outer.dispatchEvent(new secondaryWindow.Event('scroll'))
     expect(primaryScrolls).toBe(0)
     expect(document.body.contains(anchor)).toBe(false)
@@ -1272,6 +1285,7 @@ describe('core/popup', () => {
     expect(position.x).toBe(7)
     sync.stop()
     expect(removed).toBeGreaterThan(0)
+    expect(documentRemoved).toBeGreaterThan(0)
     window.removeEventListener('scroll', onPrimaryScroll)
   })
 
