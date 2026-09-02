@@ -1220,6 +1220,42 @@ describe('core/popup', () => {
     sync.stop()
   })
 
+  it('createPositionSync keeps observers and overflow listeners in an iframe realm', () => {
+    const frame = document.createElement('iframe')
+    document.body.appendChild(frame)
+    const secondary = frame.contentDocument!
+    const secondaryWindow = frame.contentWindow!
+    secondary.body.innerHTML = `<div id="outer" style="overflow:auto"><div id="anchor"></div></div>`
+    const outer = secondary.getElementById('outer')!
+    const anchor = secondary.getElementById('anchor')!
+    anchor.getBoundingClientRect = () => rect(10, 10, 20, 20)
+    Object.defineProperty(secondary.documentElement, 'clientWidth', { configurable: true, value: 200 })
+    Object.defineProperty(secondary.documentElement, 'clientHeight', { configurable: true, value: 100 })
+    let resizeConstructed = 0
+    let intersectionConstructed = 0
+    let added = 0
+    let removed = 0
+    const originalAdd = outer.addEventListener.bind(outer)
+    const originalRemove = outer.removeEventListener.bind(outer)
+    outer.addEventListener = ((type: string, ...args: Parameters<typeof outer.addEventListener>) => {
+      if (type === 'scroll') added += 1
+      return originalAdd(type, ...args)
+    }) as typeof outer.addEventListener
+    outer.removeEventListener = ((type: string, ...args: Parameters<typeof outer.removeEventListener>) => {
+      if (type === 'scroll') removed += 1
+      return originalRemove(type, ...args)
+    }) as typeof outer.removeEventListener
+    Object.defineProperty(secondaryWindow, 'ResizeObserver', { configurable: true, value: class { constructor() { resizeConstructed += 1 } observe() {} disconnect() {} } })
+    Object.defineProperty(secondaryWindow, 'IntersectionObserver', { configurable: true, value: class { constructor() { intersectionConstructed += 1 } observe() {} disconnect() {} } })
+    const sync = createPositionSync({ observedElements: [anchor], onUpdate() {}, win: secondaryWindow, layoutShift: true })
+    sync.start()
+    expect(resizeConstructed).toBeGreaterThan(0)
+    expect(intersectionConstructed).toBeGreaterThan(0)
+    expect(added).toBeGreaterThan(0)
+    sync.stop()
+    expect(removed).toBeGreaterThan(0)
+  })
+
   it('createPositionSync can update synchronously from ancestor scroll', async () => {
     document.body.innerHTML = `
       <div id="outer" style="overflow: auto; max-height: 100px;">
