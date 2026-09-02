@@ -577,8 +577,8 @@ const rectToSnapshot = (rect: Pick<DOMRectReadOnly, "x" | "y" | "width" | "heigh
 const rectsAreEqual = (a: RectSnapshot, b: RectSnapshot): boolean =>
   a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 
-const isOverflowElement = (el: Element): boolean => {
-  const style = getComputedStyle(el);
+const isOverflowElement = (el: Element, win: Window): boolean => {
+  const style = win.getComputedStyle(el);
   const overflow = `${style.overflow}${style.overflowX}${style.overflowY}`;
   return /(auto|scroll|overlay)/.test(overflow);
 };
@@ -588,9 +588,10 @@ const collectOverflowAncestors = (el: Element, win: Window): EventTarget[] => {
   let current: Node | null = el.parentNode;
 
   while (current) {
-    if (current instanceof Element) {
-      if (isOverflowElement(current)) targets.add(current);
-      current = current.parentNode;
+    if (current.nodeType === 1) {
+      const element = current as Element;
+      if (isOverflowElement(element, win)) targets.add(element);
+      current = element.parentNode;
       continue;
     }
 

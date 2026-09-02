@@ -825,7 +825,7 @@ export function createSelect(
 
       // Lock scroll
       if (lockScrollOption && !didLockScroll) {
-        lockScroll(root.ownerDocument);
+        lockScroll(root);
         didLockScroll = true;
       }
 
@@ -885,7 +885,7 @@ export function createSelect(
 
       // Unlock scroll
       if (didLockScroll) {
-        unlockScroll(root.ownerDocument);
+        unlockScroll(root);
         didLockScroll = false;
       }
 
@@ -1135,7 +1135,7 @@ export function createSelect(
       portal.cleanup();
       // Unlock scroll if still locked
       if (didLockScroll) {
-        unlockScroll(root.ownerDocument);
+        unlockScroll(root);
         didLockScroll = false;
       }
       cleanups.forEach((fn) => fn());

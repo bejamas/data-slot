@@ -267,7 +267,7 @@ export function createAlertDialog(
       modalStack.open();
 
       if (lockScrollOption && !didLockScroll) {
-        lockScroll(root.ownerDocument);
+        lockScroll(root);
         didLockScroll = true;
       }
     } else {
@@ -278,7 +278,7 @@ export function createAlertDialog(
       modalStack.close();
 
       if (didLockScroll) {
-        unlockScroll(root.ownerDocument);
+        unlockScroll(root);
         didLockScroll = false;
       }
     }
@@ -371,7 +371,7 @@ export function createAlertDialog(
         setAria(trigger, "expanded", false);
       }
       if (didLockScroll) {
-        unlockScroll(root.ownerDocument);
+        unlockScroll(root);
         didLockScroll = false;
       }
       cleanupContentFocusable();

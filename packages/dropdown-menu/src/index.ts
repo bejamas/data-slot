@@ -247,7 +247,7 @@ const dispatchCustomEvent = <T>(
   cancelable = false,
 ): boolean => {
   return el.dispatchEvent(
-    new CustomEvent(name, {
+    new (getWindow(el).CustomEvent)(name, {
       bubbles: true,
       cancelable,
       detail,
@@ -440,7 +440,7 @@ export function createDropdownMenu(
     el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
   const isHoverPointer = (e: PointerEvent) => e.pointerType !== "touch";
   const closestItem = (target: EventTarget | null): HTMLElement | null =>
-    target instanceof Element ? (target.closest(ITEM_SELECTOR) as HTMLElement | null) : null;
+    target instanceof win.Element ? (target.closest(ITEM_SELECTOR) as HTMLElement | null) : null;
   const getItemRecord = (el: HTMLElement | null): DropdownMenuItemRecord | null =>
     el ? items.find((item) => item.el === el) ?? null : null;
   const getRadioItems = (): DropdownMenuItemRecord[] => items.filter((item) => item.type === "radio");
@@ -882,7 +882,7 @@ export function createDropdownMenu(
       presence.enter();
 
       if (lockScrollOption && !didLockScroll) {
-        lockScroll(root.ownerDocument);
+        lockScroll(root);
         didLockScroll = true;
       }
 
@@ -911,7 +911,7 @@ export function createDropdownMenu(
       keyboardMode = false;
 
       if (didLockScroll) {
-        unlockScroll(root.ownerDocument);
+        unlockScroll(root);
         didLockScroll = false;
       }
 
@@ -1327,7 +1327,7 @@ export function createDropdownMenu(
       presence.cleanup();
       portal.cleanup();
       if (didLockScroll) {
-        unlockScroll(root.ownerDocument);
+        unlockScroll(root);
         didLockScroll = false;
       }
       cleanups.forEach((cleanup) => cleanup());
