@@ -1252,6 +1252,28 @@ describe("Select", () => {
       expect(trigger.hasAttribute("aria-invalid")).toBe(false);
       controller.destroy();
     });
+
+    it("blocks requestSubmit while invalid and submits one selected value once valid", () => {
+      document.body.innerHTML = `<form><div data-slot="select" data-name="fruit" data-required><button data-slot="select-trigger"><span data-slot="select-value"></span></button><div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div></div></div></form>`;
+      const root = document.querySelector('[data-slot="select"]') as HTMLElement;
+      const form = document.querySelector("form")!;
+      const field = form.elements.namedItem("fruit") as HTMLInputElement;
+      const controller = createSelect(root);
+      let invalidWasCancelled = false;
+      let submits = 0;
+      field.addEventListener("invalid", (event) => { invalidWasCancelled = event.defaultPrevented; });
+      form.addEventListener("submit", (event) => { event.preventDefault(); submits += 1; });
+
+      form.requestSubmit();
+      expect(submits).toBe(0);
+      expect(invalidWasCancelled).toBe(true);
+
+      controller.select("apple");
+      form.requestSubmit();
+      expect(submits).toBe(1);
+      expect(new FormData(form).getAll("fruit")).toEqual(["apple"]);
+      controller.destroy();
+    });
     it("creates hidden input when name is provided", () => {
       const { root, controller } = setup({ name: "fruit" });
 
