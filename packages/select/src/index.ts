@@ -316,9 +316,30 @@ export function createSelect(
   // Create hidden input for form integration
   if (name) {
     hiddenInput = document.createElement("input");
-    hiddenInput.type = "hidden";
+    // A hidden input is exempt from constraint validation. Keep this field out
+    // of the visual and keyboard flow instead, so native required validation
+    // can represent the custom select without creating a second form value.
+    hiddenInput.type = required ? "text" : "hidden";
     hiddenInput.name = name;
     hiddenInput.value = currentValue ?? "";
+    hiddenInput.required = required;
+    hiddenInput.disabled = disabled;
+    if (required) {
+      hiddenInput.tabIndex = -1;
+      hiddenInput.setAttribute("aria-hidden", "true");
+      Object.assign(hiddenInput.style, {
+        position: "absolute",
+        width: "1px",
+        height: "1px",
+        padding: "0",
+        margin: "-1px",
+        overflow: "hidden",
+        clip: "rect(0, 0, 0, 0)",
+        whiteSpace: "nowrap",
+        border: "0",
+      });
+      cleanups.push(on(hiddenInput, "invalid", () => trigger.focus()));
+    }
     root.appendChild(hiddenInput);
   }
 
