@@ -261,7 +261,7 @@ export function createDialog(
 
       // Lock scroll
       if (lockScrollOption && !didLockScroll) {
-        lockScroll();
+        lockScroll(root.ownerDocument);
         didLockScroll = true;
       }
     } else {
@@ -274,7 +274,7 @@ export function createDialog(
 
       // Unlock scroll (only if we locked it)
       if (didLockScroll) {
-        unlockScroll();
+        unlockScroll(root.ownerDocument);
         didLockScroll = false;
       }
     }
@@ -426,7 +426,7 @@ export function createDialog(
         setAria(trigger, "expanded", false);
       }
       if (didLockScroll) {
-        unlockScroll();
+        unlockScroll(root.ownerDocument);
         didLockScroll = false;
       }
       cleanupContentFocusable();

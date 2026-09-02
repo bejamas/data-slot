@@ -31,7 +31,7 @@ export const emit = <T = unknown>(
   name: string,
   detail?: T
 ): boolean =>
-  el.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+  el.dispatchEvent(createCustomEvent(el, name, detail));
 
 /**
  * Compose multiple event handlers into one
@@ -47,3 +47,4 @@ export const composeHandlers = <E extends Event>(
     }
   };
 };
+import { createCustomEvent } from "./realm.ts";

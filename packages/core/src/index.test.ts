@@ -565,6 +565,22 @@ describe('core/scroll', () => {
     expect(document.documentElement.style.overflow).toBe('')
     expect(getScrollLockCount()).toBe(0)
   })
+
+  it('isolates scroll locks for a secondary document', () => {
+    const secondary = document.implementation.createHTMLDocument('secondary')
+    secondary.documentElement.style.overflow = 'auto'
+
+    lockScroll(secondary)
+
+    expect(secondary.documentElement.style.overflow).toBe('hidden')
+    expect(document.documentElement.style.overflow).toBe('')
+    expect(getScrollLockCount(secondary)).toBe(1)
+    expect(getScrollLockCount(document)).toBe(0)
+
+    unlockScroll(secondary)
+    expect(secondary.documentElement.style.overflow).toBe('auto')
+    expect(document.documentElement.style.overflow).toBe('')
+  })
 })
 
 describe('core/portal', () => {

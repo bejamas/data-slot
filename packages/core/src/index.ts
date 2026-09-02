@@ -19,6 +19,7 @@ export {
 export type { PortalState } from "./parts.ts";
 export { ensureId, setAria, linkLabelledBy } from "./aria.ts";
 export { on, emit, composeHandlers } from "./events.ts";
+export { getDocument, getWindow, createCustomEvent } from "./realm.ts";
 export { lockScroll, unlockScroll } from "./scroll.ts";
 export {
   computeFloatingPosition,

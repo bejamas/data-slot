@@ -879,7 +879,7 @@ export function createDropdownMenu(
       presence.enter();
 
       if (lockScrollOption && !didLockScroll) {
-        lockScroll();
+        lockScroll(root.ownerDocument);
         didLockScroll = true;
       }
 
@@ -908,7 +908,7 @@ export function createDropdownMenu(
       keyboardMode = false;
 
       if (didLockScroll) {
-        unlockScroll();
+        unlockScroll(root.ownerDocument);
         didLockScroll = false;
       }
 
@@ -1325,7 +1325,7 @@ export function createDropdownMenu(
       presence.cleanup();
       portal.cleanup();
       if (didLockScroll) {
-        unlockScroll();
+        unlockScroll(root.ownerDocument);
         didLockScroll = false;
       }
       cleanups.forEach((cleanup) => cleanup());
