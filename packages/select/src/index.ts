@@ -934,7 +934,7 @@ export function createSelect(
     // Update hidden input
     if (hiddenInput) {
       hiddenInput.value = value ?? "";
-      const invalid = required && !disabled && value === null;
+      const invalid = required && !disabled && !value;
       if (invalid) trigger.setAttribute("aria-invalid", "true");
       else trigger.removeAttribute("aria-invalid");
     }

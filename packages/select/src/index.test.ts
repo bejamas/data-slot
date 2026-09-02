@@ -1235,6 +1235,23 @@ describe("Select", () => {
       expect(form.checkValidity()).toBe(true);
       controller.destroy();
     });
+
+    it("routes reportValidity to the trigger and clears invalid state after selection", () => {
+      document.body.innerHTML = `<form><div data-slot="select" data-name="fruit" data-required><button data-slot="select-trigger"><span data-slot="select-value"></span></button><div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div></div></div></form>`;
+      const root = document.querySelector('[data-slot="select"]') as HTMLElement;
+      const form = document.querySelector("form")!;
+      const trigger = root.querySelector('[data-slot="select-trigger"]') as HTMLElement;
+      const controller = createSelect(root);
+      expect(form.reportValidity()).toBe(false);
+      expect(document.activeElement).toBe(trigger);
+      expect(trigger.getAttribute("aria-invalid")).toBe("true");
+      controller.select("");
+      expect(trigger.getAttribute("aria-invalid")).toBe("true");
+      controller.select("apple");
+      expect(form.checkValidity()).toBe(true);
+      expect(trigger.hasAttribute("aria-invalid")).toBe(false);
+      controller.destroy();
+    });
     it("creates hidden input when name is provided", () => {
       const { root, controller } = setup({ name: "fruit" });
 
