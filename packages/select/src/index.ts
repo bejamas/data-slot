@@ -572,7 +572,7 @@ export function createSelect(
       if (nearViewportEdge || heightTooConstrained) {
         alignTriggerActive = false;
         const floating = computeFloatingPosition({
-          win,
+          owner: root,
           anchorRect: tr,
           contentRect: cr,
           side: preferredSide,
@@ -659,7 +659,7 @@ export function createSelect(
       }
     } else {
       const floating = computeFloatingPosition({
-        win,
+        owner: root,
         anchorRect: tr,
         contentRect: cr,
         side: preferredSide,

@@ -262,7 +262,7 @@ export function createHoverCard(
     const tr = trigger.getBoundingClientRect();
     const cr = measurePopupContentRect(content);
     const pos = computeFloatingPosition({
-      win,
+      owner: root,
       anchorRect: tr,
       contentRect: cr,
       side: preferredSide,

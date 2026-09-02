@@ -555,7 +555,7 @@ export function createCombobox(
     content.style.minWidth = `${anchorRect.width}px`;
     const cr = measurePopupContentRect(content);
     const pos = computeFloatingPosition({
-      win,
+      owner: root,
       anchorRect,
       contentRect: cr,
       side: effectiveSide,

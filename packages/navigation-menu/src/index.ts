@@ -1961,7 +1961,7 @@ export function createNavigationMenu(
     const rootRect = (root as HTMLElement).getBoundingClientRect();
     const triggerRect = trigger.getBoundingClientRect();
     const pos = computeFloatingPosition({
-      win,
+      owner: root,
       anchorRect: triggerRect,
       contentRect: floatingRect,
       side: placement.side,
