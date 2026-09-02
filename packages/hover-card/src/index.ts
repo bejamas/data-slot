@@ -16,6 +16,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createTerminalLifecycle,
+  drainCleanups,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -199,6 +200,7 @@ export function createHoverCard(
   let isOpen = options.open ?? defaultOpen;
   let isInstantTransition = false;
   const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
   let pointerOnTrigger = false;
   let pointerOnContent = false;
   let focusWithin = false;
@@ -666,8 +668,6 @@ export function createHoverCard(
       presence.cleanup();
       portal.cleanup();
       content.hidden = true;
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };

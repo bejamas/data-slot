@@ -16,6 +16,7 @@ import {
   createDismissLayer,
   createPresenceLifecycle,
   createTerminalLifecycle,
+  drainCleanups,
   focusElement,
   getAutofocusOrFirstFocusable,
   getTabbables,
@@ -115,6 +116,7 @@ export function createDialog(
 
   let isOpen = false;
   const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
   let previousActiveElement: HTMLElement | null = null;
   const cleanups: Array<() => void> = [];
 
@@ -443,8 +445,6 @@ export function createDialog(
         didLockScroll = false;
       }
       cleanupContentFocusable();
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
 
       portalLifecycle?.cleanup();
       clearRootBinding(root, ROOT_BINDING_KEY, controller);

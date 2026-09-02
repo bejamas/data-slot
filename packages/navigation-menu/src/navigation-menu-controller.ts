@@ -11,6 +11,7 @@ import {
   clearRootBinding,
   getTabbables,
   createTerminalLifecycle,
+  drainCleanups,
 } from "@data-slot/core";
 import { createPresenceLifecycle, setAria } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -143,6 +144,7 @@ export function createNavigationMenu(
   let pointerActivationTrigger: HTMLElement | null = null;
   let isRootHovered: boolean = false; // Track if pointer is over root
   const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
 
   let indicatorSyncRaf: number | null = null;
   const clearIndicatorSyncRaf = () => {
@@ -1213,7 +1215,6 @@ export function createNavigationMenu(
       });
       currentValue = null;
       popupStackController.destroy();
-      for (const cleanup of cleanups.splice(0)) cleanup();
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };

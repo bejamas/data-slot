@@ -17,6 +17,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createTerminalLifecycle,
+  drainCleanups,
   createDismissLayer,
   createFormFieldAdapter,
 } from "@data-slot/core";
@@ -132,6 +133,7 @@ export function createCombobox(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
 
   const matchesMediaQuery = (query: string): boolean => {
     if (typeof win.matchMedia !== "function") return false;
@@ -787,8 +789,6 @@ export function createCombobox(
       presence.cleanup();
       portal.cleanup();
       content.hidden = true;
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
       formField?.destroy();
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },

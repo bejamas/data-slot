@@ -22,6 +22,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createTerminalLifecycle,
+  drainCleanups,
   createDismissLayer,
   containsWithPortals,
   createTypeahead,
@@ -140,6 +141,7 @@ export function createDropdownMenu(
   let keyboardMode = false;
   let didLockScroll = false;
   const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
   terminalLifecycle.onDestroy(() => {
     if (didLockScroll) {
       unlockScroll();
@@ -837,8 +839,6 @@ export function createDropdownMenu(
         unlockScroll();
         didLockScroll = false;
       }
-      cleanups.forEach((cleanup) => cleanup());
-      cleanups.length = 0;
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };

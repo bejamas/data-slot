@@ -17,6 +17,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createTerminalLifecycle,
+  drainCleanups,
 } from "@data-slot/core";
 import { ensureId } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -219,6 +220,7 @@ export function createTooltip(
   let instantType: TooltipInstantType = null;
   let hasFocus = false;
   const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
   const cleanups: Array<() => void> = [];
 
@@ -631,8 +633,6 @@ export function createTooltip(
       presence.cleanup();
       portal.cleanup();
       content.hidden = true;
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };

@@ -35,6 +35,7 @@ export {
   createDismissLayer,
   createPortalLifecycle,
   createTerminalLifecycle,
+  drainCleanups,
   createPresenceLifecycle,
   createPositionSync,
 } from "./popup.ts";

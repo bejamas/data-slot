@@ -17,6 +17,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createTerminalLifecycle,
+  drainCleanups,
   createDismissLayer,
 } from "@data-slot/core";
 import type { SelectController, SelectOptions } from "./types";
@@ -113,6 +114,7 @@ export function createSelect(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
   terminalLifecycle.onDestroy(() => {
     if (didLockScroll) {
       unlockScroll();
@@ -671,8 +673,6 @@ export function createSelect(
         unlockScroll();
         didLockScroll = false;
       }
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
       formField?.destroy();
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },

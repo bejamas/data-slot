@@ -547,6 +547,7 @@ export interface TerminalLifecycleController {
   readonly isDestroyed: boolean;
   onBeforeDestroy(callback: () => void): void;
   onDestroy(callback: () => void): void;
+  onDestroyBundle(callbacks: readonly (() => void)[]): void;
   trackRaf(callback: FrameRequestCallback): number | null;
   trackFinalRaf(callback: FrameRequestCallback): number | null;
   trackTimeout(callback: () => void, delay: number): ReturnType<typeof setTimeout> | null;
@@ -572,6 +573,15 @@ export function createTerminalLifecycle(): TerminalLifecycleController {
     onDestroy: (callback) => {
       if (isDestroyed) callback();
       else teardowns.push(callback);
+    },
+    onDestroyBundle: (callbacks) => {
+      if (isDestroyed) {
+        for (const callback of callbacks) callback();
+        return;
+      }
+      teardowns.push(() => {
+        for (const callback of callbacks) callback();
+      });
     },
     trackRaf: (callback) => {
       if (isDestroyed || isDestroying) return null;
@@ -610,6 +620,11 @@ export function createTerminalLifecycle(): TerminalLifecycleController {
       return true;
     },
   };
+}
+
+/** Run a component's listener cleanup collection exactly once. */
+export function drainCleanups(cleanups: Array<() => void>): void {
+  for (const cleanup of cleanups.splice(0)) cleanup();
 }
 
 export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLifecycleController {
