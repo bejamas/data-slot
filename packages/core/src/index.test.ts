@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from 'bun:test'
 import {
   getPart,
   getParts,
+  getOwnedElements,
   getRoots,
   getRootBinding,
   hasRootBinding,
@@ -198,6 +199,26 @@ describe('core/parts', () => {
     expect(getParts(outer, 'accordion-trigger').map((part) => part.id)).toEqual([
       'outer-trigger',
     ])
+  })
+
+  it('keeps nested parts out of a portaled component scope', () => {
+    document.body.innerHTML = `
+      <div data-slot="dropdown-menu" id="outer"></div>
+      <div data-slot="dropdown-menu-content" id="content">
+        <button data-slot="dropdown-menu-item" id="outer-item">Outer</button>
+        <div data-slot="dropdown-menu">
+          <button data-slot="dropdown-menu-item" id="inner-item">Inner</button>
+        </div>
+      </div>
+    `
+
+    const outer = document.getElementById('outer')!
+    const content = document.getElementById('content')!
+    expect(
+      getOwnedElements(outer, content, '[data-slot="dropdown-menu-item"]').map(
+        (part) => part.id
+      )
+    ).toEqual(['outer-item'])
   })
 
   it('getRoots finds all component roots by data-slot', () => {

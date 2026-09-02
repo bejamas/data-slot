@@ -1,6 +1,7 @@
 export {
   getPart,
   getParts,
+  getOwnedElements,
   getRoots,
   getRootBinding,
   hasRootBinding,

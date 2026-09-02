@@ -3,7 +3,7 @@
  * the same component. Roots without a data-slot retain the usual descendant
  * query behavior for generic containers.
  */
-const isOwnedPart = (root: Element, part: Element): boolean => {
+const isOwnedPart = (root: Element, part: Element, scope: ParentNode): boolean => {
   const rootSlot = root.getAttribute("data-slot");
   if (!rootSlot) return true;
 
@@ -12,11 +12,26 @@ const isOwnedPart = (root: Element, part: Element): boolean => {
     if (ancestor.getAttribute("data-slot") === rootSlot) {
       return ancestor === root;
     }
+    if (ancestor === scope) return true;
     ancestor = ancestor.parentElement;
   }
 
   return false;
 };
+
+/**
+ * Query elements in a scope that are owned by a component root. This supports
+ * component content that has been portaled away from its root while excluding
+ * nested instances of the same component.
+ */
+export const getOwnedElements = <T extends Element = Element>(
+  root: Element,
+  scope: ParentNode,
+  selector: string
+): T[] =>
+  [...scope.querySelectorAll<T>(selector)].filter((part) =>
+    isOwnedPart(root, part, scope)
+  );
 
 /**
  * Query a single part/slot owned by a component root.
@@ -34,9 +49,7 @@ export const getParts = <T extends Element = Element>(
   root: Element,
   slot: string
 ): T[] =>
-  [...root.querySelectorAll<T>(`[data-slot="${slot}"]`)].filter((part) =>
-    isOwnedPart(root, part)
-  );
+  getOwnedElements<T>(root, root, `[data-slot="${slot}"]`);
 
 /**
  * Find all component roots within a scope by data-slot value

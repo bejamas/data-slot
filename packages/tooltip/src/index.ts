@@ -142,7 +142,7 @@ export function createTooltip(
 
   const trigger = getPart<HTMLElement>(root, "tooltip-trigger");
   const content = getPart<HTMLElement>(root, "tooltip-content");
-  const arrow = content?.querySelector<HTMLElement>('[data-slot="tooltip-arrow"]') ?? null;
+  const arrow = content ? getPart<HTMLElement>(content, "tooltip-arrow") : null;
   const authoredPositionerCandidate = getPart<HTMLElement>(root, "tooltip-positioner");
   const authoredPositioner =
     authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)

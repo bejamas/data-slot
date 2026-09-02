@@ -2218,4 +2218,41 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
   });
+
+  it("keeps nested dropdown items owned by the nested menu", () => {
+    document.body.innerHTML = `
+      <div data-slot="dropdown-menu" id="outer">
+        <button data-slot="dropdown-menu-trigger">Outer</button>
+        <div data-slot="dropdown-menu-content">
+          <button data-slot="dropdown-menu-item" data-value="outer-item">Outer item</button>
+          <div data-slot="dropdown-menu" id="inner">
+            <button data-slot="dropdown-menu-trigger">Inner</button>
+            <div data-slot="dropdown-menu-content">
+              <button data-slot="dropdown-menu-item" id="inner-item" data-value="inner-item">Inner item</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    let outerSelections = 0;
+    const outer = createDropdownMenu(document.getElementById("outer")!, {
+      onSelect: () => {
+        outerSelections += 1;
+      },
+    });
+    const innerItem = document.getElementById("inner-item") as HTMLElement;
+
+    expect(innerItem.getAttribute("role")).toBeNull();
+
+    const inner = createDropdownMenu(document.getElementById("inner")!);
+    outer.open();
+    innerItem.click();
+
+    expect(outerSelections).toBe(0);
+    expect(inner.isOpen).toBe(false);
+
+    outer.destroy();
+    inner.destroy();
+  });
 });
