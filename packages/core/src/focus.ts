@@ -39,10 +39,12 @@ function isVisible(element: HTMLElement): boolean {
 }
 
 function isHiddenByClosedDetails(element: HTMLElement): boolean {
-  const details = element.closest('details:not([open])')
-  if (!details) return false
-  const firstSummary = Array.from(details.children).find((child) => child.tagName === 'SUMMARY')
-  return firstSummary !== element
+  for (let current: HTMLElement | null = element.parentElement; current; current = current.parentElement) {
+    if (current.tagName !== 'DETAILS' || current.hasAttribute('open')) continue
+    const firstSummary = Array.from(current.children).find((child) => child.tagName === 'SUMMARY')
+    if (!firstSummary?.contains(element)) return true
+  }
+  return false
 }
 
 function isDisabledByFieldset(element: HTMLElement): boolean {
@@ -58,15 +60,26 @@ function isFocusable(element: HTMLElement): boolean {
   return isVisible(element) && !isInert(element) && !isHiddenByClosedDetails(element)
 }
 
+function getFocusTree(element: HTMLElement): ParentNode {
+  const root = element.getRootNode()
+  if (root !== element) return root as ParentNode
+
+  // Some lightweight DOM implementations return the element itself here for
+  // shadow-tree descendants. Preserve native semantics by walking to its root.
+  let current: Node = element
+  while (current.parentNode) current = current.parentNode
+  return current as ParentNode
+}
+
 function isRadioTabbable(element: HTMLElement): boolean {
   const Input = element.ownerDocument.defaultView?.HTMLInputElement
   if (!Input || !(element instanceof Input) || element.type !== 'radio' || !element.name) return true
-  const tree = element.getRootNode()
-  const radios = Array.from(element.ownerDocument.querySelectorAll<HTMLInputElement>('input[type="radio"]'))
+  const tree = getFocusTree(element)
+  const radios = Array.from(tree.querySelectorAll<HTMLInputElement>('input[type="radio"]'))
     .filter((radio) =>
       radio.name === element.name &&
       radio.form === element.form &&
-      radio.getRootNode() === tree &&
+      getFocusTree(radio) === tree &&
       isFocusable(radio),
     )
   const checked = radios.find((radio) => radio.checked)
