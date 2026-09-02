@@ -1202,6 +1202,39 @@ describe("Select", () => {
   });
 
   describe("form integration", () => {
+    it("participates in native required validation without adding a tab stop", () => {
+      document.body.innerHTML = `
+        <form><div data-slot="select" data-name="fruit" data-required>
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div></div>
+        </div></form>
+      `;
+      const root = document.querySelector('[data-slot="select"]') as HTMLElement;
+      const form = document.querySelector("form")!;
+      const trigger = document.querySelector('[data-slot="select-trigger"]') as HTMLElement;
+      const controller = createSelect(root);
+
+      expect(form.checkValidity()).toBe(false);
+      const field = form.elements.namedItem("fruit") as HTMLInputElement;
+      expect(field.validity.valueMissing).toBe(true);
+      expect(field.tabIndex).toBe(-1);
+      expect(document.activeElement).toBe(trigger);
+
+      controller.select("apple");
+      expect(form.checkValidity()).toBe(true);
+      expect(new FormData(form).getAll("fruit")).toEqual(["apple"]);
+      controller.destroy();
+    });
+
+    it("exempts disabled required selects from validation", () => {
+      const { root, controller } = setup({ name: "fruit", required: true, disabled: true });
+      const form = document.createElement("form");
+      root.parentElement?.insertBefore(form, root);
+      form.appendChild(root);
+
+      expect(form.checkValidity()).toBe(true);
+      controller.destroy();
+    });
     it("creates hidden input when name is provided", () => {
       const { root, controller } = setup({ name: "fruit" });
 
