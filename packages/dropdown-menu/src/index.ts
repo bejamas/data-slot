@@ -141,7 +141,7 @@ export function createDropdownMenu(
   let keyboardMode = false;
   let didLockScroll = false;
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
+  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
   terminalLifecycle.onDestroy(() => {
     if (didLockScroll) {
       unlockScroll();

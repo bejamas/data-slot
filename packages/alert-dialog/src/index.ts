@@ -86,7 +86,7 @@ export function createAlertDialog(
 
   let isOpen = false;
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
+  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
   let previousActiveElement: HTMLElement | null = null;
   const cleanups: Array<() => void> = [];
 
@@ -99,8 +99,6 @@ export function createAlertDialog(
     terminalLifecycle.trackFinalRaf(() => {
       if (previousActiveElement && document.contains(previousActiveElement)) {
         focusElement(previousActiveElement);
-      } else if (trigger && document.contains(trigger)) {
-        focusElement(trigger);
       }
       previousActiveElement = null;
     });

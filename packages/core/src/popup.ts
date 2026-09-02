@@ -547,7 +547,6 @@ export interface TerminalLifecycleController {
   readonly isDestroyed: boolean;
   onBeforeDestroy(callback: () => void): void;
   onDestroy(callback: () => void): void;
-  onDestroyBundle(callbacks: readonly (() => void)[]): void;
   trackRaf(callback: FrameRequestCallback): number | null;
   trackFinalRaf(callback: FrameRequestCallback): number | null;
   trackTimeout(callback: () => void, delay: number): ReturnType<typeof setTimeout> | null;
@@ -573,15 +572,6 @@ export function createTerminalLifecycle(): TerminalLifecycleController {
     onDestroy: (callback) => {
       if (isDestroyed) callback();
       else teardowns.push(callback);
-    },
-    onDestroyBundle: (callbacks) => {
-      if (isDestroyed) {
-        for (const callback of callbacks) callback();
-        return;
-      }
-      teardowns.push(() => {
-        for (const callback of callbacks) callback();
-      });
     },
     trackRaf: (callback) => {
       if (isDestroyed || isDestroying) return null;
@@ -620,6 +610,28 @@ export function createTerminalLifecycle(): TerminalLifecycleController {
       return true;
     },
   };
+}
+
+export interface FloatingTerminalResources {
+  cleanups: Array<() => void>;
+  positionSync: Pick<PositionSyncController, "stop">;
+  presence: Pick<PresenceLifecycleController, "cleanup">;
+  portal: Pick<PortalLifecycleController, "cleanup">;
+  unbind: () => void;
+}
+
+/** Registers the mechanical terminal disposal order shared by floating controls. */
+export function registerFloatingTerminalResources(
+  lifecycle: TerminalLifecycleController,
+  resources: FloatingTerminalResources,
+): void {
+  lifecycle.onDestroy(() => {
+    resources.positionSync.stop();
+    resources.presence.cleanup();
+    resources.portal.cleanup();
+    drainCleanups(resources.cleanups);
+    resources.unbind();
+  });
 }
 
 /** Run a component's listener cleanup collection exactly once. */

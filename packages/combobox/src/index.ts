@@ -133,7 +133,7 @@ export function createCombobox(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
+  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
 
   const matchesMediaQuery = (query: string): boolean => {
     if (typeof win.matchMedia !== "function") return false;

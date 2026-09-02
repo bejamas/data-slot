@@ -144,7 +144,7 @@ export function createNavigationMenu(
   let pointerActivationTrigger: HTMLElement | null = null;
   let isRootHovered: boolean = false; // Track if pointer is over root
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
+  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
 
   let indicatorSyncRaf: number | null = null;
   const clearIndicatorSyncRaf = () => {

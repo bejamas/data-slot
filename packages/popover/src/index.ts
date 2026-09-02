@@ -194,7 +194,7 @@ export function createPopover(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
+  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
 
   // Focus management state
   let previousActiveElement: HTMLElement | null = null;

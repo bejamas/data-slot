@@ -200,7 +200,7 @@ export function createHoverCard(
   let isOpen = options.open ?? defaultOpen;
   let isInstantTransition = false;
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
+  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
   let pointerOnTrigger = false;
   let pointerOnContent = false;
   let focusWithin = false;

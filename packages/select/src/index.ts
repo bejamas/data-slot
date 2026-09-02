@@ -114,7 +114,7 @@ export function createSelect(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
+  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
   terminalLifecycle.onDestroy(() => {
     if (didLockScroll) {
       unlockScroll();

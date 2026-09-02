@@ -220,7 +220,7 @@ export function createTooltip(
   let instantType: TooltipInstantType = null;
   let hasFocus = false;
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroyBundle([() => drainCleanups(cleanups)]);
+  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
   const cleanups: Array<() => void> = [];
 

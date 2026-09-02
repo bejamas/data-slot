@@ -36,6 +36,7 @@ export {
   createPortalLifecycle,
   createTerminalLifecycle,
   drainCleanups,
+  registerFloatingTerminalResources,
   createPresenceLifecycle,
   createPositionSync,
 } from "./popup.ts";
@@ -56,6 +57,7 @@ export type {
   PortalLifecycleOptions,
   PortalLifecycleController,
   TerminalLifecycleController,
+  FloatingTerminalResources,
   PresenceLifecycleOptions,
   PresenceLifecycleController,
 } from "./popup.ts";
