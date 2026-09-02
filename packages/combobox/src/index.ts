@@ -1,6 +1,5 @@
 import {
   getPart,
-  getParts,
   containsWithPortals,
   reuseRootBinding,
   setRootBinding,
@@ -12,7 +11,6 @@ import {
   computeFloatingPosition,
   computeFloatingTransformOrigin,
   measurePopupContentRect,
-  ensureItemVisibleInContainer,
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
@@ -25,6 +23,7 @@ import type {
   Side,
 } from "./types";
 import { resolveComboboxConfiguration } from "./configuration";
+import { createComboboxCollection } from "./combobox-collection";
 import { discoverComboboxes } from "./discovery";
 
 export type {
@@ -100,7 +99,6 @@ export function createCombobox(
   // State
   let isOpen = false;
   let currentValue: string | null = defaultValue;
-  let highlightedIndex = -1;
   let keyboardMode = false;
   let openRenderedSide: Side | null = null;
   const cleanups: Array<() => void> = [];
@@ -111,12 +109,6 @@ export function createCombobox(
   let lastTabKeydownAt = -Infinity;
   let openOnNextFocusFromPointer = false;
   let suppressOpenOnNextFocus = false;
-
-  // Cached on open
-  let allItems: HTMLElement[] = [];
-  let visibleItems: HTMLElement[] = [];
-  let enabledVisibleItems: HTMLElement[] = [];
-  let itemToEnabledIndex = new Map<HTMLElement, number>();
 
   // Hidden input for form integration
   let hiddenInput: HTMLInputElement | null = null;
@@ -144,43 +136,6 @@ export function createCombobox(
   };
 
   const isMobileTouchEnvironment = isLikelyMobileTouchEnvironment();
-
-  const isItemDisabled = (el: HTMLElement) =>
-    el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
-
-  const getItemLabel = (el: HTMLElement) => {
-    if (el.dataset["label"]) return el.dataset["label"];
-    // Try direct text nodes first (excludes child element text like check marks)
-    let directText = "";
-    for (const node of el.childNodes) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        directText += node.textContent;
-      }
-    }
-    const trimmed = directText.trim();
-    if (trimmed) return trimmed;
-    // Fall back to full textContent for wrapped labels like <span>Apple</span>
-    return el.textContent?.trim() ?? "";
-  };
-
-  const getItemValue = (el: HTMLElement): string | undefined =>
-    el.hasAttribute("data-value") ? el.getAttribute("data-value")! : undefined;
-
-  const getItemByValue = (value: string | null): HTMLElement | null => {
-    if (value === null) return null;
-    const container = list ?? content;
-    const items = getParts<HTMLElement>(container, "combobox-item");
-    return items.find((el) => getItemValue(el) === value) ?? null;
-  };
-
-  // Get the display text for a given value
-  const getLabelForValue = (value: string | null): string => {
-    const item = getItemByValue(value);
-    if (itemToStringValue) {
-      return itemToStringValue(item, value);
-    }
-    return item ? getItemLabel(item) : "";
-  };
 
   // ARIA setup
   const inputId = ensureId(input, "combobox-input");
@@ -265,146 +220,15 @@ export function createCombobox(
     root.appendChild(hiddenInput);
   }
 
-  // Default filter: case-insensitive substring
-  const defaultFilter = (inputVal: string, _itemValue: string, itemLabel: string) =>
-    itemLabel.toLowerCase().includes(inputVal.toLowerCase());
-
-  const filterFn = customFilter ?? defaultFilter;
-
-  const syncItemSelectedState = (item: HTMLElement, selected: boolean) => {
-    setAria(item, "selected", selected);
-    if (selected) {
-      item.setAttribute("data-selected", "");
-    } else {
-      item.removeAttribute("data-selected");
-    }
-
-    const indicators = getParts<HTMLElement>(item, "combobox-item-indicator");
-    for (const indicator of indicators) {
-      indicator.hidden = !selected;
-    }
-  };
-
-  // Cache items from content
-  const cacheItems = () => {
-    const container = list ?? content;
-    allItems = getParts<HTMLElement>(container, "combobox-item");
-
-    for (const item of allItems) {
-      item.setAttribute("role", "option");
-      ensureId(item, "combobox-item");
-      if (isItemDisabled(item)) {
-        item.setAttribute("aria-disabled", "true");
-      } else {
-        item.removeAttribute("aria-disabled");
-      }
-
-      // Mark selected
-      const itemValue = getItemValue(item);
-      syncItemSelectedState(item, itemValue === currentValue);
-    }
-
-    // Set groups' ARIA
-    const groups = getParts<HTMLElement>(container, "combobox-group");
-    for (const group of groups) {
-      group.setAttribute("role", "group");
-      const label = getPart<HTMLElement>(group, "combobox-label");
-      if (label) {
-        const labelId = ensureId(label, "combobox-label");
-        group.setAttribute("aria-labelledby", labelId);
-      }
-    }
-
-    rebuildVisibleItems();
-  };
-
-  // Rebuild visible/enabled item caches after filtering
-  const rebuildVisibleItems = () => {
-    visibleItems = allItems.filter((el) => !el.hidden);
-    enabledVisibleItems = visibleItems.filter((el) => !isItemDisabled(el));
-    itemToEnabledIndex = new Map(enabledVisibleItems.map((el, i) => [el, i]));
-  };
-
-  // Normalize separators after filtering:
-  // - no leading/trailing visible separator
-  // - no adjacent visible separators
-  // - at most one visible separator between adjacent visible non-separator blocks
-  const normalizeVisibleSeparators = (container: HTMLElement) => {
-    const separators = getParts<HTMLElement>(container, "combobox-separator");
-    for (const sep of separators) {
-      sep.hidden = true;
-    }
-
-    const children = Array.from(container.children).filter(
-      (child): child is HTMLElement => child instanceof HTMLElement
-    );
-
-    for (let i = 0; i < children.length; i++) {
-      const current = children[i]!;
-      const currentIsSeparator = current.dataset["slot"] === "combobox-separator";
-      if (currentIsSeparator || current.hidden) continue;
-
-      let j = i + 1;
-      let firstVisibleSeparator: HTMLElement | null = null;
-      while (j < children.length) {
-        const next = children[j]!;
-        if (next.dataset["slot"] === "combobox-separator") {
-          firstVisibleSeparator ??= next;
-          j += 1;
-          continue;
-        }
-
-        if (next.hidden) {
-          j += 1;
-          continue;
-        }
-
-        if (firstVisibleSeparator) {
-          firstVisibleSeparator.hidden = false;
-        }
-        break;
-      }
-    }
-  };
-
-  // Filtering
-  const applyFilter = (inputVal: string) => {
-    const container = list ?? content;
-    const trimmed = inputVal.trim();
-    let visibleCount = 0;
-
-    for (const item of allItems) {
-      const itemValue = getItemValue(item) ?? "";
-      const itemLabel = getItemLabel(item);
-      const matches = trimmed === "" || filterFn(trimmed, itemValue, itemLabel);
-      item.hidden = !matches;
-      if (matches) visibleCount++;
-    }
-
-    // Hide groups where all items are hidden
-    const groups = getParts<HTMLElement>(container, "combobox-group");
-    for (const group of groups) {
-      const groupItems = getParts<HTMLElement>(group, "combobox-item");
-      const hasVisible = groupItems.some((el) => !el.hidden);
-      group.hidden = !hasVisible;
-    }
-
-    normalizeVisibleSeparators(container);
-
-    // Show/hide empty message
-    if (emptySlot) {
-      emptySlot.hidden = visibleCount > 0;
-    }
-
-    // Set data-empty on content
-    if (visibleCount === 0) {
-      content.setAttribute("data-empty", "");
-    } else {
-      content.removeAttribute("data-empty");
-    }
-
-    rebuildVisibleItems();
-  };
+  const collection = createComboboxCollection({
+    root,
+    container: list ?? content,
+    input,
+    emptySlot,
+    filter: customFilter ?? ((inputValue, _itemValue, itemLabel) =>
+      itemLabel.toLowerCase().includes(inputValue.toLowerCase())),
+    itemToStringValue,
+  });
 
   // Positioning
   const syncPositionCssVars = (positioner: HTMLElement, anchorRect: DOMRectReadOnly, side: Side) => {
@@ -490,36 +314,6 @@ export function createCombobox(
     ignoreScrollTarget: (target) => target instanceof Node && content.contains(target),
   });
 
-  const getHighlightScrollContainer = (item: HTMLElement): HTMLElement => {
-    if (list && list.contains(item) && list.scrollHeight > list.clientHeight) {
-      return list;
-    }
-    return content;
-  };
-
-  // Highlighting
-  const updateHighlight = (index: number) => {
-    for (const el of allItems) el.removeAttribute("data-highlighted");
-
-    const highlightedItem = enabledVisibleItems[index];
-    if (!highlightedItem) {
-      highlightedIndex = -1;
-      input.removeAttribute("aria-activedescendant");
-      return;
-    }
-
-    highlightedItem.setAttribute("data-highlighted", "");
-    input.setAttribute("aria-activedescendant", highlightedItem.id);
-    ensureItemVisibleInContainer(highlightedItem, getHighlightScrollContainer(highlightedItem));
-    highlightedIndex = index;
-  };
-
-  const clearHighlight = () => {
-    for (const el of allItems) el.removeAttribute("data-highlighted");
-    highlightedIndex = -1;
-    input.removeAttribute("aria-activedescendant");
-  };
-
   const setDataState = (state: "open" | "closed") => {
     root.setAttribute("data-state", state);
     content.setAttribute("data-state", state);
@@ -563,7 +357,7 @@ export function createCombobox(
       setDataState("open");
       presence.enter();
 
-      cacheItems();
+      collection.cache(currentValue);
       keyboardMode = false;
 
       // In popup-input mode, input text is transient search and should start empty on open.
@@ -572,14 +366,14 @@ export function createCombobox(
       }
 
       // Apply current filter
-      applyFilter(input.value);
+      collection.filter(input.value);
 
       // Highlight selected item if visible, else auto-highlight first
-      const selectedIndex = enabledVisibleItems.findIndex((el) => getItemValue(el) === currentValue);
+      const selectedIndex = collection.enabled.findIndex((item) => collection.valueOf(item) === currentValue);
       if (selectedIndex >= 0) {
-        updateHighlight(selectedIndex);
+        collection.highlight(selectedIndex);
       } else {
-        clearHighlight();
+        collection.clearHighlight();
       }
 
       positionSync.start();
@@ -595,7 +389,7 @@ export function createCombobox(
       openRenderedSide = null;
       setAria(input, "expanded", false);
       setDataState("closed");
-      clearHighlight();
+      collection.clearHighlight();
       keyboardMode = false;
 
       positionSync.stop();
@@ -605,7 +399,7 @@ export function createCombobox(
         input.value = "";
       } else {
         // Restore input text to committed value's label
-        const committedLabel = getLabelForValue(currentValue);
+        const committedLabel = collection.labelFor(currentValue);
         input.value = committedLabel;
       }
 
@@ -637,15 +431,9 @@ export function createCombobox(
       root.removeAttribute("data-value");
     }
 
-    // Update selected state on all items (may not be cached yet on init)
-    const container = list ?? content;
-    const items = allItems.length > 0 ? allItems : getParts<HTMLElement>(container, "combobox-item");
-    for (const item of items) {
-      const itemValue = getItemValue(item);
-      syncItemSelectedState(item, itemValue === value);
-    }
+    collection.select(value);
 
-    const resolvedLabel = getLabelForValue(value);
+    const resolvedLabel = collection.labelFor(value);
     if (!isPopupInputMode) {
       input.value = resolvedLabel;
     }
@@ -679,8 +467,8 @@ export function createCombobox(
   };
 
   const selectItem = (item: HTMLElement) => {
-    if (isItemDisabled(item)) return;
-    const value = getItemValue(item);
+    if (collection.indexOf(item) === undefined) return;
+    const value = collection.valueOf(item);
     if (value === undefined) return;
 
     updateValue(value);
@@ -695,10 +483,10 @@ export function createCombobox(
 
     updateValue(null);
     input.value = "";
-    clearHighlight();
+    collection.clearHighlight();
 
     if (isOpen) {
-      applyFilter(input.value);
+      collection.filter(input.value);
       positionSync.update();
     }
 
@@ -719,49 +507,49 @@ export function createCombobox(
         e.preventDefault();
         if (!isOpen) {
           updateOpenState(true);
-          if (autoHighlight && enabledVisibleItems.length > 0) {
-            updateHighlight(0);
+          if (autoHighlight && collection.enabled.length > 0) {
+            collection.highlight(0);
           }
           return;
         }
         keyboardMode = true;
-        const len = enabledVisibleItems.length;
+        const len = collection.enabled.length;
         if (len === 0) return;
-        updateHighlight(highlightedIndex === -1 ? 0 : (highlightedIndex + 1) % len);
+        collection.highlight(collection.highlightedIndex === -1 ? 0 : (collection.highlightedIndex + 1) % len);
         break;
       }
       case "ArrowUp": {
         e.preventDefault();
         if (!isOpen) {
           updateOpenState(true);
-          if (autoHighlight && enabledVisibleItems.length > 0) {
-            updateHighlight(enabledVisibleItems.length - 1);
+          if (autoHighlight && collection.enabled.length > 0) {
+            collection.highlight(collection.enabled.length - 1);
           }
           return;
         }
         keyboardMode = true;
-        const len = enabledVisibleItems.length;
+        const len = collection.enabled.length;
         if (len === 0) return;
-        updateHighlight(highlightedIndex === -1 ? len - 1 : (highlightedIndex - 1 + len) % len);
+        collection.highlight(collection.highlightedIndex === -1 ? len - 1 : (collection.highlightedIndex - 1 + len) % len);
         break;
       }
       case "Home":
         if (!isOpen) return;
         e.preventDefault();
         keyboardMode = true;
-        if (enabledVisibleItems.length > 0) updateHighlight(0);
+        if (collection.enabled.length > 0) collection.highlight(0);
         break;
       case "End":
         if (!isOpen) return;
         e.preventDefault();
         keyboardMode = true;
-        if (enabledVisibleItems.length > 0) updateHighlight(enabledVisibleItems.length - 1);
+        if (collection.enabled.length > 0) collection.highlight(collection.enabled.length - 1);
         break;
       case "Enter":
         if (!isOpen) return;
         e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < enabledVisibleItems.length) {
-          selectItem(enabledVisibleItems[highlightedIndex]!);
+        if (collection.highlightedIndex >= 0 && collection.highlightedIndex < collection.enabled.length) {
+          selectItem(collection.enabled[collection.highlightedIndex]!);
         }
         break;
       case "Escape":
@@ -793,20 +581,20 @@ export function createCombobox(
     // Open if not already open
     if (!isOpen) {
       updateOpenState(true);
-      if (autoHighlight && hasTypedQuery && enabledVisibleItems.length > 0) {
-        updateHighlight(0);
-      } else if (highlightedIndex !== -1) {
-        clearHighlight();
+      if (autoHighlight && hasTypedQuery && collection.enabled.length > 0) {
+        collection.highlight(0);
+      } else if (collection.highlightedIndex !== -1) {
+        collection.clearHighlight();
       }
     } else {
       // Re-filter
-      applyFilter(val);
+      collection.filter(val);
 
       // Auto-highlight only after non-whitespace query input.
-      if (autoHighlight && hasTypedQuery && enabledVisibleItems.length > 0) {
-        updateHighlight(0);
+      if (autoHighlight && hasTypedQuery && collection.enabled.length > 0) {
+        collection.highlight(0);
       } else {
-        clearHighlight();
+        collection.clearHighlight();
       }
 
       // Update position after filter changes content size
@@ -896,20 +684,20 @@ export function createCombobox(
 
       if (keyboardMode) {
         keyboardMode = false;
-        if (item && itemToEnabledIndex.get(item) === highlightedIndex) return;
+        if (item && collection.indexOf(item) === collection.highlightedIndex) return;
       }
 
-      if (item && !isItemDisabled(item) && !item.hidden) {
-        const index = itemToEnabledIndex.get(item);
-        if (index !== undefined && index !== highlightedIndex) {
-          updateHighlight(index);
+      if (item && !item.hidden) {
+        const index = collection.indexOf(item);
+        if (index !== undefined && index !== collection.highlightedIndex) {
+          collection.highlight(index);
         }
       } else {
-        clearHighlight();
+        collection.clearHighlight();
       }
     }),
     on(content, "pointerleave", () => {
-      if (!keyboardMode) clearHighlight();
+      if (!keyboardMode) collection.clearHighlight();
     }),
     // Prevent mousedown on content from stealing focus from input
     on(content, "mousedown", (e) => {
@@ -954,6 +742,7 @@ export function createCombobox(
       }
       if (detail?.itemToStringValue !== undefined) {
         itemToStringValue = detail.itemToStringValue;
+        collection.setItemToStringValue(itemToStringValue);
         updateValue(currentValue, true);
       }
     })
@@ -969,6 +758,7 @@ export function createCombobox(
     close: () => updateOpenState(false),
     setItemToStringValue: (nextItemToStringValue: ComboboxItemToStringValue | null) => {
       itemToStringValue = nextItemToStringValue;
+      collection.setItemToStringValue(itemToStringValue);
       updateValue(currentValue, true);
     },
     destroy: () => {
