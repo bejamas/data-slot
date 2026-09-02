@@ -1257,13 +1257,14 @@ describe("Select", () => {
       document.body.innerHTML = `<form><div data-slot="select" data-name="fruit" data-required><button data-slot="select-trigger"><span data-slot="select-value"></span></button><div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div></div></div></form>`;
       const root = document.querySelector('[data-slot="select"]') as HTMLElement;
       const form = document.querySelector("form")!;
-      const field = form.elements.namedItem("fruit") as HTMLInputElement;
       const controller = createSelect(root);
+      const proxy = root.querySelector('input[name="fruit"]') as HTMLInputElement;
       let invalidWasCancelled = false;
       let submits = 0;
-      field.addEventListener("invalid", (event) => { invalidWasCancelled = event.defaultPrevented; });
+      proxy.addEventListener("invalid", (event) => { invalidWasCancelled = event.defaultPrevented; });
       form.addEventListener("submit", (event) => { event.preventDefault(); submits += 1; });
 
+      expect(proxy).toBeTruthy();
       form.requestSubmit();
       expect(submits).toBe(0);
       expect(invalidWasCancelled).toBe(true);
