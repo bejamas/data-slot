@@ -114,7 +114,6 @@ export function createDialog(
   }
 
   let isOpen = false;
-  let isDestroyed = false;
   const terminalLifecycle = createTerminalLifecycle();
   let previousActiveElement: HTMLElement | null = null;
   const cleanups: Array<() => void> = [];
@@ -220,7 +219,7 @@ export function createDialog(
   let contentExitEpoch = 0;
 
   const finishClosePart = (element: HTMLElement, epoch: number) => {
-    if (isDestroyed || isOpen || epoch !== currentExitEpoch) return;
+    if (terminalLifecycle.isDestroyed || isOpen || epoch !== currentExitEpoch) return;
 
     element.hidden = true;
     pendingExitCount = Math.max(0, pendingExitCount - 1);
@@ -242,7 +241,7 @@ export function createDialog(
   });
 
   const updateState = (open: boolean, force = false) => {
-    if (isDestroyed) return;
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open && !force) return;
 
     if (open) {
@@ -298,7 +297,7 @@ export function createDialog(
     onOpenChange?.(isOpen);
 
     if (open) {
-      requestAnimationFrame(focusFirst);
+      terminalLifecycle.trackRaf(() => focusFirst());
     }
   };
 
@@ -403,15 +402,14 @@ export function createDialog(
   );
 
   const controller: DialogController = {
-    open: () => { if (!isDestroyed) updateState(true); },
-    close: () => { if (!isDestroyed) updateState(false); },
-    toggle: () => { if (!isDestroyed) updateState(!isOpen); },
+    open: () => { if (!terminalLifecycle.isDestroyed) updateState(true); },
+    close: () => { if (!terminalLifecycle.isDestroyed) updateState(false); },
+    toggle: () => { if (!terminalLifecycle.isDestroyed) updateState(!isOpen); },
     get isOpen() {
       return isOpen;
     },
     destroy: () => {
       if (!terminalLifecycle.destroy()) return;
-      isDestroyed = true;
       modalStack.destroy();
       currentExitEpoch += 1;
       pendingExitCount = 0;

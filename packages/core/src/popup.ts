@@ -545,19 +545,56 @@ export interface PortalLifecycleController {
  */
 export interface TerminalLifecycleController {
   readonly isDestroyed: boolean;
-  /** Returns false when destruction has already run. */
+  guard<T extends unknown[]>(callback: (...args: T) => void): (...args: T) => void;
+  onDestroy(callback: () => void): void;
+  trackRaf(callback: FrameRequestCallback): number | null;
+  trackTimeout(callback: () => void, delay: number): ReturnType<typeof setTimeout> | null;
   destroy(): boolean;
 }
 
 export function createTerminalLifecycle(): TerminalLifecycleController {
   let isDestroyed = false;
+  const teardowns: Array<() => void> = [];
+  const rafs = new Set<number>();
+  const timeouts = new Set<ReturnType<typeof setTimeout>>();
   return {
     get isDestroyed() {
       return isDestroyed;
     },
+    guard: (callback) => (...args) => {
+      if (!isDestroyed) callback(...args);
+    },
+    onDestroy: (callback) => {
+      if (isDestroyed) callback();
+      else teardowns.push(callback);
+    },
+    trackRaf: (callback) => {
+      if (isDestroyed) return null;
+      let handle = 0;
+      handle = requestAnimationFrame((time) => {
+        rafs.delete(handle);
+        if (!isDestroyed) callback(time);
+      });
+      rafs.add(handle);
+      return handle;
+    },
+    trackTimeout: (callback, delay) => {
+      if (isDestroyed) return null;
+      const handle = setTimeout(() => {
+        timeouts.delete(handle);
+        if (!isDestroyed) callback();
+      }, delay);
+      timeouts.add(handle);
+      return handle;
+    },
     destroy() {
       if (isDestroyed) return false;
       isDestroyed = true;
+      for (const handle of rafs) cancelAnimationFrame(handle);
+      rafs.clear();
+      for (const handle of timeouts) clearTimeout(handle);
+      timeouts.clear();
+      for (const teardown of teardowns.splice(0)) teardown();
       return true;
     },
   };
