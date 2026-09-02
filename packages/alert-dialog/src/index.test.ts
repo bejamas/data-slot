@@ -121,6 +121,18 @@ describe("AlertDialog", () => {
     controller.destroy();
   });
 
+  it("keeps outside focus when destroyed before opening", async () => {
+    const { controller } = setup();
+    const outside = document.createElement("button");
+    document.body.prepend(outside);
+    outside.focus();
+
+    controller.destroy();
+    await waitForRaf();
+
+    expect(document.activeElement).toBe(outside);
+  });
+
   it("opens on trigger click and closes on cancel click", async () => {
     const { trigger, cancel, content, overlay, controller } = setup();
 

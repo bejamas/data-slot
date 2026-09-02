@@ -831,10 +831,6 @@ export function createDropdownMenu(
       setAria(trigger, "expanded", false);
       setDataState("closed");
       content.hidden = true;
-      if (didLockScroll) {
-        unlockScroll();
-        didLockScroll = false;
-      }
     },
   };
 

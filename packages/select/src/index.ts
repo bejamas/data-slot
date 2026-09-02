@@ -664,11 +664,6 @@ export function createSelect(
       setAria(trigger, "expanded", false);
       setDataState("closed");
       content.hidden = true;
-      // Unlock scroll if still locked
-      if (didLockScroll) {
-        unlockScroll();
-        didLockScroll = false;
-      }
       formField?.destroy();
     },
   };
