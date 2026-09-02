@@ -338,7 +338,13 @@ export function createSelect(
         whiteSpace: "nowrap",
         border: "0",
       });
-      cleanups.push(on(hiddenInput, "invalid", () => trigger.focus()));
+      cleanups.push(on(hiddenInput, "invalid", (event) => {
+        // Keep the browser from moving focus to the off-screen proxy.
+        event.preventDefault();
+        trigger.setAttribute("aria-invalid", "true");
+        trigger.focus();
+        requestAnimationFrame(() => trigger.focus());
+      }));
     }
     root.appendChild(hiddenInput);
   }
@@ -928,6 +934,9 @@ export function createSelect(
     // Update hidden input
     if (hiddenInput) {
       hiddenInput.value = value ?? "";
+      const invalid = required && !disabled && value === null;
+      if (invalid) trigger.setAttribute("aria-invalid", "true");
+      else trigger.removeAttribute("aria-invalid");
     }
 
     // Update root data-value
