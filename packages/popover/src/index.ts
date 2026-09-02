@@ -416,10 +416,15 @@ export function createPopover(
       return isOpen;
     },
     destroy: () => {
+      if (isDestroyed) return;
       isDestroyed = true;
+      isOpen = false;
+      setAria(trigger, "expanded", false);
+      setDataState("closed");
       positionSync.stop();
       presence.cleanup();
       portal.cleanup();
+      content.hidden = true;
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       cleanupContentFocusable();

@@ -3912,6 +3912,25 @@ describe("Select", () => {
       expect(content.parentElement).toBe(root);
     });
 
+    it("terminally closes without emitting when destroyed while open", () => {
+      const { root, trigger, content, controller } = setup();
+      const changes: boolean[] = [];
+      root.addEventListener("select:open-change", (event) => {
+        changes.push((event as CustomEvent<{ open: boolean }>).detail.open);
+      });
+
+      controller.open();
+      controller.destroy();
+      controller.destroy();
+
+      expect(controller.isOpen).toBe(false);
+      expect(root.getAttribute("data-state")).toBe("closed");
+      expect(content.getAttribute("data-state")).toBe("closed");
+      expect(content.hidden).toBe(true);
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      expect(changes).toEqual([true]);
+    });
+
     it("uses authored portal and positioner slots when provided", async () => {
       document.body.innerHTML = `
         <div data-slot="select" id="root">

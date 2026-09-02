@@ -776,10 +776,15 @@ export function createCombobox(
       updateValue(currentValue, true);
     },
     destroy: () => {
+      if (isDestroyed) return;
       isDestroyed = true;
+      isOpen = false;
+      setAria(input, "expanded", false);
+      setDataState("closed");
       positionSync.stop();
       presence.cleanup();
       portal.cleanup();
+      content.hidden = true;
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       formField?.destroy();

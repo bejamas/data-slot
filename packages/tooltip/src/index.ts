@@ -616,11 +616,16 @@ export function createTooltip(
       return isOpen;
     },
     destroy: () => {
+      if (isDestroyed) return;
       isDestroyed = true;
       if (showTimeout) clearTimeout(showTimeout);
+      showTimeout = null;
+      isOpen = false;
+      setDataState("closed");
       positionSync.stop();
       presence.cleanup();
       portal.cleanup();
+      content.hidden = true;
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       clearRootBinding(root, ROOT_BINDING_KEY, controller);

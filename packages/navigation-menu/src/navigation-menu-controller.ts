@@ -1173,9 +1173,25 @@ export function createNavigationMenu(
     open: (value: string) => updateState(value, true),
     close: () => closeMenuAndUnlock(),
     destroy: () => {
+      if (isDestroyed) return;
       isDestroyed = true;
       resetPendingInteraction();
       resetPointerIntent();
+      layout.stop();
+      itemMap.forEach(({ trigger, content, item }) => {
+        setAria(trigger, "expanded", false);
+        trigger.setAttribute("data-state", "closed");
+        item.setAttribute("data-state", "closed");
+        setContentSurfaceState(content, false);
+        content.setAttribute("aria-hidden", "true");
+        setInert(content, true);
+        content.hidden = true;
+        content.style.pointerEvents = "none";
+        presences.get(content)?.cleanup();
+        layout.restore(content);
+      });
+      currentValue = null;
+      popupStackController.destroy();
       for (const cleanup of cleanups.splice(0)) cleanup();
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },

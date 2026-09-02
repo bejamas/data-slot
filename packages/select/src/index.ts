@@ -647,11 +647,16 @@ export function createSelect(
     open: () => updateOpenState(true),
     close: () => updateOpenState(false),
     destroy: () => {
+      if (isDestroyed) return;
       isDestroyed = true;
       typeahead.destroy();
+      isOpen = false;
+      setAria(trigger, "expanded", false);
+      setDataState("closed");
       positioning.stop();
       presence.cleanup();
       portal.cleanup();
+      content.hidden = true;
       // Unlock scroll if still locked
       if (didLockScroll) {
         unlockScroll();

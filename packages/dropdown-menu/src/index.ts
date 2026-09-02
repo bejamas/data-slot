@@ -815,11 +815,16 @@ export function createDropdownMenu(
       return itemCollection.valueFor(itemCollection.recordFor(highlightedItem));
     },
     destroy: () => {
+      if (isDestroyed) return;
       isDestroyed = true;
       typeahead.destroy();
+      isOpen = false;
+      setAria(trigger, "expanded", false);
+      setDataState("closed");
       positionSync.stop();
       presence.cleanup();
       portal.cleanup();
+      content.hidden = true;
       if (didLockScroll) {
         unlockScroll();
         didLockScroll = false;
