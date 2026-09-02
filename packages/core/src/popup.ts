@@ -545,15 +545,18 @@ export interface PortalLifecycleController {
  */
 export interface TerminalLifecycleController {
   readonly isDestroyed: boolean;
-  guard<T extends unknown[]>(callback: (...args: T) => void): (...args: T) => void;
+  onBeforeDestroy(callback: () => void): void;
   onDestroy(callback: () => void): void;
   trackRaf(callback: FrameRequestCallback): number | null;
+  trackFinalRaf(callback: FrameRequestCallback): number | null;
   trackTimeout(callback: () => void, delay: number): ReturnType<typeof setTimeout> | null;
   destroy(): boolean;
 }
 
 export function createTerminalLifecycle(): TerminalLifecycleController {
   let isDestroyed = false;
+  let isDestroying = false;
+  const beforeTeardowns: Array<() => void> = [];
   const teardowns: Array<() => void> = [];
   const rafs = new Set<number>();
   const timeouts = new Set<ReturnType<typeof setTimeout>>();
@@ -561,15 +564,17 @@ export function createTerminalLifecycle(): TerminalLifecycleController {
     get isDestroyed() {
       return isDestroyed;
     },
-    guard: (callback) => (...args) => {
-      if (!isDestroyed) callback(...args);
+    onBeforeDestroy: (callback) => {
+      if (isDestroyed) return;
+      if (isDestroying) callback();
+      else beforeTeardowns.push(callback);
     },
     onDestroy: (callback) => {
       if (isDestroyed) callback();
       else teardowns.push(callback);
     },
     trackRaf: (callback) => {
-      if (isDestroyed) return null;
+      if (isDestroyed || isDestroying) return null;
       let handle = 0;
       handle = requestAnimationFrame((time) => {
         rafs.delete(handle);
@@ -577,6 +582,10 @@ export function createTerminalLifecycle(): TerminalLifecycleController {
       });
       rafs.add(handle);
       return handle;
+    },
+    trackFinalRaf: (callback) => {
+      if (!isDestroying || isDestroyed) return null;
+      return requestAnimationFrame(callback);
     },
     trackTimeout: (callback, delay) => {
       if (isDestroyed) return null;
@@ -588,12 +597,15 @@ export function createTerminalLifecycle(): TerminalLifecycleController {
       return handle;
     },
     destroy() {
-      if (isDestroyed) return false;
-      isDestroyed = true;
+      if (isDestroyed || isDestroying) return false;
+      isDestroying = true;
       for (const handle of rafs) cancelAnimationFrame(handle);
       rafs.clear();
       for (const handle of timeouts) clearTimeout(handle);
       timeouts.clear();
+      for (const teardown of beforeTeardowns.splice(0)) teardown();
+      isDestroyed = true;
+      isDestroying = false;
       for (const teardown of teardowns.splice(0)) teardown();
       return true;
     },

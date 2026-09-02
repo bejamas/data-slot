@@ -421,6 +421,8 @@ describe("AlertDialog", () => {
 
     outside.focus();
     controller.open();
+    await waitForRaf();
+    expect(document.activeElement).toBe(document.getElementById("inside"));
     expect(document.documentElement.style.overflow).toBe("hidden");
     controller.destroy();
     controller.open();

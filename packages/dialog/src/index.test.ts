@@ -1040,6 +1040,8 @@ describe("Dialog", () => {
 
     outside.focus();
     controller.open();
+    await waitForRaf();
+    expect(document.activeElement).not.toBe(outside);
     controller.destroy();
     controller.open();
     controller.destroy();

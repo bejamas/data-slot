@@ -124,6 +124,16 @@ export function createDialog(
 
   // Track if this dialog locked scroll (prevent underflow)
   let didLockScroll = false;
+  terminalLifecycle.onBeforeDestroy(() => {
+    terminalLifecycle.trackFinalRaf(() => {
+      if (previousActiveElement && document.contains(previousActiveElement)) {
+        focusElement(previousActiveElement);
+      } else if (trigger && document.contains(trigger)) {
+        focusElement(trigger);
+      }
+      previousActiveElement = null;
+    });
+  });
   terminalLifecycle.onDestroy(() => {
     if (didLockScroll) {
       unlockScroll();
@@ -433,9 +443,6 @@ export function createDialog(
         didLockScroll = false;
       }
       cleanupContentFocusable();
-      if (previousActiveElement !== null) {
-        restoreFocus();
-      }
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
 
