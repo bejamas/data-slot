@@ -1,5 +1,6 @@
 import {
   getPart,
+  getOwnedElements,
   getRoots,
   getDataBool,
   getDataNumber,
@@ -142,7 +143,9 @@ export function createTooltip(
 
   const trigger = getPart<HTMLElement>(root, "tooltip-trigger");
   const content = getPart<HTMLElement>(root, "tooltip-content");
-  const arrow = content ? getPart<HTMLElement>(content, "tooltip-arrow") : null;
+  const arrow = content
+    ? getOwnedElements<HTMLElement>(root, content, '[data-slot="tooltip-arrow"]')[0] ?? null
+    : null;
   const authoredPositionerCandidate = getPart<HTMLElement>(root, "tooltip-positioner");
   const authoredPositioner =
     authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)

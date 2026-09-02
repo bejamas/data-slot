@@ -184,7 +184,7 @@ export function createNavigationMenu(
   const getCurrentPopup = () => popupStackController.popup;
   const getCurrentPositioner = () => popupStackController.positioner;
 
-  const discoveredItems = createNavigationMenuItems(list, items);
+  const discoveredItems = createNavigationMenuItems(root, list, items);
   const {
     allItems,
     itemMap,

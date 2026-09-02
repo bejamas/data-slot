@@ -1,6 +1,7 @@
 import {
   getRoots,
   getParts,
+  getOwnedElements,
   getDataBool,
   getDataString,
   reuseRootBinding,
@@ -215,7 +216,7 @@ export function createRadioGroup(
       el,
       value,
       authoredDisabled,
-      indicators: getParts<HTMLElement>(el, "radio-group-indicator"),
+      indicators: getOwnedElements<HTMLElement>(rootElement, el, '[data-slot="radio-group-indicator"]'),
       hiddenInput,
     };
 

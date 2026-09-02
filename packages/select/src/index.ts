@@ -1,6 +1,6 @@
 import {
   getPart,
-  getParts,
+  getOwnedElements,
   reuseRootBinding,
   setRootBinding,
   clearRootBinding,
@@ -157,7 +157,7 @@ export function createSelect(
 
   // Cache items on open
   const cacheItems = () => {
-    items = getParts<HTMLElement>(content, "select-item");
+    items = getOwnedElements<HTMLElement>(root, content, '[data-slot="select-item"]');
 
     for (const item of items) {
       item.setAttribute("role", "option");
@@ -183,10 +183,10 @@ export function createSelect(
     itemToIndex = new Map(enabledItems.map((el, i) => [el, i]));
 
     // Set groups' ARIA
-    const groups = getParts<HTMLElement>(content, "select-group");
+    const groups = getOwnedElements<HTMLElement>(root, content, '[data-slot="select-group"]');
     for (const group of groups) {
       group.setAttribute("role", "group");
-      const label = getPart<HTMLElement>(group, "select-label");
+      const label = getOwnedElements<HTMLElement>(root, group, '[data-slot="select-label"]')[0] ?? null;
       if (label) {
         const labelId = ensureId(label, "select-label");
         group.setAttribute("aria-labelledby", labelId);
@@ -195,13 +195,13 @@ export function createSelect(
   };
 
   const getViewport = () =>
-    getPart<HTMLElement>(content, "select-viewport");
+    getOwnedElements<HTMLElement>(root, content, '[data-slot="select-viewport"]')[0] ?? null;
 
   const getScrollContainer = () =>
     getViewport() ?? content;
 
   const getItemText = (item: HTMLElement) =>
-    getPart<HTMLElement>(item, "select-item-text");
+    getOwnedElements<HTMLElement>(root, item, '[data-slot="select-item-text"]')[0] ?? null;
 
   const getTrimmedText = (element: HTMLElement | null | undefined) => {
     const text = element?.textContent?.trim();

@@ -98,6 +98,40 @@ describe("Combobox", () => {
     return content;
   };
 
+  describe("nested ownership", () => {
+    it("does not initialize items from a nested combobox without a list", () => {
+      document.body.innerHTML = `
+        <div data-slot="combobox" id="outer">
+          <input data-slot="combobox-input" />
+          <div data-slot="combobox-content" hidden>
+            <div data-slot="combobox-list">
+              <div data-slot="combobox-item" data-value="outer">Outer option</div>
+              <div data-slot="combobox" id="inner">
+                <input data-slot="combobox-input" />
+                <div data-slot="combobox-content" hidden>
+                  <div data-slot="combobox-item" data-value="inner">Inner option</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const outer = document.getElementById("outer")!;
+      const inner = document.getElementById("inner")!;
+      const outerController = createCombobox(outer);
+
+      outerController.open();
+      expect(outerController.value).toBeNull();
+      expect(inner.querySelector('[data-slot="combobox-item"]')?.getAttribute("role")).toBeNull();
+
+      outerController.select("outer");
+      expect(outerController.value).toBe("outer");
+
+      outerController.destroy();
+    });
+  });
+
   const mockMobileEnvironment = () => {
     const maxTouchPointsDescriptor = Object.getOwnPropertyDescriptor(window.navigator, "maxTouchPoints");
     Object.defineProperty(window.navigator, "maxTouchPoints", {

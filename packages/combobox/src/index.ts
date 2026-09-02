@@ -1,5 +1,6 @@
 import {
   getPart,
+  getOwnedElements,
   containsWithPortals,
   reuseRootBinding,
   setRootBinding,
@@ -68,11 +69,17 @@ export function createCombobox(
 
   const input = getPart<HTMLInputElement>(root, "combobox-input");
   const content = getPart<HTMLElement>(root, "combobox-content");
-  const list = getPart<HTMLElement>(root, "combobox-list") ?? getPart<HTMLElement>(content ?? root, "combobox-list");
+  const list = getPart<HTMLElement>(root, "combobox-list") ??
+    getOwnedElements<HTMLElement>(root, content ?? root, '[data-slot="combobox-list"]')[0] ??
+    null;
   const trigger = getPart<HTMLElement>(root, "combobox-trigger");
   const clearButton = getPart<HTMLElement>(root, "combobox-clear");
   const valueSlot = getPart<HTMLElement>(root, "combobox-value");
-  const emptySlot = getPart<HTMLElement>(list ?? content ?? root, "combobox-empty");
+  const emptySlot = getOwnedElements<HTMLElement>(
+    root,
+    list ?? content ?? root,
+    '[data-slot="combobox-empty"]'
+  )[0] ?? null;
   const authoredPositionerCandidate = getPart<HTMLElement>(root, "combobox-positioner");
   const authoredPositioner =
     authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)

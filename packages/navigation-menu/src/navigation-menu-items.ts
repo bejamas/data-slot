@@ -1,4 +1,4 @@
-import { ensureId, getPart } from "@data-slot/core";
+import { ensureId, getOwnedElements } from "@data-slot/core";
 
 export type NavigationMenuItem = {
   value: string;
@@ -24,6 +24,7 @@ const safeId = (value: string) => value.replace(/[^a-z0-9\-_:.]/gi, "-");
 
 /** Discovers authored menu items and keeps all lookup rules in one place. */
 export function createNavigationMenuItems(
+  root: Element,
   list: HTMLElement,
   items: HTMLElement[],
 ) {
@@ -33,8 +34,8 @@ export function createNavigationMenuItems(
   for (const item of items) {
     const value = item.dataset.value;
     if (!value) continue;
-    const trigger = getPart<HTMLElement>(item, "navigation-menu-trigger");
-    const content = getPart<HTMLElement>(item, "navigation-menu-content");
+    const trigger = getOwnedElements<HTMLElement>(root, item, '[data-slot="navigation-menu-trigger"]')[0] ?? null;
+    const content = getOwnedElements<HTMLElement>(root, item, '[data-slot="navigation-menu-content"]')[0] ?? null;
     if (!trigger || !content) continue;
     const managed = { value, item, trigger, content, index: index++ };
     allItems.push(managed);

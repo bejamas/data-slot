@@ -1,7 +1,7 @@
 import {
   getParts,
   getRoots,
-  getPart,
+  getOwnedElements,
   getDataBool,
   getDataString,
   getDataEnum,
@@ -671,8 +671,8 @@ export function createAccordion(
     const value = item.dataset["value"];
     if (!value) return;
 
-    const trigger = getPart<HTMLElement>(item, "accordion-trigger");
-    const content = getPart<HTMLElement>(item, "accordion-content");
+    const trigger = getOwnedElements<HTMLElement>(root, item, '[data-slot="accordion-trigger"]')[0] ?? null;
+    const content = getOwnedElements<HTMLElement>(root, item, '[data-slot="accordion-content"]')[0] ?? null;
 
     if (!trigger || !content) return;
 
