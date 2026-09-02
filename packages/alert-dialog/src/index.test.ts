@@ -1,5 +1,4 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import { Window } from "happy-dom";
 import { createAlertDialog, create } from "./index";
 import { createDialog } from "../../dialog/src/index";
 
@@ -338,8 +337,9 @@ describe("AlertDialog", () => {
   });
 
   it("isolates modal focus and scroll state in a secondary document", () => {
-    const secondaryWindow = new Window();
-    const secondary = secondaryWindow.document;
+    const frame = document.createElement("iframe");
+    document.body.appendChild(frame);
+    const secondary = frame.contentDocument!;
     secondary.body.innerHTML = `<div data-slot="alert-dialog"><button data-slot="alert-dialog-trigger">Open</button><div data-slot="alert-dialog-overlay"></div><div data-slot="alert-dialog-content"><button>Inside</button></div></div>`;
     const root = secondary.querySelector('[data-slot="alert-dialog"]')!;
     const controller = createAlertDialog(root);
