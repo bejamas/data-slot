@@ -1103,7 +1103,7 @@ describe("Dialog", () => {
   });
 
   describe("scroll lock", () => {
-    it("isolates modal focus, portal, and scroll state in a secondary document", () => {
+    it("isolates modal focus, portal, and scroll state in a secondary document", async () => {
       const frame = document.createElement("iframe");
       document.body.appendChild(frame);
       const secondary = frame.contentDocument!;
@@ -1115,11 +1115,14 @@ describe("Dialog", () => {
         </div>`;
       const root = secondary.querySelector('[data-slot="dialog"]')!;
       const content = secondary.querySelector('[data-slot="dialog-content"]') as HTMLElement;
+      const inside = content.querySelector("button") as HTMLButtonElement;
       const controller = createDialog(root);
 
       controller.open();
+      await new Promise<void>((resolve) => secondary.defaultView!.requestAnimationFrame(() => resolve()));
       expect(secondary.documentElement.style.overflow).toBe("hidden");
       expect(document.documentElement.style.overflow).toBe("");
+      expect(secondary.activeElement).toBe(inside);
       expect(content.ownerDocument).toBe(secondary);
       controller.close();
       expect(secondary.documentElement.style.overflow).toBe("");

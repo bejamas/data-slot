@@ -336,16 +336,19 @@ describe("AlertDialog", () => {
     alertController.destroy();
   });
 
-  it("isolates modal focus and scroll state in a secondary document", () => {
+  it("isolates modal focus and scroll state in a secondary document", async () => {
     const frame = document.createElement("iframe");
     document.body.appendChild(frame);
     const secondary = frame.contentDocument!;
     secondary.body.innerHTML = `<div data-slot="alert-dialog"><button data-slot="alert-dialog-trigger">Open</button><div data-slot="alert-dialog-overlay"></div><div data-slot="alert-dialog-content"><button>Inside</button></div></div>`;
     const root = secondary.querySelector('[data-slot="alert-dialog"]')!;
+    const inside = secondary.querySelector('[data-slot="alert-dialog-content"] button') as HTMLButtonElement;
     const controller = createAlertDialog(root);
     controller.open();
+    await new Promise<void>((resolve) => secondary.defaultView!.requestAnimationFrame(() => resolve()));
     expect(secondary.documentElement.style.overflow).toBe("hidden");
     expect(document.documentElement.style.overflow).toBe("");
+    expect(secondary.activeElement).toBe(inside);
     controller.close();
     expect(secondary.documentElement.style.overflow).toBe("");
     controller.destroy();

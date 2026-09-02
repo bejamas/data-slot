@@ -652,6 +652,7 @@ export function createDropdownMenu(
     const triggerRect = trigger.getBoundingClientRect();
     const contentRect = measurePopupContentRect(content);
     const position = computeFloatingPosition({
+      win,
       anchorRect: triggerRect,
       contentRect,
       side: preferredSide,
