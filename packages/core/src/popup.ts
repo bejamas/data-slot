@@ -1,6 +1,7 @@
 import { on } from "./events.ts";
 import { containsWithPortals, portalToBody, restorePortal } from "./parts.ts";
 import type { PortalState } from "./parts.ts";
+import type { ModalStackItemController } from "./popup-geometry";
 
 export * from "./popup-geometry";
 
@@ -629,6 +630,40 @@ export function registerFloatingTerminalResources(
     resources.positionSync.stop();
     resources.presence.cleanup();
     resources.portal.cleanup();
+    drainCleanups(resources.cleanups);
+    resources.unbind();
+  });
+}
+
+export interface ModalTerminalResources {
+  cleanups: Array<() => void>;
+  modalStack: Pick<ModalStackItemController, "destroy">;
+  presence: Array<Pick<PresenceLifecycleController, "cleanup">>;
+  portal: Pick<PortalLifecycleController, "cleanup"> | null;
+  beforeDestroy?: () => void;
+  reset: () => void;
+  releaseScrollLock: () => void;
+  cleanup: () => void;
+  unbind: () => void;
+}
+
+/**
+ * Registers the terminal disposal order shared by modal controls. Behavioral
+ * policy (events, dismissal, roles, and focus target selection) stays in the
+ * component; this owns only the resource disposal sequence.
+ */
+export function registerModalTerminalResources(
+  lifecycle: TerminalLifecycleController,
+  resources: ModalTerminalResources,
+): void {
+  if (resources.beforeDestroy) lifecycle.onBeforeDestroy(resources.beforeDestroy);
+  lifecycle.onDestroy(() => {
+    resources.modalStack.destroy();
+    for (const presence of resources.presence) presence.cleanup();
+    resources.reset();
+    resources.releaseScrollLock();
+    resources.cleanup();
+    resources.portal?.cleanup();
     drainCleanups(resources.cleanups);
     resources.unbind();
   });

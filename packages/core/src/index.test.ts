@@ -32,6 +32,8 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createPositionSync,
+  createTerminalLifecycle,
+  registerModalTerminalResources,
 } from './index'
 import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
@@ -148,6 +150,42 @@ describe('core/focusability', () => {
     `
 
     expect(getAutofocusOrFirstFocusable(document.getElementById('root')!)?.id).toBe('autofocus')
+  })
+})
+
+describe('core/modal terminal resources', () => {
+  it('disposes modal resources in a stable terminal order', () => {
+    const calls: string[] = []
+    const lifecycle = createTerminalLifecycle()
+
+    registerModalTerminalResources(lifecycle, {
+      cleanups: [() => calls.push('listener')],
+      modalStack: { destroy: () => calls.push('modal stack') },
+      presence: [
+        { cleanup: () => calls.push('overlay presence') },
+        { cleanup: () => calls.push('content presence') },
+      ],
+      portal: { cleanup: () => calls.push('portal') },
+      beforeDestroy: () => calls.push('before destroy'),
+      reset: () => calls.push('reset'),
+      releaseScrollLock: () => calls.push('scroll lock'),
+      cleanup: () => calls.push('component cleanup'),
+      unbind: () => calls.push('root unbind'),
+    })
+
+    expect(lifecycle.destroy()).toBe(true)
+    expect(calls).toEqual([
+      'before destroy',
+      'modal stack',
+      'overlay presence',
+      'content presence',
+      'reset',
+      'scroll lock',
+      'component cleanup',
+      'portal',
+      'listener',
+      'root unbind',
+    ])
   })
 })
 

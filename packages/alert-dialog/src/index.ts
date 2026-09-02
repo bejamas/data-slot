@@ -16,7 +16,7 @@ import {
   createDismissLayer,
   createPresenceLifecycle,
   createTerminalLifecycle,
-  drainCleanups,
+  registerModalTerminalResources,
   focusElement,
   getAutofocusOrFirstFocusable,
   getTabbables,
@@ -86,7 +86,6 @@ export function createAlertDialog(
 
   let isOpen = false;
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
   let previousActiveElement: HTMLElement | null = null;
   const cleanups: Array<() => void> = [];
 
@@ -95,20 +94,14 @@ export function createAlertDialog(
     : null;
 
   let didLockScroll = false;
-  terminalLifecycle.onBeforeDestroy(() => {
+  const restoreFocusOnDestroy = () => {
     terminalLifecycle.trackFinalRaf(() => {
       if (previousActiveElement && document.contains(previousActiveElement)) {
         focusElement(previousActiveElement);
       }
       previousActiveElement = null;
     });
-  });
-  terminalLifecycle.onDestroy(() => {
-    if (didLockScroll) {
-      unlockScroll();
-      didLockScroll = false;
-    }
-  });
+  };
 
   ensureId(content, "alert-dialog-content");
   content.setAttribute("role", "alertdialog");
@@ -367,13 +360,18 @@ export function createAlertDialog(
     get isOpen() {
       return isOpen;
     },
-    destroy: () => {
-      if (!terminalLifecycle.destroy()) return;
-      modalStack.destroy();
+    destroy: () => terminalLifecycle.destroy(),
+  };
+
+  registerModalTerminalResources(terminalLifecycle, {
+    cleanups,
+    modalStack,
+    presence: [overlayPresence, contentPresence],
+    portal: portalLifecycle,
+    beforeDestroy: restoreFocusOnDestroy,
+    reset: () => {
       currentExitEpoch += 1;
       pendingExitCount = 0;
-      overlayPresence.cleanup();
-      contentPresence.cleanup();
       isOpen = false;
       setDataState("closed");
       overlay.hidden = true;
@@ -381,16 +379,16 @@ export function createAlertDialog(
       if (trigger) {
         setAria(trigger, "expanded", false);
       }
+    },
+    releaseScrollLock: () => {
       if (didLockScroll) {
         unlockScroll();
         didLockScroll = false;
       }
-      cleanupContentFocusable();
-
-      portalLifecycle?.cleanup();
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
-  };
+    cleanup: cleanupContentFocusable,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   cleanups.push(
     onRoot(root, "alert-dialog:set", (e) => {
