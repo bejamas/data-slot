@@ -827,6 +827,7 @@ describe('core/popup', () => {
 
   it('computeFloatingPosition returns preferred side when it fits', () => {
     const pos = computeFloatingPosition({
+      owner: document,
       anchorRect: rect(100, 100, 60, 30),
       contentRect: rect(0, 0, 80, 40),
       side: 'bottom',
@@ -847,6 +848,7 @@ describe('core/popup', () => {
 
   it('computeFloatingPosition flips to opposite side on overflow', () => {
     const pos = computeFloatingPosition({
+      owner: document,
       anchorRect: rect(100, 580, 60, 20),
       contentRect: rect(0, 0, 120, 120),
       side: 'bottom',
@@ -866,6 +868,7 @@ describe('core/popup', () => {
 
   it('computeFloatingPosition clamps to viewport when collisions enabled', () => {
     const pos = computeFloatingPosition({
+      owner: document,
       anchorRect: rect(390, 250, 20, 20),
       contentRect: rect(0, 0, 160, 80),
       side: 'right',
@@ -885,6 +888,7 @@ describe('core/popup', () => {
 
   it('computeFloatingPosition selects the first allowed side that fits', () => {
     const pos = computeFloatingPosition({
+      owner: document,
       anchorRect: rect(180, 170, 20, 20),
       contentRect: rect(0, 0, 120, 80),
       side: 'right',
@@ -903,6 +907,7 @@ describe('core/popup', () => {
 
   it('computeFloatingPosition uses least-overflow side when none fit', () => {
     const pos = computeFloatingPosition({
+      owner: document,
       anchorRect: rect(10, 30, 20, 20),
       contentRect: rect(0, 0, 120, 90),
       side: 'left',
@@ -921,6 +926,7 @@ describe('core/popup', () => {
 
   it('computeFloatingPosition keeps the preferred vertical side when the anchor is fully below the viewport', () => {
     const pos = computeFloatingPosition({
+      owner: document,
       anchorRect: rect(100, 960, 60, 20),
       contentRect: rect(0, 0, 120, 80),
       side: 'bottom',
@@ -941,6 +947,7 @@ describe('core/popup', () => {
 
   it('computeFloatingPosition keeps the preferred vertical side when the anchor is fully above the viewport', () => {
     const pos = computeFloatingPosition({
+      owner: document,
       anchorRect: rect(100, -120, 60, 20),
       contentRect: rect(0, 0, 120, 80),
       side: 'top',
@@ -980,6 +987,7 @@ describe('core/popup', () => {
 
     try {
       const pos = computeFloatingPosition({
+        owner: document,
         anchorRect: rect(90, 60, 20, 20),
         contentRect: rect(0, 0, 120, 80),
         side: 'bottom',
@@ -1005,6 +1013,7 @@ describe('core/popup', () => {
 
   it('computeFloatingPosition preserves logical side output in LTR', () => {
     const pos = computeFloatingPosition({
+      owner: document,
       anchorRect: rect(100, 120, 60, 20),
       contentRect: rect(0, 0, 80, 40),
       side: 'inline-start',
@@ -1025,6 +1034,7 @@ describe('core/popup', () => {
 
   it('computeFloatingPosition flips between logical sides in RTL', () => {
     const pos = computeFloatingPosition({
+      owner: document,
       anchorRect: rect(10, 120, 40, 20),
       contentRect: rect(0, 0, 120, 40),
       side: 'inline-end',

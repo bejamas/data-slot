@@ -33,7 +33,7 @@ export interface ComputeFloatingPositionInput extends PopupPlacementOptions {
   anchorRect: RectLike;
   contentRect: RectLike;
   /** Element in the realm whose viewport owns these measurements. */
-  owner?: Node;
+  owner: Node;
   viewportWidth?: number;
   viewportHeight?: number;
 }
@@ -97,7 +97,7 @@ interface ViewportBounds {
 }
 
 const resolveViewportBounds = (input: ComputeFloatingPositionInput): ViewportBounds => {
-  const ownerWindow = input.owner ? getWindow(input.owner) : window;
+  const ownerWindow = getWindow(input.owner);
   const visualViewport = ownerWindow.visualViewport;
   const width = input.viewportWidth ?? visualViewport?.width ?? ownerWindow.innerWidth;
   const height = input.viewportHeight ?? visualViewport?.height ?? ownerWindow.innerHeight;
