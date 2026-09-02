@@ -9,12 +9,8 @@ import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
 import {
-  computeFloatingPosition,
-  computeFloatingTransformOrigin,
-  measurePopupContentRect,
   ensureItemVisibleInContainer,
   focusElement,
-  createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
   createDismissLayer,
@@ -22,11 +18,11 @@ import {
 import type { Align, Position, SelectController, SelectOptions, Side } from "./types";
 import { resolveSelectConfiguration } from "./configuration";
 import { discoverSelects } from "./discovery";
+import { createSelectPositioning } from "./select-positioning";
 
 export type { Align, Position, SelectController, SelectOptions, Side } from "./types";
 
 const ROOT_BINDING_KEY = "@data-slot/select";
-const SIDES = ["top", "bottom"] as const;
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/select] createSelect() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
@@ -232,326 +228,14 @@ export function createSelect(
     );
   };
 
-  const syncResolvedPositionAttributes = (
-    alignTriggerActive = position === "item-aligned"
-  ) => {
-    content.setAttribute("data-position", position);
-    content.setAttribute("data-align-trigger", alignTriggerActive ? "true" : "false");
-
-    const viewport = getViewport();
-    if (viewport) {
-      viewport.setAttribute("data-position", position);
-    }
-  };
-
-  type ContentRect = Pick<
-    DOMRectReadOnly,
-    "top" | "right" | "bottom" | "left" | "width" | "height"
-  >;
-  type AnchorRect = Pick<DOMRectReadOnly, "top" | "left" | "right" | "bottom" | "width" | "height">;
-  type Axis = "top" | "left";
-
-  const getMeasuredRect = (element: HTMLElement | null): DOMRect | null => {
-    if (!element) return null;
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 || rect.height > 0 ? rect : null;
-  };
-
-  const getTriggerAlignmentRect = (triggerRect: DOMRect): AnchorRect => {
-    const valueRect = getMeasuredRect(valueSlot);
-    return valueRect ?? triggerRect;
-  };
-
-  const getOffsetInAncestorPaddingBox = (
-    item: HTMLElement,
-    ancestor: HTMLElement,
-    ancestorRect: ContentRect,
-    scrollOffset: number,
-    axis: Axis
-  ) => {
-    // Prefer offset-parent traversal when the ancestor is in the chain, and
-    // fall back to rect math otherwise (e.g. before final layout settles).
-    const offsetKey = axis === "top" ? "offsetTop" : "offsetLeft";
-    const clientKey = axis === "top" ? "clientTop" : "clientLeft";
-    const rectKey = axis === "top" ? "top" : "left";
-
-    let offset = 0;
-    let node: HTMLElement | null = item;
-    while (node && node !== ancestor) {
-      offset += node[offsetKey];
-      const offsetParent: Element | null = node.offsetParent;
-      if (!(offsetParent instanceof HTMLElement)) {
-        offset = Number.NaN;
-        break;
-      }
-      if (offsetParent !== ancestor) {
-        offset += offsetParent[clientKey];
-      }
-      node = offsetParent;
-    }
-    if (node === ancestor && Number.isFinite(offset)) {
-      return offset;
-    }
-
-    const itemRect = item.getBoundingClientRect();
-    return itemRect[rectKey] - ancestorRect[rectKey] - ancestor[clientKey] + scrollOffset;
-  };
-
-  const getOffsetInAncestorBorderBox = (
-    item: HTMLElement,
-    ancestor: HTMLElement,
-    ancestorRect: ContentRect,
-    scrollOffset: number,
-    axis: Axis
-  ) =>
-    getOffsetInAncestorPaddingBox(item, ancestor, ancestorRect, scrollOffset, axis) +
-    (axis === "top" ? ancestor.clientTop : ancestor.clientLeft);
-
-  const getItemTopInContent = (
-    item: HTMLElement,
-    cr: ContentRect,
-    scrollContainer: HTMLElement
-  ) => getOffsetInAncestorBorderBox(item, content, cr, scrollContainer.scrollTop, "top");
-
-  const getItemAlignmentAnchor = (item: HTMLElement): HTMLElement => {
-    const itemText = getItemText(item);
-    if (getMeasuredRect(itemText)) {
-      return itemText!;
-    }
-    return item;
-  };
-
-  // Compute base position data for item-aligned mode
-  const computeItemAlignedPos = (tr: DOMRect, cr: ContentRect, scrollContainer: HTMLElement) => {
-    // Prefer selected item for stable anchoring, then highlighted, then first enabled item.
-    const highlightedItem = highlightedIndex >= 0 ? enabledItems[highlightedIndex] : undefined;
-    const selectedItem = items.find((item) => item.dataset["value"] === currentValue);
-    const alignItem = selectedItem ?? highlightedItem ?? enabledItems[0];
-    const triggerAlignmentRect = getTriggerAlignmentRect(tr);
-    const valueRect = getMeasuredRect(valueSlot);
-
-    // Calculate x position (align left edges, match trigger width)
-    let x = tr.left;
-
-    // Calculate y position so aligned item is at trigger's vertical center.
-    // This is the base (unclamped) y when content scrollTop is 0.
-    let y: number;
-    let anchorTopInContent = 0;
-    let anchorHeight = triggerAlignmentRect.height;
-    if (alignItem) {
-      const itemText = getItemText(alignItem);
-      const hasExactTextAlignment = Boolean(valueRect && getMeasuredRect(itemText));
-      const alignAnchor = hasExactTextAlignment && itemText ? itemText : getItemAlignmentAnchor(alignItem);
-      const alignAnchorRect = getMeasuredRect(alignAnchor) ?? alignAnchor.getBoundingClientRect();
-      anchorTopInContent = getItemTopInContent(alignAnchor, cr, scrollContainer);
-      anchorHeight =
-        alignAnchorRect.height ||
-        alignAnchor.offsetHeight ||
-        alignItem.getBoundingClientRect().height ||
-        alignItem.offsetHeight ||
-        triggerAlignmentRect.height;
-
-      if (hasExactTextAlignment && valueRect) {
-        x = valueRect.left - (alignAnchorRect.left - cr.left);
-      }
-
-      // Position content so the item's center aligns from the content padding box.
-      y =
-        triggerAlignmentRect.top +
-        (triggerAlignmentRect.height / 2) -
-        anchorTopInContent -
-        (anchorHeight / 2);
-    } else {
-      // No items at all - align top of content with trigger
-      y = tr.top;
-    }
-
-    return {
-      x,
-      y,
-      alignItem,
-      anchorTopInContent,
-      anchorHeight,
-      triggerAlignmentRect,
-    };
-  };
-
-  const updatePosition = () => {
-    const positioner = portal.container as HTMLElement;
-    const win = root.ownerDocument.defaultView ?? window;
-    const tr = trigger.getBoundingClientRect();
-    const scrollContainer = getScrollContainer();
-
-    // Set min-width to match trigger width
-    content.style.minWidth = `${tr.width}px`;
-
-    // Get content rect after setting min-width
-    const cr = measurePopupContentRect(content);
-
-    let pos: { x: number; y: number };
-    let side: Side = "bottom";
-    let transformOrigin: string;
-    let alignTriggerActive = position === "item-aligned";
-
-    if (position === "item-aligned") {
-      const computedStyles = win.getComputedStyle(content);
-      const minHeight = Number.parseFloat(computedStyles.minHeight) || 0;
-      const triggerCollisionThreshold = 20;
-      const availableHeight = Math.max(0, win.innerHeight - collisionPadding * 2);
-      const hasTriggerGeometry = tr.width > 0 || tr.height > 0;
-      const nearViewportEdge =
-        hasTriggerGeometry &&
-        (tr.top < collisionPadding + triggerCollisionThreshold ||
-          tr.bottom > win.innerHeight - collisionPadding - triggerCollisionThreshold);
-      const heightTooConstrained =
-        cr.height > 0 &&
-        ((scrollContainer.scrollHeight <= scrollContainer.clientHeight &&
-          cr.height > availableHeight + 0.5) ||
-          (minHeight > 0 &&
-            availableHeight + 0.5 <
-              Math.min(scrollContainer.scrollHeight || cr.height, minHeight)));
-
-      if (nearViewportEdge || heightTooConstrained) {
-        alignTriggerActive = false;
-        const floating = computeFloatingPosition({
-          anchorRect: tr,
-          contentRect: cr,
-          side: preferredSide,
-          align: preferredAlign,
-          sideOffset,
-          alignOffset,
-          avoidCollisions,
-          collisionPadding,
-          allowedSides: SIDES,
-        });
-        pos = { x: floating.x, y: floating.y };
-        side = floating.side as Side;
-        transformOrigin = computeFloatingTransformOrigin({
-          side,
-          align: floating.align,
-          anchorRect: tr,
-          popupX: pos.x,
-          popupY: pos.y,
-        });
-      } else {
-        const aligned = computeItemAlignedPos(tr, cr, scrollContainer);
-        pos = { x: aligned.x, y: aligned.y };
-        const triggerCenterX =
-          aligned.triggerAlignmentRect.left + (aligned.triggerAlignmentRect.width / 2);
-        const triggerCenterY =
-          aligned.triggerAlignmentRect.top + (aligned.triggerAlignmentRect.height / 2);
-        const minY = collisionPadding;
-        const maxY = win.innerHeight - cr.height - collisionPadding;
-        const clampY = (value: number) =>
-          avoidCollisions
-            ? (maxY < minY ? minY : Math.min(Math.max(value, minY), maxY))
-            : value;
-        const minX = collisionPadding;
-        const maxX = win.innerWidth - cr.width - collisionPadding;
-        const clampX = (value: number) =>
-          avoidCollisions
-            ? (maxX < minX ? minX : Math.min(Math.max(value, minX), maxX))
-            : value;
-
-        pos.x = clampX(pos.x);
-
-        if (aligned.alignItem) {
-          const maxScrollTop = Math.max(
-            0,
-            scrollContainer.scrollHeight - scrollContainer.clientHeight
-          );
-          const getTriggerCenterInContent = (currentY: number) =>
-            triggerCenterY - currentY;
-          const getDesiredScrollTop = (currentY: number) =>
-            aligned.anchorTopInContent +
-            (aligned.anchorHeight / 2) -
-            getTriggerCenterInContent(currentY);
-          if (maxScrollTop > 0) {
-            // Keep popup near the trigger and use internal scroll to align.
-            pos.y = clampY(triggerCenterY - (cr.height / 2));
-            let scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
-            scrollContainer.scrollTop = scrollTop;
-            pos.y = clampY(
-              triggerCenterY -
-                (aligned.anchorTopInContent - scrollTop + (aligned.anchorHeight / 2))
-            );
-            scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
-            scrollContainer.scrollTop = scrollTop;
-            pos.y = clampY(
-              triggerCenterY -
-                (aligned.anchorTopInContent - scrollTop + (aligned.anchorHeight / 2))
-            );
-          } else {
-            // No internal scrolling: align directly from item geometry.
-            scrollContainer.scrollTop = 0;
-            pos.y = clampY(aligned.y);
-          }
-        } else {
-          scrollContainer.scrollTop = 0;
-          pos.y = clampY(aligned.y);
-        }
-
-        // Determine effective side based on final position
-        side = pos.y < tr.top ? "top" : "bottom";
-
-        const originX = Math.min(Math.max(triggerCenterX - pos.x, 0), cr.width);
-        const originY = Math.min(Math.max(triggerCenterY - pos.y, 0), cr.height);
-        transformOrigin = `${originX}px ${originY}px`;
-      }
-    } else {
-      const floating = computeFloatingPosition({
-        anchorRect: tr,
-        contentRect: cr,
-        side: preferredSide,
-        align: preferredAlign,
-        sideOffset,
-        alignOffset,
-        avoidCollisions,
-        collisionPadding,
-        allowedSides: SIDES,
-      });
-      pos = { x: floating.x, y: floating.y };
-      side = floating.side as Side;
-      transformOrigin = computeFloatingTransformOrigin({
-        side,
-        align: floating.align,
-        anchorRect: tr,
-        popupX: pos.x,
-        popupY: pos.y,
-      });
-    }
-    const resolvedAlign: Align =
-      position === "item-aligned" && alignTriggerActive ? "center" : preferredAlign;
-
-    if (lockScrollOption) {
-      positioner.style.position = "fixed";
-      positioner.style.top = "0px";
-      positioner.style.left = "0px";
-      positioner.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
-    } else {
-      positioner.style.position = "absolute";
-      positioner.style.top = "0px";
-      positioner.style.left = "0px";
-      positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
-    }
-    positioner.style.setProperty("--transform-origin", transformOrigin);
-    positioner.style.willChange = "transform";
-    positioner.style.margin = "0";
-    syncResolvedPositionAttributes(alignTriggerActive);
-    content.setAttribute("data-side", side);
-    content.setAttribute("data-align", resolvedAlign);
-    if (positioner !== content) {
-      positioner.setAttribute("data-side", side);
-      positioner.setAttribute("data-align", resolvedAlign);
-    }
-  };
-
-  const positionSync = createPositionSync({
-    observedElements: [trigger, content],
-    isActive: () => isOpen,
-    ancestorScroll: lockScrollOption,
-    onUpdate: updatePosition,
-    ignoreScrollTarget: (target) => target instanceof Node && content.contains(target),
+  const positioning = createSelectPositioning({
+    root, trigger, content, valueSlot,
+    getPositioner: () => portal.container as HTMLElement,
+    getViewport,
+    isOpen: () => isOpen,
+    getCollection: () => ({ items, enabledItems, highlightedIndex, value: currentValue }),
+    position, preferredSide, preferredAlign, sideOffset, alignOffset, avoidCollisions,
+    collisionPadding, lockScroll: lockScrollOption,
   });
 
   const updateHighlight = (index: number, focus = true, ensureVisible = true) => {
@@ -680,16 +364,16 @@ export function createSelect(
         clearHighlight();
       }
 
-      positionSync.start();
-      updatePosition();
-      positionSync.update();
+      positioning.start();
+      positioning.update();
+      positioning.sync();
 
       // Use rAF to refine position after browser has fully rendered content,
       // and to highlight item under cursor if pointer opened the select
       requestAnimationFrame(() => {
         if (!isOpen) return;
-        updatePosition();
-        positionSync.update();
+        positioning.update();
+        positioning.sync();
 
         // Highlight item under cursor if pointer opened the select
         if (
@@ -729,7 +413,7 @@ export function createSelect(
         didLockScroll = false;
       }
 
-      positionSync.stop();
+      positioning.stop();
       if (immediate) {
         presence.cleanup();
         finishClose();
@@ -884,7 +568,7 @@ export function createSelect(
   // Initialize
   setAria(trigger, "expanded", false);
   content.hidden = true;
-  syncResolvedPositionAttributes();
+  positioning.syncResolvedPositionAttributes();
   setDataState("closed");
 
   // Initial value display
@@ -970,7 +654,7 @@ export function createSelect(
     destroy: () => {
       isDestroyed = true;
       if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
-      positionSync.stop();
+      positioning.stop();
       presence.cleanup();
       portal.cleanup();
       // Unlock scroll if still locked
