@@ -140,6 +140,7 @@ export function createTooltip(
     DUPLICATE_BINDING_WARNING
   );
   if (existingController) return existingController;
+  const win = getWindow(root);
 
   const trigger = getPart<HTMLElement>(root, "tooltip-trigger");
   const content = getPart<HTMLElement>(root, "tooltip-content");
@@ -339,7 +340,6 @@ export function createTooltip(
 
   const updatePosition = () => {
     const positioner = portal.container as HTMLElement;
-    const win = getWindow(root);
     const direction = resolveDirection();
     const tr = trigger.getBoundingClientRect();
     const cr = measurePopupContentRect(content);
