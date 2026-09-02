@@ -17,7 +17,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createTerminalLifecycle,
-  drainCleanups,
+  registerFloatingTerminalResources,
   createDismissLayer,
   createFormFieldAdapter,
 } from "@data-slot/core";
@@ -133,7 +133,6 @@ export function createCombobox(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
 
   const matchesMediaQuery = (query: string): boolean => {
     if (typeof win.matchMedia !== "function") return false;
@@ -785,14 +784,18 @@ export function createCombobox(
       isOpen = false;
       setAria(input, "expanded", false);
       setDataState("closed");
-      positionSync.stop();
-      presence.cleanup();
-      portal.cleanup();
       content.hidden = true;
       formField?.destroy();
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   if (defaultOpen) updateOpenState(true);

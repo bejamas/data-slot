@@ -17,7 +17,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createTerminalLifecycle,
-  drainCleanups,
+  registerFloatingTerminalResources,
   createDismissLayer,
 } from "@data-slot/core";
 import type { SelectController, SelectOptions } from "./types";
@@ -114,7 +114,6 @@ export function createSelect(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
   terminalLifecycle.onDestroy(() => {
     if (didLockScroll) {
       unlockScroll();
@@ -664,9 +663,6 @@ export function createSelect(
       isOpen = false;
       setAria(trigger, "expanded", false);
       setDataState("closed");
-      positioning.stop();
-      presence.cleanup();
-      portal.cleanup();
       content.hidden = true;
       // Unlock scroll if still locked
       if (didLockScroll) {
@@ -674,9 +670,16 @@ export function createSelect(
         didLockScroll = false;
       }
       formField?.destroy();
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync: positioning,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
 

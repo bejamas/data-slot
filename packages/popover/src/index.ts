@@ -18,7 +18,7 @@ import {
   createPresenceLifecycle,
   getAutofocusOrFirstFocusable,
   createTerminalLifecycle,
-  drainCleanups,
+  registerFloatingTerminalResources,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -194,7 +194,6 @@ export function createPopover(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
 
   // Focus management state
   let previousActiveElement: HTMLElement | null = null;
@@ -426,14 +425,18 @@ export function createPopover(
       isOpen = false;
       setAria(trigger, "expanded", false);
       setDataState("closed");
-      positionSync.stop();
-      presence.cleanup();
-      portal.cleanup();
       content.hidden = true;
       cleanupContentFocusable();
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;

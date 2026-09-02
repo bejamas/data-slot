@@ -17,7 +17,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createTerminalLifecycle,
-  drainCleanups,
+  registerFloatingTerminalResources,
 } from "@data-slot/core";
 import { ensureId } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -220,7 +220,6 @@ export function createTooltip(
   let instantType: TooltipInstantType = null;
   let hasFocus = false;
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
   const cleanups: Array<() => void> = [];
 
@@ -629,13 +628,17 @@ export function createTooltip(
       setDataState("closed");
       trigger.removeAttribute("aria-describedby");
       content.setAttribute("aria-hidden", "true");
-      positionSync.stop();
-      presence.cleanup();
-      portal.cleanup();
       content.hidden = true;
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;

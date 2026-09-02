@@ -16,7 +16,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createTerminalLifecycle,
-  drainCleanups,
+  registerFloatingTerminalResources,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -200,7 +200,6 @@ export function createHoverCard(
   let isOpen = options.open ?? defaultOpen;
   let isInstantTransition = false;
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
   let pointerOnTrigger = false;
   let pointerOnContent = false;
   let focusWithin = false;
@@ -664,13 +663,17 @@ export function createHoverCard(
       isOpen = false;
       setAria(trigger, "expanded", false);
       setDataState("closed");
-      positionSync.stop();
-      presence.cleanup();
-      portal.cleanup();
       content.hidden = true;
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;

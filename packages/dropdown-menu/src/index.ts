@@ -22,7 +22,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createTerminalLifecycle,
-  drainCleanups,
+  registerFloatingTerminalResources,
   createDismissLayer,
   containsWithPortals,
   createTypeahead,
@@ -141,7 +141,6 @@ export function createDropdownMenu(
   let keyboardMode = false;
   let didLockScroll = false;
   const terminalLifecycle = createTerminalLifecycle();
-  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
   terminalLifecycle.onDestroy(() => {
     if (didLockScroll) {
       unlockScroll();
@@ -831,17 +830,22 @@ export function createDropdownMenu(
       isOpen = false;
       setAria(trigger, "expanded", false);
       setDataState("closed");
-      positionSync.stop();
-      presence.cleanup();
-      portal.cleanup();
       content.hidden = true;
       if (didLockScroll) {
         unlockScroll();
         didLockScroll = false;
       }
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
+
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   if (defaultOpen) {
     updateOpenState(true, {
