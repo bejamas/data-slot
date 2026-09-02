@@ -864,6 +864,44 @@ describe("Accordion", () => {
     controllers.forEach((controller) => controller.destroy());
   });
 
+  it("keeps nested accordions independent", async () => {
+    document.body.innerHTML = `
+      <div data-slot="accordion" id="outer">
+        <div data-slot="accordion-item" data-value="outer-item">
+          <button data-slot="accordion-trigger" id="outer-trigger">Outer</button>
+          <div data-slot="accordion-content" id="outer-content">
+            <div data-slot="accordion" id="inner">
+              <div data-slot="accordion-item" data-value="inner-item">
+                <button data-slot="accordion-trigger" id="inner-trigger">Inner</button>
+                <div data-slot="accordion-content" id="inner-content">Inner content</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const outer = createAccordion(document.getElementById("outer")!);
+    const inner = createAccordion(document.getElementById("inner")!);
+    const outerTrigger = document.getElementById("outer-trigger") as HTMLElement;
+    const innerTrigger = document.getElementById("inner-trigger") as HTMLElement;
+    const innerContent = document.getElementById("inner-content") as HTMLElement;
+
+    innerTrigger.click();
+    expect(inner.value).toEqual(["inner-item"]);
+    expect(outer.value).toEqual([]);
+
+    outerTrigger.click();
+    outerTrigger.click();
+    await waitForExit();
+
+    expect(inner.value).toEqual(["inner-item"]);
+    expect(innerContent.hidden).toBe(false);
+
+    outer.destroy();
+    inner.destroy();
+  });
+
   describe("root binding", () => {
     it("reuses the existing controller for duplicate direct binds", () => {
       const { root, controller } = setup();

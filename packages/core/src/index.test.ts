@@ -183,6 +183,23 @@ describe('core/parts', () => {
     expect(items).toHaveLength(3)
   })
 
+  it('keeps parts owned by a nested component out of its parent query', () => {
+    document.body.innerHTML = `
+      <div data-slot="accordion" id="outer">
+        <button data-slot="accordion-trigger" id="outer-trigger">Outer</button>
+        <div data-slot="accordion">
+          <button data-slot="accordion-trigger" id="inner-trigger">Inner</button>
+        </div>
+      </div>
+    `
+
+    const outer = document.getElementById('outer')!
+    expect(getPart(outer, 'accordion-trigger')?.id).toBe('outer-trigger')
+    expect(getParts(outer, 'accordion-trigger').map((part) => part.id)).toEqual([
+      'outer-trigger',
+    ])
+  })
+
   it('getRoots finds all component roots by data-slot', () => {
     document.body.innerHTML = `
       <div data-slot="dialog">Dialog 1</div>
