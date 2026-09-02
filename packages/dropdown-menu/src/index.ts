@@ -27,7 +27,7 @@ import {
   containsWithPortals,
 } from "@data-slot/core";
 import { resolveDropdownMenuOptions } from "./dropdown-menu-options";
-import { arraysEqual, dispatchCustomEvent, getItemRole, getItemType, hasOwn, parseDefaultValues, readActionValue, readSelectableValue, setPresence } from "./dropdown-menu-items";
+import { arraysEqual, createDropdownItemCollection, dispatchCustomEvent, getItemRole, getItemType, hasOwn, parseDefaultValues, readActionValue, readSelectableValue, setPresence } from "./dropdown-menu-items";
 export type { Align, DropdownMenuController, DropdownMenuHighlightChangeDetail, DropdownMenuItemType, DropdownMenuOpenChangeDetail, DropdownMenuOpenChangeReason, DropdownMenuOpenChangeSource, DropdownMenuOptions, DropdownMenuSelectDetail, DropdownMenuSelectionSource, DropdownMenuSetDetail, DropdownMenuSetSource, DropdownMenuUserSource, DropdownMenuValueChangeDetail, DropdownMenuValuesChangeDetail, Side } from "./dropdown-menu-types";
 import type { CacheItemsOptions, CheckboxDiff, DropdownMenuController, DropdownMenuHighlightChangeDetail, DropdownMenuItemRecord, DropdownMenuItemType, DropdownMenuOpenChangeDetail, DropdownMenuOpenChangeSource, DropdownMenuOptions, DropdownMenuSelectDetail, DropdownMenuSelectionSource, DropdownMenuSetDetail, DropdownMenuValueChangeDetail, DropdownMenuValuesChangeDetail, HighlightUpdateOptions, OpenTransitionOptions } from "./dropdown-menu-types";
 const SIDES = ["top", "right", "bottom", "left"] as const;
@@ -112,6 +112,7 @@ export function createDropdownMenu(
     container: authoredPositioner ?? undefined,
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
+  const itemCollection = createDropdownItemCollection(root, content);
   let items: DropdownMenuItemRecord[] = [];
   let enabledItems: DropdownMenuItemRecord[] = [];
   let itemToEnabledIndex = new Map<HTMLElement, number>();
@@ -238,11 +239,12 @@ export function createDropdownMenu(
     const previousItems = items;
     const previousValue = currentValue;
     const previousValues = [...currentValues];
-    items = Array.from(content.querySelectorAll<HTMLElement>(ITEM_SELECTOR)).map((el) => ({
-      el,
-      type: getItemType(el),
-      value: readSelectableValue(el),
-    }));
+    itemCollection.refresh({
+      value: previousValue,
+      values: previousValues,
+      highlightedItem,
+    });
+    items = [...itemCollection.items];
     const nextValue =
       previousValue !== null && findRadioItemByValue(previousValue) ? previousValue : null;
     const nextValues =
