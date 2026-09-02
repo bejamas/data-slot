@@ -1231,10 +1231,17 @@ describe('core/popup', () => {
     anchor.getBoundingClientRect = () => rect(10, 10, 20, 20)
     Object.defineProperty(secondary.documentElement, 'clientWidth', { configurable: true, value: 200 })
     Object.defineProperty(secondary.documentElement, 'clientHeight', { configurable: true, value: 100 })
+    Object.defineProperty(secondaryWindow, 'visualViewport', { configurable: true, value: {
+      width: 120, height: 80, offsetLeft: 7, offsetTop: 11,
+      addEventListener() {}, removeEventListener() {},
+    } })
     let resizeConstructed = 0
     let intersectionConstructed = 0
     let added = 0
     let removed = 0
+    let primaryScrolls = 0
+    const onPrimaryScroll = () => { primaryScrolls += 1 }
+    window.addEventListener('scroll', onPrimaryScroll)
     const originalAdd = outer.addEventListener.bind(outer)
     const originalRemove = outer.removeEventListener.bind(outer)
     outer.addEventListener = ((type: string, ...args: Parameters<typeof outer.addEventListener>) => {
@@ -1252,8 +1259,20 @@ describe('core/popup', () => {
     expect(resizeConstructed).toBeGreaterThan(0)
     expect(intersectionConstructed).toBeGreaterThan(0)
     expect(added).toBeGreaterThan(0)
+    outer.dispatchEvent(new secondaryWindow.Event('scroll'))
+    expect(primaryScrolls).toBe(0)
+    expect(document.body.contains(anchor)).toBe(false)
+    const position = computeFloatingPosition({
+      owner: anchor,
+      anchorRect: rect(0, 0, 10, 10),
+      contentRect: rect(0, 0, 20, 20),
+      side: 'bottom', align: 'start', sideOffset: 0, alignOffset: 0,
+      avoidCollisions: true, collisionPadding: 0,
+    })
+    expect(position.x).toBe(7)
     sync.stop()
     expect(removed).toBeGreaterThan(0)
+    window.removeEventListener('scroll', onPrimaryScroll)
   })
 
   it('createPositionSync can update synchronously from ancestor scroll', async () => {
