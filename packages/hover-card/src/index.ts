@@ -371,6 +371,7 @@ export function createHoverCard(
   });
 
   const applyState = (open: boolean, reason: HoverCardReason, instant = false) => {
+    if (isDestroyed) return;
     if (isOpen === open) return;
 
     if (!open && isOpen && skipDelayDuration > 0) {
@@ -449,6 +450,7 @@ export function createHoverCard(
 
     openTimeout = setTimeout(() => {
       openTimeout = null;
+      if (isDestroyed) return;
       requestState(true, reason);
     }, delay);
   };
@@ -464,6 +466,7 @@ export function createHoverCard(
 
     closeTimeout = setTimeout(() => {
       closeTimeout = null;
+      if (isDestroyed) return;
       requestState(false, reason);
     }, closeDelay);
   };
@@ -621,14 +624,17 @@ export function createHoverCard(
 
   const controller: HoverCardController = {
     open: () => {
+      if (isDestroyed) return;
       if (isTriggerDisabled()) return;
       clearTimers();
       requestState(true, "api");
     },
     close: () => {
+      if (isDestroyed) return;
       requestClosedState("api");
     },
     toggle: () => {
+      if (isDestroyed) return;
       if (!isOpen && isTriggerDisabled()) return;
       if (isOpen) {
         requestClosedState("api");
@@ -638,6 +644,7 @@ export function createHoverCard(
       }
     },
     setOpen: (open) => {
+      if (isDestroyed) return;
       if (open) {
         clearTimers();
         forceState(true, "api");

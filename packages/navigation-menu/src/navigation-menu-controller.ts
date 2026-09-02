@@ -476,6 +476,7 @@ export function createNavigationMenu(
   });
 
   const updateState = (value: string | null, immediate = false) => {
+    if (isDestroyed) return;
     safety.clear();
     // Skip if value hasn't changed
     if (value === currentValue) {
@@ -1170,8 +1171,8 @@ export function createNavigationMenu(
     get value() {
       return currentValue;
     },
-    open: (value: string) => updateState(value, true),
-    close: () => closeMenuAndUnlock(),
+    open: (value: string) => { if (!isDestroyed) updateState(value, true); },
+    close: () => { if (!isDestroyed) closeMenuAndUnlock(); },
     destroy: () => {
       if (isDestroyed) return;
       isDestroyed = true;

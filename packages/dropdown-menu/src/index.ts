@@ -409,6 +409,7 @@ export function createDropdownMenu(
     syncItems();
   };
   const updateOpenState = (open: boolean, { source, reason }: OpenTransitionOptions) => {
+    if (isDestroyed) return;
     if (isOpen === open) return;
     pendingDismissMeta = null;
     const previousOpen = isOpen;
@@ -784,22 +785,23 @@ export function createDropdownMenu(
     }),
   );
   const controller: DropdownMenuController = {
-    open: () =>
+    open: () => !isDestroyed &&
       updateOpenState(true, {
         source: "programmatic",
         reason: "programmatic",
       }),
-    close: () =>
+    close: () => !isDestroyed &&
       updateOpenState(false, {
         source: "programmatic",
         reason: "programmatic",
       }),
-    toggle: () =>
+    toggle: () => !isDestroyed &&
       updateOpenState(!isOpen, {
         source: "programmatic",
         reason: "programmatic",
       }),
     set: (detail) => {
+      if (isDestroyed) return;
       applySet(detail);
     },
     get isOpen() {

@@ -300,6 +300,7 @@ export function createPopover(
 
   const restoreFocus = () => {
     requestAnimationFrame(() => {
+      if (isDestroyed) return;
       if (previousActiveElement && previousActiveElement.isConnected) {
         focusElement(previousActiveElement);
       } else {
@@ -328,6 +329,7 @@ export function createPopover(
   });
 
   const updateState = (open: boolean) => {
+    if (isDestroyed) return;
     if (isOpen === open) return;
 
     // Save focus target before opening
@@ -409,9 +411,9 @@ export function createPopover(
   );
 
   const controller: PopoverController = {
-    open: () => updateState(true),
-    close: () => updateState(false),
-    toggle: () => updateState(!isOpen),
+    open: () => { if (!isDestroyed) updateState(true); },
+    close: () => { if (!isDestroyed) updateState(false); },
+    toggle: () => { if (!isDestroyed) updateState(!isOpen); },
     get isOpen() {
       return isOpen;
     },

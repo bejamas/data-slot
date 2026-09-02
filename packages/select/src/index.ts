@@ -288,6 +288,7 @@ export function createSelect(
 
   const restoreFocus = () => {
     requestAnimationFrame(() => {
+      if (isDestroyed) return;
       if (previousActiveElement && document.contains(previousActiveElement)) {
         focusElement(previousActiveElement);
       } else if (trigger && document.contains(trigger)) {
@@ -331,6 +332,7 @@ export function createSelect(
     open: boolean,
     options: { skipFocusRestore?: boolean; immediate?: boolean } = {}
   ) => {
+    if (isDestroyed) return;
     const { skipFocusRestore = false, immediate = false } = options;
 
     if (isOpen === open) return;
@@ -365,7 +367,7 @@ export function createSelect(
       // Use rAF to refine position after browser has fully rendered content,
       // and to highlight item under cursor if pointer opened the select
       requestAnimationFrame(() => {
-        if (!isOpen) return;
+        if (isDestroyed || !isOpen) return;
         positioning.update();
         positioning.sync();
 
@@ -421,6 +423,7 @@ export function createSelect(
   };
 
   const updateValue = (value: string | null, init = false) => {
+    if (isDestroyed) return;
     if (currentValue === value && !init) return;
 
     const oldValue = currentValue;
@@ -643,9 +646,9 @@ export function createSelect(
   const controller: SelectController = {
     get value() { return currentValue; },
     get isOpen() { return isOpen; },
-    select: (value: string) => updateValue(value),
-    open: () => updateOpenState(true),
-    close: () => updateOpenState(false),
+    select: (value: string) => { if (!isDestroyed) updateValue(value); },
+    open: () => { if (!isDestroyed) updateOpenState(true); },
+    close: () => { if (!isDestroyed) updateOpenState(false); },
     destroy: () => {
       if (isDestroyed) return;
       isDestroyed = true;

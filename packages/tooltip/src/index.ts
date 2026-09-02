@@ -409,6 +409,7 @@ export function createTooltip(
     reason: TooltipReason,
     nextInstantType: TooltipInstantType = null
   ) => {
+    if (isDestroyed) return;
     if (isOpen === open) return;
 
     if (!open && isOpen && skipDelayDuration > 0) {
@@ -454,6 +455,7 @@ export function createTooltip(
     }
 
     showTimeout = setTimeout(() => {
+      if (isDestroyed) return;
       updateState(true, reason, reason === "focus" ? "focus" : null);
       showTimeout = null;
     }, delay);
@@ -603,6 +605,7 @@ export function createTooltip(
 
   const controller: TooltipController = {
     show: () => {
+      if (isDestroyed) return;
       // Respect disabled state even for programmatic calls
       if (isTriggerDisabled()) return;
       if (showTimeout) {
@@ -611,7 +614,7 @@ export function createTooltip(
       }
       updateState(true, "api");
     },
-    hide: () => hideImmediately("api"),
+    hide: () => { if (!isDestroyed) hideImmediately("api"); },
     get isOpen() {
       return isOpen;
     },
@@ -622,6 +625,8 @@ export function createTooltip(
       showTimeout = null;
       isOpen = false;
       setDataState("closed");
+      trigger.removeAttribute("aria-describedby");
+      content.setAttribute("aria-hidden", "true");
       positionSync.stop();
       presence.cleanup();
       portal.cleanup();

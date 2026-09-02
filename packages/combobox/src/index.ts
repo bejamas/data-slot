@@ -361,6 +361,7 @@ export function createCombobox(
   };
 
   const updateOpenState = (open: boolean, skipFocusRestore = false) => {
+    if (isDestroyed) return;
     if (isOpen === open) return;
     if (disabled && open) return;
 
@@ -766,11 +767,12 @@ export function createCombobox(
     get value() { return currentValue; },
     get inputValue() { return input.value; },
     get isOpen() { return isOpen; },
-    select: (value: string) => updateValue(value),
-    clear: () => updateValue(null),
-    open: () => updateOpenState(true),
-    close: () => updateOpenState(false),
+    select: (value: string) => { if (!isDestroyed) updateValue(value); },
+    clear: () => { if (!isDestroyed) updateValue(null); },
+    open: () => { if (!isDestroyed) updateOpenState(true); },
+    close: () => { if (!isDestroyed) updateOpenState(false); },
     setItemToStringValue: (nextItemToStringValue: ComboboxItemToStringValue | null) => {
+      if (isDestroyed) return;
       itemToStringValue = nextItemToStringValue;
       collection.setItemToStringValue(itemToStringValue);
       updateValue(currentValue, true);

@@ -3931,6 +3931,19 @@ describe("Select", () => {
       expect(changes).toEqual([true]);
     });
 
+    it("keeps a retained controller inert after destruction", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      controller.open();
+      controller.select("apple");
+      controller.close();
+
+      expect(controller.isOpen).toBe(false);
+      expect(root.getAttribute("data-state")).toBe("closed");
+      expect(document.documentElement.style.overflow).toBe("");
+    });
+
     it("uses authored portal and positioner slots when provided", async () => {
       document.body.innerHTML = `
         <div data-slot="select" id="root">
