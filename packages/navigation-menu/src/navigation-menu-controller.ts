@@ -145,6 +145,13 @@ export function createNavigationMenu(
   let isDestroyed = false;
   const terminalLifecycle = createTerminalLifecycle();
 
+  let indicatorSyncRaf: number | null = null;
+  const clearIndicatorSyncRaf = () => {
+    if (indicatorSyncRaf !== null) {
+      cancelAnimationFrame(indicatorSyncRaf);
+      indicatorSyncRaf = null;
+    }
+  };
   const cleanups: Array<() => void> = [];
   const presences = new Map<
     HTMLElement,
@@ -448,6 +455,7 @@ export function createNavigationMenu(
 
   // Update hover indicator position
   const updateIndicator = (trigger: HTMLElement | null) => {
+    if (!trigger) clearIndicatorSyncRaf();
     hoveredTrigger = trigger;
     navigationIndicator.show(trigger);
   };
@@ -617,7 +625,9 @@ export function createNavigationMenu(
         layout.observe(newData);
         updateIndicator(newData.trigger); // Indicator follows active trigger
       } else {
-        layout.stop();
+        clearIndicatorSyncRaf();
+      updateIndicator(null);
+      layout.stop();
         safety.hideBridge();
         safety.clear();
         popupStackController.close(popupSizeBaseline);
@@ -1140,12 +1150,20 @@ export function createNavigationMenu(
   cleanups.push(
     on(window, "resize", () => {
       if (currentValue || hoveredTrigger) {
-        requestAnimationFrame(() => syncIndicator(hoveredTrigger));
+        clearIndicatorSyncRaf();
+        indicatorSyncRaf = requestAnimationFrame(() => {
+          indicatorSyncRaf = null;
+          if (!isDestroyed) syncIndicator(hoveredTrigger);
+        });
       }
     }),
     on(list, "scroll", () => {
       if (currentValue || hoveredTrigger) {
-        requestAnimationFrame(() => syncIndicator(hoveredTrigger));
+        clearIndicatorSyncRaf();
+        indicatorSyncRaf = requestAnimationFrame(() => {
+          indicatorSyncRaf = null;
+          if (!isDestroyed) syncIndicator(hoveredTrigger);
+        });
       }
     }),
   );
@@ -1180,6 +1198,8 @@ export function createNavigationMenu(
       isDestroyed = true;
       resetPendingInteraction();
       resetPointerIntent();
+      clearIndicatorSyncRaf();
+      updateIndicator(null);
       layout.stop();
       itemMap.forEach(({ trigger, content, item }) => {
         setAria(trigger, "expanded", false);

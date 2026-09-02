@@ -15,6 +15,7 @@ import {
   createModalStackItem,
   createDismissLayer,
   createPresenceLifecycle,
+  createTerminalLifecycle,
   focusElement,
   getAutofocusOrFirstFocusable,
   getTabbables,
@@ -114,6 +115,7 @@ export function createDialog(
 
   let isOpen = false;
   let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
   let previousActiveElement: HTMLElement | null = null;
   const cleanups: Array<() => void> = [];
 
@@ -240,6 +242,7 @@ export function createDialog(
   });
 
   const updateState = (open: boolean, force = false) => {
+    if (isDestroyed) return;
     if (isOpen === open && !force) return;
 
     if (open) {
@@ -400,13 +403,14 @@ export function createDialog(
   );
 
   const controller: DialogController = {
-    open: () => updateState(true),
-    close: () => updateState(false),
-    toggle: () => updateState(!isOpen),
+    open: () => { if (!isDestroyed) updateState(true); },
+    close: () => { if (!isDestroyed) updateState(false); },
+    toggle: () => { if (!isDestroyed) updateState(!isOpen); },
     get isOpen() {
       return isOpen;
     },
     destroy: () => {
+      if (!terminalLifecycle.destroy()) return;
       isDestroyed = true;
       modalStack.destroy();
       currentExitEpoch += 1;

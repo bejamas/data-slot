@@ -207,6 +207,7 @@ export function createPopover(
   };
 
   const focusFirst = () => {
+    if (isDestroyed) return;
     // Priority: [autofocus] > first focusable > content itself
     const initialFocus = getAutofocusOrFirstFocusable(content);
     if (initialFocus) return initialFocus.focus();
