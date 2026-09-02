@@ -335,4 +335,37 @@ describe("AlertDialog", () => {
 
     alertController.destroy();
   });
+
+  it("traps Tab among currently tabbable controls, skipping hidden, inert, and newly disabled descendants", async () => {
+    document.body.innerHTML = `
+      <div data-slot="alert-dialog" id="alert-root">
+        <div data-slot="alert-dialog-overlay"></div>
+        <div data-slot="alert-dialog-content">
+          <div hidden><button id="hidden-control">Hidden</button></div>
+          <div inert><button id="inert-control">Inert</button></div>
+          <button id="first-control">First</button>
+          <button id="last-control">Last</button>
+        </div>
+      </div>
+    `;
+    const root = document.getElementById("alert-root")!;
+    const controller = createAlertDialog(root);
+    const first = document.getElementById("first-control") as HTMLButtonElement;
+    const last = document.getElementById("last-control") as HTMLButtonElement;
+
+    controller.open();
+    await waitForRaf();
+    expect(document.activeElement).toBe(first);
+
+    last.focus();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    expect(document.activeElement).toBe(first);
+
+    last.disabled = true;
+    first.focus();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    expect(document.activeElement).toBe(first);
+
+    controller.destroy();
+  });
 });

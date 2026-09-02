@@ -16,6 +16,7 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
+  getFocusable,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -30,10 +31,6 @@ const ALIGNS = ["start", "center", "end"] as const;
  * Kept for backward compatibility and planned for removal in the next major.
  */
 export type PopoverPosition = PopoverSide;
-
-// Focusable element selector
-const FOCUSABLE =
-  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export interface PopoverOptions {
   /** Initial open state */
@@ -209,10 +206,10 @@ export function createPopover(
 
   const focusFirst = () => {
     // Priority: [autofocus] > first focusable > content itself
-    const autofocusEl = content.querySelector<HTMLElement>("[autofocus]");
+    const autofocusEl = getFocusable(content).find((element) => element.hasAttribute("autofocus"));
     if (autofocusEl) return autofocusEl.focus();
 
-    const first = content.querySelector<HTMLElement>(FOCUSABLE);
+    const first = getFocusable(content)[0];
     if (first) return first.focus();
 
     // No focusable elements — make content itself focusable temporarily

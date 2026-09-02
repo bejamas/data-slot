@@ -18,6 +18,7 @@ import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
 import { createTypeahead } from './index'
+import { getFocusable, getTabbables } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
 import {
   computeFloatingPosition,
@@ -33,6 +34,50 @@ import {
 } from './index'
 import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
+
+describe('core/focusability', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('returns only visible, enabled focusable descendants and keeps negative tabindex focusable', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <button id="visible">Visible</button>
+        <button id="hidden" hidden>Hidden</button>
+        <div style="display: none"><button id="display-none">Display none</button></div>
+        <div style="visibility: hidden"><button id="visibility-hidden">Visibility hidden</button></div>
+        <div inert><button id="inert">Inert</button></div>
+        <fieldset disabled><button id="fieldset-disabled">Disabled by fieldset</button></fieldset>
+        <button id="disabled" disabled>Disabled</button>
+        <div id="programmatic" tabindex="-1">Programmatic</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+
+    expect(getFocusable(root).map((element) => element.id)).toEqual(['visible', 'programmatic'])
+    expect(getTabbables(root).map((element) => element.id)).toEqual(['visible'])
+  })
+
+  it('uses radio-group tabbing semantics and reflects runtime state changes', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <input id="first" type="radio" name="plan">
+        <input id="selected" type="radio" name="plan" checked>
+        <input id="third" type="radio" name="plan">
+        <button id="action">Action</button>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const action = document.getElementById('action') as HTMLButtonElement
+
+    expect(getTabbables(root).map((element) => element.id)).toEqual(['selected', 'action'])
+    action.disabled = true
+    expect(getTabbables(root).map((element) => element.id)).toEqual(['selected'])
+    root.setAttribute('inert', '')
+    expect(getFocusable(root)).toEqual([])
+  })
+})
 
 describe('core/parts', () => {
   it('getPart finds a single slot', () => {
