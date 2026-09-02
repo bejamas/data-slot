@@ -1234,6 +1234,42 @@ describe("Select", () => {
       expect(root.querySelector('input[type="hidden"]')).toBeFalsy();
     });
 
+    it("restores its initial value and form data after a native form reset without emitting change", async () => {
+      document.body.innerHTML = `
+        <form><div data-slot="select" id="root">
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div><div data-slot="select-item" data-value="banana">Banana</div></div>
+        </div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      let changes = 0;
+      const controller = createSelect(root, { name: "fruit", defaultValue: "banana", onValueChange: () => changes++ });
+
+      controller.select("apple");
+      form.reset();
+      await Promise.resolve();
+
+      expect(controller.value).toBe("banana");
+      expect(root.querySelector('[data-slot="select-value"]')?.textContent).toBe("Banana");
+      expect(root.querySelector('[data-value="banana"]')?.getAttribute("aria-selected")).toBe("true");
+      expect(new FormData(form).get("fruit")).toBe("banana");
+      expect(changes).toBe(1);
+      controller.destroy();
+    });
+
+    it("does not apply a canceled form reset", async () => {
+      document.body.innerHTML = `<form><div data-slot="select" id="root"><button data-slot="select-trigger"><span data-slot="select-value"></span></button><div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div><div data-slot="select-item" data-value="banana">Banana</div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      const controller = createSelect(root, { name: "fruit", defaultValue: "banana" });
+      controller.select("apple");
+      form.addEventListener("reset", (event) => event.preventDefault());
+      form.reset();
+      await Promise.resolve();
+      expect(controller.value).toBe("apple");
+      controller.destroy();
+    });
+
     it("reads data-name attribute", () => {
       document.body.innerHTML = `
         <div data-slot="select" id="root" data-name="fruit">

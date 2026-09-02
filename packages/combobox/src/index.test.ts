@@ -1446,6 +1446,52 @@ describe("Combobox", () => {
       expect(hiddenInput.name).toBe("fruit");
       controller.destroy();
     });
+
+    it("restores initial selection, input text, and form data after reset without a second change", async () => {
+      document.body.innerHTML = `<form><div data-slot="combobox" id="root"><input data-slot="combobox-input" name="fruit" /><div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="apple">Apple</div><div data-slot="combobox-item" data-value="banana">Banana</div></div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      let changes = 0;
+      const controller = createCombobox(root, { defaultValue: "banana", onValueChange: () => changes++ });
+      controller.select("apple");
+      form.reset();
+      await Promise.resolve();
+
+      expect(controller.value).toBe("banana");
+      expect((root.querySelector('[data-slot="combobox-input"]') as HTMLInputElement).value).toBe("Banana");
+      expect(root.querySelector('[data-value="banana"]')?.getAttribute("aria-selected")).toBe("true");
+      expect(new FormData(form).get("fruit")).toBe("banana");
+      expect(changes).toBe(1);
+      controller.destroy();
+    });
+
+    it("does not apply a canceled form reset", async () => {
+      document.body.innerHTML = `<form><div data-slot="combobox" id="root"><input data-slot="combobox-input" name="fruit" /><div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="apple">Apple</div><div data-slot="combobox-item" data-value="banana">Banana</div></div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      const controller = createCombobox(root, { defaultValue: "banana" });
+      controller.select("apple");
+      form.addEventListener("reset", (event) => event.preventDefault());
+      form.reset();
+      await Promise.resolve();
+      expect(controller.value).toBe("apple");
+      controller.destroy();
+    });
+
+    it("restores an authored input name when destroyed and can be rebound", () => {
+      document.body.innerHTML = `<form><div data-slot="combobox" id="root"><input data-slot="combobox-input" name="fruit" /><div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="apple">Apple</div></div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const input = root.querySelector('[data-slot="combobox-input"]') as HTMLInputElement;
+      const first = createCombobox(root);
+      expect(input.hasAttribute("name")).toBe(false);
+      first.destroy();
+      expect(input.name).toBe("fruit");
+      expect(root.querySelector('input[type="hidden"]')).toBeNull();
+      const second = createCombobox(root);
+      expect(input.hasAttribute("name")).toBe(false);
+      second.destroy();
+      expect(input.name).toBe("fruit");
+    });
   });
 
   describe("native label[for] support", () => {

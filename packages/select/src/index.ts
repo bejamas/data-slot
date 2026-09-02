@@ -8,6 +8,7 @@ import {
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+import { FormFieldAdapter } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
 import {
   ensureItemVisibleInContainer,
@@ -96,8 +97,7 @@ export function createSelect(
   let enabledItems: HTMLElement[] = [];
   let itemToIndex = new Map<HTMLElement, number>();
 
-  // Hidden input for form integration
-  let hiddenInput: HTMLInputElement | null = null;
+  let formField: FormFieldAdapter | null = null;
 
   // Track if this instance locked scroll
   let didLockScroll = false;
@@ -153,14 +153,6 @@ export function createSelect(
     trigger.setAttribute("aria-required", "true");
   }
 
-  // Create hidden input for form integration
-  if (name) {
-    hiddenInput = document.createElement("input");
-    hiddenInput.type = "hidden";
-    hiddenInput.name = name;
-    hiddenInput.value = currentValue ?? "";
-    root.appendChild(hiddenInput);
-  }
 
   // Cache items on open
   const cacheItems = () => {
@@ -432,10 +424,7 @@ export function createSelect(
     const oldValue = currentValue;
     currentValue = value;
 
-    // Update hidden input
-    if (hiddenInput) {
-      hiddenInput.value = value ?? "";
-    }
+    formField?.setValue(value);
 
     // Update root data-value
     if (value !== null) {
@@ -561,6 +550,13 @@ export function createSelect(
   cacheItems();
   updateValue(currentValue, true);
 
+  formField = new FormFieldAdapter({
+    root,
+    name,
+    defaultValue,
+    onReset: (value) => updateValue(value, true),
+  });
+
   // Trigger events
   cleanups.push(
     on(trigger, "pointerdown", (e) => {
@@ -650,9 +646,7 @@ export function createSelect(
       }
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
-      if (hiddenInput && hiddenInput.parentNode) {
-        hiddenInput.parentNode.removeChild(hiddenInput);
-      }
+      formField?.destroy();
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };

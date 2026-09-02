@@ -15,6 +15,7 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createDismissLayer,
+  FormFieldAdapter,
 } from "@data-slot/core";
 import type {
   ComboboxController,
@@ -90,10 +91,11 @@ export function createCombobox(
 
   // Resolve options: JS > data-* > defaults
   const {
-    defaultValue, defaultOpen, placeholder, disabled, required, name, openOnFocus, autoHighlight,
+    defaultValue, defaultOpen, placeholder, disabled, required, name: configuredName, openOnFocus, autoHighlight,
     customFilter, onValueChange, onOpenChange, onInputValueChange, preferredSide, preferredAlign,
     sideOffset, alignOffset, avoidCollisions, collisionPadding,
   } = resolveComboboxConfiguration(root, content, authoredPositioner, options);
+  const name = configuredName ?? input.getAttribute("name");
   let itemToStringValue = options.itemToStringValue ?? null;
 
   // State
@@ -110,8 +112,7 @@ export function createCombobox(
   let openOnNextFocusFromPointer = false;
   let suppressOpenOnNextFocus = false;
 
-  // Hidden input for form integration
-  let hiddenInput: HTMLInputElement | null = null;
+  let formField: FormFieldAdapter | null = null;
 
   // Portal lifecycle
   const portal = createPortalLifecycle({
@@ -210,15 +211,6 @@ export function createCombobox(
     }
   }
 
-  // Form integration: strip name from visible input, create hidden input
-  if (name) {
-    if (input.name) input.removeAttribute("name");
-    hiddenInput = document.createElement("input");
-    hiddenInput.type = "hidden";
-    hiddenInput.name = name;
-    hiddenInput.value = currentValue ?? "";
-    root.appendChild(hiddenInput);
-  }
 
   const collection = createComboboxCollection({
     root,
@@ -419,10 +411,7 @@ export function createCombobox(
     currentValue = value;
     syncValidity();
 
-    // Update hidden input
-    if (hiddenInput) {
-      hiddenInput.value = value ?? "";
-    }
+    formField?.setValue(value);
 
     // Update root data-value
     if (value !== null) {
@@ -632,6 +621,14 @@ export function createCombobox(
   // Set initial value and input text
   updateValue(currentValue, true);
 
+  formField = new FormFieldAdapter({
+    root,
+    name,
+    defaultValue,
+    control: input,
+    onReset: (value) => updateValue(value, true),
+  });
+
   // Event listeners
   cleanups.push(
     on(doc, "keydown", (e) => {
@@ -768,9 +765,7 @@ export function createCombobox(
       portal.cleanup();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
-      if (hiddenInput && hiddenInput.parentNode) {
-        hiddenInput.parentNode.removeChild(hiddenInput);
-      }
+      formField?.destroy();
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
