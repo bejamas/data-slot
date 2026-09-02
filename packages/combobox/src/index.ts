@@ -325,7 +325,7 @@ export function createCombobox(
   }
 
   // Native <label for="..."> support
-  const nativeLabel = document.querySelector<HTMLLabelElement>(`label[for="${CSS.escape(inputId)}"]`);
+  const nativeLabel = doc.querySelector<HTMLLabelElement>(`label[for="${CSS.escape(inputId)}"]`);
   if (nativeLabel) {
     const labelId = ensureId(nativeLabel, "combobox-label");
     const existing = input.getAttribute("aria-labelledby");
@@ -367,7 +367,7 @@ export function createCombobox(
   // Form integration: strip name from visible input, create hidden input
   if (name) {
     if (input.name) input.removeAttribute("name");
-    hiddenInput = document.createElement("input");
+    hiddenInput = doc.createElement("input");
     hiddenInput.type = "hidden";
     hiddenInput.name = name;
     hiddenInput.value = currentValue ?? "";
@@ -695,7 +695,7 @@ export function createCombobox(
       updatePosition();
       positionSync.update();
 
-      requestAnimationFrame(() => {
+      win.requestAnimationFrame(() => {
         if (!isOpen) return;
         positionSync.update();
       });

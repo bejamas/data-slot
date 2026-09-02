@@ -5,7 +5,7 @@ export function getDocument(node?: Node | null): Document {
 
 /** Resolve the Window associated with a node or document. */
 export function getWindow(node?: Node | Document | null): Window {
-  const doc = node?.nodeType === Node.DOCUMENT_NODE ? (node as Document) : getDocument(node);
+  const doc = node?.nodeType === 9 ? (node as Document) : getDocument(node);
   return doc.defaultView ?? window;
 }
 

@@ -646,7 +646,9 @@ const observeElementMove = (element: Element, onMove: () => void, win: Window): 
     const clampedThreshold = Math.max(0, Math.min(1, threshold)) || 1;
 
     let isFirstUpdate = true;
-    io = new IntersectionObserver(
+    const IntersectionObserverConstructor = (win as Window & typeof globalThis).IntersectionObserver;
+    if (!IntersectionObserverConstructor) return;
+    io = new IntersectionObserverConstructor(
       (entries) => {
         const ratio = entries[0]?.intersectionRatio ?? 1;
 
@@ -689,13 +691,15 @@ const observeElementMove = (element: Element, onMove: () => void, win: Window): 
 };
 
 export function createPositionSync(options: PositionSyncOptions): PositionSyncController {
-  const win = options.win ?? window;
+  const win = options.win ?? options.observedElements?.[0]?.ownerDocument.defaultView ?? window;
   const isActive = options.isActive ?? (() => true);
   const observedElements = options.observedElements ?? [];
   const ancestorScroll = options.ancestorScroll ?? true;
   const syncOnScroll = options.syncOnScroll ?? false;
   const ancestorResize = options.ancestorResize ?? true;
-  const elementResize = options.elementResize ?? typeof ResizeObserver !== "undefined";
+  const ResizeObserverConstructor = (win as Window & typeof globalThis).ResizeObserver;
+  const IntersectionObserverConstructor = (win as Window & typeof globalThis).IntersectionObserver;
+  const elementResize = options.elementResize ?? typeof ResizeObserverConstructor !== "undefined";
   const layoutShift = options.layoutShift ?? false;
   const animationFrame = options.animationFrame ?? false;
 
@@ -788,8 +792,8 @@ export function createPositionSync(options: PositionSyncOptions): PositionSyncCo
       }
     }
 
-    if (elementResize && typeof ResizeObserver !== "undefined") {
-      resizeObserver = new ResizeObserver(onResize);
+    if (elementResize && ResizeObserverConstructor) {
+      resizeObserver = new ResizeObserverConstructor(onResize);
       for (const el of observedElements) {
         resizeObserver.observe(el);
       }
@@ -797,7 +801,7 @@ export function createPositionSync(options: PositionSyncOptions): PositionSyncCo
 
     const referenceElement = observedElements[0] ?? null;
 
-    if (layoutShift && referenceElement && typeof IntersectionObserver !== "undefined") {
+    if (layoutShift && referenceElement && IntersectionObserverConstructor) {
       moveCleanup = observeElementMove(referenceElement, schedule, win);
     }
 

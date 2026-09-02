@@ -177,6 +177,8 @@ export function createSelect(
   if (!trigger || !content) {
     throw new Error("Select requires trigger and content slots");
   }
+  const doc = root.ownerDocument ?? document;
+  const win = doc.defaultView ?? window;
 
   // Resolve options with explicit precedence: JS > data-* (root, then valueSlot) > default
   const defaultValue = options.defaultValue ?? getDataString(root, "defaultValue") ?? null;
@@ -291,7 +293,7 @@ export function createSelect(
   content.tabIndex = -1;
 
   // Native <label for="..."> support: find label whose `for` matches the trigger's id
-  const nativeLabel = document.querySelector<HTMLLabelElement>(`label[for="${CSS.escape(triggerId)}"]`);
+  const nativeLabel = doc.querySelector<HTMLLabelElement>(`label[for="${CSS.escape(triggerId)}"]`);
   if (nativeLabel) {
     const labelId = ensureId(nativeLabel, "select-label");
     const existing = trigger.getAttribute("aria-labelledby");
@@ -315,7 +317,7 @@ export function createSelect(
 
   // Create hidden input for form integration
   if (name) {
-    hiddenInput = document.createElement("input");
+    hiddenInput = doc.createElement("input");
     hiddenInput.type = "hidden";
     hiddenInput.name = name;
     hiddenInput.value = currentValue ?? "";
@@ -758,10 +760,10 @@ export function createSelect(
   };
 
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
-      if (previousActiveElement && document.contains(previousActiveElement)) {
+    win.requestAnimationFrame(() => {
+      if (previousActiveElement && doc.contains(previousActiveElement)) {
         focusElement(previousActiveElement);
-      } else if (trigger && document.contains(trigger)) {
+      } else if (trigger && doc.contains(trigger)) {
         focusElement(trigger);
       }
       previousActiveElement = null;
@@ -811,7 +813,7 @@ export function createSelect(
       const openedByPointer = pendingPointerOpen;
       pendingPointerOpen = false;
       shouldRestoreFocusOnClose = true;
-      previousActiveElement = document.activeElement as HTMLElement;
+      previousActiveElement = doc.activeElement as HTMLElement;
       isOpen = true;
       setAria(trigger, "expanded", true);
       portal.mount();
@@ -842,7 +844,7 @@ export function createSelect(
 
       // Use rAF to refine position after browser has fully rendered content,
       // and to highlight item under cursor if pointer opened the select
-      requestAnimationFrame(() => {
+      win.requestAnimationFrame(() => {
         if (!isOpen) return;
         updatePosition();
         positionSync.update();
@@ -854,7 +856,7 @@ export function createSelect(
           lastPointerType !== "touch" &&
           (lastPointerX !== 0 || lastPointerY !== 0)
         ) {
-          const el = document.elementFromPoint(lastPointerX, lastPointerY);
+          const el = doc.elementFromPoint(lastPointerX, lastPointerY);
           const item = el?.closest?.('[data-slot="select-item"]') as HTMLElement | null;
           if (item && !isItemDisabled(item) && content.contains(item)) {
             const index = itemToIndex.get(item);
