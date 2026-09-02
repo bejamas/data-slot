@@ -219,12 +219,13 @@ jobs:
         id: release_notes
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
             echo "OPENAI_API_KEY not set, using default release notes"
             echo "use_default=true" >> $GITHUB_OUTPUT
           else
-            bun run scripts/generate-release-notes.ts ${{ github.ref_name }} > release-notes.md
+            bun run scripts/generate-release-notes.ts "$RELEASE_TAG" > release-notes.md
             echo "use_default=false" >> $GITHUB_OUTPUT
           fi
 
