@@ -11,6 +11,7 @@ import {
   ensureId,
   on,
   emit,
+  getDocument,
 } from "@data-slot/core";
 
 export interface RadioGroupOptions {
@@ -153,6 +154,7 @@ export function createRadioGroup(
   root: Element,
   options: RadioGroupOptions = {},
 ): RadioGroupController {
+  const doc = getDocument(root);
   const existingController = reuseRootBinding<RadioGroupController>(
     root,
     ROOT_BINDING_KEY,
@@ -379,7 +381,7 @@ export function createRadioGroup(
 
     cleanups.push(
       on(item.hiddenInput, "focus", () => {
-        if (document.activeElement !== item.el) {
+        if (doc.activeElement !== item.el) {
           item.el.focus();
         }
       }),

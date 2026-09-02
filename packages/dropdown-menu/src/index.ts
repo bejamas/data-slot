@@ -25,6 +25,8 @@ import {
   createPresenceLifecycle,
   createDismissLayer,
   containsWithPortals,
+  getDocument,
+  getWindow,
 } from "@data-slot/core";
 
 /** Side of the trigger to place the content */
@@ -334,6 +336,8 @@ export function createDropdownMenu(
   root: Element,
   options: DropdownMenuOptions = {},
 ): DropdownMenuController {
+  const doc = getDocument(root);
+  const win = getWindow(root);
   const existingController = reuseRootBinding<DropdownMenuController>(
     root,
     ROOT_BINDING_KEY,
@@ -645,7 +649,6 @@ export function createDropdownMenu(
 
   const updatePosition = () => {
     const positioner = portal.container as HTMLElement;
-    const win = root.ownerDocument.defaultView ?? window;
     const triggerRect = trigger.getBoundingClientRect();
     const contentRect = measurePopupContentRect(content);
     const position = computeFloatingPosition({
@@ -697,10 +700,10 @@ export function createDropdownMenu(
   });
 
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
-      if (previousActiveElement && document.contains(previousActiveElement)) {
+    win.requestAnimationFrame(() => {
+      if (previousActiveElement && doc.contains(previousActiveElement)) {
         focusElement(previousActiveElement);
-      } else if (document.contains(trigger)) {
+      } else if (doc.contains(trigger)) {
         focusElement(trigger);
       }
       previousActiveElement = null;
@@ -870,7 +873,7 @@ export function createDropdownMenu(
 
     const previousOpen = isOpen;
     if (open) {
-      previousActiveElement = document.activeElement as HTMLElement | null;
+      previousActiveElement = doc.activeElement as HTMLElement | null;
       isOpen = true;
       setAria(trigger, "expanded", true);
       portal.mount();
@@ -1186,7 +1189,6 @@ export function createDropdownMenu(
     }),
   );
 
-  const doc = root.ownerDocument ?? document;
   cleanups.push(
     on(
       doc,

@@ -12,6 +12,8 @@ import {
   on,
   emit,
   ensureItemVisibleInContainer,
+  getDocument,
+  getWindow,
 } from "@data-slot/core";
 import { commandScore } from "./command-score";
 
@@ -227,6 +229,8 @@ export function createCommand(
   root: Element,
   options: CommandOptions = {}
 ): CommandController {
+  const doc = getDocument(root);
+  const win = getWindow(root);
   const existingController = reuseRootBinding<CommandController>(
     root,
     ROOT_BINDING_KEY,
@@ -290,7 +294,7 @@ export function createCommand(
   list.setAttribute("role", "listbox");
   list.tabIndex = -1;
 
-  const nativeLabel = document.querySelector<HTMLLabelElement>(`label[for="${CSS.escape(inputId)}"]`);
+  const nativeLabel = doc.querySelector<HTMLLabelElement>(`label[for="${win.CSS.escape(inputId)}"]`);
   if (nativeLabel) {
     const labelId = ensureId(nativeLabel, "command-label");
     const existing = input.getAttribute("aria-labelledby");
@@ -302,12 +306,12 @@ export function createCommand(
   }
 
   const focusInput = () => {
-    if (document.activeElement === input) return;
+    if (doc.activeElement === input) return;
     input.focus({ preventScroll: true });
   };
 
   const getInteractiveDescendant = (target: EventTarget | null): HTMLElement | null => {
-    if (!(target instanceof HTMLElement) || !rootEl.contains(target)) return null;
+    if (!(target instanceof win.HTMLElement) || !rootEl.contains(target)) return null;
     const interactive = target.closest(INTERACTIVE_DESCENDANT_SELECTOR);
     return interactive instanceof HTMLElement && rootEl.contains(interactive) ? interactive : null;
   };
@@ -326,15 +330,17 @@ export function createCommand(
   };
 
   const syncResizeObserver = () => {
-    if (typeof ResizeObserver === "undefined") {
+    const ResizeObserverConstructor = win.ResizeObserver;
+    if (!ResizeObserverConstructor) {
       setListHeightVar();
       return;
     }
 
     if (!resizeObserver) {
-      resizeObserver = new ResizeObserver(() => {
+      const observer = new ResizeObserverConstructor(() => {
         setListHeightVar();
       });
+      resizeObserver = observer;
     }
 
     resizeObserver.disconnect();
@@ -531,7 +537,7 @@ export function createCommand(
     if (shouldEnsureVisible) {
       scrollSelectedItemIntoView();
     }
-    if (document.activeElement === input || document.activeElement === rootEl) {
+    if (doc.activeElement === input || doc.activeElement === rootEl) {
       focusInput();
     }
     emitValueIfChanged(previousValue, currentValue, shouldEmit);
@@ -979,8 +985,9 @@ export function createCommand(
     });
   };
 
-  if (typeof MutationObserver !== "undefined") {
-    mutationObserver = new MutationObserver(() => {
+  const MutationObserverConstructor = win.MutationObserver;
+  if (MutationObserverConstructor) {
+    mutationObserver = new MutationObserverConstructor(() => {
       scheduleMutationRefresh();
     });
     observeMutations();

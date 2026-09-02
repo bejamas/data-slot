@@ -16,6 +16,8 @@ import {
   createDismissLayer,
   createPresenceLifecycle,
   focusElement,
+  getDocument,
+  getWindow,
 } from "@data-slot/core";
 
 export interface DialogOptions {
@@ -85,6 +87,8 @@ export function createDialog(
   root: Element,
   options: DialogOptions = {}
 ): DialogController {
+  const doc = getDocument(root);
+  const win = getWindow(root);
   const existingController = reuseRootBinding<DialogController>(
     root,
     ROOT_BINDING_KEY,
@@ -176,14 +180,14 @@ export function createDialog(
   };
 
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
+    win.requestAnimationFrame(() => {
       if (
         previousActiveElement &&
-        document.contains(previousActiveElement) &&
+        doc.contains(previousActiveElement) &&
         typeof previousActiveElement.focus === "function"
       ) {
         focusElement(previousActiveElement);
-      } else if (trigger && document.contains(trigger)) {
+      } else if (trigger && doc.contains(trigger)) {
         focusElement(trigger);
       }
       previousActiveElement = null;
@@ -255,7 +259,7 @@ export function createDialog(
       mountPortal();
 
       // Store current focus
-      previousActiveElement = document.activeElement as HTMLElement;
+      previousActiveElement = doc.activeElement as HTMLElement;
 
       modalStack.open();
 
@@ -300,7 +304,7 @@ export function createDialog(
     onOpenChange?.(isOpen);
 
     if (open) {
-      requestAnimationFrame(focusFirst);
+      win.requestAnimationFrame(focusFirst);
     }
   };
 
@@ -320,7 +324,7 @@ export function createDialog(
 
     const first = focusables[0]!;
     const last = focusables[focusables.length - 1]!;
-    const active = document.activeElement;
+    const active = doc.activeElement;
 
     // If focus is outside the dialog, bring it back
     if (!content.contains(active)) {

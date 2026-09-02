@@ -1103,6 +1103,27 @@ describe("Dialog", () => {
   });
 
   describe("scroll lock", () => {
+    it("isolates modal focus, portal, and scroll state in a secondary document", () => {
+      const secondary = document.implementation.createHTMLDocument("secondary");
+      secondary.body.innerHTML = `
+        <div data-slot="dialog">
+          <button data-slot="dialog-trigger">Open</button>
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content"><button>Inside</button></div>
+        </div>`;
+      const root = secondary.querySelector('[data-slot="dialog"]')!;
+      const content = secondary.querySelector('[data-slot="dialog-content"]') as HTMLElement;
+      const controller = createDialog(root);
+
+      controller.open();
+      expect(secondary.documentElement.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("");
+      expect(content.ownerDocument).toBe(secondary);
+      controller.close();
+      expect(secondary.documentElement.style.overflow).toBe("");
+      controller.destroy();
+    });
+
     it("locks scroll when opening", () => {
       const { controller } = setup();
 

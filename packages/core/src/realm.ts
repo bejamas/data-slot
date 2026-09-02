@@ -4,9 +4,9 @@ export function getDocument(node?: Node | null): Document {
 }
 
 /** Resolve the Window associated with a node or document. */
-export function getWindow(node?: Node | Document | null): Window {
+export function getWindow(node?: Node | Document | null): Window & typeof globalThis {
   const doc = node?.nodeType === 9 ? (node as Document) : getDocument(node);
-  return doc.defaultView ?? window;
+  return (doc.defaultView ?? window) as Window & typeof globalThis;
 }
 
 /** Create events in their target's realm so cross-window dispatch remains valid. */

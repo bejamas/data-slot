@@ -11,6 +11,7 @@ import {
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+import { getWindow } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
 const ACTIVATION_MODES = ["auto", "manual"] as const;
@@ -97,6 +98,7 @@ export function createTabs(
   root: Element,
   options: TabsOptions = {}
 ): TabsController {
+  const win = getWindow(root);
   const existingController = reuseRootBinding<TabsController>(
     root,
     ROOT_BINDING_KEY,
@@ -306,7 +308,7 @@ export function createTabs(
 
   const scheduleIndicatorUpdate = () => {
     if (!indicator || indicatorFrame !== null) return;
-    indicatorFrame = requestAnimationFrame(() => {
+    indicatorFrame = win.requestAnimationFrame(() => {
       indicatorFrame = null;
       updateIndicator();
     });
@@ -382,14 +384,15 @@ export function createTabs(
   // Keep indicator in sync with layout changes (only if indicator exists)
   if (indicator) {
     const indicatorTick = () => scheduleIndicatorUpdate();
-    cleanups.push(on(window, "resize", indicatorTick));
+    cleanups.push(on(win, "resize", indicatorTick));
     cleanups.push(on(list, "scroll", indicatorTick));
-    const ro = new ResizeObserver(indicatorTick);
-    ro.observe(list);
-    cleanups.push(() => ro.disconnect());
+    const ResizeObserverConstructor = win.ResizeObserver;
+    const ro = ResizeObserverConstructor ? new ResizeObserverConstructor(indicatorTick) : null;
+    ro?.observe(list);
+    if (ro) cleanups.push(() => ro.disconnect());
     cleanups.push(() => {
       if (indicatorFrame !== null) {
-        cancelAnimationFrame(indicatorFrame);
+        win.cancelAnimationFrame(indicatorFrame);
         indicatorFrame = null;
       }
     });

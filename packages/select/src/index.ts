@@ -293,7 +293,7 @@ export function createSelect(
   content.tabIndex = -1;
 
   // Native <label for="..."> support: find label whose `for` matches the trigger's id
-  const nativeLabel = doc.querySelector<HTMLLabelElement>(`label[for="${CSS.escape(triggerId)}"]`);
+  const nativeLabel = doc.querySelector<HTMLLabelElement>(`label[for="${win.CSS.escape(triggerId)}"]`);
   if (nativeLabel) {
     const labelId = ensureId(nativeLabel, "select-label");
     const existing = trigger.getAttribute("aria-labelledby");
@@ -307,7 +307,7 @@ export function createSelect(
   if (disabled) {
     trigger.setAttribute("aria-disabled", "true");
     trigger.setAttribute("data-disabled", "");
-    if (trigger instanceof HTMLButtonElement) {
+    if (trigger instanceof win.HTMLButtonElement) {
       trigger.disabled = true;
     }
   }
@@ -438,7 +438,7 @@ export function createSelect(
     while (node && node !== ancestor) {
       offset += node[offsetKey];
       const offsetParent: Element | null = node.offsetParent;
-      if (!(offsetParent instanceof HTMLElement)) {
+      if (!(offsetParent instanceof win.HTMLElement)) {
         offset = Number.NaN;
         break;
       }
@@ -536,7 +536,6 @@ export function createSelect(
 
   const updatePosition = () => {
     const positioner = portal.container as HTMLElement;
-    const win = root.ownerDocument.defaultView ?? window;
     const tr = trigger.getBoundingClientRect();
     const scrollContainer = getScrollContainer();
 
@@ -709,7 +708,7 @@ export function createSelect(
     isActive: () => isOpen,
     ancestorScroll: lockScrollOption,
     onUpdate: updatePosition,
-    ignoreScrollTarget: (target) => target instanceof Node && content.contains(target),
+    ignoreScrollTarget: (target) => target instanceof win.Node && content.contains(target),
   });
 
   const updateHighlight = (index: number, focus = true, ensureVisible = true) => {

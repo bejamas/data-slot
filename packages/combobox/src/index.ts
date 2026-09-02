@@ -317,7 +317,7 @@ export function createCombobox(
     trigger.setAttribute("aria-label", "Toggle");
   }
 
-  if (clearButton instanceof HTMLButtonElement && !clearButton.hasAttribute("type")) {
+  if (clearButton instanceof win.HTMLButtonElement && !clearButton.hasAttribute("type")) {
     clearButton.setAttribute("type", "button");
   }
   if (clearButton && !clearButton.hasAttribute("tabindex")) {
@@ -325,7 +325,7 @@ export function createCombobox(
   }
 
   // Native <label for="..."> support
-  const nativeLabel = doc.querySelector<HTMLLabelElement>(`label[for="${CSS.escape(inputId)}"]`);
+  const nativeLabel = doc.querySelector<HTMLLabelElement>(`label[for="${win.CSS.escape(inputId)}"]`);
   if (nativeLabel) {
     const labelId = ensureId(nativeLabel, "combobox-label");
     const existing = input.getAttribute("aria-labelledby");
@@ -445,7 +445,7 @@ export function createCombobox(
     }
 
     const children = Array.from(container.children).filter(
-      (child): child is HTMLElement => child instanceof HTMLElement
+      (child): child is HTMLElement => child instanceof win.HTMLElement
     );
 
     for (let i = 0; i < children.length; i++) {
@@ -596,7 +596,7 @@ export function createCombobox(
     isActive: () => isOpen,
     ancestorScroll: true,
     onUpdate: updatePosition,
-    ignoreScrollTarget: (target) => target instanceof Node && content.contains(target),
+    ignoreScrollTarget: (target) => target instanceof win.Node && content.contains(target),
   });
 
   const getHighlightScrollContainer = (item: HTMLElement): HTMLElement => {

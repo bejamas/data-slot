@@ -16,6 +16,8 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
+  getDocument,
+  getWindow,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -100,6 +102,8 @@ export function createPopover(
   root: Element,
   options: PopoverOptions = {}
 ): PopoverController {
+  const doc = getDocument(root);
+  const win = getWindow(root);
   const existingController = reuseRootBinding<PopoverController>(
     root,
     ROOT_BINDING_KEY,
@@ -234,7 +238,6 @@ export function createPopover(
 
   const updatePosition = () => {
     const positioner = portal.container as HTMLElement;
-    const win = root.ownerDocument.defaultView ?? window;
     const tr = trigger.getBoundingClientRect();
     const cr = measurePopupContentRect(content);
     const pos = computeFloatingPosition({
@@ -305,7 +308,7 @@ export function createPopover(
   };
 
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
+    win.requestAnimationFrame(() => {
       if (previousActiveElement && previousActiveElement.isConnected) {
         focusElement(previousActiveElement);
       } else {
@@ -338,7 +341,7 @@ export function createPopover(
 
     // Save focus target before opening
     if (open) {
-      previousActiveElement = document.activeElement as HTMLElement | null;
+      previousActiveElement = doc.activeElement as HTMLElement | null;
     }
 
     isOpen = open;
@@ -352,7 +355,7 @@ export function createPopover(
       updatePosition();
       positionSync.start();
       positionSync.update();
-      requestAnimationFrame(focusFirst);
+      win.requestAnimationFrame(focusFirst);
     } else {
       setDataState("closed");
       presence.exit();
@@ -376,7 +379,7 @@ export function createPopover(
     updatePosition();
     positionSync.start();
     positionSync.update();
-    requestAnimationFrame(focusFirst);
+    win.requestAnimationFrame(focusFirst);
   }
 
   // Trigger click

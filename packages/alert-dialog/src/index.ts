@@ -16,6 +16,8 @@ import {
   createDismissLayer,
   createPresenceLifecycle,
   focusElement,
+  getDocument,
+  getWindow,
 } from "@data-slot/core";
 
 export interface AlertDialogOptions {
@@ -55,6 +57,8 @@ export function createAlertDialog(
   root: Element,
   options: AlertDialogOptions = {}
 ): AlertDialogController {
+  const doc = getDocument(root);
+  const win = getWindow(root);
   const existingController = reuseRootBinding<AlertDialogController>(
     root,
     ROOT_BINDING_KEY,
@@ -137,14 +141,14 @@ export function createAlertDialog(
   };
 
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
+    win.requestAnimationFrame(() => {
       if (
         previousActiveElement &&
-        document.contains(previousActiveElement) &&
+        doc.contains(previousActiveElement) &&
         typeof previousActiveElement.focus === "function"
       ) {
         focusElement(previousActiveElement);
-      } else if (trigger && document.contains(trigger)) {
+      } else if (trigger && doc.contains(trigger)) {
         focusElement(trigger);
       }
       previousActiveElement = null;
@@ -220,7 +224,7 @@ export function createAlertDialog(
 
     const first = focusables[0]!;
     const last = focusables[focusables.length - 1]!;
-    const active = document.activeElement;
+    const active = doc.activeElement;
 
     if (!content.contains(active)) {
       e.preventDefault();
@@ -259,7 +263,7 @@ export function createAlertDialog(
       pendingExitCount = 0;
 
       portalLifecycle?.mount();
-      previousActiveElement = document.activeElement as HTMLElement;
+      previousActiveElement = doc.activeElement as HTMLElement;
       modalStack.open();
 
       if (lockScrollOption && !didLockScroll) {
@@ -300,7 +304,7 @@ export function createAlertDialog(
     onOpenChange?.(isOpen);
 
     if (open) {
-      requestAnimationFrame(focusFirst);
+      win.requestAnimationFrame(focusFirst);
     }
   };
 

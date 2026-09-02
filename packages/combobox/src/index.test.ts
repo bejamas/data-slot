@@ -1406,6 +1406,31 @@ describe("Combobox", () => {
   });
 
   describe("native label[for] support", () => {
+    it("keeps labels, form proxies, portals, and events in a secondary document", () => {
+      const secondary = document.implementation.createHTMLDocument("secondary");
+      secondary.body.innerHTML = `
+        <label for="secondary-input">Choose a fruit</label>
+        <div data-slot="combobox">
+          <input data-slot="combobox-input" id="secondary-input" />
+          <div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="apple">Apple</div></div></div>
+        </div>`;
+      const root = secondary.querySelector('[data-slot="combobox"]')!;
+      const input = secondary.getElementById("secondary-input") as HTMLInputElement;
+      const content = secondary.querySelector('[data-slot="combobox-content"]') as HTMLElement;
+      let eventDocument: Document | null = null;
+      root.addEventListener("combobox:change", (event) => { eventDocument = event.target?.ownerDocument ?? null; });
+      const controller = createCombobox(root, { name: "fruit" });
+
+      expect(input.getAttribute("aria-labelledby")).toContain(secondary.querySelector("label")!.id);
+      expect(root.querySelector('input[type="hidden"]')?.ownerDocument).toBe(secondary);
+      controller.open();
+      expect(content.parentElement?.ownerDocument).toBe(secondary);
+      controller.select("apple");
+      expect(eventDocument).toBe(secondary);
+      expect(document.body.contains(content)).toBe(false);
+      controller.destroy();
+    });
+
     it("sets aria-labelledby on input from native label[for]", () => {
       document.body.innerHTML = `
         <label for="my-input">Choose a fruit</label>

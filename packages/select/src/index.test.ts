@@ -3230,6 +3230,31 @@ describe("Select", () => {
   });
 
   describe("native label[for] support", () => {
+    it("keeps labels, form proxies, portals, and events in a secondary document", () => {
+      const secondary = document.implementation.createHTMLDocument("secondary");
+      secondary.body.innerHTML = `
+        <label for="secondary-trigger">Choose a fruit</label>
+        <div data-slot="select">
+          <button data-slot="select-trigger" id="secondary-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div></div>
+        </div>`;
+      const root = secondary.querySelector('[data-slot="select"]')!;
+      const trigger = secondary.getElementById("secondary-trigger") as HTMLButtonElement;
+      const content = secondary.querySelector('[data-slot="select-content"]') as HTMLElement;
+      let eventDocument: Document | null = null;
+      root.addEventListener("select:change", (event) => { eventDocument = event.target?.ownerDocument ?? null; });
+      const controller = createSelect(root, { name: "fruit" });
+
+      expect(trigger.getAttribute("aria-labelledby")).toContain(secondary.querySelector("label")!.id);
+      expect(root.querySelector('input[type="hidden"]')?.ownerDocument).toBe(secondary);
+      controller.open();
+      expect(content.parentElement?.ownerDocument).toBe(secondary);
+      controller.select("apple");
+      expect(eventDocument).toBe(secondary);
+      expect(document.body.contains(content)).toBe(false);
+      controller.destroy();
+    });
+
     it("sets aria-labelledby on trigger from native label[for]", () => {
       document.body.innerHTML = `
         <label for="my-trigger">Choose a fruit</label>
