@@ -14,6 +14,12 @@ import { execFileSync } from "child_process";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 
+type TagRange = {
+  currentRevision: string;
+  previousRevision: string | null;
+  range: string;
+};
+
 function getPreviousTag(currentTag: string): string | null {
   try {
     const tags = execFileSync("git", ["tag", "--sort=-version:refname"], {
@@ -60,21 +66,29 @@ function resolveRevision(revision: string): string | null {
   }
 }
 
+function resolveTagRange(tag: string): TagRange | null {
+  const previousTag = getPreviousTag(tag);
+  const currentRevision = resolveRevision(tag);
+  if (!currentRevision) return null;
+
+  const previousRevision = previousTag ? resolveRevision(previousTag) : null;
+  const range = previousRevision
+    ? `${previousRevision}..${currentRevision}`
+    : currentRevision;
+
+  return { currentRevision, previousRevision, range };
+}
+
 function getCommitsSinceTag(
   tag: string
 ): Array<{ hash: string; message: string; author: string }> {
   try {
-    const previousTag = getPreviousTag(tag);
-    const currentRevision = resolveRevision(tag);
-    if (!currentRevision) return [];
-    const previousRevision = previousTag ? resolveRevision(previousTag) : null;
-    const range = previousRevision
-      ? `${previousRevision}..${currentRevision}`
-      : currentRevision;
+    const tagRange = resolveTagRange(tag);
+    if (!tagRange) return [];
 
     const log = execFileSync(
       "git",
-      ["log", range, "--pretty=format:%H|%s|%an", "--no-merges"],
+      ["log", tagRange.range, "--pretty=format:%H|%s|%an", "--no-merges"],
       { encoding: "utf-8" }
     ).trim();
 
@@ -95,19 +109,16 @@ function getChangedFiles(
   tag: string
 ): Array<{ file: string; changes: string; packageName: string }> {
   try {
-    const previousTag = getPreviousTag(tag);
-    const currentRevision = resolveRevision(tag);
-    if (!currentRevision) return [];
-    const previousRevision = previousTag ? resolveRevision(previousTag) : null;
-    const range = previousRevision
-      ? `${previousRevision}..${currentRevision}`
-      : currentRevision;
+    const tagRange = resolveTagRange(tag);
+    if (!tagRange) return [];
 
-    console.error(`Comparing: ${range}`);
+    console.error(`Comparing: ${tagRange.range}`);
 
-    const files = execFileSync("git", ["diff", "--name-only", range], {
-      encoding: "utf-8",
-    })
+    const files = execFileSync(
+      "git",
+      ["diff", "--name-only", tagRange.range],
+      { encoding: "utf-8" }
+    )
       .trim()
       .split("\n")
       .filter(Boolean);
@@ -135,10 +146,10 @@ function getChangedFiles(
       if (!isSourceFile) continue;
 
       try {
-        const diffBase = previousRevision || "HEAD~1";
+        const diffBase = tagRange.previousRevision || "HEAD~1";
         const diff = execFileSync(
           "git",
-          ["diff", `${diffBase}..${currentRevision}`, "--", file],
+          ["diff", `${diffBase}..${tagRange.currentRevision}`, "--", file],
           {
             encoding: "utf-8",
             maxBuffer: 1024 * 1024,
