@@ -232,13 +232,13 @@ export function createTooltip(
   const contentId = ensureId(content, "tooltip-content");
   content.setAttribute("role", "tooltip");
   const resolveDirection = (): TooltipDirection => {
-    const rootElement = root instanceof HTMLElement ? root : null;
+    const rootElement = root instanceof win.HTMLElement ? root : null;
     const authoredDirection = rootElement?.getAttribute("dir") ?? trigger.getAttribute("dir");
     if (authoredDirection === "rtl") return "rtl";
 
     const computedDirection =
-      getComputedStyle(trigger).direction ||
-      (rootElement ? getComputedStyle(rootElement).direction : "") ||
+      win.getComputedStyle(trigger).direction ||
+      (rootElement ? win.getComputedStyle(rootElement).direction : "") ||
       root.ownerDocument.documentElement.getAttribute("dir") ||
       "";
 

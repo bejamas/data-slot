@@ -77,7 +77,7 @@ const getMaxTimingMs = (durationsValue: string, delaysValue: string): number => 
 };
 
 const getMaxPresenceDurationMs = (element: HTMLElement): number => {
-  const style = getComputedStyle(element);
+  const style = getWindow(element).getComputedStyle(element);
   const transitionMs = getMaxTimingMs(style.transitionDuration, style.transitionDelay);
   const animationMs = getMaxTimingMs(style.animationDuration, style.animationDelay);
   return Math.max(transitionMs, animationMs);

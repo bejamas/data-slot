@@ -85,7 +85,7 @@ const getMaxTimingMs = (durationsValue: string, delaysValue: string): number => 
 };
 
 const getMaxPresenceDurationMs = (element: HTMLElement): number => {
-  const style = getComputedStyle(element);
+  const style = getWindow(element).getComputedStyle(element);
   const transitionMs = getMaxTimingMs(style.transitionDuration, style.transitionDelay);
   const animationMs = getMaxTimingMs(style.animationDuration, style.animationDelay);
   return Math.max(transitionMs, animationMs);
@@ -105,7 +105,7 @@ const getMaxTransitionTimingMsForProperties = (
   element: HTMLElement,
   shouldIncludeProperty: (property: string) => boolean
 ): number => {
-  const style = getComputedStyle(element);
+  const style = getWindow(element).getComputedStyle(element);
   const properties = style.transitionProperty.split(",").map((property) => property.trim());
   const durations = style.transitionDuration.split(",");
   const delays = style.transitionDelay.split(",");
@@ -333,7 +333,7 @@ export function createAccordion(
   };
 
   const getMotionStrategy = (item: AccordionItemRecord): AccordionMotionStrategy => {
-    const style = getComputedStyle(item.content);
+    const style = win.getComputedStyle(item.content);
     const hasSizeTransition = getMaxSizeTransitionMs(item.content) > 0;
     const hasAnimation = hasActiveAnimation(style);
 
@@ -657,8 +657,8 @@ export function createAccordion(
     if (authoredDirection === "rtl") return "rtl";
 
     const computedDirection =
-      getComputedStyle(target).direction ||
-      getComputedStyle(rootEl).direction ||
+      win.getComputedStyle(target).direction ||
+      win.getComputedStyle(rootEl).direction ||
       root.ownerDocument?.documentElement.getAttribute("dir") ||
       "";
 

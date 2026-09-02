@@ -225,7 +225,7 @@ export function createTabs(
       top += current.offsetTop;
 
       const parent = current.offsetParent;
-      if (!(parent instanceof HTMLElement)) {
+      if (!(parent instanceof win.HTMLElement)) {
         return null;
       }
 
