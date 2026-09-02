@@ -19,7 +19,8 @@ export {
 export type { PortalState } from "./parts.ts";
 export { ensureId, setAria, linkLabelledBy } from "./aria.ts";
 export { on, emit, composeHandlers } from "./events.ts";
-export { FormFieldAdapter } from "./form-field.ts";
+export { createFormFieldAdapter } from "./form-field.ts";
+export type { FormFieldAdapter } from "./form-field.ts";
 export { lockScroll, unlockScroll } from "./scroll.ts";
 export {
   computeFloatingPosition,

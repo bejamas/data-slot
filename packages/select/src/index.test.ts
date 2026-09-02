@@ -1270,6 +1270,19 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it("resets an unnamed select with an empty-string default without serializing a proxy", async () => {
+      document.body.innerHTML = `<form><div data-slot="select" id="root"><button data-slot="select-trigger"><span data-slot="select-value"></span></button><div data-slot="select-content"><div data-slot="select-item" data-value="">Empty</div><div data-slot="select-item" data-value="apple">Apple</div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      const controller = createSelect(root, { defaultValue: "" });
+      controller.select("apple");
+      form.reset();
+      await Promise.resolve();
+      expect(controller.value).toBe("");
+      expect(root.querySelector('input[type="hidden"]')).toBeNull();
+      controller.destroy();
+    });
+
     it("reads data-name attribute", () => {
       document.body.innerHTML = `
         <div data-slot="select" id="root" data-name="fruit">

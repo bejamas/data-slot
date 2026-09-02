@@ -1478,6 +1478,40 @@ describe("Combobox", () => {
       controller.destroy();
     });
 
+    it("resets an unnamed combobox with an empty-string default without creating a proxy", async () => {
+      document.body.innerHTML = `<form><div data-slot="combobox" id="root"><input data-slot="combobox-input" /><div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="">Empty</div><div data-slot="combobox-item" data-value="apple">Apple</div></div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      const controller = createCombobox(root, { defaultValue: "" });
+      controller.select("apple");
+      form.reset();
+      await Promise.resolve();
+      expect(controller.value).toBe("");
+      expect(root.querySelector('input[type="hidden"]')).toBeNull();
+      controller.destroy();
+    });
+
+    it("uses and preserves an authored external form association", async () => {
+      document.body.innerHTML = `<form id="external"></form><div data-slot="combobox" id="root"><input data-slot="combobox-input" name="fruit" form="external" /><div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="apple">Apple</div><div data-slot="combobox-item" data-value="banana">Banana</div></div></div></div>`;
+      const root = document.getElementById("root")!;
+      const input = root.querySelector('[data-slot="combobox-input"]') as HTMLInputElement;
+      const form = document.getElementById("external") as HTMLFormElement;
+      const first = createCombobox(root, { defaultValue: "banana" });
+      first.select("apple");
+      expect(new FormData(form).get("fruit")).toBe("apple");
+      form.reset();
+      await Promise.resolve();
+      expect(first.value).toBe("banana");
+      first.destroy();
+      expect(input.name).toBe("fruit");
+      expect(input.getAttribute("form")).toBe("external");
+      const second = createCombobox(root, { defaultValue: "banana" });
+      expect(new FormData(form).get("fruit")).toBe("banana");
+      second.destroy();
+      expect(input.name).toBe("fruit");
+      expect(input.getAttribute("form")).toBe("external");
+    });
+
     it("restores an authored input name when destroyed and can be rebound", () => {
       document.body.innerHTML = `<form><div data-slot="combobox" id="root"><input data-slot="combobox-input" name="fruit" /><div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="apple">Apple</div></div></div></div></form>`;
       const root = document.getElementById("root")!;

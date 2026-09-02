@@ -8,7 +8,8 @@ import {
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
-import { FormFieldAdapter } from "@data-slot/core";
+import { createFormFieldAdapter } from "@data-slot/core";
+import type { FormFieldAdapter } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
 import {
   ensureItemVisibleInContainer,
@@ -550,7 +551,7 @@ export function createSelect(
   cacheItems();
   updateValue(currentValue, true);
 
-  formField = new FormFieldAdapter({
+  formField = createFormFieldAdapter({
     root,
     name,
     defaultValue,

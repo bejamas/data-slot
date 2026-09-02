@@ -15,8 +15,9 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createDismissLayer,
-  FormFieldAdapter,
+  createFormFieldAdapter,
 } from "@data-slot/core";
+import type { FormFieldAdapter } from "@data-slot/core";
 import type {
   ComboboxController,
   ComboboxItemToStringValue,
@@ -621,7 +622,7 @@ export function createCombobox(
   // Set initial value and input text
   updateValue(currentValue, true);
 
-  formField = new FormFieldAdapter({
+  formField = createFormFieldAdapter({
     root,
     name,
     defaultValue,
