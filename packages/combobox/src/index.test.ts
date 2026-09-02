@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach } from "bun:test";
+import { Window } from "happy-dom";
 import { createCombobox, create } from "./index";
 import { clearRootBinding, setRootBinding } from "../../core/src/index";
 import { createDialog } from "../../dialog/src/index";
@@ -1407,7 +1408,8 @@ describe("Combobox", () => {
 
   describe("native label[for] support", () => {
     it("keeps labels, form proxies, portals, and events in a secondary document", () => {
-      const secondary = document.implementation.createHTMLDocument("secondary");
+      const secondaryWindow = new Window();
+      const secondary = secondaryWindow.document;
       secondary.body.innerHTML = `
         <label for="secondary-input">Choose a fruit</label>
         <div data-slot="combobox">
@@ -1418,7 +1420,11 @@ describe("Combobox", () => {
       const input = secondary.getElementById("secondary-input") as HTMLInputElement;
       const content = secondary.querySelector('[data-slot="combobox-content"]') as HTMLElement;
       let eventDocument: Document | null = null;
-      root.addEventListener("combobox:change", (event) => { eventDocument = event.target?.ownerDocument ?? null; });
+      let eventIsSecondary = false;
+      root.addEventListener("combobox:change", (event) => {
+        eventDocument = event.target?.ownerDocument ?? null;
+        eventIsSecondary = event instanceof secondaryWindow.CustomEvent;
+      });
       const controller = createCombobox(root, { name: "fruit" });
 
       expect(input.getAttribute("aria-labelledby")).toContain(secondary.querySelector("label")!.id);
@@ -1427,6 +1433,7 @@ describe("Combobox", () => {
       expect(content.parentElement?.ownerDocument).toBe(secondary);
       controller.select("apple");
       expect(eventDocument).toBe(secondary);
+      expect(eventIsSecondary).toBe(true);
       expect(document.body.contains(content)).toBe(false);
       controller.destroy();
     });

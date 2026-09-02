@@ -1,3 +1,5 @@
+import { getDocument } from "./realm.ts";
+
 /**
  * Query a single part/slot within a component root
  */
@@ -287,7 +289,7 @@ export function portalToBody(
   state: PortalState
 ): void {
   if (state.portaled) return;
-  const body = (originRoot.ownerDocument ?? document)?.body;
+  const body = getDocument(originRoot).body;
   if (!body) return;
   state.originalParent = el.parentNode;
   state.originalNextSibling = el.nextSibling;

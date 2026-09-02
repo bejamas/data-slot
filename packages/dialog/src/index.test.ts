@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { Window } from "happy-dom";
 import { createDialog, create } from "./index";
 import { clearRootBinding, setRootBinding } from "../../core/src/index";
 import { createPopover } from "../../popover/src/index";
@@ -1104,7 +1105,8 @@ describe("Dialog", () => {
 
   describe("scroll lock", () => {
     it("isolates modal focus, portal, and scroll state in a secondary document", () => {
-      const secondary = document.implementation.createHTMLDocument("secondary");
+      const secondaryWindow = new Window();
+      const secondary = secondaryWindow.document;
       secondary.body.innerHTML = `
         <div data-slot="dialog">
           <button data-slot="dialog-trigger">Open</button>

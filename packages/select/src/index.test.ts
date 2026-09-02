@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach } from "bun:test";
+import { Window } from "happy-dom";
 import { createSelect, create } from "./index";
 import { clearRootBinding, setRootBinding } from "../../core/src/index";
 import { resetScrollLock } from "../../core/src/scroll";
@@ -3231,7 +3232,8 @@ describe("Select", () => {
 
   describe("native label[for] support", () => {
     it("keeps labels, form proxies, portals, and events in a secondary document", () => {
-      const secondary = document.implementation.createHTMLDocument("secondary");
+      const secondaryWindow = new Window();
+      const secondary = secondaryWindow.document;
       secondary.body.innerHTML = `
         <label for="secondary-trigger">Choose a fruit</label>
         <div data-slot="select">
@@ -3242,7 +3244,11 @@ describe("Select", () => {
       const trigger = secondary.getElementById("secondary-trigger") as HTMLButtonElement;
       const content = secondary.querySelector('[data-slot="select-content"]') as HTMLElement;
       let eventDocument: Document | null = null;
-      root.addEventListener("select:change", (event) => { eventDocument = event.target?.ownerDocument ?? null; });
+      let eventIsSecondary = false;
+      root.addEventListener("select:change", (event) => {
+        eventDocument = event.target?.ownerDocument ?? null;
+        eventIsSecondary = event instanceof secondaryWindow.CustomEvent;
+      });
       const controller = createSelect(root, { name: "fruit" });
 
       expect(trigger.getAttribute("aria-labelledby")).toContain(secondary.querySelector("label")!.id);
@@ -3251,6 +3257,7 @@ describe("Select", () => {
       expect(content.parentElement?.ownerDocument).toBe(secondary);
       controller.select("apple");
       expect(eventDocument).toBe(secondary);
+      expect(eventIsSecondary).toBe(true);
       expect(document.body.contains(content)).toBe(false);
       controller.destroy();
     });

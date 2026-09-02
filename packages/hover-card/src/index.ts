@@ -18,6 +18,7 @@ import {
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+import { getWindow } from "@data-slot/core";
 
 export type HoverCardSide = "top" | "right" | "bottom" | "left";
 const SIDES = ["top", "right", "bottom", "left"] as const;
@@ -257,7 +258,7 @@ export function createHoverCard(
 
   const updatePosition = () => {
     const positioner = portal.container as HTMLElement;
-    const win = root.ownerDocument.defaultView ?? window;
+    const win = getWindow(root);
     const tr = trigger.getBoundingClientRect();
     const cr = measurePopupContentRect(content);
     const pos = computeFloatingPosition({

@@ -14,6 +14,7 @@ import {
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
+import { getDocument, getWindow } from "@data-slot/core";
 import {
   computeFloatingPosition,
   computeFloatingTransformOrigin,
@@ -177,8 +178,8 @@ export function createSelect(
   if (!trigger || !content) {
     throw new Error("Select requires trigger and content slots");
   }
-  const doc = root.ownerDocument ?? document;
-  const win = doc.defaultView ?? window;
+  const doc = getDocument(root);
+  const win = getWindow(root);
 
   // Resolve options with explicit precedence: JS > data-* (root, then valueSlot) > default
   const defaultValue = options.defaultValue ?? getDataString(root, "defaultValue") ?? null;
@@ -571,6 +572,7 @@ export function createSelect(
       if (nearViewportEdge || heightTooConstrained) {
         alignTriggerActive = false;
         const floating = computeFloatingPosition({
+          win,
           anchorRect: tr,
           contentRect: cr,
           side: preferredSide,
@@ -657,6 +659,7 @@ export function createSelect(
       }
     } else {
       const floating = computeFloatingPosition({
+        win,
         anchorRect: tr,
         contentRect: cr,
         side: preferredSide,

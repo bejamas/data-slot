@@ -124,7 +124,7 @@ function getRootLabels(root: HTMLElement): HTMLLabelElement[] {
 
   if (!root.id) return labels;
 
-  const doc = root.ownerDocument ?? document;
+  const doc = getDocument(root);
   const selector = `label[for="${CSS.escape(root.id)}"]`;
   for (const label of doc.querySelectorAll<HTMLLabelElement>(selector)) {
     if (!labels.includes(label)) {
@@ -197,7 +197,7 @@ export function createRadioGroup(
       continue;
     }
 
-    const hiddenInput = (rootElement.ownerDocument ?? document).createElement(
+    const hiddenInput = getDocument(rootElement).createElement(
       "input",
     );
     hiddenInput.type = "radio";

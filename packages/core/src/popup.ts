@@ -1,6 +1,7 @@
 import { on } from "./events.ts";
 import { containsWithPortals, portalToBody, restorePortal } from "./parts.ts";
 import type { PortalState } from "./parts.ts";
+import { getDocument, getWindow } from "./realm.ts";
 
 export type PopupDirection = "ltr" | "rtl";
 export type PopupSide = "top" | "right" | "bottom" | "left" | "inline-start" | "inline-end";
@@ -31,6 +32,8 @@ interface RectLike {
 export interface ComputeFloatingPositionInput extends PopupPlacementOptions {
   anchorRect: RectLike;
   contentRect: RectLike;
+  /** Owning window for viewport measurements. */
+  win?: Window;
   viewportWidth?: number;
   viewportHeight?: number;
 }
@@ -94,7 +97,7 @@ interface ViewportBounds {
 }
 
 const resolveViewportBounds = (input: ComputeFloatingPositionInput): ViewportBounds => {
-  const visualViewport = window.visualViewport;
+  const visualViewport = input.win?.visualViewport ?? window.visualViewport;
   const width = input.viewportWidth ?? visualViewport?.width;
   const height = input.viewportHeight ?? visualViewport?.height;
 
@@ -314,7 +317,7 @@ const getModalStackStore = (doc: Document): ModalStackStore => {
 export function createModalStackItem(
   options: ModalStackItemOptions
 ): ModalStackItemController {
-  const doc = options.content.ownerDocument ?? document;
+  const doc = getDocument(options.content);
   const entry: ModalStackEntry = {
     content: options.content,
     overlay: options.overlay ?? null,
@@ -691,7 +694,7 @@ const observeElementMove = (element: Element, onMove: () => void, win: Window): 
 };
 
 export function createPositionSync(options: PositionSyncOptions): PositionSyncController {
-  const win = options.win ?? options.observedElements?.[0]?.ownerDocument.defaultView ?? window;
+  const win = options.win ?? getWindow(options.observedElements?.[0]);
   const isActive = options.isActive ?? (() => true);
   const observedElements = options.observedElements ?? [];
   const ancestorScroll = options.ancestorScroll ?? true;
@@ -907,7 +910,7 @@ const getTopmostOpenLayer = (
 };
 
 const createDismissLayerStore = (doc: Document): DismissLayerStore => {
-  const win = doc.defaultView ?? window;
+  const win = getWindow(doc);
   const store: DismissLayerStore = {
     layers: [],
     openSequence: 0,
@@ -1018,7 +1021,7 @@ const getDismissLayerStore = (doc: Document): DismissLayerStore => {
 };
 
 export function createDismissLayer(options: DismissLayerOptions): () => void {
-  const doc = options.root.ownerDocument ?? document;
+  const doc = getDocument(options.root);
   const store = getDismissLayerStore(doc);
   const entry: DismissLayerEntry = {
     isOpen: options.isOpen,
@@ -1086,7 +1089,7 @@ export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLi
     originalNextSibling: null,
     portaled: false,
   };
-  const doc = options.root.ownerDocument ?? document;
+  const doc = getDocument(options.root);
   let wrapper: HTMLElement | null = null;
 
   const ensureWrapper = () => {
@@ -1230,7 +1233,7 @@ const getMaxTimingMs = (durationsRaw: string, delaysRaw: string): number => {
 };
 
 const getMaxExitDurationMs = (element: HTMLElement): number => {
-  const win = element.ownerDocument.defaultView ?? window;
+  const win = getWindow(element);
   const style = win.getComputedStyle(element);
   const transitionMs = getMaxTimingMs(style.transitionDuration, style.transitionDelay);
   const animationMs = getMaxTimingMs(style.animationDuration, style.animationDelay);
@@ -1238,7 +1241,7 @@ const getMaxExitDurationMs = (element: HTMLElement): number => {
 };
 
 export function createPresenceLifecycle(options: PresenceLifecycleOptions): PresenceLifecycleController {
-  const win = options.win ?? options.element.ownerDocument.defaultView ?? window;
+  const win = options.win ?? getWindow(options.element);
   let exiting = false;
   let enterRafId: number | null = null;
   let enterRafId2: number | null = null;

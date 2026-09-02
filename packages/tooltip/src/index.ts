@@ -18,6 +18,7 @@ import {
 } from "@data-slot/core";
 import { ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+import { getWindow } from "@data-slot/core";
 
 const ROOT_BINDING_KEY = "@data-slot/tooltip";
 const DUPLICATE_BINDING_WARNING =
@@ -338,7 +339,7 @@ export function createTooltip(
 
   const updatePosition = () => {
     const positioner = portal.container as HTMLElement;
-    const win = root.ownerDocument.defaultView ?? window;
+    const win = getWindow(root);
     const direction = resolveDirection();
     const tr = trigger.getBoundingClientRect();
     const cr = measurePopupContentRect(content);

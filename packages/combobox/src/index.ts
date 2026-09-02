@@ -24,6 +24,7 @@ import {
   createPresenceLifecycle,
   createDismissLayer,
 } from "@data-slot/core";
+import { getDocument, getWindow } from "@data-slot/core";
 
 /** Side of the input to place the content */
 export type Side = "top" | "bottom";
@@ -213,8 +214,8 @@ export function createCombobox(
   let keyboardMode = false;
   let openRenderedSide: Side | null = null;
   const cleanups: Array<() => void> = [];
-  const doc = root.ownerDocument ?? document;
-  const win = doc.defaultView ?? window;
+  const doc = getDocument(root);
+  const win = getWindow(root);
   const rootElement = root as HTMLElement;
   const FOCUS_OPEN_INTENT_WINDOW_MS = 750;
   let lastTabKeydownAt = -Infinity;
@@ -554,6 +555,7 @@ export function createCombobox(
     content.style.minWidth = `${anchorRect.width}px`;
     const cr = measurePopupContentRect(content);
     const pos = computeFloatingPosition({
+      win,
       anchorRect,
       contentRect: cr,
       side: effectiveSide,

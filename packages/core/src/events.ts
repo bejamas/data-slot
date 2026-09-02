@@ -1,3 +1,5 @@
+import { getWindow } from "./realm.ts";
+
 /**
  * Add an event listener and return a cleanup function
  */
@@ -33,6 +35,12 @@ export const emit = <T = unknown>(
 ): boolean =>
   el.dispatchEvent(createCustomEvent(el, name, detail));
 
+/** Create events in their target's realm so cross-window dispatch remains valid. */
+const createCustomEvent = <T>(target: Node, name: string, detail?: T): CustomEvent<T> => {
+  const CustomEventConstructor = getWindow(target).CustomEvent;
+  return new CustomEventConstructor(name, { bubbles: true, detail });
+};
+
 /**
  * Compose multiple event handlers into one
  * Handlers are called in order, stops if event.defaultPrevented
@@ -47,4 +55,3 @@ export const composeHandlers = <E extends Event>(
     }
   };
 };
-import { createCustomEvent } from "./realm.ts";

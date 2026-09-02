@@ -12,6 +12,7 @@ import {
   on,
   emit,
 } from "@data-slot/core";
+import { getDocument } from "@data-slot/core";
 
 export interface SwitchOptions {
   /** Initial checked state */
@@ -134,7 +135,7 @@ function getRootLabels(root: HTMLElement): HTMLLabelElement[] {
 
   if (!root.id) return labels;
 
-  const doc = root.ownerDocument ?? document;
+  const doc = getDocument(root);
   const selector = `label[for="${CSS.escape(root.id)}"]`;
   for (const label of doc.querySelectorAll<HTMLLabelElement>(selector)) {
     if (!labels.includes(label)) {
@@ -194,7 +195,7 @@ export function createSwitch(
   const onCheckedChange = options.onCheckedChange;
 
   const cleanups: Array<() => void> = [];
-  const doc = root.ownerDocument ?? document;
+  const doc = getDocument(root);
   const hiddenInput = doc.createElement("input");
   hiddenInput.type = "checkbox";
   hiddenInput.tabIndex = -1;
