@@ -198,7 +198,6 @@ export function createHoverCard(
 
   let isOpen = options.open ?? defaultOpen;
   let isInstantTransition = false;
-  let isDestroyed = false;
   const terminalLifecycle = createTerminalLifecycle();
   let pointerOnTrigger = false;
   let pointerOnContent = false;
@@ -359,7 +358,7 @@ export function createHoverCard(
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       portal.restore();
       content.hidden = true;
     },
@@ -373,7 +372,7 @@ export function createHoverCard(
   });
 
   const applyState = (open: boolean, reason: HoverCardReason, instant = false) => {
-    if (isDestroyed) return;
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
 
     if (!open && isOpen && skipDelayDuration > 0) {
@@ -450,9 +449,9 @@ export function createHoverCard(
       return;
     }
 
-    openTimeout = setTimeout(() => {
+    openTimeout = terminalLifecycle.trackTimeout(() => {
       openTimeout = null;
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       requestState(true, reason);
     }, delay);
   };
@@ -466,9 +465,9 @@ export function createHoverCard(
       return;
     }
 
-    closeTimeout = setTimeout(() => {
+    closeTimeout = terminalLifecycle.trackTimeout(() => {
       closeTimeout = null;
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       requestState(false, reason);
     }, closeDelay);
   };
@@ -626,17 +625,17 @@ export function createHoverCard(
 
   const controller: HoverCardController = {
     open: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       if (isTriggerDisabled()) return;
       clearTimers();
       requestState(true, "api");
     },
     close: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       requestClosedState("api");
     },
     toggle: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       if (!isOpen && isTriggerDisabled()) return;
       if (isOpen) {
         requestClosedState("api");
@@ -646,7 +645,7 @@ export function createHoverCard(
       }
     },
     setOpen: (open) => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       if (open) {
         clearTimers();
         forceState(true, "api");
@@ -659,7 +658,6 @@ export function createHoverCard(
     },
     destroy: () => {
       if (!terminalLifecycle.destroy()) return;
-      isDestroyed = true;
       resetInteractionState();
       isOpen = false;
       setAria(trigger, "expanded", false);

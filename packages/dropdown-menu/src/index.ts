@@ -139,8 +139,13 @@ export function createDropdownMenu(
   const typeahead = createTypeahead();
   let keyboardMode = false;
   let didLockScroll = false;
-  let isDestroyed = false;
   const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroy(() => {
+    if (didLockScroll) {
+      unlockScroll();
+      didLockScroll = false;
+    }
+  });
   let pendingDismissMeta: Pick<DropdownMenuOpenChangeDetail, "source" | "reason"> | null = null;
   const cleanups: Array<() => void> = [];
   const portal = createPortalLifecycle({
@@ -264,7 +269,7 @@ export function createDropdownMenu(
     onUpdate: updatePosition,
   });
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
+    terminalLifecycle.trackRaf(() => {
       if (previousActiveElement && document.contains(previousActiveElement)) {
         focusElement(previousActiveElement);
       } else if (document.contains(trigger)) {
@@ -276,7 +281,7 @@ export function createDropdownMenu(
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       portal.restore();
       content.hidden = true;
       restoreFocus();
@@ -411,7 +416,7 @@ export function createDropdownMenu(
     syncItems();
   };
   const updateOpenState = (open: boolean, { source, reason }: OpenTransitionOptions) => {
-    if (isDestroyed) return;
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
     pendingDismissMeta = null;
     const previousOpen = isOpen;
@@ -787,23 +792,23 @@ export function createDropdownMenu(
     }),
   );
   const controller: DropdownMenuController = {
-    open: () => !isDestroyed &&
+    open: () => !terminalLifecycle.isDestroyed &&
       updateOpenState(true, {
         source: "programmatic",
         reason: "programmatic",
       }),
-    close: () => !isDestroyed &&
+    close: () => !terminalLifecycle.isDestroyed &&
       updateOpenState(false, {
         source: "programmatic",
         reason: "programmatic",
       }),
-    toggle: () => !isDestroyed &&
+    toggle: () => !terminalLifecycle.isDestroyed &&
       updateOpenState(!isOpen, {
         source: "programmatic",
         reason: "programmatic",
       }),
     set: (detail) => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       applySet(detail);
     },
     get isOpen() {
@@ -820,7 +825,6 @@ export function createDropdownMenu(
     },
     destroy: () => {
       if (!terminalLifecycle.destroy()) return;
-      isDestroyed = true;
       typeahead.destroy();
       isOpen = false;
       setAria(trigger, "expanded", false);

@@ -218,7 +218,6 @@ export function createTooltip(
   let isOpen = false;
   let instantType: TooltipInstantType = null;
   let hasFocus = false;
-  let isDestroyed = false;
   const terminalLifecycle = createTerminalLifecycle();
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
   const cleanups: Array<() => void> = [];
@@ -389,7 +388,7 @@ export function createTooltip(
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       portal.restore();
       content.hidden = true;
     },
@@ -411,7 +410,7 @@ export function createTooltip(
     reason: TooltipReason,
     nextInstantType: TooltipInstantType = null
   ) => {
-    if (isDestroyed) return;
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
 
     if (!open && isOpen && skipDelayDuration > 0) {
@@ -456,8 +455,8 @@ export function createTooltip(
       return;
     }
 
-    showTimeout = setTimeout(() => {
-      if (isDestroyed) return;
+    showTimeout = terminalLifecycle.trackTimeout(() => {
+      if (terminalLifecycle.isDestroyed) return;
       updateState(true, reason, reason === "focus" ? "focus" : null);
       showTimeout = null;
     }, delay);
@@ -607,7 +606,7 @@ export function createTooltip(
 
   const controller: TooltipController = {
     show: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       // Respect disabled state even for programmatic calls
       if (isTriggerDisabled()) return;
       if (showTimeout) {
@@ -616,13 +615,12 @@ export function createTooltip(
       }
       updateState(true, "api");
     },
-    hide: () => { if (!isDestroyed) hideImmediately("api"); },
+    hide: () => { if (!terminalLifecycle.isDestroyed) hideImmediately("api"); },
     get isOpen() {
       return isOpen;
     },
     destroy: () => {
       if (!terminalLifecycle.destroy()) return;
-      isDestroyed = true;
       if (showTimeout) clearTimeout(showTimeout);
       showTimeout = null;
       isOpen = false;

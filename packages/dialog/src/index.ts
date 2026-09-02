@@ -124,6 +124,12 @@ export function createDialog(
 
   // Track if this dialog locked scroll (prevent underflow)
   let didLockScroll = false;
+  terminalLifecycle.onDestroy(() => {
+    if (didLockScroll) {
+      unlockScroll();
+      didLockScroll = false;
+    }
+  });
 
   // ARIA setup
   ensureId(content, "dialog-content");
@@ -172,7 +178,7 @@ export function createDialog(
   };
 
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
+    terminalLifecycle.trackRaf(() => {
       if (
         previousActiveElement &&
         document.contains(previousActiveElement) &&

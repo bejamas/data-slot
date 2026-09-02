@@ -142,7 +142,6 @@ export function createNavigationMenu(
   let suppressFocusOpenForTrigger: HTMLElement | null = null;
   let pointerActivationTrigger: HTMLElement | null = null;
   let isRootHovered: boolean = false; // Track if pointer is over root
-  let isDestroyed = false;
   const terminalLifecycle = createTerminalLifecycle();
 
   let indicatorSyncRaf: number | null = null;
@@ -187,7 +186,7 @@ export function createNavigationMenu(
   const popupStackController = createNavigationMenuPopupStack({
     root,
     viewport,
-    isDestroyed: () => isDestroyed,
+    isDestroyed: () => terminalLifecycle.isDestroyed,
     beforeRestore: () => resetLayout(),
   });
   const getCurrentPopup = () => popupStackController.popup;
@@ -206,7 +205,7 @@ export function createNavigationMenu(
       createPresenceLifecycle({
         element: content,
         onExitComplete: () => {
-          if (isDestroyed) return;
+          if (terminalLifecycle.isDestroyed) return;
           setContentSurfaceState(content, false);
           setContentActivationDirection(content, null);
           content.removeAttribute("data-motion");
@@ -386,7 +385,7 @@ export function createNavigationMenu(
   };
 
   const focusContentForValue = (value: string): void => {
-    requestAnimationFrame(() => {
+    terminalLifecycle.trackRaf(() => {
       if (currentValue !== value) return;
       const data = itemMap.get(value);
       if (!data) return;
@@ -486,7 +485,7 @@ export function createNavigationMenu(
   });
 
   const updateState = (value: string | null, immediate = false) => {
-    if (isDestroyed) return;
+    if (terminalLifecycle.isDestroyed) return;
     safety.clear();
     // Skip if value hasn't changed
     if (value === currentValue) {
@@ -683,13 +682,13 @@ export function createNavigationMenu(
       doUpdate();
     } else if (value !== null && currentValue === null) {
       // Opening - use delay
-      openTimeout = setTimeout(doUpdate, delayOpen);
+      openTimeout = terminalLifecycle.trackTimeout(doUpdate, delayOpen);
     } else if (value !== null && currentValue !== null) {
       // Switching between items - instant
       doUpdate();
     } else {
       // Closing - use delay
-      closeTimeout = setTimeout(doUpdate, delayClose);
+      closeTimeout = terminalLifecycle.trackTimeout(doUpdate, delayClose);
     }
   };
 
@@ -1151,18 +1150,18 @@ export function createNavigationMenu(
     on(window, "resize", () => {
       if (currentValue || hoveredTrigger) {
         clearIndicatorSyncRaf();
-        indicatorSyncRaf = requestAnimationFrame(() => {
+        indicatorSyncRaf = terminalLifecycle.trackRaf(() => {
           indicatorSyncRaf = null;
-          if (!isDestroyed) syncIndicator(hoveredTrigger);
+          if (!terminalLifecycle.isDestroyed) syncIndicator(hoveredTrigger);
         });
       }
     }),
     on(list, "scroll", () => {
       if (currentValue || hoveredTrigger) {
         clearIndicatorSyncRaf();
-        indicatorSyncRaf = requestAnimationFrame(() => {
+        indicatorSyncRaf = terminalLifecycle.trackRaf(() => {
           indicatorSyncRaf = null;
-          if (!isDestroyed) syncIndicator(hoveredTrigger);
+          if (!terminalLifecycle.isDestroyed) syncIndicator(hoveredTrigger);
         });
       }
     }),
@@ -1191,11 +1190,10 @@ export function createNavigationMenu(
     get value() {
       return currentValue;
     },
-    open: (value: string) => { if (!isDestroyed) updateState(value, true); },
-    close: () => { if (!isDestroyed) closeMenuAndUnlock(); },
+    open: (value: string) => { if (!terminalLifecycle.isDestroyed) updateState(value, true); },
+    close: () => { if (!terminalLifecycle.isDestroyed) closeMenuAndUnlock(); },
     destroy: () => {
       if (!terminalLifecycle.destroy()) return;
-      isDestroyed = true;
       resetPendingInteraction();
       resetPointerIntent();
       clearIndicatorSyncRaf();

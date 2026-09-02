@@ -112,8 +112,13 @@ export function createSelect(
     container: authoredPositioner ?? undefined,
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
-  let isDestroyed = false;
   const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroy(() => {
+    if (didLockScroll) {
+      unlockScroll();
+      didLockScroll = false;
+    }
+  });
   let shouldRestoreFocusOnClose = true;
 
   const isItemDisabled = (el: HTMLElement) =>
@@ -289,8 +294,8 @@ export function createSelect(
   };
 
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
-      if (isDestroyed) return;
+    terminalLifecycle.trackRaf(() => {
+      if (terminalLifecycle.isDestroyed) return;
       if (previousActiveElement && document.contains(previousActiveElement)) {
         focusElement(previousActiveElement);
       } else if (trigger && document.contains(trigger)) {
@@ -301,7 +306,7 @@ export function createSelect(
   };
 
   const finishClose = () => {
-    if (isDestroyed) return;
+    if (terminalLifecycle.isDestroyed) return;
     portal.restore();
     content.hidden = true;
     if (shouldRestoreFocusOnClose) {
@@ -334,7 +339,7 @@ export function createSelect(
     open: boolean,
     options: { skipFocusRestore?: boolean; immediate?: boolean } = {}
   ) => {
-    if (isDestroyed) return;
+    if (terminalLifecycle.isDestroyed) return;
     const { skipFocusRestore = false, immediate = false } = options;
 
     if (isOpen === open) return;
@@ -368,8 +373,8 @@ export function createSelect(
 
       // Use rAF to refine position after browser has fully rendered content,
       // and to highlight item under cursor if pointer opened the select
-      requestAnimationFrame(() => {
-        if (isDestroyed || !isOpen) return;
+      terminalLifecycle.trackRaf(() => {
+        if (terminalLifecycle.isDestroyed || !isOpen) return;
         positioning.update();
         positioning.sync();
 
@@ -425,7 +430,7 @@ export function createSelect(
   };
 
   const updateValue = (value: string | null, init = false) => {
-    if (isDestroyed) return;
+    if (terminalLifecycle.isDestroyed) return;
     if (currentValue === value && !init) return;
 
     const oldValue = currentValue;
@@ -648,12 +653,11 @@ export function createSelect(
   const controller: SelectController = {
     get value() { return currentValue; },
     get isOpen() { return isOpen; },
-    select: (value: string) => { if (!isDestroyed) updateValue(value); },
-    open: () => { if (!isDestroyed) updateOpenState(true); },
-    close: () => { if (!isDestroyed) updateOpenState(false); },
+    select: (value: string) => { if (!terminalLifecycle.isDestroyed) updateValue(value); },
+    open: () => { if (!terminalLifecycle.isDestroyed) updateOpenState(true); },
+    close: () => { if (!terminalLifecycle.isDestroyed) updateOpenState(false); },
     destroy: () => {
       if (!terminalLifecycle.destroy()) return;
-      isDestroyed = true;
       typeahead.destroy();
       isOpen = false;
       setAria(trigger, "expanded", false);

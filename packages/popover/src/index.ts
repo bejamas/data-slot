@@ -192,7 +192,6 @@ export function createPopover(
     container: authoredPositioner ?? undefined,
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
-  let isDestroyed = false;
   const terminalLifecycle = createTerminalLifecycle();
 
   // Focus management state
@@ -207,7 +206,7 @@ export function createPopover(
   };
 
   const focusFirst = () => {
-    if (isDestroyed) return;
+    if (terminalLifecycle.isDestroyed) return;
     // Priority: [autofocus] > first focusable > content itself
     const initialFocus = getAutofocusOrFirstFocusable(content);
     if (initialFocus) return initialFocus.focus();
@@ -302,8 +301,8 @@ export function createPopover(
   };
 
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
-      if (isDestroyed) return;
+    terminalLifecycle.trackRaf(() => {
+      if (terminalLifecycle.isDestroyed) return;
       if (previousActiveElement && previousActiveElement.isConnected) {
         focusElement(previousActiveElement);
       } else {
@@ -316,7 +315,7 @@ export function createPopover(
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       portal.restore();
       content.hidden = true;
       cleanupContentFocusable();
@@ -332,7 +331,7 @@ export function createPopover(
   });
 
   const updateState = (open: boolean) => {
-    if (isDestroyed) return;
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
 
     // Save focus target before opening
@@ -351,7 +350,7 @@ export function createPopover(
       updatePosition();
       positionSync.start();
       positionSync.update();
-      requestAnimationFrame(focusFirst);
+      terminalLifecycle.trackRaf(focusFirst);
     } else {
       setDataState("closed");
       presence.exit();
@@ -375,7 +374,7 @@ export function createPopover(
     updatePosition();
     positionSync.start();
     positionSync.update();
-    requestAnimationFrame(focusFirst);
+    terminalLifecycle.trackRaf(focusFirst);
   }
 
   // Trigger click
@@ -414,15 +413,14 @@ export function createPopover(
   );
 
   const controller: PopoverController = {
-    open: () => { if (!isDestroyed) updateState(true); },
-    close: () => { if (!isDestroyed) updateState(false); },
-    toggle: () => { if (!isDestroyed) updateState(!isOpen); },
+    open: () => { if (!terminalLifecycle.isDestroyed) updateState(true); },
+    close: () => { if (!terminalLifecycle.isDestroyed) updateState(false); },
+    toggle: () => { if (!terminalLifecycle.isDestroyed) updateState(!isOpen); },
     get isOpen() {
       return isOpen;
     },
     destroy: () => {
       if (!terminalLifecycle.destroy()) return;
-      isDestroyed = true;
       isOpen = false;
       setAria(trigger, "expanded", false);
       setDataState("closed");

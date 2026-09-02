@@ -93,6 +93,12 @@ export function createAlertDialog(
     : null;
 
   let didLockScroll = false;
+  terminalLifecycle.onDestroy(() => {
+    if (didLockScroll) {
+      unlockScroll();
+      didLockScroll = false;
+    }
+  });
 
   ensureId(content, "alert-dialog-content");
   content.setAttribute("role", "alertdialog");
@@ -134,7 +140,7 @@ export function createAlertDialog(
   };
 
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
+    terminalLifecycle.trackRaf(() => {
       if (
         previousActiveElement &&
         document.contains(previousActiveElement) &&

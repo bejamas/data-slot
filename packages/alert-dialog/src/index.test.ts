@@ -406,4 +406,28 @@ describe("AlertDialog", () => {
 
     controller.destroy();
   });
+
+  it("keeps a retained controller inert, cancels queued focus, and releases scroll lock on destroy", async () => {
+    document.body.innerHTML = `
+      <button id="outside">Outside</button>
+      <div data-slot="alert-dialog" id="root">
+        <div data-slot="alert-dialog-overlay"></div>
+        <div data-slot="alert-dialog-content"><button id="inside">Inside</button></div>
+      </div>
+    `;
+    const outside = document.getElementById("outside") as HTMLButtonElement;
+    const root = document.getElementById("root")!;
+    const controller = createAlertDialog(root);
+
+    outside.focus();
+    controller.open();
+    expect(document.documentElement.style.overflow).toBe("hidden");
+    controller.destroy();
+    controller.open();
+    controller.destroy();
+
+    await waitForRaf();
+    expect(document.activeElement).toBe(outside);
+    expect(document.documentElement.style.overflow).toBe("");
+  });
 });

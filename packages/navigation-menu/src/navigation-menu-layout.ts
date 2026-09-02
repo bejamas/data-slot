@@ -1,3 +1,4 @@
+import { createTerminalLifecycle } from "@data-slot/core";
 import {
   computeFloatingPosition,
   createPositionSync,
@@ -149,7 +150,7 @@ export function createNavigationMenuLayout(
   let measureRaf: number | null = null;
   let resizeObserver: ResizeObserver | null = null;
   let mutationObserver: MutationObserver | null = null;
-  let destroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
 
   const resolvePlacement = (panel: Panel): PlacementConfig => ({
     side:
@@ -191,7 +192,7 @@ export function createNavigationMenuLayout(
   };
   const scheduleInstantClear = () => {
     clearInstantRaf();
-    instantRaf = requestAnimationFrame(() => {
+    instantRaf = terminalLifecycle.trackRaf(() => {
       instantRaf = null;
       if (initialInstant && initialInstantFrames > 0) {
         initialInstantFrames -= 1;
@@ -410,13 +411,13 @@ export function createNavigationMenuLayout(
     const run = () => apply(panel, config.mode ?? "measure-target");
     if (config.defer === false) run();
     else
-      requestAnimationFrame(() => {
-        if (!destroyed) run();
+      terminalLifecycle.trackRaf(() => {
+        if (!terminalLifecycle.isDestroyed) run();
       });
   };
   const schedule = () => {
     clearMeasure();
-    measureRaf = requestAnimationFrame(() => {
+    measureRaf = terminalLifecycle.trackRaf(() => {
       measureRaf = null;
       const selection = readSelection();
       if (!selection.panel || !popup.ensure() || popup.closing) return;
@@ -512,8 +513,7 @@ export function createNavigationMenuLayout(
     reset();
   };
   const destroy = () => {
-    if (destroyed) return;
-    destroyed = true;
+    if (!terminalLifecycle.destroy()) return;
     dispose();
     for (const content of contentPlacement.keys()) {
       restore(content);
