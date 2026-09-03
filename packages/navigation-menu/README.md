@@ -180,7 +180,7 @@ wrappers while the menu is open.
 ### Slots
 
 - `navigation-menu-indicator` - Animated highlight that follows top-level hover/focus targets; when a submenu is open, it stays anchored to the active trigger
-- `navigation-menu-portal` - Portal wrapper that is moved to `document.body` while the menu is open
+- `navigation-menu-portal` - Portal wrapper moved to the root's owning document body (`root.ownerDocument.body`) while the menu is open
 - `navigation-menu-positioner` - Canonical popup positioning surface; receives resolved side/alignment output and sizing vars
 - `navigation-menu-popup` - Canonical animated popup shell that wraps the viewport
 - `navigation-menu-viewport` - Clipping viewport that holds the active content panel
@@ -203,7 +203,7 @@ A full close is intentionally non-directional.
 
 ## Styling
 
-`navigation-menu-portal` is moved to `document.body` while open. If authored popup-stack slots
+`navigation-menu-portal` is moved to the root's owning document body (`root.ownerDocument.body`) while open. In an iframe, the popup stays inside that iframe and uses its window for positioning. If authored popup-stack slots
 are present, they are reused. Otherwise, missing `portal` / `positioner` / `popup` wrappers are
 generated while open and removed on close.
 

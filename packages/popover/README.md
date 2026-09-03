@@ -71,7 +71,7 @@ const popover = createPopover(element, {
 | `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
 | `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
 | `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
-| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
+| `portal` | `boolean` | `true` | Portal content to the root's owning document body while open |
 | `position` | `"top" \| "bottom" \| "left" \| "right"` | - | Deprecated alias for `side` |
 | `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside |
 | `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
@@ -143,7 +143,7 @@ Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align
 | `data-align-offset` | number | `0` | Offset from alignment edge (px) |
 | `data-avoid-collisions` | boolean | `true` | Flip/shift to stay in viewport |
 | `data-collision-padding` | number | `8` | Viewport edge padding (px) |
-| `data-portal` | boolean | `true` | Portal content to `document.body` while open |
+| `data-portal` | boolean | `true` | Portal content to the root's owning document body while open |
 | `data-close-on-click-outside` | boolean | `true` | Close when clicking outside |
 | `data-close-on-escape` | boolean | `true` | Close when pressing Escape |
 
@@ -167,7 +167,7 @@ Placement can be set on root, content, or authored positioner (content takes pre
 ## Styling
 
 Popover position is computed in JavaScript and applied as `position: absolute` + inline `transform: translate3d(...)`.
-By default, content is portaled to `document.body` while open (document coordinates). If you provide authored `popover-positioner` / `popover-portal` slots, those are reused. Otherwise a transient `popover-positioner` wrapper is generated.
+By default, content is portaled to the root's owning document body (`root.ownerDocument.body`) while open. Positioning uses that document's window. In an iframe, the popup stays inside the iframe. If you provide authored `popover-positioner` / `popover-portal` slots, those are reused. Otherwise a transient `popover-positioner` wrapper is generated.
 If `portal` is disabled, positioning is applied directly to `popover-content`.
 The positioned element (`popover-positioner`, or `popover-content` when `portal` is disabled) also receives `--transform-origin` so popup animations can originate from the trigger anchor.
 Use `data-open`/`data-closed` and `data-side` for styling/animation.

@@ -63,6 +63,8 @@ console.log(controller.value); // 'banana'
 controller.destroy();
 ```
 
+Labels, hidden form inputs, portals, focus, and positioning use the root's owning document and window. A combobox inside a same-origin iframe uses the same component API; initialize it after the frame loads. See [iframe initialization](../../README.md#components-inside-an-iframe).
+
 ## Slots
 
 | Slot | Description |

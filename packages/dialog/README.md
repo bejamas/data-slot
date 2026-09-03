@@ -62,7 +62,7 @@ const dialog = createDialog(element, {
 | `defaultOpen` | `boolean` | `false` | Initial open state |
 | `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside content |
 | `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
-| `lockScroll` | `boolean` | `true` | Lock body scroll when open |
+| `lockScroll` | `boolean` | `true` | Lock scrolling in the root element's owning document when open |
 | `alertDialog` | `boolean` | `false` | Use alertdialog role for confirmations |
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
 
@@ -75,7 +75,7 @@ Options can also be set via data attributes on the root element. JS options take
 | `data-default-open` | boolean | `false` | Initial open state |
 | `data-close-on-click-outside` | boolean | `true` | Close when clicking outside content |
 | `data-close-on-escape` | boolean | `true` | Close when pressing Escape |
-| `data-lock-scroll` | boolean | `true` | Lock body scroll when open |
+| `data-lock-scroll` | boolean | `true` | Lock scrolling in the root element's owning document when open |
 | `data-alert-dialog` | boolean | `false` | Use alertdialog role for confirmations |
 
 Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.

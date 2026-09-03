@@ -65,7 +65,7 @@ const tooltip = createTooltip(element, {
 | `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
 | `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
 | `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
-| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
+| `portal` | `boolean` | `true` | Portal content to the root's owning document body while open |
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when visibility changes |
 
 **Note:** `side` and `align` are preferred placement inputs resolved at bind time. With collision handling enabled, computed `data-side` can differ at runtime.
@@ -197,7 +197,7 @@ The component sets these attributes automatically:
 ## Styling
 
 Position is computed in JavaScript and applied to the positioner as `position: absolute` + `transform: translate3d(...)`.
-By default, content is portaled to `document.body` while open.
+By default, content is portaled to the root's owning document body (`root.ownerDocument.body`) while open. Positioning uses that document's window; in an iframe, the popup stays inside the iframe.
 The positioned element (`tooltip-positioner`, or `tooltip-content` when `portal` is disabled) gets `--transform-origin`, which `tooltip-content` can use for transform animations via CSS inheritance.
 Use `data-open` / `data-closed`, `data-starting-style` / `data-ending-style`, `data-side`, `data-align`, and `data-instant` for styling and animations.
 Placement uses layout dimensions, so `scale`/`zoom` animations on `tooltip-content` remain stable without adding an extra wrapper.

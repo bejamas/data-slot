@@ -113,6 +113,10 @@ tabs.select("sports"); // Programmatic control
 tabs.destroy(); // Cleanup when done
 ```
 
+### Components inside an iframe
+
+Components can be initialized inside same-origin iframes by passing the iframe's document or a root element after it loads. Focus, scrolling, and portals stay within that document.
+
 ### Other components
 
 The same pattern applies to all components:

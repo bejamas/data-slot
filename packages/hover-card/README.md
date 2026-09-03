@@ -69,7 +69,7 @@ const hoverCard = createHoverCard(element, {
 | `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
 | `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
 | `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
-| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
+| `portal` | `boolean` | `true` | Portal content to the root's owning document body while open |
 | `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside |
 | `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
@@ -185,7 +185,7 @@ root.dispatchEvent(new CustomEvent("hover-card:set", { detail: { value: true } }
 ## Styling
 
 Position is computed in JavaScript and applied as `position: absolute` + `transform: translate3d(...)`.
-By default, content is portaled to `document.body` while open.
+By default, content is portaled to the root's owning document body (`root.ownerDocument.body`) while open. Positioning uses that document's window; in an iframe, the popup stays inside the iframe.
 The positioned element (`hover-card-positioner`, or `hover-card-content` when `portal` is disabled) receives `--transform-origin`, so animations can scale from the trigger anchor.
 Use `data-open` / `data-closed`, `data-side`, and `data-align` for animation/styling.
 Placement uses layout dimensions, so `scale`/`zoom` animations on `hover-card-content` stay aligned without requiring an extra inner wrapper.

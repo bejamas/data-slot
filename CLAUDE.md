@@ -48,6 +48,26 @@ getDataBool(root, "disabled")        // reads data-disabled, returns boolean
 getDataEnum(root, "orientation", ["horizontal", "vertical"] as const)
 ```
 
+### Document and Window Ownership
+
+A component's root can belong to a same-origin iframe while this module runs in its parent window. Resolve DOM APIs from that root:
+
+```typescript
+import { getDocument, getWindow } from "@data-slot/core";
+
+const doc = getDocument(root);
+const win = getWindow(root);
+```
+
+- Use `doc` for queries, element creation, focus state, and document listeners.
+- Use `win` for style reads, animation frames, observers, and constructors in `instanceof` checks (for example, `target instanceof win.HTMLElement`). Use `emit()` for events in the target's window.
+- Pair `lockScroll(root)` and `unlockScroll(root)` for the same document. Keep portal content in the root's document.
+- Pass `owner: root` to `computeFloatingPosition()`, even when supplying viewport dimensions. Rectangles must come from that document.
+- `createPositionSync()` infers its window from the first observed element; `createPresenceLifecycle()` infers it from its element. Any explicit `win` must match those elements.
+- Test cross-document behavior with elements from a loaded iframe. A document made with `createHTMLDocument()` has no window and cannot exercise distinct window constructors.
+
+Keep the global `document` default for `create(scope = document)`. Discovery remains within the supplied scope; callers initialize iframe documents separately after load. See [core API](packages/core/README.md#api) and [iframe initialization](README.md#components-inside-an-iframe).
+
 ### ARIA Utilities
 ```typescript
 import { ensureId, setAria, linkLabelledBy } from "@data-slot/core";

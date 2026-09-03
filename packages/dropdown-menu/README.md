@@ -287,6 +287,7 @@ interface DropdownMenuOptions {
 
 Notes:
 
+- `lockScroll` defaults to `true` and applies to the root's owning document. When enabled, a menu inside an iframe locks only that iframe's document. Its portal and focus handling also stay in that document. See [iframe initialization](../../README.md#components-inside-an-iframe).
 - `closeOnSelect` defaults to `true`. Multi-select menus usually want `false`.
 - `onSelect` tracks accepted user activation. It does not fire for programmatic state changes.
 - `onValueChange` and `onValuesChange` follow the same silence rules as their DOM events.

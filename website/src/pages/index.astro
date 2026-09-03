@@ -70,6 +70,23 @@ const dialog = createDialog(element, options?);
 
 // Common controller methods
 controller.destroy(); // cleanup listeners`;
+
+const iframeCode = `import { create } from "@data-slot/dialog";
+
+const frame = document.createElement("iframe");
+frame.title = "Component preview";
+frame.addEventListener("load", () => {
+  const doc = frame.contentDocument;
+  if (!doc) return;
+  create(doc);
+});
+frame.src = "/preview.html"; // Same-origin page with dialog markup and styles
+document.body.append(frame);`;
+
+const floatingOwnerMigration = ` computeFloatingPosition({
+   ...placementOptions,
++  owner: anchor,
+ });`;
 ---
 
 <Layout
@@ -208,6 +225,37 @@ bun add @data-slot/dialog`}
   <div class="code-block">
     <Code code={apiCode} lang="javascript" theme="vitesse-light" />
   </div>
+
+  <h3 id="iframes" class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Components inside an iframe</h3>
+  <p class="my-4">
+    Components use their root element's document and window for focus, scroll locks, portals, and layout.
+    Their markup, options, and controller methods stay the same.
+    Calling <code>create()</code> in the parent page does not discover iframe contents:
+    wait for a same-origin preview to load, then pass its document.
+  </p>
+  <div class="code-block">
+    <Code code={iframeCode} lang="typescript" theme="vitesse-light" />
+  </div>
+  <p class="my-4">
+    The preview needs its own styles. Destroy controllers before removing the iframe or replacing its contents,
+    and initialize new elements after navigation. For a cross-origin iframe, initialize components from code running inside it.
+  </p>
+
+  <h3 id="core-migration" class="text-base font-medium mt-8 mb-3 before:content-['###_'] before:text-border">Core helper migration</h3>
+  <p class="my-4">
+    If you call <code>computeFloatingPosition()</code> directly, its input now requires an <code>owner</code> node,
+    even when you supply viewport dimensions. Pass the anchor, root, or document that owns the measured rectangles.
+    The supplied components already do this.
+  </p>
+  <div class="code-block">
+    <Code code={floatingOwnerMigration} lang="diff" theme="vitesse-light" />
+  </div>
+  <p class="my-4">
+    Core also exports <code>getDocument()</code> and <code>getWindow()</code>.
+    Scroll helpers accept an optional owner; position and presence lifecycles infer the window from their elements.
+    See the <a href="https://github.com/bejamas/data-slot/blob/main/packages/core/README.md#api" class="underline">core API reference</a>
+    for details, including the re-exports from <code>@data-slot/ui</code>.
+  </p>
 
   <Footer />
 </Layout>

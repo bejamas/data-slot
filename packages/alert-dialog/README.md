@@ -79,7 +79,7 @@ const alertDialog = createAlertDialog(element, {
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Called when open state changes |
 | `closeOnClickOutside` | `boolean` | `false` | Close when clicking the overlay |
 | `closeOnEscape` | `boolean` | `true` | Close when pressing `Escape` |
-| `lockScroll` | `boolean` | `true` | Lock page scroll while open |
+| `lockScroll` | `boolean` | `true` | Lock scrolling in the root element's owning document while open |
 
 #### Controller
 
@@ -97,7 +97,7 @@ const alertDialog = createAlertDialog(element, {
 
 - `alert-dialog` - Root element
 - `alert-dialog-trigger` - Element that toggles the alert dialog
-- `alert-dialog-portal` - Optional element portaled to `document.body`
+- `alert-dialog-portal` - Optional element portaled to the root's owning document body (`root.ownerDocument.body`)
 - `alert-dialog-overlay` - Required overlay
 - `alert-dialog-content` - Required modal content
 - `alert-dialog-title` - Title used for `aria-labelledby`

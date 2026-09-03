@@ -68,6 +68,8 @@ controller.destroy();
 
 `createSelect(root)` is idempotent per root. Calling it again for the same element returns the existing controller; destroy it first if you need to rebind with different options.
 
+Labels, hidden form inputs, portals, focus, and positioning use the root's owning document and window. When `lockScroll` is enabled, only that document is locked while open, including when the select lives inside an iframe. See [iframe initialization](../../README.md#components-inside-an-iframe).
+
 ## Slots
 
 | Slot | Description |

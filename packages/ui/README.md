@@ -123,6 +123,8 @@ tabs.select("news");  // Programmatic control
 tabs.destroy();       // Cleanup
 ```
 
+For components inside a same-origin iframe, pass the iframe's document to `create()` after it loads, or pass one of its elements to the component factory. Components automatically use that element's document and window. See the [iframe initialization note](../../README.md#components-inside-an-iframe).
+
 ## Styling
 
 Components are unstyled. Use `data-state`, switch-specific state hooks, and ARIA attributes for CSS:
@@ -198,8 +200,14 @@ With Tailwind:
 From `@data-slot/core`:
 
 - `getPart`, `getParts`, `getRoots` - DOM queries
+- `getDocument`, `getWindow` - Resolve a node's owning document and window
+- `lockScroll`, `unlockScroll` - Scroll locks scoped to an optional owning node or document
+- `computeFloatingPosition` - Popup placement with a required `owner` node
+- `createPositionSync`, `createPresenceLifecycle` - Position and presence lifecycles using the owning window by default
 - `setAria`, `ensureId`, `linkLabelledBy` - ARIA helpers
 - `on`, `emit`, `composeHandlers` - Event utilities
+
+These helpers are available from `@data-slot/ui`, `@data-slot/ui/core`, or `@data-slot/core`. Direct callers of `computeFloatingPosition()` must now pass `owner`, even with explicit viewport dimensions. See the [core API and migration note](../core/README.md#api). Component factory signatures and options are unchanged.
 
 ## License
 
