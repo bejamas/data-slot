@@ -1,0 +1,799 @@
+---
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Toast Parity Fixture</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+
+      body {
+        margin: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        background: #f5f4f1;
+        color: #1f1f1f;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 1rem;
+      }
+
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: 1rem;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .controls button {
+        font: inherit;
+        font-size: 0.75rem;
+        border: 1px solid #cfc8be;
+        background: #fcfbf8;
+        border-radius: 0.35rem;
+        color: #2d2a27;
+        padding: 0.35rem 0.55rem;
+        cursor: pointer;
+      }
+
+      [data-slot="toast-viewport"] {
+        position: fixed;
+        top: auto;
+        right: auto;
+        bottom: auto;
+        left: auto;
+        width: min(22rem, calc(100vw - 2rem));
+        height: var(--toast-stack-size, 0px);
+        min-height: 1px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        --toast-gap: 14px;
+        --toast-collapsed-peek: 14px;
+        pointer-events: auto;
+        z-index: 80;
+      }
+
+      [data-slot="toast-viewport"][data-position="top-left"] {
+        top: 1rem;
+        left: 1rem;
+      }
+
+      [data-slot="toast-viewport"][data-position="top-center"] {
+        left: 50%;
+        transform: translateX(-50%);
+        top: 1rem;
+      }
+
+      [data-slot="toast-viewport"][data-position="top-right"] {
+        top: 1rem;
+        right: 1rem;
+      }
+
+      [data-slot="toast-viewport"][data-position="bottom-left"] {
+        left: 1rem;
+        bottom: 1rem;
+      }
+
+      [data-slot="toast-viewport"][data-position="bottom-center"] {
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 1rem;
+      }
+
+      [data-slot="toast-viewport"][data-position="bottom-right"] {
+        right: 1rem;
+        bottom: 1rem;
+      }
+
+      [data-slot="toast-item"] {
+        position: absolute;
+        inset-inline: 0;
+        top: auto;
+        bottom: 0;
+        transform-origin: bottom center;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.65rem;
+        box-sizing: border-box;
+        border-radius: 0.7rem;
+        background: #fff;
+        color: #333;
+        padding: 0.65rem 0.72rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,.1), 0 0 0 1px #ededed;
+        opacity: 0;
+        outline: none;
+        touch-action: none;
+        overflow-wrap: anywhere;
+        transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
+        transition:
+          transform 400ms ease,
+          opacity 400ms ease,
+          height 400ms ease,
+          box-shadow 200ms ease;
+        will-change: transform, opacity;
+        pointer-events: auto;
+      }
+
+      [data-slot="toast-item"]:has([data-slot="toast-description"]:not([hidden])) {
+        align-items: flex-start;
+      }
+
+      [data-slot="toast-viewport"][data-position^="top"] [data-slot="toast-item"] {
+        top: 0;
+        bottom: auto;
+        transform-origin: top center;
+      }
+
+      [data-slot="toast-viewport"][data-position^="bottom"] [data-slot="toast-item"] {
+        top: auto;
+        bottom: 0;
+      }
+
+      [data-slot="toast-item"][data-swiping="false"][data-removed="true"]::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        transform: scaleY(2);
+      }
+
+      [data-slot="toast-item"][data-expanded="true"]::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: calc(var(--toast-gap, 0px) + 1px);
+        bottom: 100%;
+      }
+
+      [data-slot="toast-item"][data-mounted="true"] {
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
+      }
+
+      [data-slot="toast-item"][data-mounted="true"][data-expanded="false"][data-front="false"] {
+        transform: translate3d(
+            0,
+            calc(var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1)),
+            0
+          )
+          scale(calc(1 - var(--toast-index, 0) * 0.05));
+        height: var(--toast-frontmost-height);
+      }
+
+      [data-slot="toast-item"][data-mounted="true"][data-expanded="true"] {
+        transform: translate3d(
+          0,
+          calc(var(--toast-offset, 0px) * var(--toast-lift, -1)),
+          0
+        );
+        height: var(--toast-initial-height);
+      }
+
+      [data-slot="toast-item"] > * {
+        transition: opacity 400ms;
+      }
+
+      [data-slot="toast-item"][data-expanded="false"][data-front="false"][data-state="open"] > * {
+        opacity: 0;
+      }
+
+      [data-slot="toast-item"][data-visible="false"] {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      [data-slot="toast-item"][data-front="true"] {
+        /* box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3); */
+        box-shadow: 0 4px 12px rgba(0,0,0,.1), 0 0 0 1px #ededed;
+      }
+
+      [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="true"] {
+        transform: translate3d(
+          var(--toast-swipe-end-x, 0px),
+          var(--toast-swipe-end-y, 0px),
+          0
+        );
+        opacity: 0;
+      }
+
+      [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="true"] {
+        transform: translate3d(
+          var(--toast-swipe-end-x, 0px),
+          calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-swipe-end-y, 0px)),
+          0
+        );
+        opacity: 0;
+      }
+
+      [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="false"] {
+        transform: translate3d(
+            var(--toast-swipe-end-x, 0px),
+            calc(
+              var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+                var(--toast-swipe-end-y, 0px)
+            ),
+            0
+          )
+          scale(calc(1 - var(--toast-index, 0) * 0.05));
+        opacity: 0;
+      }
+
+      [data-slot="toast-item"][data-removed="true"][data-front="true"] {
+        transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
+        opacity: 0;
+      }
+
+      [data-slot="toast-item"][data-removed="true"][data-front="false"][data-expanded="true"] {
+        transform: translate3d(
+          0,
+          calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-lift, -1) * -100%),
+          0
+        );
+        opacity: 0;
+      }
+
+      [data-slot="toast-item"][data-removed="true"][data-front="false"][data-expanded="false"] {
+        transform: translate3d(0, 40%, 0);
+        opacity: 0;
+        transition:
+          transform 500ms ease,
+          opacity 200ms ease;
+      }
+
+      [data-slot="toast-item"][data-removed="true"][data-front="false"]::before {
+        height: calc(var(--toast-initial-height, 0px) + 20%);
+      }
+
+      [data-slot="toast-item"][data-swiping="true"] {
+        transition: none;
+      }
+
+      [data-slot="toast-item"][data-swiping="true"][data-front="true"] {
+        transform: translate3d(
+          var(--toast-swipe-movement-x, 0px),
+          var(--toast-swipe-movement-y, 0px),
+          0
+        );
+      }
+
+      [data-slot="toast-item"][data-swiping="true"][data-expanded="false"][data-front="false"] {
+        transform: translate3d(
+            var(--toast-swipe-movement-x, 0px),
+            calc(
+              var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+                var(--toast-swipe-movement-y, 0px)
+            ),
+            0
+          )
+          scale(calc(1 - var(--toast-index, 0) * 0.05));
+      }
+
+      [data-slot="toast-item"][data-swiping="true"][data-expanded="true"] {
+        transform: translate3d(
+          var(--toast-swipe-movement-x, 0px),
+          calc(var(--toast-offset, 0px) * var(--toast-lift, -1) + var(--toast-swipe-movement-y, 0px)),
+          0
+        );
+      }
+
+      [data-slot="toast-title"] {
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      [data-slot="toast-description"] {
+        margin: 0;
+        font-size: 0.72rem;
+        color: #bdbdbd;
+      }
+
+      [data-slot="toast-description"]:not([hidden]) {
+        margin-top: 0.15rem;
+      }
+
+      .toast-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+
+      [data-slot="toast-action"],
+      [data-slot="toast-close"] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font: inherit;
+        font-size: 0.72rem;
+        border: 1px solid #ededed;
+        border-radius: 0.35rem;
+        background: transparent;
+        color: #333;
+        padding: 0.2rem 0.4rem;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      [data-slot="toast-close"] {
+        font-size: 0.8rem;
+      }
+
+      [data-slot="toast-action"][hidden],
+      [data-slot="toast-description"][hidden] {
+        display: none !important;
+      }
+
+      [data-slot="toast-item"][data-type="success"] {
+        border-color: #2f7a56;
+      }
+
+      [data-slot="toast-item"][data-type="error"] {
+        border-color: #8a3939;
+      }
+
+      [data-slot="toast-item"][data-type="warning"] {
+        border-color: #8a6d2f;
+      }
+
+      .signal {
+        display: inline-block;
+        font-size: 0.72rem;
+        margin-right: 0.75rem;
+      }
+
+      .signal[hidden] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Toast Parity Fixture</h1>
+      <div class="controls">
+        <button data-testid="default-button" type="button">Default</button>
+        <button data-testid="success" type="button">Success</button>
+        <button data-testid="error" type="button">Error</button>
+        <button data-testid="action" type="button">Action</button>
+        <button data-testid="action-prevent" type="button">Action prevent default</button>
+        <button data-testid="promise" type="button">Promise</button>
+        <button data-testid="promise-reject" type="button">Promise reject + unwrap</button>
+        <button data-testid="string-description" type="button">String description</button>
+        <button data-testid="overflow-sequence" type="button">Overflow sequence</button>
+        <button data-testid="update-toast" type="button">Update toast</button>
+        <button data-testid="update-toast-duration" type="button">Update duration</button>
+        <button data-testid="testid-toast-button" type="button">Toast with testId</button>
+        <button data-testid="toast-secondary" type="button">Toast secondary</button>
+        <button data-testid="toast-global" type="button">Toast global</button>
+        <button data-testid="position-top-left" type="button">Top-left</button>
+        <button data-testid="position-top-center" type="button">Top-center</button>
+        <button data-testid="position-top-right" type="button">Top-right</button>
+        <button data-testid="position-bottom-left" type="button">Bottom-left</button>
+        <button data-testid="position-bottom-center" type="button">Bottom-center</button>
+        <button data-testid="position-bottom-right" type="button">Bottom-right</button>
+        <button data-testid="mixed-heights-global" type="button">Mixed heights (global)</button>
+        <button data-testid="mixed-heights-top-right" type="button">Mixed heights (top-right)</button>
+        <button data-testid="auto-close-toast-callback" type="button">Auto close callback</button>
+        <button data-testid="dismiss-toast-callback" type="button">Dismiss callback</button>
+        <button data-testid="dismiss-button" type="button">Dismiss last callback toast</button>
+        <button data-testid="with-custom-aria-labels" type="button">With custom ARIA labels</button>
+      </div>
+
+      <div>
+        <span class="signal" data-testid="auto-close-el" hidden>auto close fired</span>
+        <span class="signal" data-testid="dismiss-el" hidden>dismiss fired</span>
+        <span class="signal" data-testid="unwrap-el" hidden>unwrap rejected</span>
+      </div>
+
+      <div data-slot="toast" id="toast-global" data-position="bottom-right" data-duration="5000" data-limit="3" class="toast-root">
+        <template data-slot="toast-template">
+          <li data-slot="toast-item" data-sonner-toast role="status" aria-atomic="true">
+            <div>
+              <strong data-slot="toast-title"></strong>
+              <p data-slot="toast-description"></p>
+            </div>
+            <div class="toast-actions">
+              <button data-slot="toast-action" data-button type="button"></button>
+              <button data-slot="toast-close" data-dismiss type="button" aria-label="Close">×</button>
+            </div>
+          </li>
+        </template>
+        <ol data-slot="toast-viewport" data-sonner-toaster data-testid="global-toaster" aria-label="Notifications"></ol>
+      </div>
+
+      <div data-slot="toast" id="toast-secondary" data-position="top-left" data-duration="1500" data-limit="3" class="toast-root">
+        <template data-slot="toast-template">
+          <li data-slot="toast-item" data-sonner-toast role="status" aria-atomic="true">
+            <div>
+              <strong data-slot="toast-title"></strong>
+              <p data-slot="toast-description"></p>
+            </div>
+            <div class="toast-actions">
+              <button data-slot="toast-action" data-button type="button"></button>
+              <button data-slot="toast-close" data-dismiss type="button" aria-label="Close">×</button>
+            </div>
+          </li>
+        </template>
+        <ol data-slot="toast-viewport" data-sonner-toaster data-testid="secondary-toaster" aria-label="Notifications"></ol>
+      </div>
+
+      <div data-slot="toast" id="toast-aria" data-position="top-center" data-duration="2500" data-limit="3" class="toast-root">
+        <template data-slot="toast-template">
+          <li data-slot="toast-item" data-sonner-toast role="status" aria-atomic="true">
+            <div>
+              <strong data-slot="toast-title"></strong>
+              <p data-slot="toast-description"></p>
+            </div>
+            <div class="toast-actions">
+              <button data-slot="toast-action" data-button type="button"></button>
+              <button data-slot="toast-close" data-dismiss type="button" aria-label="Yeet the notice">×</button>
+            </div>
+          </li>
+        </template>
+        <ol data-slot="toast-viewport" data-sonner-toaster data-testid="aria-toaster" aria-label="Notices"></ol>
+      </div>
+
+      <div data-slot="toast" id="toast-top-right" data-position="top-right" data-duration="2600" data-limit="3" class="toast-root">
+        <template data-slot="toast-template">
+          <li data-slot="toast-item" data-sonner-toast role="status" aria-atomic="true">
+            <div>
+              <strong data-slot="toast-title"></strong>
+              <p data-slot="toast-description"></p>
+            </div>
+            <div class="toast-actions">
+              <button data-slot="toast-action" data-button type="button"></button>
+              <button data-slot="toast-close" data-dismiss type="button" aria-label="Close">×</button>
+            </div>
+          </li>
+        </template>
+        <ol data-slot="toast-viewport" data-sonner-toaster data-testid="top-right-toaster" aria-label="Notifications"></ol>
+      </div>
+
+      <div data-slot="toast" id="toast-bottom-left" data-position="bottom-left" data-duration="2600" data-limit="3" class="toast-root">
+        <template data-slot="toast-template">
+          <li data-slot="toast-item" data-sonner-toast role="status" aria-atomic="true">
+            <div>
+              <strong data-slot="toast-title"></strong>
+              <p data-slot="toast-description"></p>
+            </div>
+            <div class="toast-actions">
+              <button data-slot="toast-action" data-button type="button"></button>
+              <button data-slot="toast-close" data-dismiss type="button" aria-label="Close">×</button>
+            </div>
+          </li>
+        </template>
+        <ol data-slot="toast-viewport" data-sonner-toaster data-testid="bottom-left-toaster" aria-label="Notifications"></ol>
+      </div>
+
+      <div data-slot="toast" id="toast-bottom-center" data-position="bottom-center" data-duration="2600" data-limit="3" class="toast-root">
+        <template data-slot="toast-template">
+          <li data-slot="toast-item" data-sonner-toast role="status" aria-atomic="true">
+            <div>
+              <strong data-slot="toast-title"></strong>
+              <p data-slot="toast-description"></p>
+            </div>
+            <div class="toast-actions">
+              <button data-slot="toast-action" data-button type="button"></button>
+              <button data-slot="toast-close" data-dismiss type="button" aria-label="Close">×</button>
+            </div>
+          </li>
+        </template>
+        <ol data-slot="toast-viewport" data-sonner-toaster data-testid="bottom-center-toaster" aria-label="Notifications"></ol>
+      </div>
+    </main>
+
+    <script>
+      import { createToast } from "@data-slot/toast";
+
+      const signal = (testId) => {
+        const element = document.querySelector(`[data-testid="${testId}"]`);
+        if (!element) return;
+        element.hidden = false;
+        element.setAttribute("data-state", "done");
+      };
+
+      const clearSignal = (testId) => {
+        const element = document.querySelector(`[data-testid="${testId}"]`);
+        if (!element) return;
+        element.hidden = true;
+        element.removeAttribute("data-state");
+      };
+
+      clearSignal("auto-close-el");
+      clearSignal("dismiss-el");
+      clearSignal("unwrap-el");
+
+      const globalRoot = document.getElementById("toast-global");
+      const secondaryRoot = document.getElementById("toast-secondary");
+      const ariaRoot = document.getElementById("toast-aria");
+      const topRightRoot = document.getElementById("toast-top-right");
+      const bottomLeftRoot = document.getElementById("toast-bottom-left");
+      const bottomCenterRoot = document.getElementById("toast-bottom-center");
+
+      if (!globalRoot || !secondaryRoot || !ariaRoot || !topRightRoot || !bottomLeftRoot || !bottomCenterRoot) {
+        throw new Error("Parity fixture roots missing");
+      }
+
+      const autoCloseIds = new Set();
+      const dismissIds = new Set();
+      let lastDismissTargetId = null;
+
+      const globalController = createToast(globalRoot, {
+        onDismiss: (id) => {
+          if (autoCloseIds.has(id)) {
+            autoCloseIds.delete(id);
+            signal("auto-close-el");
+          }
+          if (dismissIds.has(id)) {
+            dismissIds.delete(id);
+            signal("dismiss-el");
+          }
+        },
+      });
+
+      const secondaryController = createToast(secondaryRoot);
+      const ariaController = createToast(ariaRoot);
+      const topRightController = createToast(topRightRoot);
+      const bottomLeftController = createToast(bottomLeftRoot);
+      const bottomCenterController = createToast(bottomCenterRoot);
+
+      const byTestId = (id) => document.querySelector(`[data-testid="${id}"]`);
+
+      byTestId("default-button")?.addEventListener("click", () => {
+        globalController.show({
+          title: "My Default Toast",
+        });
+      });
+
+      byTestId("success")?.addEventListener("click", () => {
+        globalController.show({
+          title: "My Success Toast",
+          type: "success",
+          duration: 1800,
+        });
+      });
+
+      byTestId("error")?.addEventListener("click", () => {
+        globalController.show({
+          title: "My Error Toast",
+          type: "error",
+          duration: 1800,
+        });
+      });
+
+      byTestId("action")?.addEventListener("click", () => {
+        globalController.show({
+          title: "My Action Toast",
+          action: { label: "Action" },
+          duration: 2400,
+        });
+      });
+
+      byTestId("action-prevent")?.addEventListener("click", () => {
+        globalController.show({
+          title: "Action that stays open",
+          action: {
+            label: "Action",
+            onClick: (event) => {
+              event.preventDefault();
+            },
+          },
+          duration: 2400,
+        });
+      });
+
+      byTestId("promise")?.addEventListener("click", () => {
+        globalController.promise(
+          new Promise((resolve) => {
+            setTimeout(() => resolve("Loaded"), 250);
+          }),
+          {
+            loading: { title: "Loading...", duration: 0 },
+            success: (value) => ({ title: String(value), duration: 1800 }),
+          },
+        );
+      });
+
+      byTestId("promise-reject")?.addEventListener("click", () => {
+        clearSignal("unwrap-el");
+        const handled = globalController.promise(
+          new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Promise rejected")), 220);
+          }),
+          {
+            loading: { title: "Loading...", duration: 0 },
+            error: (error) => ({
+              title: error instanceof Error ? error.message : "Error",
+              duration: 1800,
+            }),
+          },
+        );
+
+        handled.unwrap().catch(() => {
+          signal("unwrap-el");
+        });
+      });
+
+      byTestId("string-description")?.addEventListener("click", () => {
+        globalController.show({
+          title: "Description toast",
+          description: "string description",
+          duration: 2400,
+        });
+      });
+
+      byTestId("overflow-sequence")?.addEventListener("click", () => {
+        globalController.show({ title: "Overflow 1", duration: 0 });
+        globalController.show({ title: "Overflow 2", duration: 0 });
+        globalController.show({ title: "Overflow 3", duration: 0 });
+        globalController.show({ title: "Overflow 4", duration: 0 });
+      });
+
+      byTestId("update-toast")?.addEventListener("click", () => {
+        const id = "updated-toast";
+        globalController.show({
+          id,
+          title: "My Unupdated Toast",
+          duration: 2600,
+        });
+        setTimeout(() => {
+          globalController.show({
+            id,
+            title: "My Updated Toast",
+            duration: 1800,
+          });
+        }, 300);
+      });
+
+      byTestId("update-toast-duration")?.addEventListener("click", () => {
+        const id = "updated-duration-toast";
+        globalController.show({
+          id,
+          title: "My Unupdated Toast, Updated After 3 Seconds",
+          duration: 2400,
+        });
+        setTimeout(() => {
+          globalController.show({
+            id,
+            title: "My Updated Toast, Close After 1 Second",
+            duration: 700,
+          });
+        }, 350);
+      });
+
+      byTestId("testid-toast-button")?.addEventListener("click", () => {
+        globalController.show({
+          title: "Toast with test ID",
+          duration: 2200,
+          testId: "my-test-toast",
+        });
+      });
+
+      byTestId("toast-secondary")?.addEventListener("click", () => {
+        secondaryController.show({
+          title: "Secondary Toaster Toast",
+          duration: 2200,
+        });
+      });
+
+      byTestId("toast-global")?.addEventListener("click", () => {
+        globalController.show({
+          title: "Global Toaster Toast",
+          duration: 2200,
+        });
+      });
+
+      const showPositionToast = (controller, title) => {
+        controller.show({
+          title,
+          description: "Position smoke-check toast",
+          duration: 2200,
+        });
+      };
+
+      const showMixedHeights = (controller, prefix) => {
+        controller.show({
+          title: `${prefix} compact`,
+          description: "Short copy.",
+          duration: 0,
+        });
+        controller.show({
+          title: `${prefix} medium`,
+          duration: 0,
+        });
+        controller.show({
+          title: `${prefix} tall`,
+          description:
+            "This one is intentionally verbose so it wraps into several lines and produces a clearly taller card than the medium and action variants in the same stack. It should remain the tallest example after the height transition settles and the hover expansion completes.",
+          duration: 0,
+        });
+        controller.show({
+          title: `${prefix} action`,
+          description:
+            "Action row makes this taller than medium, but shorter than tall.",
+          action: { label: "Retry" },
+          duration: 0,
+        });
+      };
+
+      byTestId("position-top-left")?.addEventListener("click", () => {
+        showPositionToast(secondaryController, "Top-left position");
+      });
+
+      byTestId("position-top-center")?.addEventListener("click", () => {
+        showPositionToast(ariaController, "Top-center position");
+      });
+
+      byTestId("position-top-right")?.addEventListener("click", () => {
+        showPositionToast(topRightController, "Top-right position");
+      });
+
+      byTestId("position-bottom-left")?.addEventListener("click", () => {
+        showPositionToast(bottomLeftController, "Bottom-left position");
+      });
+
+      byTestId("position-bottom-center")?.addEventListener("click", () => {
+        showPositionToast(bottomCenterController, "Bottom-center position");
+      });
+
+      byTestId("position-bottom-right")?.addEventListener("click", () => {
+        showPositionToast(globalController, "Bottom-right position");
+      });
+
+      byTestId("mixed-heights-global")?.addEventListener("click", () => {
+        showMixedHeights(globalController, "Global mixed");
+      });
+
+      byTestId("mixed-heights-top-right")?.addEventListener("click", () => {
+        showMixedHeights(topRightController, "Top-right mixed");
+      });
+
+      byTestId("auto-close-toast-callback")?.addEventListener("click", () => {
+        clearSignal("auto-close-el");
+        const id = globalController.show({
+          title: "Auto close callback",
+          duration: 650,
+        });
+        autoCloseIds.add(id);
+      });
+
+      byTestId("dismiss-toast-callback")?.addEventListener("click", () => {
+        clearSignal("dismiss-el");
+        const id = globalController.show({
+          title: "Dismiss callback",
+          duration: 0,
+        });
+        dismissIds.add(id);
+        lastDismissTargetId = id;
+      });
+
+      byTestId("dismiss-button")?.addEventListener("click", () => {
+        if (!lastDismissTargetId) return;
+        globalController.dismiss(lastDismissTargetId);
+      });
+
+      byTestId("with-custom-aria-labels")?.addEventListener("click", () => {
+        ariaController.show({
+          title: "Toast with custom ARIA labels",
+          closeButtonAriaLabel: "Yeet the notice",
+          duration: 2600,
+        });
+      });
+    </script>
+  </body>
+</html>
