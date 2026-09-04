@@ -14,15 +14,9 @@ import {
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 
-const ORIENTATIONS = ["horizontal", "vertical"] as const;
-const THUMB_ALIGNMENTS = ["center", "edge", "edge-client-only"] as const;
 
-type ThumbAlignment = (typeof THUMB_ALIGNMENTS)[number];
-type SliderValue = number | [number, number];
-type VisualPercents = {
-  thumbPercent: number;
-  trackPercent: number;
-};
+import { ORIENTATIONS, THUMB_ALIGNMENTS, parseDefaultValue, isRange, clampAndSnap, valueToPercent, percentToValue, clampPercent } from "./slider-math";
+import type { ThumbAlignment, SliderValue, VisualPercents } from "./slider-math";
 
 export interface SliderOptions {
   /** Initial value(s) - number or [min, max] for range */
@@ -68,62 +62,6 @@ export interface SliderController {
 const ROOT_BINDING_KEY = "@data-slot/slider";
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/slider] createSlider() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
-
-/**
- * Parse a default value from string (e.g., "50" or "25,75")
- */
-function parseDefaultValue(str: string | undefined): SliderValue | undefined {
-  if (!str) return undefined;
-  const parts = str.split(",").map((s) => parseFloat(s.trim()));
-  if (parts.some((p) => isNaN(p))) return undefined;
-  if (parts.length === 2) return [parts[0]!, parts[1]!];
-  if (parts.length === 1) return parts[0];
-  return undefined;
-}
-
-/**
- * Check if value is a range (two-thumb) slider
- */
-function isRange(value: SliderValue): value is [number, number] {
-  return Array.isArray(value);
-}
-
-/**
- * Clamp and snap a value to step
- */
-function clampAndSnap(
-  val: number,
-  min: number,
-  max: number,
-  step: number,
-): number {
-  // Snap to step first
-  const snapped = Math.round((val - min) / step) * step + min;
-  // Handle floating point precision
-  const decimals = step.toString().split(".")[1]?.length ?? 0;
-  const rounded = parseFloat(snapped.toFixed(decimals));
-  // Clamp to range
-  return Math.min(max, Math.max(min, rounded));
-}
-
-/**
- * Calculate percentage from value
- */
-function valueToPercent(val: number, min: number, max: number): number {
-  if (max === min) return 0;
-  return ((val - min) / (max - min)) * 100;
-}
-
-/**
- * Calculate value from percentage
- */
-function percentToValue(percent: number, min: number, max: number): number {
-  return (percent / 100) * (max - min) + min;
-}
-
-function clampPercent(percent: number): number {
-  return Math.max(0, Math.min(100, percent));
-}
 
 /**
  * Create a slider controller for a root element
