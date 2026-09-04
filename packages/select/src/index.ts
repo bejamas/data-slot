@@ -4,6 +4,7 @@ import {
   reuseRootBinding,
   setRootBinding,
   clearRootBinding,
+  createTypeahead,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -82,8 +83,7 @@ export function createSelect(
   let currentValue: string | null = defaultValue;
   let previousActiveElement: HTMLElement | null = null;
   let highlightedIndex = -1;
-  let typeaheadBuffer = "";
-  let typeaheadTimeout: ReturnType<typeof setTimeout> | null = null;
+  const typeahead = createTypeahead();
   let keyboardMode = false;
   let lastPointerX = 0;
   let lastPointerY = 0;
@@ -403,7 +403,7 @@ export function createSelect(
       setAria(trigger, "expanded", false);
       setDataState("closed");
       clearHighlight();
-      typeaheadBuffer = "";
+      typeahead.reset();
       keyboardMode = false;
       shouldRestoreFocusOnClose = !skipFocusRestore;
 
@@ -524,25 +524,11 @@ export function createSelect(
   };
 
   const handleTypeahead = (char: string) => {
-    if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
-    typeaheadTimeout = setTimeout(() => { typeaheadBuffer = ""; }, 500);
-
-    typeaheadBuffer += char;
-
-    let matchIndex = enabledItems.findIndex((el) =>
-      getItemLabelText(el).toLowerCase().startsWith(typeaheadBuffer)
+    const matchIndex = typeahead.match(
+      char,
+      enabledItems.map((el) => getItemLabelText(el)),
+      highlightedIndex
     );
-
-    if (matchIndex === -1 && typeaheadBuffer.length === 1) {
-      const start = highlightedIndex + 1;
-      for (let i = 0; i < enabledItems.length; i++) {
-        const idx = (start + i) % enabledItems.length;
-        if (getItemLabelText(enabledItems[idx]!).toLowerCase().startsWith(char)) {
-          matchIndex = idx;
-          break;
-        }
-      }
-    }
 
     if (matchIndex !== -1) {
       keyboardMode = true;
@@ -653,7 +639,7 @@ export function createSelect(
     close: () => updateOpenState(false),
     destroy: () => {
       isDestroyed = true;
-      if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
+      typeahead.destroy();
       positioning.stop();
       presence.cleanup();
       portal.cleanup();
