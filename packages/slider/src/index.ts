@@ -64,7 +64,43 @@ const DUPLICATE_BINDING_WARNING =
   "[@data-slot/slider] createSlider() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
 /**
- * Parse a default value from string (e.g., "50" or "25,75")
+ * Create a slider controller for a root element
+ *
+ * ## Events
+ * - **Outbound** `slider:change` (on root): Fires during value changes.
+ *   `event.detail: { value: number | [number, number] }`
+ * - **Outbound** `slider:commit` (on root): Fires when interaction ends (pointer release, blur).
+ *   `event.detail: { value: number | [number, number] }`
+ * - **Inbound** `slider:set` (on root): Set value programmatically.
+ *   `event.detail: { value: number | [number, number] }`
+ *
+ * @example
+ * ```js
+ * // Listen for value changes
+ * root.addEventListener("slider:change", (e) => console.log(e.detail.value));
+ * // Set value from outside
+ * root.dispatchEvent(new CustomEvent("slider:set", { detail: { value: 50 } }));
+ * ```
+ *
+ * Expected markup:
+ * ```html
+ * <div data-slot="slider" data-default-value="50">
+ *   <div data-slot="slider-track">
+ *     <div data-slot="slider-range"></div>
+ *   </div>
+ *   <div data-slot="slider-thumb"></div>
+ * </div>
+ *
+ * <!-- Optional control wrapper -->
+ * <div data-slot="slider" data-default-value="50">
+ *   <div data-slot="slider-control">
+ *     <div data-slot="slider-track">
+ *       <div data-slot="slider-range"></div>
+ *     </div>
+ *     <div data-slot="slider-thumb"></div>
+ *   </div>
+ * </div>
+ * ```
  */
 export function createSlider(
   root: Element,
