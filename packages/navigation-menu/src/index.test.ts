@@ -2268,6 +2268,10 @@ describe("NavigationMenu", () => {
         const viewportPositioner = getViewportPositioner(viewport);
         viewportPopup.style.width = "260px";
         viewportPopup.style.height = "150px";
+        // Force the public resize path to restore missing popup vars from the
+        // committed target size rather than the transient rendered size.
+        viewportPopup.style.removeProperty("--popup-width");
+        viewportPopup.style.removeProperty("--popup-height");
 
         window.dispatchEvent(new Event("resize"));
         await waitForAnimationFrame();
