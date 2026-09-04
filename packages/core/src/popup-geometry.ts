@@ -1,6 +1,4 @@
 import { on } from "./events.ts";
-import { containsWithPortals, portalToBody, restorePortal } from "./parts.ts";
-import type { PortalState } from "./parts.ts";
 
 export type PopupDirection = "ltr" | "rtl";
 export type PopupSide = "top" | "right" | "bottom" | "left" | "inline-start" | "inline-end";
@@ -536,4 +534,3 @@ export function ensureItemVisibleInContainer(
     container.scrollTop = nextScrollTop;
   }
 }
-
