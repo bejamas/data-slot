@@ -974,6 +974,49 @@ describe("Combobox", () => {
       controller.destroy();
     });
 
+    for (const attribute of ["disabled", "data-disabled", "aria-disabled"]) {
+      for (const activation of ["pointer", "keyboard"]) {
+        it(`rejects ${activation} selection after ${attribute} is added while open`, () => {
+          let changes = 0;
+          const { input, items, controller } = setup({
+            onValueChange: () => { changes++; },
+          });
+          try {
+            controller.open();
+            input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+            items[0]!.setAttribute(attribute, attribute === "aria-disabled" ? "true" : "");
+
+            if (activation === "pointer") {
+              items[0]!.click();
+            } else {
+              input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+            }
+
+            expect(controller.value).toBeNull();
+            expect(controller.isOpen).toBe(true);
+            expect(changes).toBe(0);
+          } finally {
+            controller.destroy();
+          }
+        });
+      }
+    }
+
+    it("allows clicking an item enabled while the popup is open", () => {
+      const { items, controller } = setup();
+      try {
+        controller.open();
+        items[3]!.removeAttribute("data-disabled");
+        items[3]!.removeAttribute("aria-disabled");
+        items[3]!.click();
+
+        expect(controller.value).toBe("disabled");
+        expect(controller.isOpen).toBe(false);
+      } finally {
+        controller.destroy();
+      }
+    });
+
     it("emits combobox:change on selection", () => {
       const { root, items, controller } = setup();
       let selectedValue: string | null | undefined;

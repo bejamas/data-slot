@@ -1,144 +1,38 @@
 import {
   getPart,
   getParts,
-  getRoots,
-  hasRootBinding,
   reuseRootBinding,
   setRootBinding,
   clearRootBinding,
-  getDataBool,
-  getDataNumber,
-  getDataString,
-  getDataEnum,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
 import {
-  computeFloatingPosition,
-  computeFloatingTransformOrigin,
-  measurePopupContentRect,
   ensureItemVisibleInContainer,
   focusElement,
-  createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
   createDismissLayer,
 } from "@data-slot/core";
+import type { SelectController, SelectOptions } from "./types";
+import { resolveSelectConfiguration } from "./configuration";
+import { discoverSelects } from "./discovery";
+import { createSelectPositioning } from "./select-positioning";
 
-/** Side of the trigger to place the content */
-export type Side = "top" | "bottom";
-const SIDES = ["top", "bottom"] as const;
-
-/** Alignment of the content relative to the trigger */
-export type Align = "start" | "center" | "end";
-const ALIGNS = ["start", "center", "end"] as const;
-
-/** Positioning mode for the content */
-export type Position = "item-aligned" | "popper";
-const POSITIONS = ["item-aligned", "popper"] as const;
-
-export interface SelectOptions {
-  /** Initial selected value */
-  defaultValue?: string;
-  /** Callback when value changes */
-  onValueChange?: (value: string | null) => void;
-  /** Initial open state */
-  defaultOpen?: boolean;
-  /** Callback when open state changes */
-  onOpenChange?: (open: boolean) => void;
-  /** Placeholder text when no value selected */
-  placeholder?: string;
-  /** Disable interaction */
-  disabled?: boolean;
-  /** Form validation required */
-  required?: boolean;
-  /** Form field name (auto-creates hidden input) */
-  name?: string;
-
-  /**
-   * Positioning mode for the content.
-   * - "item-aligned": Positions content so selected item aligns with trigger (like native select)
-   * - "popper": Positions content below/above trigger like a dropdown
-   * @default "item-aligned"
-   */
-  position?: Position;
-
-  // Positioning props (Radix-compatible, used when position="popper")
-  /**
-   * The preferred side of the trigger to render against.
-   * Will be reversed when collisions occur and `avoidCollisions` is enabled.
-   * @default "bottom"
-   */
-  side?: Side;
-  /**
-   * The preferred alignment against the trigger.
-   * May change when collisions occur.
-   * @default "start"
-   */
-  align?: Align;
-  /**
-   * The distance in pixels from the trigger.
-   * @default 4
-   */
-  sideOffset?: number;
-  /**
-   * An offset in pixels from the "start" or "end" alignment options.
-   * @default 0
-   */
-  alignOffset?: number;
-  /**
-   * When true, overrides side/align preferences to prevent collisions with viewport edges.
-   * @default true
-   */
-  avoidCollisions?: boolean;
-  /**
-   * The padding between the content and the viewport edges when avoiding collisions.
-   * @default 8
-   */
-  collisionPadding?: number;
-  /**
-   * Lock body scroll when open.
-   * @default true
-   */
-  lockScroll?: boolean;
-  /**
-   * Whether moving the pointer over items should highlight and focus them.
-   * @default true
-   */
-  highlightItemOnHover?: boolean;
-}
-
-export interface SelectController {
-  /** Current selected value */
-  readonly value: string | null;
-  /** Current open state */
-  readonly isOpen: boolean;
-  /** Select a value programmatically */
-  select(value: string): void;
-  /** Open the popup */
-  open(): void;
-  /** Close the popup */
-  close(): void;
-  /** Cleanup all event listeners */
-  destroy(): void;
-}
+export type { Align, Position, SelectController, SelectOptions, Side } from "./types";
 
 const ROOT_BINDING_KEY = "@data-slot/select";
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/select] createSelect() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
-/**
- * Create a select controller for a root element.
- *
- * Supports Radix-compatible positioning props for precise placement:
+/** Creates a select controller for a root element. Positioning supports:
  * - `side`: "top" | "bottom" (default: "bottom")
  * - `align`: "start" | "center" | "end" (default: "start")
  * - `sideOffset`: distance from trigger in px (default: 4)
  * - `alignOffset`: offset from alignment edge in px (default: 0)
  * - `avoidCollisions`: flip/shift to stay in viewport (default: true)
  * - `collisionPadding`: viewport edge padding in px (default: 8)
- *
  * ## Events
  * - **Outbound** `select:change` (on root): Fires when value changes.
  *   `event.detail: { value: string | null }`
@@ -178,65 +72,11 @@ export function createSelect(
     throw new Error("Select requires trigger and content slots");
   }
 
-  // Resolve options with explicit precedence: JS > data-* (root, then valueSlot) > default
-  const defaultValue = options.defaultValue ?? getDataString(root, "defaultValue") ?? null;
-  const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
-  // Check root first, then valueSlot for placeholder (some implementations put it on the span)
-  const placeholder = options.placeholder ?? getDataString(root, "placeholder") ?? (valueSlot ? getDataString(valueSlot, "placeholder") : undefined) ?? "";
-  const disabled = options.disabled ?? getDataBool(root, "disabled") ?? false;
-  const required = options.required ?? getDataBool(root, "required") ?? false;
-  const name = options.name ?? getDataString(root, "name") ?? null;
-  const onValueChange = options.onValueChange;
-  const onOpenChange = options.onOpenChange;
-
-  // Placement precedence: JS option > content > authored positioner > root
-  const getPlacementEnum = <T extends string>(key: string, allowed: readonly T[]): T | undefined =>
-    getDataEnum(content, key, allowed) ??
-    (authoredPositioner ? getDataEnum(authoredPositioner, key, allowed) : undefined) ??
-    getDataEnum(root, key, allowed);
-  const getPlacementNumber = (key: string): number | undefined =>
-    getDataNumber(content, key) ??
-    (authoredPositioner ? getDataNumber(authoredPositioner, key) : undefined) ??
-    getDataNumber(root, key);
-  const getPlacementBool = (key: string): boolean | undefined =>
-    getDataBool(content, key) ??
-    (authoredPositioner ? getDataBool(authoredPositioner, key) : undefined) ??
-    getDataBool(root, key);
-
-  // Position mode
-  const position =
-    options.position ??
-    getPlacementEnum("position", POSITIONS) ??
-    "item-aligned";
-
-  // Placement options (used for popper mode)
-  const preferredSide =
-    options.side ??
-    getPlacementEnum("side", SIDES) ??
-    "bottom";
-  const preferredAlign =
-    options.align ??
-    getPlacementEnum("align", ALIGNS) ??
-    "start";
-  const sideOffset =
-    options.sideOffset ??
-    getPlacementNumber("sideOffset") ??
-    4;
-  const alignOffset =
-    options.alignOffset ??
-    getPlacementNumber("alignOffset") ??
-    0;
-  const avoidCollisions =
-    options.avoidCollisions ??
-    getPlacementBool("avoidCollisions") ??
-    true;
-  const collisionPadding =
-    options.collisionPadding ??
-    getPlacementNumber("collisionPadding") ??
-    8;
-  const lockScrollOption = options.lockScroll ?? getDataBool(root, "lockScroll") ?? true;
-  const highlightItemOnHover =
-    options.highlightItemOnHover ?? getDataBool(root, "highlightItemOnHover") ?? true;
+  const {
+    defaultValue, defaultOpen, placeholder, disabled, required, name, onValueChange, onOpenChange,
+    position, preferredSide, preferredAlign, sideOffset, alignOffset, avoidCollisions,
+    collisionPadding, lockScrollOption, highlightItemOnHover,
+  } = resolveSelectConfiguration(root, content, valueSlot, authoredPositioner, options);
 
   let isOpen = false;
   let currentValue: string | null = defaultValue;
@@ -388,326 +228,14 @@ export function createSelect(
     );
   };
 
-  const syncResolvedPositionAttributes = (
-    alignTriggerActive = position === "item-aligned"
-  ) => {
-    content.setAttribute("data-position", position);
-    content.setAttribute("data-align-trigger", alignTriggerActive ? "true" : "false");
-
-    const viewport = getViewport();
-    if (viewport) {
-      viewport.setAttribute("data-position", position);
-    }
-  };
-
-  type ContentRect = Pick<
-    DOMRectReadOnly,
-    "top" | "right" | "bottom" | "left" | "width" | "height"
-  >;
-  type AnchorRect = Pick<DOMRectReadOnly, "top" | "left" | "right" | "bottom" | "width" | "height">;
-  type Axis = "top" | "left";
-
-  const getMeasuredRect = (element: HTMLElement | null): DOMRect | null => {
-    if (!element) return null;
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 || rect.height > 0 ? rect : null;
-  };
-
-  const getTriggerAlignmentRect = (triggerRect: DOMRect): AnchorRect => {
-    const valueRect = getMeasuredRect(valueSlot);
-    return valueRect ?? triggerRect;
-  };
-
-  const getOffsetInAncestorPaddingBox = (
-    item: HTMLElement,
-    ancestor: HTMLElement,
-    ancestorRect: ContentRect,
-    scrollOffset: number,
-    axis: Axis
-  ) => {
-    // Prefer offset-parent traversal when the ancestor is in the chain, and
-    // fall back to rect math otherwise (e.g. before final layout settles).
-    const offsetKey = axis === "top" ? "offsetTop" : "offsetLeft";
-    const clientKey = axis === "top" ? "clientTop" : "clientLeft";
-    const rectKey = axis === "top" ? "top" : "left";
-
-    let offset = 0;
-    let node: HTMLElement | null = item;
-    while (node && node !== ancestor) {
-      offset += node[offsetKey];
-      const offsetParent: Element | null = node.offsetParent;
-      if (!(offsetParent instanceof HTMLElement)) {
-        offset = Number.NaN;
-        break;
-      }
-      if (offsetParent !== ancestor) {
-        offset += offsetParent[clientKey];
-      }
-      node = offsetParent;
-    }
-    if (node === ancestor && Number.isFinite(offset)) {
-      return offset;
-    }
-
-    const itemRect = item.getBoundingClientRect();
-    return itemRect[rectKey] - ancestorRect[rectKey] - ancestor[clientKey] + scrollOffset;
-  };
-
-  const getOffsetInAncestorBorderBox = (
-    item: HTMLElement,
-    ancestor: HTMLElement,
-    ancestorRect: ContentRect,
-    scrollOffset: number,
-    axis: Axis
-  ) =>
-    getOffsetInAncestorPaddingBox(item, ancestor, ancestorRect, scrollOffset, axis) +
-    (axis === "top" ? ancestor.clientTop : ancestor.clientLeft);
-
-  const getItemTopInContent = (
-    item: HTMLElement,
-    cr: ContentRect,
-    scrollContainer: HTMLElement
-  ) => getOffsetInAncestorBorderBox(item, content, cr, scrollContainer.scrollTop, "top");
-
-  const getItemAlignmentAnchor = (item: HTMLElement): HTMLElement => {
-    const itemText = getItemText(item);
-    if (getMeasuredRect(itemText)) {
-      return itemText!;
-    }
-    return item;
-  };
-
-  // Compute base position data for item-aligned mode
-  const computeItemAlignedPos = (tr: DOMRect, cr: ContentRect, scrollContainer: HTMLElement) => {
-    // Prefer selected item for stable anchoring, then highlighted, then first enabled item.
-    const highlightedItem = highlightedIndex >= 0 ? enabledItems[highlightedIndex] : undefined;
-    const selectedItem = items.find((item) => item.dataset["value"] === currentValue);
-    const alignItem = selectedItem ?? highlightedItem ?? enabledItems[0];
-    const triggerAlignmentRect = getTriggerAlignmentRect(tr);
-    const valueRect = getMeasuredRect(valueSlot);
-
-    // Calculate x position (align left edges, match trigger width)
-    let x = tr.left;
-
-    // Calculate y position so aligned item is at trigger's vertical center.
-    // This is the base (unclamped) y when content scrollTop is 0.
-    let y: number;
-    let anchorTopInContent = 0;
-    let anchorHeight = triggerAlignmentRect.height;
-    if (alignItem) {
-      const itemText = getItemText(alignItem);
-      const hasExactTextAlignment = Boolean(valueRect && getMeasuredRect(itemText));
-      const alignAnchor = hasExactTextAlignment && itemText ? itemText : getItemAlignmentAnchor(alignItem);
-      const alignAnchorRect = getMeasuredRect(alignAnchor) ?? alignAnchor.getBoundingClientRect();
-      anchorTopInContent = getItemTopInContent(alignAnchor, cr, scrollContainer);
-      anchorHeight =
-        alignAnchorRect.height ||
-        alignAnchor.offsetHeight ||
-        alignItem.getBoundingClientRect().height ||
-        alignItem.offsetHeight ||
-        triggerAlignmentRect.height;
-
-      if (hasExactTextAlignment && valueRect) {
-        x = valueRect.left - (alignAnchorRect.left - cr.left);
-      }
-
-      // Position content so the item's center aligns from the content padding box.
-      y =
-        triggerAlignmentRect.top +
-        (triggerAlignmentRect.height / 2) -
-        anchorTopInContent -
-        (anchorHeight / 2);
-    } else {
-      // No items at all - align top of content with trigger
-      y = tr.top;
-    }
-
-    return {
-      x,
-      y,
-      alignItem,
-      anchorTopInContent,
-      anchorHeight,
-      triggerAlignmentRect,
-    };
-  };
-
-  const updatePosition = () => {
-    const positioner = portal.container as HTMLElement;
-    const win = root.ownerDocument.defaultView ?? window;
-    const tr = trigger.getBoundingClientRect();
-    const scrollContainer = getScrollContainer();
-
-    // Set min-width to match trigger width
-    content.style.minWidth = `${tr.width}px`;
-
-    // Get content rect after setting min-width
-    const cr = measurePopupContentRect(content);
-
-    let pos: { x: number; y: number };
-    let side: Side = "bottom";
-    let transformOrigin: string;
-    let alignTriggerActive = position === "item-aligned";
-
-    if (position === "item-aligned") {
-      const computedStyles = win.getComputedStyle(content);
-      const minHeight = Number.parseFloat(computedStyles.minHeight) || 0;
-      const triggerCollisionThreshold = 20;
-      const availableHeight = Math.max(0, win.innerHeight - collisionPadding * 2);
-      const hasTriggerGeometry = tr.width > 0 || tr.height > 0;
-      const nearViewportEdge =
-        hasTriggerGeometry &&
-        (tr.top < collisionPadding + triggerCollisionThreshold ||
-          tr.bottom > win.innerHeight - collisionPadding - triggerCollisionThreshold);
-      const heightTooConstrained =
-        cr.height > 0 &&
-        ((scrollContainer.scrollHeight <= scrollContainer.clientHeight &&
-          cr.height > availableHeight + 0.5) ||
-          (minHeight > 0 &&
-            availableHeight + 0.5 <
-              Math.min(scrollContainer.scrollHeight || cr.height, minHeight)));
-
-      if (nearViewportEdge || heightTooConstrained) {
-        alignTriggerActive = false;
-        const floating = computeFloatingPosition({
-          anchorRect: tr,
-          contentRect: cr,
-          side: preferredSide,
-          align: preferredAlign,
-          sideOffset,
-          alignOffset,
-          avoidCollisions,
-          collisionPadding,
-          allowedSides: SIDES,
-        });
-        pos = { x: floating.x, y: floating.y };
-        side = floating.side as Side;
-        transformOrigin = computeFloatingTransformOrigin({
-          side,
-          align: floating.align,
-          anchorRect: tr,
-          popupX: pos.x,
-          popupY: pos.y,
-        });
-      } else {
-        const aligned = computeItemAlignedPos(tr, cr, scrollContainer);
-        pos = { x: aligned.x, y: aligned.y };
-        const triggerCenterX =
-          aligned.triggerAlignmentRect.left + (aligned.triggerAlignmentRect.width / 2);
-        const triggerCenterY =
-          aligned.triggerAlignmentRect.top + (aligned.triggerAlignmentRect.height / 2);
-        const minY = collisionPadding;
-        const maxY = win.innerHeight - cr.height - collisionPadding;
-        const clampY = (value: number) =>
-          avoidCollisions
-            ? (maxY < minY ? minY : Math.min(Math.max(value, minY), maxY))
-            : value;
-        const minX = collisionPadding;
-        const maxX = win.innerWidth - cr.width - collisionPadding;
-        const clampX = (value: number) =>
-          avoidCollisions
-            ? (maxX < minX ? minX : Math.min(Math.max(value, minX), maxX))
-            : value;
-
-        pos.x = clampX(pos.x);
-
-        if (aligned.alignItem) {
-          const maxScrollTop = Math.max(
-            0,
-            scrollContainer.scrollHeight - scrollContainer.clientHeight
-          );
-          const getTriggerCenterInContent = (currentY: number) =>
-            triggerCenterY - currentY;
-          const getDesiredScrollTop = (currentY: number) =>
-            aligned.anchorTopInContent +
-            (aligned.anchorHeight / 2) -
-            getTriggerCenterInContent(currentY);
-          if (maxScrollTop > 0) {
-            // Keep popup near the trigger and use internal scroll to align.
-            pos.y = clampY(triggerCenterY - (cr.height / 2));
-            let scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
-            scrollContainer.scrollTop = scrollTop;
-            pos.y = clampY(
-              triggerCenterY -
-                (aligned.anchorTopInContent - scrollTop + (aligned.anchorHeight / 2))
-            );
-            scrollTop = Math.min(Math.max(getDesiredScrollTop(pos.y), 0), maxScrollTop);
-            scrollContainer.scrollTop = scrollTop;
-            pos.y = clampY(
-              triggerCenterY -
-                (aligned.anchorTopInContent - scrollTop + (aligned.anchorHeight / 2))
-            );
-          } else {
-            // No internal scrolling: align directly from item geometry.
-            scrollContainer.scrollTop = 0;
-            pos.y = clampY(aligned.y);
-          }
-        } else {
-          scrollContainer.scrollTop = 0;
-          pos.y = clampY(aligned.y);
-        }
-
-        // Determine effective side based on final position
-        side = pos.y < tr.top ? "top" : "bottom";
-
-        const originX = Math.min(Math.max(triggerCenterX - pos.x, 0), cr.width);
-        const originY = Math.min(Math.max(triggerCenterY - pos.y, 0), cr.height);
-        transformOrigin = `${originX}px ${originY}px`;
-      }
-    } else {
-      const floating = computeFloatingPosition({
-        anchorRect: tr,
-        contentRect: cr,
-        side: preferredSide,
-        align: preferredAlign,
-        sideOffset,
-        alignOffset,
-        avoidCollisions,
-        collisionPadding,
-        allowedSides: SIDES,
-      });
-      pos = { x: floating.x, y: floating.y };
-      side = floating.side as Side;
-      transformOrigin = computeFloatingTransformOrigin({
-        side,
-        align: floating.align,
-        anchorRect: tr,
-        popupX: pos.x,
-        popupY: pos.y,
-      });
-    }
-    const resolvedAlign: Align =
-      position === "item-aligned" && alignTriggerActive ? "center" : preferredAlign;
-
-    if (lockScrollOption) {
-      positioner.style.position = "fixed";
-      positioner.style.top = "0px";
-      positioner.style.left = "0px";
-      positioner.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
-    } else {
-      positioner.style.position = "absolute";
-      positioner.style.top = "0px";
-      positioner.style.left = "0px";
-      positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
-    }
-    positioner.style.setProperty("--transform-origin", transformOrigin);
-    positioner.style.willChange = "transform";
-    positioner.style.margin = "0";
-    syncResolvedPositionAttributes(alignTriggerActive);
-    content.setAttribute("data-side", side);
-    content.setAttribute("data-align", resolvedAlign);
-    if (positioner !== content) {
-      positioner.setAttribute("data-side", side);
-      positioner.setAttribute("data-align", resolvedAlign);
-    }
-  };
-
-  const positionSync = createPositionSync({
-    observedElements: [trigger, content],
-    isActive: () => isOpen,
-    ancestorScroll: lockScrollOption,
-    onUpdate: updatePosition,
-    ignoreScrollTarget: (target) => target instanceof Node && content.contains(target),
+  const positioning = createSelectPositioning({
+    root, trigger, content, valueSlot,
+    getPositioner: () => portal.container as HTMLElement,
+    getViewport,
+    isOpen: () => isOpen,
+    getCollection: () => ({ items, enabledItems, highlightedIndex, value: currentValue }),
+    position, preferredSide, preferredAlign, sideOffset, alignOffset, avoidCollisions,
+    collisionPadding, lockScroll: lockScrollOption,
   });
 
   const updateHighlight = (index: number, focus = true, ensureVisible = true) => {
@@ -836,16 +364,16 @@ export function createSelect(
         clearHighlight();
       }
 
-      positionSync.start();
-      updatePosition();
-      positionSync.update();
+      positioning.start();
+      positioning.update();
+      positioning.sync();
 
       // Use rAF to refine position after browser has fully rendered content,
       // and to highlight item under cursor if pointer opened the select
       requestAnimationFrame(() => {
         if (!isOpen) return;
-        updatePosition();
-        positionSync.update();
+        positioning.update();
+        positioning.sync();
 
         // Highlight item under cursor if pointer opened the select
         if (
@@ -885,7 +413,7 @@ export function createSelect(
         didLockScroll = false;
       }
 
-      positionSync.stop();
+      positioning.stop();
       if (immediate) {
         presence.cleanup();
         finishClose();
@@ -1040,7 +568,7 @@ export function createSelect(
   // Initialize
   setAria(trigger, "expanded", false);
   content.hidden = true;
-  syncResolvedPositionAttributes();
+  positioning.syncResolvedPositionAttributes();
   setDataState("closed");
 
   // Initial value display
@@ -1126,7 +654,7 @@ export function createSelect(
     destroy: () => {
       isDestroyed = true;
       if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
-      positionSync.stop();
+      positioning.stop();
       presence.cleanup();
       portal.cleanup();
       // Unlock scroll if still locked
@@ -1150,15 +678,6 @@ export function createSelect(
   return controller;
 }
 
-/**
- * Find and bind all select components in a scope
- * Returns array of controllers for programmatic access
- */
 export function create(scope: ParentNode = document): SelectController[] {
-  const controllers: SelectController[] = [];
-  for (const root of getRoots(scope, "select")) {
-    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
-    controllers.push(createSelect(root));
-  }
-  return controllers;
+  return discoverSelects(scope, createSelect);
 }
