@@ -17,6 +17,7 @@ import {
 import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
+import { createTypeahead } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
 import {
   computeFloatingPosition,
@@ -1975,5 +1976,110 @@ describe('core/popup', () => {
         value: originalGetComputedStyle,
       })
     }
+  })
+})
+
+describe('core/typeahead', () => {
+  const labels = ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Other']
+
+  it('matches the first label starting with the typed character', () => {
+    const typeahead = createTypeahead()
+    expect(typeahead.match('b', labels, -1)).toBe(1)
+    typeahead.destroy()
+  })
+
+  it('matches case-insensitively', () => {
+    const typeahead = createTypeahead()
+    expect(typeahead.match('C', labels, -1)).toBe(3)
+    expect(typeahead.match('h', labels, 3)).toBe(3)
+    typeahead.destroy()
+  })
+
+  it('accumulates characters into a prefix buffer', () => {
+    const typeahead = createTypeahead()
+    expect(typeahead.match('b', labels, -1)).toBe(1)
+    expect(typeahead.match('l', labels, 1)).toBe(2)
+    expect(typeahead.match('u', labels, 2)).toBe(2)
+    typeahead.destroy()
+  })
+
+  it('returns -1 when the buffer matches nothing', () => {
+    const typeahead = createTypeahead()
+    expect(typeahead.match('z', labels, -1)).toBe(-1)
+    expect(typeahead.match('a', labels, -1)).toBe(-1) // buffer is now "za"
+    typeahead.destroy()
+  })
+
+  it('treats a repeated character as a longer prefix (parity with select/dropdown-menu)', () => {
+    const typeahead = createTypeahead()
+    expect(typeahead.match('b', labels, -1)).toBe(1)
+    // Buffer is now "bb": no label starts with it and the single-character
+    // wrap-around does not apply, so the highlight does not cycle.
+    expect(typeahead.match('b', labels, 1)).toBe(-1)
+    typeahead.destroy()
+  })
+
+  it('single-character wrap-around searches forward from currentIndex + 1', () => {
+    // The wrap-around is only consulted when a one-character buffer has no
+    // prefix match anywhere; assert its ordering via an injected label list
+    // where the prefix search and the wrap search would disagree if reached.
+    const typeahead = createTypeahead()
+    expect(typeahead.match('c', ['Cherry', 'apple', 'Cranberry'], 0)).toBe(0)
+    typeahead.reset()
+    expect(typeahead.match('a', ['Cherry', 'apple', 'Cranberry'], 2)).toBe(1)
+    typeahead.destroy()
+  })
+
+  it('treats -1 as "start from the first item" in the wrap-around search', () => {
+    const typeahead = createTypeahead()
+    typeahead.match('x', labels, -1) // buffer "x" -> no match
+    typeahead.reset()
+    // fresh single "o": prefix match finds Other regardless of index
+    expect(typeahead.match('o', labels, -1)).toBe(4)
+    // "oo" -> no prefix match; single-char fallback does not apply (length 2)
+    expect(typeahead.match('o', labels, 4)).toBe(-1)
+    typeahead.destroy()
+  })
+
+  it('resets the buffer after the delay elapses', async () => {
+    const typeahead = createTypeahead({ resetDelayMs: 20 })
+    expect(typeahead.match('b', labels, -1)).toBe(1)
+    await new Promise((resolve) => setTimeout(resolve, 40))
+    // A fresh "c" must not be read as "bc"
+    expect(typeahead.match('c', labels, 1)).toBe(3)
+    typeahead.destroy()
+  })
+
+  it('keeps the buffer while characters arrive within the delay', async () => {
+    const typeahead = createTypeahead({ resetDelayMs: 60 })
+    expect(typeahead.match('o', labels, -1)).toBe(4)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(typeahead.match('t', labels, 4)).toBe(4)
+    typeahead.destroy()
+  })
+
+  it('reset() clears the buffer and cancels the timer', async () => {
+    const typeahead = createTypeahead({ resetDelayMs: 1000 })
+    expect(typeahead.match('b', labels, -1)).toBe(1)
+    typeahead.reset()
+    expect(typeahead.match('c', labels, 1)).toBe(3)
+    typeahead.destroy()
+  })
+
+  it('uses the provided window for timers', () => {
+    const calls: Array<{ name: string; delay?: number }> = []
+    const fakeWin = {
+      setTimeout: (_fn: () => void, delay: number) => {
+        calls.push({ name: 'set', delay })
+        return 42
+      },
+      clearTimeout: (id: number) => {
+        calls.push({ name: `clear:${id}` })
+      },
+    } as unknown as Window
+    const typeahead = createTypeahead({ win: fakeWin, resetDelayMs: 123 })
+    typeahead.match('a', labels, -1)
+    typeahead.destroy()
+    expect(calls).toEqual([{ name: 'set', delay: 123 }, { name: 'clear:42' }])
   })
 })

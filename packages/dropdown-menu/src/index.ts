@@ -22,6 +22,7 @@ import {
   createPresenceLifecycle,
   createDismissLayer,
   containsWithPortals,
+  createTypeahead,
 } from "@data-slot/core";
 import { resolveDropdownMenuOptions } from "./dropdown-menu-options";
 import { createDropdownItemCollection } from "./dropdown-menu-items";
@@ -133,8 +134,7 @@ export function createDropdownMenu(
   let currentValues: string[] = [];
   let highlightedItem: HTMLElement | null = null;
   let previousActiveElement: HTMLElement | null = null;
-  let typeaheadBuffer = "";
-  let typeaheadTimeout: ReturnType<typeof setTimeout> | null = null;
+  const typeahead = createTypeahead();
   let keyboardMode = false;
   let didLockScroll = false;
   let isDestroyed = false;
@@ -428,7 +428,7 @@ export function createDropdownMenu(
         emitSelectionInvalidation: source !== "init",
       });
       keyboardMode = false;
-      typeaheadBuffer = "";
+      typeahead.reset();
       positionSync.start();
       updatePosition();
       positionSync.update();
@@ -444,7 +444,7 @@ export function createDropdownMenu(
           focusContentOnClear: false,
         });
       }
-      typeaheadBuffer = "";
+      typeahead.reset();
       keyboardMode = false;
       if (didLockScroll) {
         unlockScroll();
@@ -509,25 +509,13 @@ export function createDropdownMenu(
     }
   };
   const handleTypeahead = (char: string) => {
-    if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
-    typeaheadTimeout = setTimeout(() => {
-      typeaheadBuffer = "";
-    }, 500);
-    typeaheadBuffer += char;
-    let matchIndex = itemCollection.enabled.findIndex((item) =>
-      (item.el.textContent?.trim().toLowerCase() ?? "").startsWith(typeaheadBuffer),
+    const currentIndex = highlightedItem ? (itemCollection.enabledIndex(highlightedItem) ?? -1) : -1;
+    const matchIndex = typeahead.match(
+      char,
+      itemCollection.enabled.map((item) => item.el.textContent?.trim() ?? ""),
+      currentIndex,
     );
-    if (matchIndex === -1 && typeaheadBuffer.length === 1) {
-      const start = highlightedItem ? (itemCollection.enabledIndex(highlightedItem) ?? -1) + 1 : 0;
-      for (let i = 0; i < itemCollection.enabled.length; i++) {
-        const index = (start + i) % itemCollection.enabled.length;
-        const item = itemCollection.enabled[index];
-        if ((item?.el.textContent?.trim().toLowerCase() ?? "").startsWith(char)) {
-          matchIndex = index;
-          break;
-        }
-      }
-    }
+
     if (matchIndex !== -1) {
       keyboardMode = true;
       updateHighlight(itemCollection.enabled[matchIndex]?.el ?? null, {
@@ -827,7 +815,7 @@ export function createDropdownMenu(
     },
     destroy: () => {
       isDestroyed = true;
-      if (typeaheadTimeout) clearTimeout(typeaheadTimeout);
+      typeahead.destroy();
       positionSync.stop();
       presence.cleanup();
       portal.cleanup();
