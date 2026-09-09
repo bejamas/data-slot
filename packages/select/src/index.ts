@@ -15,7 +15,7 @@ import {
   createPresenceLifecycle,
   createDismissLayer,
 } from "@data-slot/core";
-import type { Align, Position, SelectController, SelectOptions, Side } from "./types";
+import type { SelectController, SelectOptions } from "./types";
 import { resolveSelectConfiguration } from "./configuration";
 import { discoverSelects } from "./discovery";
 import { createSelectPositioning } from "./select-positioning";

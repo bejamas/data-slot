@@ -467,7 +467,7 @@ export function createCombobox(
   };
 
   const selectItem = (item: HTMLElement) => {
-    if (collection.indexOf(item) === undefined) return;
+    if (collection.isDisabled(item)) return;
     const value = collection.valueOf(item);
     if (value === undefined) return;
 

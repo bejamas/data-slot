@@ -23,6 +23,7 @@ export interface ComboboxCollection {
   readonly enabled: readonly HTMLElement[];
   readonly highlightedIndex: number;
   indexOf(item: HTMLElement): number | undefined;
+  isDisabled(item: HTMLElement): boolean;
   valueOf(item: HTMLElement): string | undefined;
   labelFor(value: string | null): string;
 }
@@ -162,6 +163,7 @@ export function createComboboxCollection({
     get enabled() { return enabledVisibleItems; },
     get highlightedIndex() { return highlightedIndex; },
     indexOf(item) { return itemToEnabledIndex.get(item); },
+    isDisabled: isItemDisabled,
     valueOf,
     labelFor,
   };

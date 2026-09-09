@@ -1,9 +1,22 @@
 import { getDataBool, getDataEnum, getDataNumber, getDataString } from "@data-slot/core";
 import type { Align, DropdownMenuOptions, Side } from "./dropdown-menu-types";
-import { hasOwn, parseDefaultValues } from "./dropdown-menu-items";
 
 const sides = ["top", "right", "bottom", "left"] as const;
 const aligns = ["start", "center", "end"] as const;
+
+const hasOwn = <K extends string>(value: object, key: K): value is Record<K, unknown> =>
+  Object.prototype.hasOwnProperty.call(value, key);
+
+const parseDefaultValues = (raw: string | undefined): string[] => {
+  try {
+    const values = JSON.parse(raw?.trim() || "[]");
+    return Array.isArray(values)
+      ? values.filter((value): value is string => typeof value === "string").map((value) => value.trim()).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+};
 
 /** Resolves authored data attributes once, preserving option precedence. */
 export const resolveDropdownMenuOptions = (root: Element, content: HTMLElement, positioner: HTMLElement | null, options: DropdownMenuOptions) => {

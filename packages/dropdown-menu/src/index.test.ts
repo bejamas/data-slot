@@ -595,6 +595,47 @@ describe("DropdownMenu", () => {
       controller.destroy();
     });
 
+    for (const action of ["click", "set"]) {
+      it(`clears the last checkbox through ${action}`, () => {
+        const { root, controller } = setup(
+          { defaultValues: ["email"], closeOnSelect: false },
+          `
+          <div data-slot="dropdown-menu" id="root">
+            <button data-slot="dropdown-menu-trigger">Options</button>
+            <div data-slot="dropdown-menu-content">
+              <button data-slot="dropdown-menu-checkbox-item" data-value="email">Email</button>
+            </div>
+          </div>
+          `,
+        );
+        const item = root.querySelector<HTMLElement>('[data-slot="dropdown-menu-checkbox-item"]')!;
+        const changes: unknown[] = [];
+        root.addEventListener("dropdown-menu:values-change", (event) => {
+          changes.push((event as CustomEvent).detail);
+        });
+        try {
+          controller.open();
+          if (action === "click") item.click();
+          else controller.set({ values: [] });
+
+          expect(controller.values).toEqual([]);
+          expect(item.getAttribute("aria-checked")).toBe("false");
+          expect(item.hasAttribute("data-checked")).toBe(false);
+          expect(controller.isOpen).toBe(true);
+          expect(changes).toEqual([{
+            values: [],
+            previousValues: ["email"],
+            changedValue: "email",
+            checked: false,
+            item,
+            source: action === "click" ? "pointer" : "programmatic",
+          }]);
+        } finally {
+          controller.destroy();
+        }
+      });
+    }
+
     it("supports canceling dropdown-menu:select before commit and close", () => {
       const { root, trigger, controller } = setup(
         {},

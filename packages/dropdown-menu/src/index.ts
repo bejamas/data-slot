@@ -2,9 +2,6 @@ import {
   getPart,
   getRoots,
   getDataBool,
-  getDataNumber,
-  getDataString,
-  getDataEnum,
   hasRootBinding,
   reuseRootBinding,
   setRootBinding,
@@ -27,14 +24,52 @@ import {
   containsWithPortals,
 } from "@data-slot/core";
 import { resolveDropdownMenuOptions } from "./dropdown-menu-options";
-import { arraysEqual, createDropdownItemCollection, dispatchCustomEvent, getItemRole, getItemType, hasOwn, parseDefaultValues, readActionValue, readSelectableValue, setPresence } from "./dropdown-menu-items";
-export type { Align, DropdownMenuController, DropdownMenuHighlightChangeDetail, DropdownMenuItemType, DropdownMenuOpenChangeDetail, DropdownMenuOpenChangeReason, DropdownMenuOpenChangeSource, DropdownMenuOptions, DropdownMenuSelectDetail, DropdownMenuSelectionSource, DropdownMenuSetDetail, DropdownMenuSetSource, DropdownMenuUserSource, DropdownMenuValueChangeDetail, DropdownMenuValuesChangeDetail, Side } from "./dropdown-menu-types";
-import type { CacheItemsOptions, CheckboxDiff, DropdownMenuController, DropdownMenuHighlightChangeDetail, DropdownMenuItemRecord, DropdownMenuItemType, DropdownMenuOpenChangeDetail, DropdownMenuOpenChangeSource, DropdownMenuOptions, DropdownMenuSelectDetail, DropdownMenuSelectionSource, DropdownMenuSetDetail, DropdownMenuValueChangeDetail, DropdownMenuValuesChangeDetail, HighlightUpdateOptions, OpenTransitionOptions } from "./dropdown-menu-types";
-const SIDES = ["top", "right", "bottom", "left"] as const;
-const ALIGNS = ["start", "center", "end"] as const;
+import { createDropdownItemCollection } from "./dropdown-menu-items";
+import type {
+  CacheItemsOptions,
+  DropdownMenuController,
+  DropdownMenuHighlightChangeDetail,
+  DropdownMenuItemRecord,
+  DropdownMenuOpenChangeDetail,
+  DropdownMenuOpenChangeSource,
+  DropdownMenuOptions,
+  DropdownMenuSelectDetail,
+  DropdownMenuSelectionSource,
+  DropdownMenuSetDetail,
+  DropdownMenuUserSource,
+  DropdownMenuValueChangeDetail,
+  DropdownMenuValuesChangeDetail,
+  HighlightUpdateOptions,
+  OpenTransitionOptions,
+} from "./dropdown-menu-types";
+
+export type {
+  Align,
+  DropdownMenuController,
+  DropdownMenuHighlightChangeDetail,
+  DropdownMenuItemType,
+  DropdownMenuOpenChangeDetail,
+  DropdownMenuOpenChangeReason,
+  DropdownMenuOpenChangeSource,
+  DropdownMenuOptions,
+  DropdownMenuSelectDetail,
+  DropdownMenuSelectionSource,
+  DropdownMenuSetDetail,
+  DropdownMenuSetSource,
+  DropdownMenuUserSource,
+  DropdownMenuValueChangeDetail,
+  DropdownMenuValuesChangeDetail,
+  Side,
+} from "./dropdown-menu-types";
+
 const ROOT_BINDING_KEY = "@data-slot/dropdown-menu";
 const DUPLICATE_BINDING_WARNING = "[@data-slot/dropdown-menu] createDropdownMenu() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
-const ITEM_SELECTOR = '[data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-checkbox-item"]';
+const arraysEqual = (left: readonly string[], right: readonly string[]): boolean =>
+  left.length === right.length && left.every((value, index) => value === right[index]);
+
+const dispatchCustomEvent = <T>(el: Element, name: string, detail: T, cancelable = false): boolean =>
+  el.dispatchEvent(new CustomEvent(name, { bubbles: true, cancelable, detail }));
+
 /**
  * Create a dropdown menu controller for a root element.
  *
@@ -113,166 +148,40 @@ export function createDropdownMenu(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
   const itemCollection = createDropdownItemCollection(root, content);
-  let items: DropdownMenuItemRecord[] = [];
-  let enabledItems: DropdownMenuItemRecord[] = [];
-  let itemToEnabledIndex = new Map<HTMLElement, number>();
-  const isDisabledEl = (el: HTMLElement): boolean =>
-    el.hasAttribute("disabled") || el.hasAttribute("data-disabled") || el.getAttribute("aria-disabled") === "true";
   const isHoverPointer = (e: PointerEvent) => e.pointerType !== "touch";
-  const closestItem = (target: EventTarget | null): HTMLElement | null =>
-    target instanceof Element ? (target.closest(ITEM_SELECTOR) as HTMLElement | null) : null;
-  const getItemRecord = (el: HTMLElement | null): DropdownMenuItemRecord | null =>
-    el ? items.find((item) => item.el === el) ?? null : null;
-  const getRadioItems = (): DropdownMenuItemRecord[] => items.filter((item) => item.type === "radio");
-  const getCheckboxItems = (): DropdownMenuItemRecord[] => items.filter((item) => item.type === "checkbox");
-  const findRadioItemByValueIn = (
-    records: readonly DropdownMenuItemRecord[],
-    value: string,
-  ): DropdownMenuItemRecord | null =>
-    records.find((item) => item.type === "radio" && item.value === value) ?? null;
-  const getResolvedValue = (item: DropdownMenuItemRecord | null): string | null => {
-    if (!item) return null;
-    if (item.type === "item") {
-      return readActionValue(item);
-    }
-    return item.value;
-  };
-  const isInvalidSelectableItem = (item: DropdownMenuItemRecord): boolean =>
-    (item.type === "radio" || item.type === "checkbox") && item.value === null;
-  const isItemDisabled = (item: DropdownMenuItemRecord): boolean =>
-    isDisabledEl(item.el) || isInvalidSelectableItem(item);
-  const findRadioItemByValue = (value: string): DropdownMenuItemRecord | null =>
-    getRadioItems().find((item) => item.value === value) ?? null;
-  const findItemByResolvedValue = (value: string): DropdownMenuItemRecord | null =>
-    enabledItems.find((item) => getResolvedValue(item) === value) ?? null;
-  const getCheckboxDiff = (
-    previousValues: readonly string[],
-    nextValues: readonly string[],
-    checkboxItems: readonly DropdownMenuItemRecord[] = getCheckboxItems(),
-  ): CheckboxDiff => {
-    const previousSet = new Set(previousValues);
-    const nextSet = new Set(nextValues);
-    let changedValue: string | null = null;
-    let checked: boolean | null = null;
-    let item: HTMLElement | null = null;
-    for (const checkboxItem of checkboxItems) {
-      if (checkboxItem.type !== "checkbox") continue;
-      const value = checkboxItem.value;
-      if (!value) continue;
-      const wasChecked = previousSet.has(value);
-      const isChecked = nextSet.has(value);
-      if (wasChecked === isChecked) continue;
-      if (changedValue !== null) {
-        return { changedValue: null, checked: null, item: null };
-      }
-      changedValue = value;
-      checked = isChecked;
-      item = checkboxItem.el;
-    }
-    return { changedValue, checked, item };
-  };
-  const canonicalizeCheckboxValues = (
-    rawValues: readonly unknown[],
-    mode: "init" | "set",
-  ): string[] | null => {
-    const checkboxItems = getCheckboxItems().filter((item) => item.value !== null);
-    if (checkboxItems.length === 0) return null;
-    if (rawValues.length === 0) return [];
-    const requested = new Set(
-      rawValues
-        .filter((value): value is string => typeof value === "string")
-        .map((value) => value.trim())
-        .filter((value) => value.length > 0),
-    );
-    if (requested.size === 0) {
-      return mode === "init" ? [] : null;
-    }
-    const canonical: string[] = [];
-    for (const item of checkboxItems) {
-      if (item.value && requested.has(item.value)) {
-        canonical.push(item.value);
-      }
-    }
-    if (canonical.length === 0) {
-      return mode === "init" ? [] : null;
-    }
-    return canonical;
-  };
-  const syncItems = () => {
-    for (const item of items) {
-      const disabled = isItemDisabled(item);
-      item.el.setAttribute("role", getItemRole(item.type));
-      item.el.tabIndex = -1;
-      if (disabled) {
-        item.el.setAttribute("aria-disabled", "true");
-      } else {
-        item.el.removeAttribute("aria-disabled");
-      }
-      if (item.type === "radio") {
-        const checked = item.value !== null && currentValue === item.value;
-        setPresence(item.el, "data-checked", checked);
-        setAria(item.el, "checked", item.value !== null ? checked : null);
-      } else if (item.type === "checkbox") {
-        const checked = item.value !== null && currentValues.includes(item.value);
-        setPresence(item.el, "data-checked", checked);
-        setAria(item.el, "checked", item.value !== null ? checked : null);
-      } else {
-        item.el.removeAttribute("data-checked");
-        item.el.removeAttribute("aria-checked");
-      }
-    }
-    if (getRadioItems().length > 0 && currentValue !== null) {
-      root.setAttribute("data-value", currentValue);
-    } else {
-      root.removeAttribute("data-value");
-    }
-  };
-  const syncHighlightState = () => {
-    for (const item of items) {
-      setPresence(item.el, "data-highlighted", item.el === highlightedItem);
-    }
-  };
+  const syncItems = () => itemCollection.synchronizeSelection(currentValue, currentValues);
+
   const cacheItems = ({
     source = "programmatic",
     emitSelectionInvalidation = false,
   }: CacheItemsOptions = {}) => {
-    const previousItems = items;
     const previousValue = currentValue;
     const previousValues = [...currentValues];
-    itemCollection.refresh({
+    const refreshed = itemCollection.refresh({
       value: previousValue,
       values: previousValues,
       highlightedItem,
     });
-    items = [...itemCollection.items];
-    const nextValue =
-      previousValue !== null && findRadioItemByValue(previousValue) ? previousValue : null;
-    const nextValues =
-      previousValues.length > 0 ? canonicalizeCheckboxValues(previousValues, "init") ?? [] : [];
-    currentValue = nextValue;
-    currentValues = nextValues;
-    enabledItems = items.filter((item) => !isItemDisabled(item));
-    itemToEnabledIndex = new Map(enabledItems.map((item, index) => [item.el, index]));
-    if (highlightedItem && !itemToEnabledIndex.has(highlightedItem)) {
-      highlightedItem = null;
-    }
-    syncItems();
-    syncHighlightState();
+    const { previousItems } = refreshed;
+    currentValue = refreshed.value;
+    currentValues = refreshed.values;
+    highlightedItem = refreshed.highlightedItem;
+
     if (emitSelectionInvalidation) {
       if (previousValue !== currentValue) {
         emitValueChange({
           value: currentValue,
           previousValue,
-          item: currentValue === null ? null : findRadioItemByValue(currentValue)?.el ?? null,
-          previousItem: previousValue === null ? null : findRadioItemByValueIn(previousItems, previousValue)?.el ?? null,
+          item: currentValue === null ? null : itemCollection.radioFor(currentValue)?.el ?? null,
+          previousItem: previousValue === null ? null : itemCollection.radioFor(previousValue, previousItems)?.el ?? null,
           source,
         });
       }
       if (!arraysEqual(previousValues, currentValues)) {
-        const diff = getCheckboxDiff(
+        const diff = itemCollection.checkboxDiff(
           previousValues,
           currentValues,
-          previousItems.filter((item) => item.type === "checkbox"),
+          previousItems,
         );
         emitValuesChange({
           values: [...currentValues],
@@ -389,7 +298,7 @@ export function createDropdownMenu(
     nextItem: HTMLElement | null,
     { source, focus = true, focusContentOnClear = false }: HighlightUpdateOptions,
   ): boolean => {
-    if (nextItem && !itemToEnabledIndex.has(nextItem)) {
+    if (nextItem && !itemCollection.isEnabled(nextItem)) {
       return false;
     }
     const previousItem = highlightedItem;
@@ -403,7 +312,7 @@ export function createDropdownMenu(
       return false;
     }
     highlightedItem = nextItem;
-    syncHighlightState();
+    itemCollection.highlight(highlightedItem);
     if (nextItem) {
       ensureItemVisibleInContainer(nextItem, content);
       if (focus) {
@@ -413,8 +322,8 @@ export function createDropdownMenu(
       focusElement(content);
     }
     emitHighlightChange({
-      value: getResolvedValue(getItemRecord(nextItem)),
-      previousValue: getResolvedValue(getItemRecord(previousItem)),
+      value: itemCollection.valueFor(itemCollection.recordFor(nextItem)),
+      previousValue: itemCollection.valueFor(itemCollection.recordFor(previousItem)),
       item: nextItem,
       previousItem,
       source,
@@ -427,12 +336,12 @@ export function createDropdownMenu(
     emitChange = true,
   ): boolean => {
     cacheItems({ source, emitSelectionInvalidation: emitChange });
-    if (getRadioItems().length === 0) return false;
-    const nextItem = value === null ? null : findRadioItemByValue(value);
+    if (itemCollection.radios().length === 0) return false;
+    const nextItem = value === null ? null : itemCollection.radioFor(value);
     if (value !== null && !nextItem) return false;
     if (currentValue === value) return false;
     const previousValue = currentValue;
-    const previousItem = previousValue === null ? null : findRadioItemByValue(previousValue);
+    const previousItem = previousValue === null ? null : itemCollection.radioFor(previousValue);
     currentValue = value;
     syncItems();
     if (emitChange) {
@@ -452,11 +361,11 @@ export function createDropdownMenu(
     emitChange = true,
   ): boolean => {
     cacheItems({ source, emitSelectionInvalidation: emitChange });
-    const nextValues = canonicalizeCheckboxValues(values, emitChange ? "set" : "init");
+    const nextValues = itemCollection.checkboxValues(values, emitChange ? "set" : "init");
     if (nextValues === null) return false;
     if (arraysEqual(currentValues, nextValues)) return false;
     const previousValues = [...currentValues];
-    const diff = getCheckboxDiff(previousValues, nextValues);
+    const diff = itemCollection.checkboxDiff(previousValues, nextValues);
     currentValues = nextValues;
     syncItems();
     if (emitChange) {
@@ -480,7 +389,7 @@ export function createDropdownMenu(
         currentValue = null;
       }
     } else {
-      for (const radioItem of getRadioItems()) {
+      for (const radioItem of itemCollection.radios()) {
         if (radioItem.value !== null && getDataBool(radioItem.el, "defaultChecked")) {
           currentValue = radioItem.value;
           break;
@@ -488,13 +397,13 @@ export function createDropdownMenu(
       }
     }
     if (optionsHasDefaultValues || rootHasDefaultValues) {
-      const resolvedDefaults = canonicalizeCheckboxValues(requestedDefaultValues, "init");
+      const resolvedDefaults = itemCollection.checkboxValues(requestedDefaultValues, "init");
       currentValues = resolvedDefaults ?? [];
     } else {
-      const itemDefaults = getCheckboxItems()
+      const itemDefaults = itemCollection.checkboxes()
         .filter((item) => item.value !== null && getDataBool(item.el, "defaultChecked"))
         .map((item) => item.value as string);
-      currentValues = canonicalizeCheckboxValues(itemDefaults, "init") ?? [];
+      currentValues = itemCollection.checkboxValues(itemDefaults, "init") ?? [];
     }
     syncItems();
   };
@@ -561,8 +470,8 @@ export function createDropdownMenu(
     });
   };
   const activateItem = (item: DropdownMenuItemRecord, source: DropdownMenuUserSource) => {
-    if (isItemDisabled(item)) return;
-    const value = getResolvedValue(item);
+    if (itemCollection.isDisabled(item)) return;
+    const value = itemCollection.valueFor(item);
     if (value === null) return;
     let checked: boolean | undefined;
     if (item.type === "radio") {
@@ -605,14 +514,14 @@ export function createDropdownMenu(
       typeaheadBuffer = "";
     }, 500);
     typeaheadBuffer += char;
-    let matchIndex = enabledItems.findIndex((item) =>
+    let matchIndex = itemCollection.enabled.findIndex((item) =>
       (item.el.textContent?.trim().toLowerCase() ?? "").startsWith(typeaheadBuffer),
     );
     if (matchIndex === -1 && typeaheadBuffer.length === 1) {
-      const start = highlightedItem ? (itemToEnabledIndex.get(highlightedItem) ?? -1) + 1 : 0;
-      for (let i = 0; i < enabledItems.length; i++) {
-        const index = (start + i) % enabledItems.length;
-        const item = enabledItems[index];
+      const start = highlightedItem ? (itemCollection.enabledIndex(highlightedItem) ?? -1) + 1 : 0;
+      for (let i = 0; i < itemCollection.enabled.length; i++) {
+        const index = (start + i) % itemCollection.enabled.length;
+        const item = itemCollection.enabled[index];
         if ((item?.el.textContent?.trim().toLowerCase() ?? "").startsWith(char)) {
           matchIndex = index;
           break;
@@ -621,7 +530,7 @@ export function createDropdownMenu(
     }
     if (matchIndex !== -1) {
       keyboardMode = true;
-      updateHighlight(enabledItems[matchIndex]?.el ?? null, {
+      updateHighlight(itemCollection.enabled[matchIndex]?.el ?? null, {
         source: "keyboard",
         focus: true,
       });
@@ -650,7 +559,7 @@ export function createDropdownMenu(
           focusContentOnClear: true,
         });
       } else {
-        const nextItem = findItemByResolvedValue(detail.highlightedValue);
+        const nextItem = itemCollection.itemForValue(detail.highlightedValue);
         if (nextItem) {
           updateHighlight(nextItem.el, {
             source,
@@ -697,15 +606,15 @@ export function createDropdownMenu(
         });
         return;
       }
-      const itemCount = enabledItems.length;
+      const itemCount = itemCollection.enabled.length;
       if (itemCount === 0) return;
       switch (event.key) {
         case "ArrowDown":
           event.preventDefault();
           keyboardMode = true;
           updateHighlight(
-            enabledItems[
-              highlightedItem ? ((itemToEnabledIndex.get(highlightedItem) ?? -1) + 1) % itemCount : 0
+            itemCollection.enabled[
+              highlightedItem ? ((itemCollection.enabledIndex(highlightedItem) ?? -1) + 1) % itemCount : 0
             ]?.el ?? null,
             { source: "keyboard", focus: true },
           );
@@ -714,9 +623,9 @@ export function createDropdownMenu(
           event.preventDefault();
           keyboardMode = true;
           updateHighlight(
-            enabledItems[
+            itemCollection.enabled[
               highlightedItem
-                ? (itemToEnabledIndex.get(highlightedItem)! - 1 + itemCount) % itemCount
+                ? (itemCollection.enabledIndex(highlightedItem)! - 1 + itemCount) % itemCount
                 : itemCount - 1
             ]?.el ?? null,
             { source: "keyboard", focus: true },
@@ -725,7 +634,7 @@ export function createDropdownMenu(
         case "Home":
           event.preventDefault();
           keyboardMode = true;
-          updateHighlight(enabledItems[0]?.el ?? null, {
+          updateHighlight(itemCollection.enabled[0]?.el ?? null, {
             source: "keyboard",
             focus: true,
           });
@@ -733,7 +642,7 @@ export function createDropdownMenu(
         case "End":
           event.preventDefault();
           keyboardMode = true;
-          updateHighlight(enabledItems[itemCount - 1]?.el ?? null, {
+          updateHighlight(itemCollection.enabled[itemCount - 1]?.el ?? null, {
             source: "keyboard",
             focus: true,
           });
@@ -742,7 +651,7 @@ export function createDropdownMenu(
         case " ":
           event.preventDefault();
           if (highlightedItem) {
-            const highlightedRecord = getItemRecord(highlightedItem);
+            const highlightedRecord = itemCollection.recordFor(highlightedItem);
             if (highlightedRecord) {
               activateItem(highlightedRecord, "keyboard");
             }
@@ -756,21 +665,20 @@ export function createDropdownMenu(
       }
     }),
     on(content, "click", (event) => {
-      const itemEl = closestItem(event.target);
-      const item = getItemRecord(itemEl);
+      const item = itemCollection.fromTarget(event.target);
       if (!item) return;
       activateItem(item, "pointer");
     }),
     on(content, "pointermove", (event) => {
       if (!highlightItemOnHover || !isHoverPointer(event)) return;
-      const itemEl = closestItem(event.target);
+      const itemEl = itemCollection.fromTarget(event.target)?.el ?? null;
       if (keyboardMode) {
         keyboardMode = false;
         if (itemEl && itemEl === highlightedItem) {
           return;
         }
       }
-      if (itemEl && itemToEnabledIndex.has(itemEl)) {
+      if (itemEl && itemCollection.isEnabled(itemEl)) {
         updateHighlight(itemEl, {
           source: "pointer",
           focus: true,
@@ -915,7 +823,7 @@ export function createDropdownMenu(
       return [...currentValues];
     },
     get highlightedValue() {
-      return getResolvedValue(getItemRecord(highlightedItem));
+      return itemCollection.valueFor(itemCollection.recordFor(highlightedItem));
     },
     destroy: () => {
       isDestroyed = true;

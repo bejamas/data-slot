@@ -8,47 +8,6 @@ export type VisualPercents = {
   trackPercent: number;
 };
 
-export interface SliderOptions {
-  /** Initial value(s) - number or [min, max] for range */
-  defaultValue?: number | [number, number];
-  /** Minimum value */
-  min?: number;
-  /** Maximum value */
-  max?: number;
-  /** Step increment */
-  step?: number;
-  /** Larger step for PageUp/PageDown/Shift+Arrow */
-  largeStep?: number;
-  /** Slider orientation */
-  orientation?: "horizontal" | "vertical";
-  /**
-   * Thumb alignment when the value is at the track edges.
-   * "edge-client-only" is accepted for Base UI compatibility and behaves the same as "edge".
-   */
-  thumbAlignment?: ThumbAlignment;
-  /** Disable the slider */
-  disabled?: boolean;
-  /** Callback when value changes during interaction */
-  onValueChange?: (value: number | [number, number]) => void;
-  /** Callback when interaction ends (pointer release, blur) */
-  onValueCommit?: (value: number | [number, number]) => void;
-}
-
-export interface SliderController {
-  /** Set value programmatically */
-  setValue(value: number | [number, number]): void;
-  /** Current value(s) */
-  readonly value: number | [number, number];
-  /** Min value */
-  readonly min: number;
-  /** Max value */
-  readonly max: number;
-  /** Whether slider is disabled */
-  readonly disabled: boolean;
-  /** Cleanup all event listeners */
-  destroy(): void;
-}
-
 /**
  * Parse a default value from string (e.g., "50" or "25,75")
  */
