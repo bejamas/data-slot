@@ -10,13 +10,19 @@
  *   - Git repository with tags
  */
 
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 
+type TagRange = {
+  currentRevision: string;
+  previousRevision: string | null;
+  range: string;
+};
+
 function getPreviousTag(currentTag: string): string | null {
   try {
-    const tags = execSync("git tag --sort=-version:refname", {
+    const tags = execFileSync("git", ["tag", "--sort=-version:refname"], {
       encoding: "utf-8",
     })
       .trim()
@@ -47,18 +53,43 @@ function getPreviousTag(currentTag: string): string | null {
   }
 }
 
+function resolveRevision(revision: string): string | null {
+  try {
+    return execFileSync(
+      "git",
+      ["rev-parse", "--verify", "--end-of-options", `${revision}^{commit}`],
+      { encoding: "utf-8" }
+    ).trim();
+  } catch {
+    console.error(`Revision ${revision} could not be resolved to a commit`);
+    return null;
+  }
+}
+
+function resolveTagRange(tag: string): TagRange | null {
+  const previousTag = getPreviousTag(tag);
+  const currentRevision = resolveRevision(tag);
+  if (!currentRevision) return null;
+
+  const previousRevision = previousTag ? resolveRevision(previousTag) : null;
+  const range = previousRevision
+    ? `${previousRevision}..${currentRevision}`
+    : currentRevision;
+
+  return { currentRevision, previousRevision, range };
+}
+
 function getCommitsSinceTag(
   tag: string
 ): Array<{ hash: string; message: string; author: string }> {
   try {
-    const previousTag = getPreviousTag(tag);
-    const range = previousTag ? `${previousTag}..${tag}` : tag;
+    const tagRange = resolveTagRange(tag);
+    if (!tagRange) return [];
 
-    const log = execSync(
-      `git log ${range} --pretty=format:"%H|%s|%an" --no-merges`,
-      {
-        encoding: "utf-8",
-      }
+    const log = execFileSync(
+      "git",
+      ["log", tagRange.range, "--pretty=format:%H|%s|%an", "--no-merges"],
+      { encoding: "utf-8" }
     ).trim();
 
     if (!log) return [];
@@ -78,14 +109,16 @@ function getChangedFiles(
   tag: string
 ): Array<{ file: string; changes: string; packageName: string }> {
   try {
-    const previousTag = getPreviousTag(tag);
-    const range = previousTag ? `${previousTag}..${tag}` : tag;
+    const tagRange = resolveTagRange(tag);
+    if (!tagRange) return [];
 
-    console.error(`Comparing: ${range}`);
+    console.error(`Comparing: ${tagRange.range}`);
 
-    const files = execSync(`git diff --name-only ${range}`, {
-      encoding: "utf-8",
-    })
+    const files = execFileSync(
+      "git",
+      ["diff", "--name-only", tagRange.range],
+      { encoding: "utf-8" }
+    )
       .trim()
       .split("\n")
       .filter(Boolean);
@@ -113,8 +146,10 @@ function getChangedFiles(
       if (!isSourceFile) continue;
 
       try {
-        const diff = execSync(
-          `git diff ${previousTag || "HEAD~1"}..${tag} -- "${file}"`,
+        const diffBase = tagRange.previousRevision || "HEAD~1";
+        const diff = execFileSync(
+          "git",
+          ["diff", `${diffBase}..${tagRange.currentRevision}`, "--", file],
           {
             encoding: "utf-8",
             maxBuffer: 1024 * 1024,
