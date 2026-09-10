@@ -63,6 +63,44 @@ describe("AlertDialog", () => {
     };
   };
 
+
+  for (const singleControl of [true, false]) {
+    for (const shiftKey of [false, true]) {
+      it(`moves ${shiftKey ? "backward" : "forward"} from programmatic focus with ${singleControl ? "one tabbable control" : "two tabbable controls"}`, async () => {
+        const { title, cancel, action, controller } = setup();
+        title.setAttribute("tabindex", "-1");
+        if (singleControl) action.remove();
+        try {
+          controller.open();
+          await waitForRaf();
+          expect(document.activeElement?.getAttribute("data-slot")).toBe("alert-dialog-title");
+          const event = new KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true, cancelable: true });
+          title.dispatchEvent(event);
+          expect(event.defaultPrevented).toBe(true);
+          expect(document.activeElement).toBe(shiftKey && !singleControl ? action : cancel);
+        } finally {
+          controller.destroy();
+        }
+      });
+    }
+  }
+
+  it("focuses the content when no eligible descendants remain", async () => {
+    const { content, controller } = setup();
+    content.innerHTML = '<summary>Not focusable</summary><button hidden>Hidden</button>';
+    try {
+      controller.open();
+      await waitForRaf();
+      expect(document.activeElement).toBe(content);
+      const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+      content.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      expect(document.activeElement).toBe(content);
+    } finally {
+      controller.destroy();
+    }
+  });
+
   beforeEach(() => {
     document.body.innerHTML = "";
   });

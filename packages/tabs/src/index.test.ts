@@ -32,6 +32,25 @@ describe('Tabs', () => {
     return { root, list, triggers, panels, controller }
   }
 
+  it('ArrowDown selects a valid programmatic target and falls back to the panel', () => {
+    const { triggers, panels, controller } = setup()
+    const trigger = triggers[0]!
+    const panel = panels[0]!
+    panel.innerHTML = '<summary>Not focusable</summary><button hidden>Hidden</button><h2 tabindex="-1">Introduction</h2>'
+    const intro = panel.querySelector('h2')!
+    try {
+      trigger.focus()
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(document.activeElement).toBe(intro)
+      intro.remove()
+      trigger.focus()
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(document.activeElement).toBe(panel)
+    } finally {
+      controller.destroy()
+    }
+  })
+
   it('initializes with first tab selected by default', () => {
     const { triggers, panels, controller } = setup()
 

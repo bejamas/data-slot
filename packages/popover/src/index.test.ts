@@ -542,6 +542,28 @@ describe('Popover', () => {
 
   // Focus management tests
   describe('focus management', () => {
+    it('skips invalid autofocus targets and permits programmatic initial focus', async () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">
+            <summary autofocus>Not focusable</summary>
+            <button hidden autofocus>Hidden</button>
+            <h2 id="intro" tabindex="-1">Introduction</h2>
+            <button>Action</button>
+          </div>
+        </div>
+      `
+      const controller = createPopover(document.getElementById('root')!)
+      try {
+        controller.open()
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+        expect(document.activeElement).toBe(document.getElementById('intro'))
+      } finally {
+        controller.destroy()
+      }
+    })
+
     it('focuses first focusable element on open', () => {
       document.body.innerHTML = `
         <div data-slot="popover" id="root">

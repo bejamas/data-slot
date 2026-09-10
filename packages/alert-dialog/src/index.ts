@@ -218,9 +218,10 @@ export function createAlertDialog(
     const last = focusables[focusables.length - 1]!;
     const active = content.ownerDocument.activeElement;
 
-    if (!content.contains(active)) {
+    // Initial or programmatic focus may be inside the dialog but outside its tab order.
+    if (!focusables.includes(active as HTMLElement)) {
       e.preventDefault();
-      first.focus();
+      (e.shiftKey ? last : first).focus();
       return;
     }
 
