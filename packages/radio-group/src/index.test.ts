@@ -261,7 +261,7 @@ describe("RadioGroup", () => {
       expect(radioItems[0]?.hasAttribute("data-required")).toBe(true);
     });
 
-    it("restores the default selection on native form reset", async () => {
+    it.each(["connected", "detached", "canceled second reset"])("restores the default selection on native form reset (%s)", async (scenario) => {
       document.body.innerHTML = `
         <form id="form">
           <div
@@ -285,15 +285,23 @@ describe("RadioGroup", () => {
       const form = document.getElementById("form") as HTMLFormElement;
       const root = document.getElementById("root") as HTMLElement;
       const controller = createRadioGroup(root);
+      const inputs = getHiddenInputs();
 
       controller.select("pro");
       expect(controller.value).toBe("pro");
 
+      if (scenario === "detached") form.remove();
       form.reset();
-      await new Promise<void>((resolve) => queueMicrotask(resolve));
+      if (scenario === "canceled second reset") {
+        form.addEventListener("reset", (event) => event.preventDefault(), { once: true });
+        form.reset();
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
       expect(controller.value).toBe("starter");
-      expect(getHiddenInputs()[0]?.checked).toBe(true);
+      expect(inputs[0]?.checked).toBe(true);
+      expect(root.querySelector('[data-value="starter"]')?.getAttribute("aria-checked")).toBe("true");
+      controller.destroy();
     });
   });
 

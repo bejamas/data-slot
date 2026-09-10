@@ -1381,6 +1381,114 @@ describe("Combobox", () => {
   });
 
   describe("form integration", () => {
+    it.each(["inline", "popup"] as const)("resets an open %s input's query, results, and highlight silently", async (mode) => {
+      const inputMarkup = '<input data-slot="combobox-input" name="fruit" />';
+      const valueChanges: Array<string | null> = [];
+      const inputChanges: string[] = [];
+      const openChanges: boolean[] = [];
+      const { root, input, items, emptySlot, controller } = setup({
+        defaultValue: "banana",
+        autoHighlight: true,
+        onValueChange: (value) => valueChanges.push(value),
+        onInputValueChange: (value) => inputChanges.push(value),
+        onOpenChange: (open) => openChanges.push(open),
+      }, `
+        <form>
+          <div data-slot="combobox" id="root">
+            ${mode === "inline" ? inputMarkup : ""}
+            <button data-slot="combobox-trigger"><span data-slot="combobox-value">Choose fruit</span></button>
+            <div data-slot="combobox-content">
+              ${mode === "popup" ? inputMarkup : ""}
+              <div data-slot="combobox-list">
+                <div data-slot="combobox-item" data-value="apple">Apple</div>
+                <div data-slot="combobox-item" data-value="banana">Banana</div>
+                <div data-slot="combobox-empty" hidden>No results</div>
+              </div>
+            </div>
+          </div>
+        </form>
+      `);
+      const form = root.closest("form")!;
+      const events: string[] = [];
+      for (const type of ["combobox:change", "combobox:input-change", "combobox:open-change"]) {
+        root.addEventListener(type, () => events.push(type));
+      }
+      controller.select("apple");
+      controller.open();
+      input.value = "app";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(items[0]?.hasAttribute("data-highlighted")).toBe(true);
+      expect(items[1]?.hidden).toBe(true);
+
+      // Reset twice: presentation must reset even when the committed value is unchanged.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        form.reset();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(controller.value).toBe("banana");
+        expect(controller.isOpen).toBe(true);
+        expect(input.value).toBe(mode === "popup" ? "" : "Banana");
+        expect(root.querySelector('[data-slot="combobox-value"]')?.textContent).toBe("Banana");
+        expect(items[0]?.hidden).toBe(mode === "inline");
+        expect(items[1]?.hidden).toBe(false);
+        expect(items[0]?.hasAttribute("data-highlighted")).toBe(false);
+        expect(items[1]?.hasAttribute("data-highlighted")).toBe(true);
+        expect(input.getAttribute("aria-activedescendant")).toBe(items[1]?.id ?? null);
+        expect(emptySlot.hidden).toBe(true);
+        expect(new FormData(form).get("fruit")).toBe("banana");
+
+        if (attempt === 0) {
+          input.value = "app";
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
+      expect(valueChanges).toEqual(["apple"]);
+      expect(inputChanges).toEqual(["app", "app"]);
+      expect(openChanges).toEqual([true]);
+      expect(events).toEqual(["combobox:change", "combobox:open-change", "combobox:input-change", "combobox:input-change"]);
+      controller.destroy();
+    });
+
+    it("clears the active descendant and empty results when an open combobox resets to no selection", async () => {
+      const { root, input, items, emptySlot, controller } = setup();
+      const form = document.createElement("form");
+      root.before(form);
+      form.appendChild(root);
+      controller.open();
+      input.value = "missing";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(emptySlot.hidden).toBe(false);
+
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(controller.value).toBeNull();
+      expect(input.value).toBe("");
+      expect(input.hasAttribute("aria-activedescendant")).toBe(false);
+      expect(Array.from(items).every((item) => !item.hidden && !item.hasAttribute("data-highlighted"))).toBe(true);
+      expect(emptySlot.hidden).toBe(true);
+      expect(controller.isOpen).toBe(true);
+      controller.destroy();
+    });
+
+    it("preserves an authored named input's disabled state on its form proxy", () => {
+      const { root, controller } = setup({ defaultValue: "apple" }, `
+        <form>
+          <div data-slot="combobox" id="root">
+            <input data-slot="combobox-input" name="fruit" disabled />
+            <div data-slot="combobox-content">
+              <div data-slot="combobox-item" data-value="apple">Apple</div>
+            </div>
+          </div>
+        </form>
+      `);
+      // Happy DOM's FormData includes disabled controls; assert native eligibility here.
+      const proxy = root.querySelector<HTMLInputElement>('input[type="hidden"]')!;
+      expect(proxy.name).toBe("fruit");
+      expect(proxy.disabled).toBe(true);
+      controller.destroy();
+    });
+
     it("creates hidden input when name is provided", () => {
       const { root, controller } = setup({ name: "fruit" });
       const hiddenInput = root.querySelector('input[type="hidden"]') as HTMLInputElement;
@@ -1445,6 +1553,86 @@ describe("Combobox", () => {
       const hiddenInput = root.querySelector('input[type="hidden"]') as HTMLInputElement;
       expect(hiddenInput.name).toBe("fruit");
       controller.destroy();
+    });
+
+    it("restores initial selection, input text, and form data after reset without a second change", async () => {
+      document.body.innerHTML = `<form><div data-slot="combobox" id="root"><input data-slot="combobox-input" name="fruit" /><div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="apple">Apple</div><div data-slot="combobox-item" data-value="banana">Banana</div></div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      let changes = 0;
+      const controller = createCombobox(root, { defaultValue: "banana", onValueChange: () => changes++ });
+      controller.select("apple");
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(controller.value).toBe("banana");
+      expect((root.querySelector('[data-slot="combobox-input"]') as HTMLInputElement).value).toBe("Banana");
+      expect(root.querySelector('[data-value="banana"]')?.getAttribute("aria-selected")).toBe("true");
+      expect(new FormData(form).get("fruit")).toBe("banana");
+      expect(changes).toBe(1);
+      controller.destroy();
+    });
+
+    it("does not apply a canceled form reset", async () => {
+      document.body.innerHTML = `<form><div data-slot="combobox" id="root"><input data-slot="combobox-input" name="fruit" /><div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="apple">Apple</div><div data-slot="combobox-item" data-value="banana">Banana</div></div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      const controller = createCombobox(root, { defaultValue: "banana" });
+      controller.select("apple");
+      form.addEventListener("reset", (event) => event.preventDefault());
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(controller.value).toBe("apple");
+      controller.destroy();
+    });
+
+    it("resets an unnamed combobox with an empty-string default without creating a proxy", async () => {
+      document.body.innerHTML = `<form><div data-slot="combobox" id="root"><input data-slot="combobox-input" /><div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="">Empty</div><div data-slot="combobox-item" data-value="apple">Apple</div></div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      const controller = createCombobox(root, { defaultValue: "" });
+      controller.select("apple");
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(controller.value).toBe("");
+      expect(root.querySelector('input[type="hidden"]')).toBeNull();
+      controller.destroy();
+    });
+
+    it("uses and preserves an authored external form association", async () => {
+      document.body.innerHTML = `<form id="external"></form><div data-slot="combobox" id="root"><input data-slot="combobox-input" name="fruit" form="external" /><div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="apple">Apple</div><div data-slot="combobox-item" data-value="banana">Banana</div></div></div></div>`;
+      const root = document.getElementById("root")!;
+      const input = root.querySelector('[data-slot="combobox-input"]') as HTMLInputElement;
+      const form = document.getElementById("external") as HTMLFormElement;
+      const first = createCombobox(root, { defaultValue: "banana" });
+      first.select("apple");
+      expect(new FormData(form).get("fruit")).toBe("apple");
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(first.value).toBe("banana");
+      first.destroy();
+      expect(input.name).toBe("fruit");
+      expect(input.getAttribute("form")).toBe("external");
+      const second = createCombobox(root, { defaultValue: "banana" });
+      expect(new FormData(form).get("fruit")).toBe("banana");
+      second.destroy();
+      expect(input.name).toBe("fruit");
+      expect(input.getAttribute("form")).toBe("external");
+    });
+
+    it("restores an authored input name when destroyed and can be rebound", () => {
+      document.body.innerHTML = `<form><div data-slot="combobox" id="root"><input data-slot="combobox-input" name="fruit" /><div data-slot="combobox-content"><div data-slot="combobox-list"><div data-slot="combobox-item" data-value="apple">Apple</div></div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const input = root.querySelector('[data-slot="combobox-input"]') as HTMLInputElement;
+      const first = createCombobox(root);
+      expect(input.hasAttribute("name")).toBe(false);
+      first.destroy();
+      expect(input.name).toBe("fruit");
+      expect(root.querySelector('input[type="hidden"]')).toBeNull();
+      const second = createCombobox(root);
+      expect(input.hasAttribute("name")).toBe(false);
+      second.destroy();
+      expect(input.name).toBe("fruit");
     });
   });
 
