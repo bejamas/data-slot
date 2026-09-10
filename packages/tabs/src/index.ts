@@ -8,6 +8,7 @@ import {
   hasRootBinding,
   setRootBinding,
   clearRootBinding,
+  getFocusable,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -44,10 +45,6 @@ export interface TabsController {
 const ROOT_BINDING_KEY = "@data-slot/tabs";
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/tabs] createTabs() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
-
-// Focusable selector constant (shared with other components)
-const FOCUSABLE =
-  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 interface TabItem {
   el: HTMLElement;
@@ -441,7 +438,7 @@ export function createTabs(
         const panel = item.panel;
         if (panel) {
           e.preventDefault();
-          const focusable = panel.querySelector<HTMLElement>(FOCUSABLE);
+          const focusable = getFocusable(panel)[0];
           (focusable || panel).focus();
           return;
         }

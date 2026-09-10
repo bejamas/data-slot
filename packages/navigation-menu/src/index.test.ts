@@ -3109,6 +3109,33 @@ describe("NavigationMenu", () => {
       return { root, triggers, contents, link1, link2, link3, controller };
     };
 
+    it("navigates only tabbable descendants and falls back to content when none remain", async () => {
+      const { triggers, contents, controller } = setupWithLinks();
+      const trigger = triggers[0]!;
+      const content = contents[0]!;
+      content.innerHTML = `
+        <h2 tabindex="-1">Programmatic only</h2>
+        <summary>Not focusable</summary>
+        <button hidden>Hidden</button>
+        <div style="visibility: hidden"><button id="visible-action" style="visibility: visible">Visible action</button></div>
+      `;
+      const action = content.querySelector<HTMLButtonElement>("#visible-action")!;
+      try {
+        controller.open("products");
+        trigger.focus();
+        trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+        await flushRAF();
+        expect(document.activeElement).toBe(action);
+        action.disabled = true;
+        trigger.focus();
+        trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+        await flushRAF();
+        expect(document.activeElement).toBe(content);
+      } finally {
+        controller.destroy();
+      }
+    });
+
     it("ArrowDown from trigger moves focus to first content element", async () => {
       const { triggers, link1, controller } = setupWithLinks();
 

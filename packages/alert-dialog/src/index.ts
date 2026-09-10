@@ -16,6 +16,8 @@ import {
   createDismissLayer,
   createPresenceLifecycle,
   focusElement,
+  getAutofocusOrFirstFocusable,
+  getTabbables,
 } from "@data-slot/core";
 
 export interface AlertDialogOptions {
@@ -47,9 +49,6 @@ export interface AlertDialogController {
 const ROOT_BINDING_KEY = "@data-slot/alert-dialog";
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/alert-dialog] createAlertDialog() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
-
-const FOCUSABLE =
-  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export function createAlertDialog(
   root: Element,
@@ -126,11 +125,8 @@ export function createAlertDialog(
   };
 
   const focusFirst = () => {
-    const autofocusEl = content.querySelector<HTMLElement>("[autofocus]");
-    if (autofocusEl) return autofocusEl.focus();
-
-    const first = content.querySelector<HTMLElement>(FOCUSABLE);
-    if (first) return first.focus();
+    const initialFocus = getAutofocusOrFirstFocusable(content);
+    if (initialFocus) return initialFocus.focus();
 
     ensureContentFocusable();
     content.focus();
@@ -209,7 +205,7 @@ export function createAlertDialog(
   const handleKeydown = (e: KeyboardEvent) => {
     if (e.key !== "Tab") return;
 
-    const focusables = content.querySelectorAll<HTMLElement>(FOCUSABLE);
+    const focusables = getTabbables(content);
 
     if (focusables.length === 0) {
       e.preventDefault();
@@ -220,11 +216,12 @@ export function createAlertDialog(
 
     const first = focusables[0]!;
     const last = focusables[focusables.length - 1]!;
-    const active = document.activeElement;
+    const active = content.ownerDocument.activeElement;
 
-    if (!content.contains(active)) {
+    // Initial or programmatic focus may be inside the dialog but outside its tab order.
+    if (!focusables.includes(active as HTMLElement)) {
       e.preventDefault();
-      first.focus();
+      (e.shiftKey ? last : first).focus();
       return;
     }
 

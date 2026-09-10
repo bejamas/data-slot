@@ -36,6 +36,21 @@ Find all component roots within a scope by data-slot value.
 const dialogs = getRoots(document, "dialog");
 ```
 
+### Focus Utilities
+
+`getFocusable(container)` returns programmatically focusable descendants in DOM
+order, including elements with a negative `tabindex`. `getTabbables(container)`
+returns the subset eligible for Tab navigation, accounting for checked radio
+groups. It also returns DOM order rather than sorting positive `tabindex` values.
+
+`getAutofocusOrFirstFocusable(container)` selects an eligible `[autofocus]`
+descendant, otherwise the first focusable descendant, or `undefined` if none exist.
+
+Each call reads current DOM state. Hidden, inert, and natively disabled controls
+are excluded. `aria-disabled` and `data-disabled` alone do not remove native focus
+eligibility. Queries exclude the container itself and do not cross into nested
+shadow roots; pass a shadow root directly to query its descendants.
+
 ### ARIA Utilities
 
 #### `ensureId(element, prefix)`
@@ -116,4 +131,3 @@ function createCustomComponent(root: Element) {
 ## License
 
 MIT
-

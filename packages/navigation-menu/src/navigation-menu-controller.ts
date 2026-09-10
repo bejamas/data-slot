@@ -9,6 +9,7 @@ import {
   hasRootBinding,
   setRootBinding,
   clearRootBinding,
+  getTabbables,
 } from "@data-slot/core";
 import { createPresenceLifecycle, setAria } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
@@ -335,26 +336,7 @@ export function createNavigationMenu(
     return discoveredItems.isNonSubmenuListTarget(target);
   };
 
-  // Focusable elements selector for content navigation
-  const focusableSelector =
-    'a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-  // Get focusable elements in a content panel
-  const getFocusableElements = (content: HTMLElement): HTMLElement[] => {
-    return Array.from(
-      content.querySelectorAll<HTMLElement>(focusableSelector),
-    ).filter((el) => !el.hidden && !el.closest("[hidden]"));
-  };
-
-  const isElementActuallyFocusable = (el: HTMLElement): boolean => {
-    if (!el.isConnected) return false;
-    if (el.hidden || el.closest("[hidden]")) return false;
-    if ("disabled" in el && (el as HTMLButtonElement).disabled) return false;
-    if (el.getAttribute("aria-hidden") === "true") return false;
-    if (el.getAttribute("tabindex") === "-1") return false;
-    if (el.matches(focusableSelector)) return true;
-    return el.tabIndex >= 0;
-  };
+  const getFocusableElements = getTabbables;
 
   const isWithinThisMenu = (candidate: HTMLElement): boolean => {
     if (root.contains(candidate)) return true;
@@ -377,9 +359,8 @@ export function createNavigationMenu(
 
   const focusNextFocusableAfterRoot = (): boolean => {
     const doc = root.ownerDocument;
-    const candidates = Array.from(doc.querySelectorAll<HTMLElement>("*"));
+    const candidates = getTabbables(doc);
     for (const candidate of candidates) {
-      if (!isElementActuallyFocusable(candidate)) continue;
       if (isWithinThisMenu(candidate)) continue;
       if (
         ((root as Node).compareDocumentPosition(candidate) &

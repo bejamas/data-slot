@@ -16,6 +16,8 @@ import {
   createDismissLayer,
   createPresenceLifecycle,
   focusElement,
+  getAutofocusOrFirstFocusable,
+  getTabbables,
 } from "@data-slot/core";
 
 export interface DialogOptions {
@@ -55,10 +57,6 @@ export interface DialogController {
 const ROOT_BINDING_KEY = "@data-slot/dialog";
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/dialog] createDialog() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
-
-// Focusable element selector
-const FOCUSABLE =
-  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 /**
  * Create a dialog controller for a root element
@@ -161,11 +159,8 @@ export function createDialog(
   };
 
   const focusFirst = () => {
-    const autofocusEl = content.querySelector<HTMLElement>("[autofocus]");
-    if (autofocusEl) return autofocusEl.focus();
-
-    const first = content.querySelector<HTMLElement>(FOCUSABLE);
-    if (first) return first.focus();
+    const initialFocus = getAutofocusOrFirstFocusable(content);
+    if (initialFocus) return initialFocus.focus();
 
     ensureContentFocusable();
     content.focus();
@@ -308,7 +303,7 @@ export function createDialog(
   const handleKeydown = (e: KeyboardEvent) => {
     if (e.key !== "Tab") return;
 
-    const focusables = content.querySelectorAll<HTMLElement>(FOCUSABLE);
+    const focusables = getTabbables(content);
 
     // If no focusables, prevent Tab from escaping
     if (focusables.length === 0) {
@@ -320,12 +315,12 @@ export function createDialog(
 
     const first = focusables[0]!;
     const last = focusables[focusables.length - 1]!;
-    const active = document.activeElement;
+    const active = content.ownerDocument.activeElement;
 
-    // If focus is outside the dialog, bring it back
-    if (!content.contains(active)) {
+    // Initial or programmatic focus may be inside the dialog but outside its tab order.
+    if (!focusables.includes(active as HTMLElement)) {
       e.preventDefault();
-      first.focus();
+      (e.shiftKey ? last : first).focus();
       return;
     }
 
