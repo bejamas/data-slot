@@ -1247,7 +1247,7 @@ describe("Select", () => {
 
       controller.select("apple");
       form.reset();
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(controller.value).toBe("banana");
       expect(root.querySelector('[data-slot="select-value"]')?.textContent).toBe("Banana");
@@ -1265,7 +1265,7 @@ describe("Select", () => {
       controller.select("apple");
       form.addEventListener("reset", (event) => event.preventDefault());
       form.reset();
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
       expect(controller.value).toBe("apple");
       controller.destroy();
     });
@@ -1277,10 +1277,87 @@ describe("Select", () => {
       const controller = createSelect(root, { defaultValue: "" });
       controller.select("apple");
       form.reset();
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
       expect(controller.value).toBe("");
       expect(root.querySelector('input[type="hidden"]')).toBeNull();
       controller.destroy();
+    });
+
+    for (const name of ["fruit", undefined]) {
+      const fieldType = name ? "named" : "unnamed";
+
+      it(`resets an initially detached ${fieldType} select after attaching it to a form`, async () => {
+        const root = document.createElement("div");
+        root.innerHTML = `
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div><div data-slot="select-item" data-value="banana">Banana</div></div>`;
+        const controller = createSelect(root, { name, defaultValue: "banana" });
+        const form = document.createElement("form");
+        document.body.appendChild(form);
+        form.appendChild(root);
+        controller.select("apple");
+
+        form.reset();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(controller.value).toBe("banana");
+        expect(root.querySelector('[data-slot="select-value"]')?.textContent).toBe("Banana");
+        expect(new FormData(form).get("fruit")).toBe(name ? "banana" : null);
+        controller.destroy();
+      });
+
+      it(`follows the current form when the ${fieldType} select moves between forms`, async () => {
+        const { root, controller } = setup({ name, defaultValue: "banana" });
+        const firstForm = document.createElement("form");
+        const secondForm = document.createElement("form");
+        const unrelatedForm = document.createElement("form");
+        document.body.append(firstForm, secondForm, unrelatedForm);
+        firstForm.appendChild(root);
+        controller.select("apple");
+
+        firstForm.reset();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(controller.value).toBe("banana");
+
+        secondForm.appendChild(root);
+        controller.select("apple");
+        firstForm.reset();
+        unrelatedForm.reset();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(controller.value).toBe("apple");
+
+        secondForm.reset();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(controller.value).toBe("banana");
+        expect(new FormData(firstForm).get("fruit")).toBeNull();
+        expect(new FormData(secondForm).get("fruit")).toBe(name ? "banana" : null);
+        controller.destroy();
+      });
+    }
+
+    it("does not let a queued reset overwrite a rebound select", async () => {
+      const { root, controller } = setup({ name: "fruit", defaultValue: "banana" }, `
+        <form><div data-slot="select" id="root">
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div><div data-slot="select-item" data-value="banana">Banana</div></div>
+        </div></form>`);
+      const form = root.closest("form")!;
+      controller.select("apple");
+
+      form.reset();
+      controller.destroy();
+      const rebound = createSelect(root, { name: "fruit", defaultValue: "apple" });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(controller.value).toBe("apple");
+      expect(rebound.value).toBe("apple");
+      expect(root.querySelector('[data-slot="select-value"]')?.textContent).toBe("Apple");
+      expect(new FormData(form).getAll("fruit")).toEqual(["apple"]);
+      rebound.select("banana");
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(rebound.value).toBe("apple");
+      rebound.destroy();
     });
 
     it("reads data-name attribute", () => {

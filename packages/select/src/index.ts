@@ -252,6 +252,14 @@ export function createSelect(
     for (const el of items) el.removeAttribute("data-highlighted");
     highlightedIndex = -1;
   };
+  const highlightSelectedItem = () => {
+    const selectedIndex = enabledItems.findIndex((el) => el.dataset["value"] === currentValue);
+    if (selectedIndex >= 0) {
+      updateHighlight(selectedIndex, false, false);
+    } else {
+      clearHighlight();
+    }
+  };
   const clearHighlightAndFocusContent = () => {
     clearHighlight();
     focusElement(content);
@@ -348,14 +356,7 @@ export function createSelect(
 
       cacheItems();
       keyboardMode = false;
-
-      // Highlight selected item if any
-      const selectedIndex = enabledItems.findIndex((el) => el.dataset["value"] === currentValue);
-      if (selectedIndex >= 0) {
-        updateHighlight(selectedIndex, false, false);
-      } else {
-        clearHighlight();
-      }
+      highlightSelectedItem();
 
       positioning.start();
       positioning.update();
@@ -555,7 +556,14 @@ export function createSelect(
     root,
     name,
     defaultValue,
-    onReset: (value) => updateValue(value, true),
+    disabled,
+    onReset: (value) => {
+      updateValue(value, true);
+      if (isOpen) {
+        typeahead.reset();
+        highlightSelectedItem();
+      }
+    },
   });
 
   // Trigger events

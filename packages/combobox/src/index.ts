@@ -92,11 +92,10 @@ export function createCombobox(
 
   // Resolve options: JS > data-* > defaults
   const {
-    defaultValue, defaultOpen, placeholder, disabled, required, name: configuredName, openOnFocus, autoHighlight,
+    defaultValue, defaultOpen, placeholder, disabled, required, name, openOnFocus, autoHighlight,
     customFilter, onValueChange, onOpenChange, onInputValueChange, preferredSide, preferredAlign,
     sideOffset, alignOffset, avoidCollisions, collisionPadding,
-  } = resolveComboboxConfiguration(root, content, authoredPositioner, options);
-  const name = configuredName ?? input.getAttribute("name");
+  } = resolveComboboxConfiguration(root, input, content, authoredPositioner, options);
   let itemToStringValue = options.itemToStringValue ?? null;
 
   // State
@@ -337,6 +336,22 @@ export function createCombobox(
     },
   });
 
+  // Shows the current results and highlights the committed value if visible.
+  const syncOpenResults = () => {
+    keyboardMode = false;
+    // In popup-input mode, input text is transient search and should start empty.
+    if (isPopupInputMode) {
+      input.value = "";
+    }
+    collection.filter(input.value);
+    const selectedIndex = collection.enabled.findIndex((item) => collection.valueOf(item) === currentValue);
+    if (selectedIndex >= 0) {
+      collection.highlight(selectedIndex);
+    } else {
+      collection.clearHighlight();
+    }
+  };
+
   const updateOpenState = (open: boolean, skipFocusRestore = false) => {
     if (isOpen === open) return;
     if (disabled && open) return;
@@ -351,23 +366,7 @@ export function createCombobox(
       presence.enter();
 
       collection.cache(currentValue);
-      keyboardMode = false;
-
-      // In popup-input mode, input text is transient search and should start empty on open.
-      if (isPopupInputMode) {
-        input.value = "";
-      }
-
-      // Apply current filter
-      collection.filter(input.value);
-
-      // Highlight selected item if visible, else auto-highlight first
-      const selectedIndex = collection.enabled.findIndex((item) => collection.valueOf(item) === currentValue);
-      if (selectedIndex >= 0) {
-        collection.highlight(selectedIndex);
-      } else {
-        collection.clearHighlight();
-      }
+      syncOpenResults();
 
       positionSync.start();
       updatePosition();
@@ -627,7 +626,14 @@ export function createCombobox(
     name,
     defaultValue,
     control: input,
-    onReset: (value) => updateValue(value, true),
+    disabled,
+    onReset: (value) => {
+      updateValue(value, true);
+      if (isOpen) {
+        syncOpenResults();
+        positionSync.update();
+      }
+    },
   });
 
   // Event listeners

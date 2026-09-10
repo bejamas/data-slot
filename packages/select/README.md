@@ -264,6 +264,13 @@ When `name` is provided, a hidden input is automatically created for form submis
 </form>
 ```
 
+A disabled select does not submit its value.
+
+Resetting the form restores `defaultValue` and its displayed selection without
+emitting a value-change event, including when the select has no `name`.
+Synchronization happens on the next event-loop task, after the browser resets
+native controls. Calling `preventDefault()` on the reset event preserves the current state.
+
 ## License
 
 MIT
