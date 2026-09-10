@@ -221,6 +221,33 @@ describe('core/parts', () => {
     ).toEqual(['outer-item'])
   })
 
+  for (const scopeType of ['fragment', 'shadow root'] as const) {
+    it(`finds owned parts in a ${scopeType} while excluding nested components`, () => {
+      const root = document.createElement('div')
+      root.setAttribute('data-slot', 'dropdown-menu')
+      const scope = scopeType === 'fragment'
+        ? document.createDocumentFragment()
+        : document.createElement('div').attachShadow({ mode: 'open' })
+      const template = document.createElement('template')
+      template.innerHTML = `
+        <button data-slot="dropdown-menu-item" id="direct-item">Direct</button>
+        <div>
+          <button data-slot="dropdown-menu-item" id="wrapped-item">Wrapped</button>
+          <div data-slot="dropdown-menu">
+            <button data-slot="dropdown-menu-item" id="nested-item">Nested</button>
+          </div>
+        </div>
+      `
+      scope.appendChild(template.content)
+
+      expect(
+        getOwnedElements(root, scope, '[data-slot="dropdown-menu-item"]').map(
+          (part) => part.id
+        )
+      ).toEqual(['direct-item', 'wrapped-item'])
+    })
+  }
+
   it('getRoots finds all component roots by data-slot', () => {
     document.body.innerHTML = `
       <div data-slot="dialog">Dialog 1</div>

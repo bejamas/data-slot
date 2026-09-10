@@ -7,13 +7,13 @@ const isOwnedPart = (root: Element, part: Element, scope: ParentNode): boolean =
   const rootSlot = root.getAttribute("data-slot");
   if (!rootSlot) return true;
 
-  let ancestor: Element | null = part.parentElement;
+  let ancestor: ParentNode | null = part.parentNode;
   while (ancestor) {
-    if (ancestor.getAttribute("data-slot") === rootSlot) {
+    if (ancestor.nodeType === 1 && (ancestor as Element).getAttribute("data-slot") === rootSlot) {
       return ancestor === root;
     }
     if (ancestor === scope) return true;
-    ancestor = ancestor.parentElement;
+    ancestor = ancestor.parentNode;
   }
 
   return false;
