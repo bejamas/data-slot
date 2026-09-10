@@ -8,6 +8,7 @@ import {
   setAria,
   ensureId,
   on,
+  onRoot,
   emit,
   computeFloatingPosition,
   computeFloatingTransformOrigin,
@@ -688,7 +689,7 @@ export function createCombobox(
   cleanups.push(
     on(content, "click", (e) => {
       const item = (e.target as HTMLElement).closest?.('[data-slot="combobox-item"]') as HTMLElement | null;
-      if (item && !item.hidden) selectItem(item);
+      if (item && !item.hidden && collection.items.includes(item)) selectItem(item);
     }),
     on(content, "pointermove", (e) => {
       const item = (e.target as HTMLElement).closest?.('[data-slot="combobox-item"]') as HTMLElement | null;
@@ -739,7 +740,7 @@ export function createCombobox(
 
   // Inbound event
   cleanups.push(
-    on(root, "combobox:set", (e) => {
+    onRoot(root, "combobox:set", (e) => {
       const detail = (e as CustomEvent).detail;
       // Value first (syncs input to label), then inputValue can override
       if (detail?.value !== undefined) {

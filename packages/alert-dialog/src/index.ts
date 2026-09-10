@@ -8,7 +8,7 @@ import {
   clearRootBinding,
 } from "@data-slot/core";
 import { setAria, ensureId, linkLabelledBy } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
 import {
   createPortalLifecycle,
@@ -380,7 +380,7 @@ export function createAlertDialog(
   };
 
   cleanups.push(
-    on(root, "alert-dialog:set", (e) => {
+    onRoot(root, "alert-dialog:set", (e) => {
       const detail = (e as CustomEvent).detail;
       if (typeof detail?.open === "boolean") {
         updateState(detail.open);

@@ -59,7 +59,7 @@ export function createNavigationMenuItems(
   };
   const targetForPlainItem = (item: HTMLElement) => {
     if (item.matches(focusable)) return item;
-    for (const candidate of item.querySelectorAll<HTMLElement>(focusable)) {
+    for (const candidate of getOwnedElements<HTMLElement>(root, item, focusable)) {
       if (
         !candidate.closest('[data-slot="navigation-menu-content"]') &&
         !candidate.hidden &&

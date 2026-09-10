@@ -7,6 +7,7 @@ import {
   clearRootBinding,
   setAria,
   on,
+  onRoot,
   emit,
 } from "@data-slot/core";
 
@@ -104,7 +105,7 @@ export function createToggle(
   // Preferred shape: { value: boolean }
   // Deprecated shapes: boolean | { pressed: boolean }
   cleanups.push(
-    on(root, "toggle:set", (e) => {
+    onRoot(root, "toggle:set", (e) => {
       if (isDisabled()) return;
       const detail = (e as CustomEvent).detail;
       let value: boolean | undefined;

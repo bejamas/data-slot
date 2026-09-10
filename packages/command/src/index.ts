@@ -1,5 +1,6 @@
 import {
   getPart,
+  getOwnedElements,
   getRoots,
   reuseRootBinding,
   hasRootBinding,
@@ -10,6 +11,7 @@ import {
   ensureId,
   setAria,
   on,
+  onRoot,
   emit,
   ensureItemVisibleInContainer,
 } from "@data-slot/core";
@@ -124,10 +126,10 @@ export function createCommand(
   const rootEl = root as HTMLElement;
   const input = getPart<HTMLInputElement>(root, "command-input");
   const list = getPart<HTMLElement>(root, "command-list");
-  const empty = getPart<HTMLElement>(list ?? root, "command-empty");
   if (!input || !list) {
     throw new Error("Command requires command-input and command-list slots");
   }
+  const empty = getOwnedElements<HTMLElement>(root, list, '[data-slot="command-empty"]')[0] ?? null;
   const label = options.label ?? getDataString(rootEl, "label") ?? "Command Menu";
   const shouldFilter = options.shouldFilter ?? getDataBool(rootEl, "shouldFilter") ?? true;
   const loop = options.loop ?? getDataBool(rootEl, "loop") ?? false;
@@ -806,7 +808,7 @@ export function createCommand(
     })
   );
   cleanups.push(
-    on(rootEl, "command:set", (event) => {
+    onRoot(rootEl, "command:set", (event) => {
       const detail = (event as CustomEvent<{ value?: string | null; search?: string }>).detail;
       if (!detail) return;
       if (detail.search !== undefined) {

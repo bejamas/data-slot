@@ -9,6 +9,7 @@ import {
   setAria,
   ensureId,
   on,
+  onRoot,
   emit,
   lockScroll,
   unlockScroll,
@@ -748,7 +749,7 @@ export function createDropdownMenu(
     }),
   );
   cleanups.push(
-    on(root, "dropdown-menu:set", (event) => {
+    onRoot(root, "dropdown-menu:set", (event) => {
       const detail = (event as CustomEvent).detail;
       if (!detail || typeof detail !== "object") return;
       const nextDetail: DropdownMenuSetDetail = {

@@ -179,6 +179,47 @@ describe("Combobox", () => {
     document.body.innerHTML = "";
   });
 
+  describe("nested ownership", () => {
+    for (const bindInner of [false, true]) {
+      it(`ignores nested item clicks with an ${bindInner ? "initialized" : "uninitialized"} inner combobox`, () => {
+        document.body.innerHTML = `
+          <div data-slot="combobox" id="outer">
+            <input data-slot="combobox-input" /><button data-slot="combobox-trigger">Open</button>
+            <div data-slot="combobox-content">
+              <div data-slot="combobox-item" data-value="outer" id="outer-item">Outer</div>
+              <div data-slot="combobox" id="inner">
+                <input data-slot="combobox-input" /><button data-slot="combobox-trigger">Inner</button>
+                <div data-slot="combobox-content">
+                  <div data-slot="combobox-item" data-value="inner" id="inner-item">Inner</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        const outerRoot = document.getElementById("outer")!;
+        const innerRoot = document.getElementById("inner")!;
+        const outer = createCombobox(outerRoot, { name: "outer", defaultValue: "outer" });
+        const inner = bindInner ? createCombobox(innerRoot) : null;
+        try {
+          outer.open();
+          const innerItem = document.getElementById("inner-item")!;
+          if (!bindInner) expect(innerItem.hasAttribute("role")).toBe(false);
+          innerItem.click();
+          expect(outer.value).toBe("outer");
+          expect(outer.isOpen).toBe(true);
+          expect(outerRoot.querySelector<HTMLInputElement>('input[type="hidden"]')?.value).toBe("outer");
+
+          document.getElementById("outer-item")!.click();
+          expect(outer.value).toBe("outer");
+          expect(outer.isOpen).toBe(false);
+        } finally {
+          inner?.destroy();
+          outer.destroy();
+        }
+      });
+    }
+  });
+
   describe("initialization", () => {
     it("initializes with content hidden", () => {
       const { content, controller } = setup();

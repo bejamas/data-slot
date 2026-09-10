@@ -10,6 +10,7 @@ import {
   setAria,
   ensureId,
   on,
+  onRoot,
   emit,
   observeFormReset,
 } from "@data-slot/core";
@@ -369,7 +370,7 @@ export function createSwitch(
   }
 
   cleanups.push(
-    on(rootElement, "switch:set", (event) => {
+    onRoot(rootElement, "switch:set", (event) => {
       const detail = (event as CustomEvent).detail;
       const checked =
         typeof detail === "boolean"

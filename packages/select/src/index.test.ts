@@ -70,6 +70,62 @@ describe("Select", () => {
     document.documentElement.style.cssText = "";
   });
 
+  describe("nested ownership", () => {
+    for (const bindInner of [false, true]) {
+      it(`ignores nested item clicks with an ${bindInner ? "initialized" : "uninitialized"} inner select`, () => {
+        document.body.innerHTML = `
+          <div data-slot="select" id="outer">
+            <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+            <div data-slot="select-content">
+              <div data-slot="select-item" data-value="outer" id="outer-item">Outer</div>
+              <div data-slot="select" id="inner">
+                <button data-slot="select-trigger">Inner</button>
+                <div data-slot="select-content">
+                  <div data-slot="select-item" data-value="inner" id="inner-item">Inner</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        const outerRoot = document.getElementById("outer")!;
+        const innerRoot = document.getElementById("inner")!;
+        const outer = createSelect(outerRoot, { name: "outer", defaultValue: "outer" });
+        const inner = bindInner ? createSelect(innerRoot) : null;
+        try {
+          outer.open();
+          const innerItem = document.getElementById("inner-item")!;
+          if (!bindInner) expect(innerItem.hasAttribute("role")).toBe(false);
+          innerItem.click();
+          expect(outer.value).toBe("outer");
+          expect(outer.isOpen).toBe(true);
+          expect(outerRoot.querySelector<HTMLInputElement>('input[type="hidden"]')?.value).toBe("outer");
+
+          document.getElementById("outer-item")!.click();
+          expect(outer.value).toBe("outer");
+          expect(outer.isOpen).toBe(false);
+        } finally {
+          inner?.destroy();
+          outer.destroy();
+        }
+      });
+    }
+  });
+
+  it("allows clicking an item enabled while the popup is open", () => {
+    const { items, controller } = setup();
+    try {
+      controller.open();
+      const item = items[3]!;
+      item.removeAttribute("data-disabled");
+      item.removeAttribute("aria-disabled");
+      item.click();
+      expect(controller.value).toBe("disabled");
+      expect(controller.isOpen).toBe(false);
+    } finally {
+      controller.destroy();
+    }
+  });
+
   describe("initialization", () => {
     it("initializes with content hidden", () => {
       const { content, controller } = setup();

@@ -18,7 +18,7 @@ import {
   createPresenceLifecycle,
 } from "@data-slot/core";
 import { ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 
 const ROOT_BINDING_KEY = "@data-slot/tooltip";
 const DUPLICATE_BINDING_WARNING =
@@ -564,7 +564,7 @@ export function createTooltip(
 
   // Inbound event
   cleanups.push(
-    on(root, "tooltip:set", (e) => {
+    onRoot(root, "tooltip:set", (e) => {
       const detail = (e as CustomEvent).detail;
       // Preferred: { open: boolean }
       // Deprecated: { value: boolean }

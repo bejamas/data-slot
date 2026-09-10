@@ -24,6 +24,18 @@ export function on(
 }
 
 /**
+ * Listen for commands dispatched directly on a component root, ignoring
+ * commands bubbling from descendants without stopping their propagation.
+ */
+export const onRoot = (
+  root: Element,
+  type: string,
+  fn: (e: Event) => void,
+): (() => void) => on(root, type, (event) => {
+  if (event.target === root) fn(event);
+});
+
+/**
  * Dispatch a custom event with optional detail
  */
 export const emit = <T = unknown>(

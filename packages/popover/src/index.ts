@@ -19,7 +19,7 @@ import {
   getAutofocusOrFirstFocusable,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 
 export type PopoverSide = "top" | "right" | "bottom" | "left";
 const SIDES = ["top", "right", "bottom", "left"] as const;
@@ -393,7 +393,7 @@ export function createPopover(
 
   // Inbound event
   cleanups.push(
-    on(root, "popover:set", (e) => {
+    onRoot(root, "popover:set", (e) => {
       const detail = (e as CustomEvent).detail;
       // Preferred: { open: boolean }
       // Deprecated: { value: boolean }

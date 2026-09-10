@@ -11,6 +11,7 @@ import {
   setAria,
   ensureId,
   on,
+  onRoot,
   emit,
   observeFormReset,
 } from "@data-slot/core";
@@ -515,7 +516,7 @@ export function createRadioGroup(
   cleanups.push(() => resetObserver.destroy());
 
   cleanups.push(
-    on(rootElement, "radio-group:set", (event) => {
+    onRoot(rootElement, "radio-group:set", (event) => {
       if (disabled || readOnly) return;
 
       const detail = (event as CustomEvent).detail;

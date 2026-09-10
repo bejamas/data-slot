@@ -7,7 +7,7 @@ import {
   createTypeahead,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 import { createFormFieldAdapter } from "@data-slot/core";
 import type { FormFieldAdapter } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
@@ -587,7 +587,7 @@ export function createSelect(
     on(content, "keydown", handleKeydown),
     on(content, "click", (e) => {
       const item = (e.target as HTMLElement).closest?.('[data-slot="select-item"]') as HTMLElement | null;
-      if (item) selectItem(item);
+      if (item && items.includes(item)) selectItem(item);
     }),
     on(content, "pointermove", (e) => {
       if (!highlightItemOnHover || !isHoverPointer(e)) return;
@@ -627,7 +627,7 @@ export function createSelect(
 
   // Inbound event
   cleanups.push(
-    on(root, "select:set", (e) => {
+    onRoot(root, "select:set", (e) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.value !== undefined) {
         updateValue(detail.value);

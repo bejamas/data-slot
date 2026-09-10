@@ -12,7 +12,7 @@ import {
   createPresenceLifecycle,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
 type AccordionOrientation = (typeof ORIENTATIONS)[number];
@@ -867,7 +867,7 @@ export function createAccordion(
   );
 
   cleanups.push(
-    on(root, "accordion:set", (event) => {
+    onRoot(root, "accordion:set", (event) => {
       const detail = (event as CustomEvent).detail as { value?: string | string[] } | null;
       const value = detail?.value;
       if (value === undefined) return;

@@ -900,3 +900,44 @@ describe("Command", () => {
     controllers.forEach((controller) => controller.destroy());
   });
 });
+
+
+describe("Command nested ownership", () => {
+  for (const emptyInsideList of [false, true]) {
+    it(`keeps nested empty state untouched when it is ${emptyInsideList ? "inside" : "before"} its list`, () => {
+      const innerEmpty = '<div data-slot="command-empty" id="inner-empty" hidden>Inner empty</div>';
+      document.body.innerHTML = `
+        <div data-slot="command" id="outer">
+          <input data-slot="command-input" />
+          <div data-slot="command-list">
+            <div data-slot="command" id="inner">
+              <input data-slot="command-input" />
+              ${emptyInsideList ? "" : innerEmpty}
+              <div data-slot="command-list">
+                ${emptyInsideList ? innerEmpty : ""}
+                <div data-slot="command-item" id="inner-item">Inner</div>
+              </div>
+            </div>
+            <div data-slot="command-empty" id="outer-empty" hidden>Outer empty</div>
+            <div data-slot="command-item" id="outer-item">Outer</div>
+          </div>
+        </div>
+      `;
+      const outer = createCommand(document.getElementById("outer")!);
+      try {
+        outer.setSearch("zzzz");
+        expect(document.getElementById("outer-empty")!.hidden).toBe(false);
+        expect(document.getElementById("inner-empty")!.hidden).toBe(true);
+        expect(document.getElementById("inner-item")!.hidden).toBe(false);
+        expect(document.getElementById("inner-item")!.hasAttribute("role")).toBe(false);
+        expect(document.getElementById("outer-item")!.hidden).toBe(true);
+        outer.setSearch("");
+        expect(document.getElementById("outer-empty")!.hidden).toBe(true);
+        expect(document.getElementById("outer-item")!.hidden).toBe(false);
+        expect(document.getElementById("inner-empty")!.hidden).toBe(true);
+      } finally {
+        outer.destroy();
+      }
+    });
+  }
+});

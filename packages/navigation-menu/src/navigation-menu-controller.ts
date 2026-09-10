@@ -12,7 +12,7 @@ import {
   getTabbables,
 } from "@data-slot/core";
 import { createPresenceLifecycle, setAria } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 import { createDismissLayer } from "@data-slot/core";
 import { createNavigationMenuIndicator } from "./navigation-menu-indicator";
 import { createNavigationMenuItems } from "./navigation-menu-items";
@@ -1149,7 +1149,7 @@ export function createNavigationMenu(
 
   // Inbound event
   cleanups.push(
-    on(root, "navigation-menu:set", (e) => {
+    onRoot(root, "navigation-menu:set", (e) => {
       const detail = (e as CustomEvent).detail as {
         value?: string | null;
       } | null;
