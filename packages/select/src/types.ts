@@ -22,7 +22,7 @@ export interface SelectOptions {
   disabled?: boolean;
   /** Form validation required */
   required?: boolean;
-  /** Form field name (auto-creates hidden input) */
+  /** Form field name (auto-creates an internal form control) */
   name?: string;
 
   /**

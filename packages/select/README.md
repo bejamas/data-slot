@@ -135,7 +135,7 @@ Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, 
 | `placeholder` | `data-placeholder` | `string` | `""` | Text when no value selected |
 | `disabled` | `data-disabled` | `boolean` | `false` | Disable interaction |
 | `required` | `data-required` | `boolean` | `false` | Form validation required |
-| `name` | `data-name` | `string` | - | Form field name (creates an internal form input) |
+| `name` | `data-name` | `string` | - | Form field name (creates an internal form control) |
 | `position` | `data-position` | `"item-aligned" \| "popper"` | `"item-aligned"` | Positioning mode (see below) |
 | `avoidCollisions` | `data-avoid-collisions` | `boolean` | `true` | Adjust to stay in viewport |
 | `collisionPadding` | `data-collision-padding` | `number` | `8` | Viewport edge padding (px) |
@@ -253,7 +253,7 @@ The component sets these attributes to reflect state:
 
 ## Form Integration
 
-When `name` is provided, an internal input is automatically created for form submission and kept out of the visual and keyboard flow:
+When `name` is provided, an internal control is automatically created for form submission and kept out of the visual and keyboard flow:
 
 ```html
 <form>
@@ -264,7 +264,7 @@ When `name` is provided, an internal input is automatically created for form sub
 </form>
 ```
 
-With `required` / `data-required`, this input participates in native validation. An empty required select blocks form submission and focuses the visible trigger. Disabled selects are excluded from validation and submission.
+With `required` / `data-required`, this control participates in native validation. An empty required select blocks form submission and focuses the visible trigger. Disabled selects are excluded from validation and submission. Selected values are preserved exactly, including line breaks.
 
 Resetting the form restores `defaultValue` and its displayed selection without
 emitting a value-change event, including when the select has no `name`.

@@ -1210,6 +1210,46 @@ describe("Select", () => {
       return { ...fields, form };
     };
 
+    it.each([
+      ["LF", "apple\nbanana"],
+      ["CR", "apple\rbanana"],
+      ["CRLF", "apple\r\nbanana"],
+      ["only LF", "\n"],
+      ["only CR", "\r"],
+      ["only CRLF", "\r\n"],
+      ["surrounding whitespace", " \tapple\n "],
+    ])("preserves %s values through selection, validation, and reset", async (_label, value) => {
+      const { controller, form, root } = setupRequiredForm(value);
+      const before = document.createElement("input");
+      before.type = "hidden";
+      before.name = "fruit";
+      before.value = "before";
+      root.before(before);
+      const after = before.cloneNode() as HTMLInputElement;
+      after.value = "after";
+      root.after(after);
+
+      expect(controller.value).toBe(value);
+      expect(form.checkValidity()).toBe(true);
+      expect(new FormData(form).getAll("fruit")).toEqual(["before", value, "after"]);
+
+      const changedValue = `${value}\r\nchanged`;
+      controller.select(changedValue);
+      expect(new FormData(form).getAll("fruit")).toEqual(["before", changedValue, "after"]);
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(new FormData(form).getAll("fruit")).toEqual(["before", value, "after"]);
+      expect(controller.value).toBe(value);
+      expect(form.checkValidity()).toBe(true);
+
+      controller.select("");
+      expect(form.checkValidity()).toBe(false);
+      expect(new FormData(form).getAll("fruit")).toEqual(["before", "", "after"]);
+      expect(root.querySelectorAll("[data-form-field-generated]").length).toBe(1);
+      controller.destroy();
+      expect(root.querySelector("[data-form-field-generated]")).toBeNull();
+    });
+
     it.each(["apple", undefined])("restores required validation and one form value on reset (default %s)", async (defaultValue) => {
       const { controller, form, root, valueSlot } = setupRequiredForm(defaultValue);
       controller.select("banana");
@@ -1230,10 +1270,7 @@ describe("Select", () => {
     it("preserves a required selection made inside a reset listener", async () => {
       const { controller, form } = setupRequiredForm("apple");
       form.addEventListener("reset", () => controller.select("banana"));
-      // Happy DOM resets before dispatch; browsers reset after the listeners.
-      form.dispatchEvent(new Event("reset", { bubbles: true, cancelable: true }));
-      const proxy = form.elements.namedItem("fruit") as HTMLInputElement;
-      proxy.value = proxy.defaultValue;
+      form.reset();
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(controller.value).toBe("banana");
@@ -1307,7 +1344,7 @@ describe("Select", () => {
       const controller = createSelect(root);
 
       expect(form.checkValidity()).toBe(false);
-      const field = form.elements.namedItem("fruit") as HTMLInputElement;
+      const field = form.elements.namedItem("fruit") as HTMLSelectElement;
       expect(field.validity.valueMissing).toBe(true);
       expect(field.tabIndex).toBe(-1);
       expect(document.activeElement).toBe(trigger);
@@ -1350,7 +1387,7 @@ describe("Select", () => {
       const root = document.querySelector('[data-slot="select"]') as HTMLElement;
       const form = document.querySelector("form")!;
       const controller = createSelect(root);
-      const proxy = root.querySelector('input[name="fruit"]') as HTMLInputElement;
+      const proxy = form.elements.namedItem("fruit") as HTMLSelectElement;
       let invalidWasCancelled = false;
       let submits = 0;
       proxy.addEventListener("invalid", (event) => { invalidWasCancelled = event.defaultPrevented; });

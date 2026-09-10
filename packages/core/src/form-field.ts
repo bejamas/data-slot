@@ -92,9 +92,9 @@ export function createFormFieldAdapter({
   name: string | null;
   defaultValue: string | null;
   control?: HTMLInputElement | null;
-  /** Excludes the generated input from submission, like a disabled native control. */
+  /** Excludes the generated control from submission, like a disabled native control. */
   disabled?: boolean;
-  /** Enables native required validation on the generated input. */
+  /** Enables native required validation on the generated control. */
   required?: boolean;
   /** Visible control that receives validation state and focus. */
   validationTarget?: HTMLElement;
@@ -102,23 +102,41 @@ export function createFormFieldAdapter({
 }): FormFieldAdapter {
   const authoredName = control?.getAttribute("name") ?? null;
   const authoredForm = control?.getAttribute("form") ?? null;
-  let proxy: HTMLInputElement | null = null;
+  let proxy: HTMLInputElement | HTMLSelectElement | null = null;
+  let validationProxy: HTMLSelectElement | null = null;
+  let selectedOption: HTMLOptionElement | null = null;
+  const setProxyValue = (value: string | null) => {
+    if (selectedOption) selectedOption.value = value ?? "";
+    if (proxy) proxy.value = value ?? "";
+  };
 
   if (name) {
     control?.removeAttribute("name");
-    proxy = root.ownerDocument.createElement("input");
-    proxy.type = "hidden";
+    if (required) {
+      // Unlike a text input, an option preserves CR/LF in arbitrary item values.
+      // One selected option also keeps empty values in FormData when validation
+      // is bypassed, without introducing a second submitted control.
+      validationProxy = root.ownerDocument.createElement("select");
+      selectedOption = root.ownerDocument.createElement("option");
+      selectedOption.defaultSelected = true;
+      validationProxy.appendChild(selectedOption);
+      proxy = validationProxy;
+    } else {
+      const input = root.ownerDocument.createElement("input");
+      input.type = "hidden";
+      input.defaultValue = defaultValue ?? "";
+      proxy = input;
+    }
     proxy.name = name;
-    proxy.value = defaultValue ?? "";
-    proxy.defaultValue = defaultValue ?? "";
+    setProxyValue(defaultValue);
     proxy.disabled = disabled || (control?.disabled ?? false);
     if (authoredForm !== null) proxy.setAttribute("form", authoredForm);
     proxy.setAttribute("data-form-field-generated", "");
     root.appendChild(proxy);
   }
 
-  const validation = required && proxy
-    ? observeFormFieldValidation(proxy, validationTarget)
+  const validation = validationProxy
+    ? observeFormFieldValidation(validationProxy, validationTarget)
     : null;
   const submission = control && proxy
     ? observeFormFieldSubmission(root, control, proxy, disabled)
@@ -145,13 +163,12 @@ export function createFormFieldAdapter({
     },
     onReset: (event) => {
       if (resetVersions.get(event) !== valueVersion) {
-        // A text proxy is reset natively after reset listeners run. Restore a
-        // selection made in a listener even when the deferred reset is skipped.
-        if (proxy) proxy.value = lastValue ?? "";
+        // Preserve a newer selection when the deferred reset is skipped.
+        setProxyValue(lastValue);
         validation?.sync();
         return;
       }
-      if (proxy) proxy.value = defaultValue ?? "";
+      setProxyValue(defaultValue);
       validation?.sync();
       lastValue = defaultValue;
       onReset(defaultValue);
@@ -164,7 +181,7 @@ export function createFormFieldAdapter({
         lastValue = value;
         valueVersion++;
       }
-      if (proxy) proxy.value = value ?? "";
+      setProxyValue(value);
       validation?.sync();
       submission?.observe();
       observer.observe();

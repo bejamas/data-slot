@@ -1,8 +1,7 @@
 import { on } from "./events.ts";
 
 /** Makes a visually hidden proxy validate and report errors at its visible control. */
-export function observeFormFieldValidation(proxy: HTMLInputElement, target?: HTMLElement) {
-  proxy.type = "text";
+export function observeFormFieldValidation(proxy: HTMLSelectElement, target?: HTMLElement) {
   proxy.required = true;
   proxy.tabIndex = -1;
   proxy.setAttribute("aria-hidden", "true");
