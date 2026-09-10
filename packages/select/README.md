@@ -266,6 +266,11 @@ When `name` is provided, an internal input is automatically created for form sub
 
 With `required` / `data-required`, this input participates in native validation. An empty required select blocks form submission and focuses the visible trigger. Disabled selects are excluded from validation and submission.
 
+Resetting the form restores `defaultValue` and its displayed selection without
+emitting a value-change event, including when the select has no `name`.
+Synchronization happens on the next event-loop task, after the browser resets
+native controls. Calling `preventDefault()` on the reset event preserves the current state.
+
 ## License
 
 MIT

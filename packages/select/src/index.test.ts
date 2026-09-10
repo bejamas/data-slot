@@ -1202,6 +1202,98 @@ describe("Select", () => {
   });
 
   describe("form integration", () => {
+    const setupRequiredForm = (defaultValue?: string) => {
+      const fields = setup({ name: "fruit", required: true, defaultValue });
+      const form = document.createElement("form");
+      fields.root.before(form);
+      form.appendChild(fields.root);
+      return { ...fields, form };
+    };
+
+    it.each(["apple", undefined])("restores required validation and one form value on reset (default %s)", async (defaultValue) => {
+      const { controller, form, root, valueSlot } = setupRequiredForm(defaultValue);
+      controller.select("banana");
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(controller.value).toBe(defaultValue ?? null);
+      expect(valueSlot.textContent).toBe(defaultValue ? "Apple" : "");
+      expect(form.checkValidity()).toBe(Boolean(defaultValue));
+      expect(new FormData(form).getAll("fruit")).toEqual([defaultValue ?? ""]);
+      expect(root.querySelectorAll("[data-form-field-generated]").length).toBe(1);
+      controller.select("apple");
+      expect(form.checkValidity()).toBe(true);
+      expect(new FormData(form).getAll("fruit")).toEqual(["apple"]);
+      controller.destroy();
+    });
+
+    it("preserves a required selection made inside a reset listener", async () => {
+      const { controller, form } = setupRequiredForm("apple");
+      form.addEventListener("reset", () => controller.select("banana"));
+      // Happy DOM resets before dispatch; browsers reset after the listeners.
+      form.dispatchEvent(new Event("reset", { bubbles: true, cancelable: true }));
+      const proxy = form.elements.namedItem("fruit") as HTMLInputElement;
+      proxy.value = proxy.defaultValue;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(controller.value).toBe("banana");
+      expect(new FormData(form).getAll("fruit")).toEqual(["banana"]);
+      expect(form.checkValidity()).toBe(true);
+      controller.destroy();
+    });
+
+    it("preserves required validation state on a canceled reset", async () => {
+      const { controller, form, trigger } = setupRequiredForm("apple");
+      controller.select("");
+      form.addEventListener("reset", (event) => event.preventDefault());
+      // Happy DOM resets even when canceled. Supply the native event boundary.
+      form.dispatchEvent(new Event("reset", { bubbles: true, cancelable: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(controller.value).toBe("");
+      expect(form.checkValidity()).toBe(false);
+      expect(trigger.getAttribute("aria-invalid")).toBe("true");
+      controller.destroy();
+    });
+
+    it("does not take validation focus from an earlier invalid native field", async () => {
+      const { controller, form, root } = setupRequiredForm();
+      const input = document.createElement("input");
+      input.required = true;
+      root.before(input);
+      input.focus();
+      form.reportValidity();
+      await waitForRaf();
+      expect(document.activeElement).toBe(input);
+      controller.destroy();
+    });
+
+    it("focuses the first of two invalid required selects", async () => {
+      const { controller, form, root, trigger } = setupRequiredForm();
+      const secondRoot = document.createElement("div");
+      secondRoot.innerHTML = '<button data-slot="select-trigger"></button><div data-slot="select-content"></div>';
+      root.after(secondRoot);
+      const second = createSelect(secondRoot, { name: "second", required: true });
+      form.requestSubmit();
+      await waitForRaf();
+      expect(document.activeElement).toBe(trigger);
+      controller.destroy();
+      second.destroy();
+    });
+
+    it.each(["destroy", "select"])("cancels pending invalid focus on %s", async (action) => {
+      const { controller, form } = setupRequiredForm();
+      const input = document.createElement("input");
+      form.appendChild(input);
+      form.reportValidity();
+      if (action === "destroy") controller.destroy();
+      else controller.select("apple");
+      input.focus();
+      await waitForRaf();
+      expect(document.activeElement).toBe(input);
+      if (action !== "destroy") controller.destroy();
+    });
+
     it("participates in native required validation without adding a tab stop", () => {
       document.body.innerHTML = `
         <form><div data-slot="select" data-name="fruit" data-required>
@@ -1305,6 +1397,132 @@ describe("Select", () => {
       controller.destroy();
 
       expect(root.querySelector('input[type="hidden"]')).toBeFalsy();
+    });
+
+    it("restores its initial value and form data after a native form reset without emitting change", async () => {
+      document.body.innerHTML = `
+        <form><div data-slot="select" id="root">
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div><div data-slot="select-item" data-value="banana">Banana</div></div>
+        </div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      let changes = 0;
+      const controller = createSelect(root, { name: "fruit", defaultValue: "banana", onValueChange: () => changes++ });
+
+      controller.select("apple");
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(controller.value).toBe("banana");
+      expect(root.querySelector('[data-slot="select-value"]')?.textContent).toBe("Banana");
+      expect(root.querySelector('[data-value="banana"]')?.getAttribute("aria-selected")).toBe("true");
+      expect(new FormData(form).get("fruit")).toBe("banana");
+      expect(changes).toBe(1);
+      controller.destroy();
+    });
+
+    it("does not apply a canceled form reset", async () => {
+      document.body.innerHTML = `<form><div data-slot="select" id="root"><button data-slot="select-trigger"><span data-slot="select-value"></span></button><div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div><div data-slot="select-item" data-value="banana">Banana</div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      const controller = createSelect(root, { name: "fruit", defaultValue: "banana" });
+      controller.select("apple");
+      form.addEventListener("reset", (event) => event.preventDefault());
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(controller.value).toBe("apple");
+      controller.destroy();
+    });
+
+    it("resets an unnamed select with an empty-string default without serializing a proxy", async () => {
+      document.body.innerHTML = `<form><div data-slot="select" id="root"><button data-slot="select-trigger"><span data-slot="select-value"></span></button><div data-slot="select-content"><div data-slot="select-item" data-value="">Empty</div><div data-slot="select-item" data-value="apple">Apple</div></div></div></form>`;
+      const root = document.getElementById("root")!;
+      const form = root.closest("form")!;
+      const controller = createSelect(root, { defaultValue: "" });
+      controller.select("apple");
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(controller.value).toBe("");
+      expect(root.querySelector('input[type="hidden"]')).toBeNull();
+      controller.destroy();
+    });
+
+    for (const name of ["fruit", undefined]) {
+      const fieldType = name ? "named" : "unnamed";
+
+      it(`resets an initially detached ${fieldType} select after attaching it to a form`, async () => {
+        const root = document.createElement("div");
+        root.innerHTML = `
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div><div data-slot="select-item" data-value="banana">Banana</div></div>`;
+        const controller = createSelect(root, { name, defaultValue: "banana" });
+        const form = document.createElement("form");
+        document.body.appendChild(form);
+        form.appendChild(root);
+        controller.select("apple");
+
+        form.reset();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(controller.value).toBe("banana");
+        expect(root.querySelector('[data-slot="select-value"]')?.textContent).toBe("Banana");
+        expect(new FormData(form).get("fruit")).toBe(name ? "banana" : null);
+        controller.destroy();
+      });
+
+      it(`follows the current form when the ${fieldType} select moves between forms`, async () => {
+        const { root, controller } = setup({ name, defaultValue: "banana" });
+        const firstForm = document.createElement("form");
+        const secondForm = document.createElement("form");
+        const unrelatedForm = document.createElement("form");
+        document.body.append(firstForm, secondForm, unrelatedForm);
+        firstForm.appendChild(root);
+        controller.select("apple");
+
+        firstForm.reset();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(controller.value).toBe("banana");
+
+        secondForm.appendChild(root);
+        controller.select("apple");
+        firstForm.reset();
+        unrelatedForm.reset();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(controller.value).toBe("apple");
+
+        secondForm.reset();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(controller.value).toBe("banana");
+        expect(new FormData(firstForm).get("fruit")).toBeNull();
+        expect(new FormData(secondForm).get("fruit")).toBe(name ? "banana" : null);
+        controller.destroy();
+      });
+    }
+
+    it("does not let a queued reset overwrite a rebound select", async () => {
+      const { root, controller } = setup({ name: "fruit", defaultValue: "banana" }, `
+        <form><div data-slot="select" id="root">
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div><div data-slot="select-item" data-value="banana">Banana</div></div>
+        </div></form>`);
+      const form = root.closest("form")!;
+      controller.select("apple");
+
+      form.reset();
+      controller.destroy();
+      const rebound = createSelect(root, { name: "fruit", defaultValue: "apple" });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(controller.value).toBe("apple");
+      expect(rebound.value).toBe("apple");
+      expect(root.querySelector('[data-slot="select-value"]')?.textContent).toBe("Apple");
+      expect(new FormData(form).getAll("fruit")).toEqual(["apple"]);
+      rebound.select("banana");
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(rebound.value).toBe("apple");
+      rebound.destroy();
     });
 
     it("reads data-name attribute", () => {

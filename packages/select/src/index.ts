@@ -8,6 +8,8 @@ import {
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, emit } from "@data-slot/core";
+import { createFormFieldAdapter } from "@data-slot/core";
+import type { FormFieldAdapter } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
 import {
   ensureItemVisibleInContainer,
@@ -96,8 +98,7 @@ export function createSelect(
   let enabledItems: HTMLElement[] = [];
   let itemToIndex = new Map<HTMLElement, number>();
 
-  // Hidden input for form integration
-  let hiddenInput: HTMLInputElement | null = null;
+  let formField: FormFieldAdapter | null = null;
 
   // Track if this instance locked scroll
   let didLockScroll = false;
@@ -153,41 +154,6 @@ export function createSelect(
     trigger.setAttribute("aria-required", "true");
   }
 
-  // Create hidden input for form integration
-  if (name) {
-    hiddenInput = document.createElement("input");
-    // A hidden input is exempt from constraint validation. Keep this field out
-    // of the visual and keyboard flow instead, so native required validation
-    // can represent the custom select without creating a second form value.
-    hiddenInput.type = required ? "text" : "hidden";
-    hiddenInput.name = name;
-    hiddenInput.value = currentValue ?? "";
-    hiddenInput.required = required;
-    hiddenInput.disabled = disabled;
-    if (required) {
-      hiddenInput.tabIndex = -1;
-      hiddenInput.setAttribute("aria-hidden", "true");
-      Object.assign(hiddenInput.style, {
-        position: "absolute",
-        width: "1px",
-        height: "1px",
-        padding: "0",
-        margin: "-1px",
-        overflow: "hidden",
-        clip: "rect(0, 0, 0, 0)",
-        whiteSpace: "nowrap",
-        border: "0",
-      });
-      cleanups.push(on(hiddenInput, "invalid", (event) => {
-        // Keep the browser from moving focus to the off-screen proxy.
-        event.preventDefault();
-        trigger.setAttribute("aria-invalid", "true");
-        trigger.focus();
-        requestAnimationFrame(() => trigger.focus());
-      }));
-    }
-    root.appendChild(hiddenInput);
-  }
 
   // Cache items on open
   const cacheItems = () => {
@@ -286,6 +252,14 @@ export function createSelect(
     for (const el of items) el.removeAttribute("data-highlighted");
     highlightedIndex = -1;
   };
+  const highlightSelectedItem = () => {
+    const selectedIndex = enabledItems.findIndex((el) => el.dataset["value"] === currentValue);
+    if (selectedIndex >= 0) {
+      updateHighlight(selectedIndex, false, false);
+    } else {
+      clearHighlight();
+    }
+  };
   const clearHighlightAndFocusContent = () => {
     clearHighlight();
     focusElement(content);
@@ -382,14 +356,7 @@ export function createSelect(
 
       cacheItems();
       keyboardMode = false;
-
-      // Highlight selected item if any
-      const selectedIndex = enabledItems.findIndex((el) => el.dataset["value"] === currentValue);
-      if (selectedIndex >= 0) {
-        updateHighlight(selectedIndex, false, false);
-      } else {
-        clearHighlight();
-      }
+      highlightSelectedItem();
 
       positioning.start();
       positioning.update();
@@ -459,13 +426,7 @@ export function createSelect(
     const oldValue = currentValue;
     currentValue = value;
 
-    // Update hidden input
-    if (hiddenInput) {
-      hiddenInput.value = value ?? "";
-      const invalid = required && !disabled && !value;
-      if (invalid) trigger.setAttribute("aria-invalid", "true");
-      else trigger.removeAttribute("aria-invalid");
-    }
+    formField?.setValue(value);
 
     // Update root data-value
     if (value !== null) {
@@ -591,6 +552,22 @@ export function createSelect(
   cacheItems();
   updateValue(currentValue, true);
 
+  formField = createFormFieldAdapter({
+    root,
+    name,
+    defaultValue,
+    disabled,
+    required,
+    validationTarget: trigger,
+    onReset: (value) => {
+      updateValue(value, true);
+      if (isOpen) {
+        typeahead.reset();
+        highlightSelectedItem();
+      }
+    },
+  });
+
   // Trigger events
   cleanups.push(
     on(trigger, "pointerdown", (e) => {
@@ -680,9 +657,7 @@ export function createSelect(
       }
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
-      if (hiddenInput && hiddenInput.parentNode) {
-        hiddenInput.parentNode.removeChild(hiddenInput);
-      }
+      formField?.destroy();
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };

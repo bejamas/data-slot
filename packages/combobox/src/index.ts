@@ -15,7 +15,9 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createDismissLayer,
+  createFormFieldAdapter,
 } from "@data-slot/core";
+import type { FormFieldAdapter } from "@data-slot/core";
 import type {
   ComboboxController,
   ComboboxItemToStringValue,
@@ -93,7 +95,7 @@ export function createCombobox(
     defaultValue, defaultOpen, placeholder, disabled, required, name, openOnFocus, autoHighlight,
     customFilter, onValueChange, onOpenChange, onInputValueChange, preferredSide, preferredAlign,
     sideOffset, alignOffset, avoidCollisions, collisionPadding,
-  } = resolveComboboxConfiguration(root, content, authoredPositioner, options);
+  } = resolveComboboxConfiguration(root, input, content, authoredPositioner, options);
   let itemToStringValue = options.itemToStringValue ?? null;
 
   // State
@@ -110,8 +112,7 @@ export function createCombobox(
   let openOnNextFocusFromPointer = false;
   let suppressOpenOnNextFocus = false;
 
-  // Hidden input for form integration
-  let hiddenInput: HTMLInputElement | null = null;
+  let formField: FormFieldAdapter | null = null;
 
   // Portal lifecycle
   const portal = createPortalLifecycle({
@@ -210,15 +211,6 @@ export function createCombobox(
     }
   }
 
-  // Form integration: strip name from visible input, create hidden input
-  if (name) {
-    if (input.name) input.removeAttribute("name");
-    hiddenInput = document.createElement("input");
-    hiddenInput.type = "hidden";
-    hiddenInput.name = name;
-    hiddenInput.value = currentValue ?? "";
-    root.appendChild(hiddenInput);
-  }
 
   const collection = createComboboxCollection({
     root,
@@ -344,6 +336,22 @@ export function createCombobox(
     },
   });
 
+  // Shows the current results and highlights the committed value if visible.
+  const syncOpenResults = () => {
+    keyboardMode = false;
+    // In popup-input mode, input text is transient search and should start empty.
+    if (isPopupInputMode) {
+      input.value = "";
+    }
+    collection.filter(input.value);
+    const selectedIndex = collection.enabled.findIndex((item) => collection.valueOf(item) === currentValue);
+    if (selectedIndex >= 0) {
+      collection.highlight(selectedIndex);
+    } else {
+      collection.clearHighlight();
+    }
+  };
+
   const updateOpenState = (open: boolean, skipFocusRestore = false) => {
     if (isOpen === open) return;
     if (disabled && open) return;
@@ -358,23 +366,7 @@ export function createCombobox(
       presence.enter();
 
       collection.cache(currentValue);
-      keyboardMode = false;
-
-      // In popup-input mode, input text is transient search and should start empty on open.
-      if (isPopupInputMode) {
-        input.value = "";
-      }
-
-      // Apply current filter
-      collection.filter(input.value);
-
-      // Highlight selected item if visible, else auto-highlight first
-      const selectedIndex = collection.enabled.findIndex((item) => collection.valueOf(item) === currentValue);
-      if (selectedIndex >= 0) {
-        collection.highlight(selectedIndex);
-      } else {
-        collection.clearHighlight();
-      }
+      syncOpenResults();
 
       positionSync.start();
       updatePosition();
@@ -419,10 +411,7 @@ export function createCombobox(
     currentValue = value;
     syncValidity();
 
-    // Update hidden input
-    if (hiddenInput) {
-      hiddenInput.value = value ?? "";
-    }
+    formField?.setValue(value);
 
     // Update root data-value
     if (value !== null) {
@@ -632,6 +621,21 @@ export function createCombobox(
   // Set initial value and input text
   updateValue(currentValue, true);
 
+  formField = createFormFieldAdapter({
+    root,
+    name,
+    defaultValue,
+    control: input,
+    disabled,
+    onReset: (value) => {
+      updateValue(value, true);
+      if (isOpen) {
+        syncOpenResults();
+        positionSync.update();
+      }
+    },
+  });
+
   // Event listeners
   cleanups.push(
     on(doc, "keydown", (e) => {
@@ -768,9 +772,7 @@ export function createCombobox(
       portal.cleanup();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
-      if (hiddenInput && hiddenInput.parentNode) {
-        hiddenInput.parentNode.removeChild(hiddenInput);
-      }
+      formField?.destroy();
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };

@@ -6,7 +6,7 @@ const ALIGNS = ["start", "center", "end"] as const;
 
 /** Resolves authored configuration once, preserving the documented precedence rules. */
 export function resolveComboboxConfiguration(
-  root: Element, content: HTMLElement, authoredPositioner: HTMLElement | null, options: ComboboxOptions,
+  root: Element, input: HTMLInputElement, content: HTMLElement, authoredPositioner: HTMLElement | null, options: ComboboxOptions,
 ) {
   const enumValue = <T extends string>(key: string, allowed: readonly T[]) =>
     getDataEnum(content, key, allowed) ?? (authoredPositioner ? getDataEnum(authoredPositioner, key, allowed) : undefined) ?? getDataEnum(root, key, allowed);
@@ -18,7 +18,7 @@ export function resolveComboboxConfiguration(
     placeholder: options.placeholder ?? getDataString(root, "placeholder") ?? "",
     disabled: options.disabled ?? getDataBool(root, "disabled") ?? false,
     required: options.required ?? getDataBool(root, "required") ?? false,
-    name: options.name ?? getDataString(root, "name") ?? null,
+    name: options.name ?? getDataString(root, "name") ?? input.getAttribute("name") ?? null,
     openOnFocus: options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? true,
     autoHighlight: options.autoHighlight ?? getDataBool(root, "autoHighlight") ?? false,
     customFilter: options.filter ?? null,

@@ -303,6 +303,21 @@ When `name` is provided, a hidden input is automatically created for form submis
 </form>
 ```
 
+An authored `name` on the combobox input is also supported. The generated input
+submits the selected value; the visible input keeps the search or display text.
+Destroying the controller removes the generated input and restores the authored name.
+
+**Behavior change:** earlier releases left an authored `name` on the visible input,
+so the form received the displayed or typed text. It now receives the selected value
+(or an empty string when nothing is selected). To submit free text, keep `name` off the
+combobox input and mirror `combobox:input-change` into a separate field.
+A disabled combobox does not submit its value.
+
+Resetting the form restores `defaultValue` and the displayed selection without
+emitting a value-change event. An open popup also resets its search and highlight.
+Synchronization happens on the next event-loop task, after the browser resets
+native controls. Calling `preventDefault()` on the reset event preserves the current state.
+
 ## License
 
 MIT
