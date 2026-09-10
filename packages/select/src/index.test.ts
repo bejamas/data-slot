@@ -1202,6 +1202,208 @@ describe("Select", () => {
   });
 
   describe("form integration", () => {
+    const setupRequiredForm = (defaultValue?: string) => {
+      const fields = setup({ name: "fruit", required: true, defaultValue });
+      const form = document.createElement("form");
+      fields.root.before(form);
+      form.appendChild(fields.root);
+      return { ...fields, form };
+    };
+
+    it.each([
+      ["LF", "apple\nbanana"],
+      ["CR", "apple\rbanana"],
+      ["CRLF", "apple\r\nbanana"],
+      ["only LF", "\n"],
+      ["only CR", "\r"],
+      ["only CRLF", "\r\n"],
+      ["surrounding whitespace", " \tapple\n "],
+    ])("preserves %s values through selection, validation, and reset", async (_label, value) => {
+      const { controller, form, root } = setupRequiredForm(value);
+      const before = document.createElement("input");
+      before.type = "hidden";
+      before.name = "fruit";
+      before.value = "before";
+      root.before(before);
+      const after = before.cloneNode() as HTMLInputElement;
+      after.value = "after";
+      root.after(after);
+
+      expect(controller.value).toBe(value);
+      expect(form.checkValidity()).toBe(true);
+      expect(new FormData(form).getAll("fruit")).toEqual(["before", value, "after"]);
+
+      const changedValue = `${value}\r\nchanged`;
+      controller.select(changedValue);
+      expect(new FormData(form).getAll("fruit")).toEqual(["before", changedValue, "after"]);
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(new FormData(form).getAll("fruit")).toEqual(["before", value, "after"]);
+      expect(controller.value).toBe(value);
+      expect(form.checkValidity()).toBe(true);
+
+      controller.select("");
+      expect(form.checkValidity()).toBe(false);
+      expect(new FormData(form).getAll("fruit")).toEqual(["before", "", "after"]);
+      expect(root.querySelectorAll("[data-form-field-generated]").length).toBe(1);
+      controller.destroy();
+      expect(root.querySelector("[data-form-field-generated]")).toBeNull();
+    });
+
+    it.each(["apple", undefined])("restores required validation and one form value on reset (default %s)", async (defaultValue) => {
+      const { controller, form, root, valueSlot } = setupRequiredForm(defaultValue);
+      controller.select("banana");
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(controller.value).toBe(defaultValue ?? null);
+      expect(valueSlot.textContent).toBe(defaultValue ? "Apple" : "");
+      expect(form.checkValidity()).toBe(Boolean(defaultValue));
+      expect(new FormData(form).getAll("fruit")).toEqual([defaultValue ?? ""]);
+      expect(root.querySelectorAll("[data-form-field-generated]").length).toBe(1);
+      controller.select("apple");
+      expect(form.checkValidity()).toBe(true);
+      expect(new FormData(form).getAll("fruit")).toEqual(["apple"]);
+      controller.destroy();
+    });
+
+    it("preserves a required selection made inside a reset listener", async () => {
+      const { controller, form } = setupRequiredForm("apple");
+      form.addEventListener("reset", () => controller.select("banana"));
+      form.reset();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(controller.value).toBe("banana");
+      expect(new FormData(form).getAll("fruit")).toEqual(["banana"]);
+      expect(form.checkValidity()).toBe(true);
+      controller.destroy();
+    });
+
+    it("preserves required validation state on a canceled reset", async () => {
+      const { controller, form, trigger } = setupRequiredForm("apple");
+      controller.select("");
+      form.addEventListener("reset", (event) => event.preventDefault());
+      // Happy DOM resets even when canceled. Supply the native event boundary.
+      form.dispatchEvent(new Event("reset", { bubbles: true, cancelable: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(controller.value).toBe("");
+      expect(form.checkValidity()).toBe(false);
+      expect(trigger.getAttribute("aria-invalid")).toBe("true");
+      controller.destroy();
+    });
+
+    it("does not take validation focus from an earlier invalid native field", async () => {
+      const { controller, form, root } = setupRequiredForm();
+      const input = document.createElement("input");
+      input.required = true;
+      root.before(input);
+      input.focus();
+      form.reportValidity();
+      await waitForRaf();
+      expect(document.activeElement).toBe(input);
+      controller.destroy();
+    });
+
+    it("focuses the first of two invalid required selects", async () => {
+      const { controller, form, root, trigger } = setupRequiredForm();
+      const secondRoot = document.createElement("div");
+      secondRoot.innerHTML = '<button data-slot="select-trigger"></button><div data-slot="select-content"></div>';
+      root.after(secondRoot);
+      const second = createSelect(secondRoot, { name: "second", required: true });
+      form.requestSubmit();
+      await waitForRaf();
+      expect(document.activeElement).toBe(trigger);
+      controller.destroy();
+      second.destroy();
+    });
+
+    it.each(["destroy", "select"])("cancels pending invalid focus on %s", async (action) => {
+      const { controller, form } = setupRequiredForm();
+      const input = document.createElement("input");
+      form.appendChild(input);
+      form.reportValidity();
+      if (action === "destroy") controller.destroy();
+      else controller.select("apple");
+      input.focus();
+      await waitForRaf();
+      expect(document.activeElement).toBe(input);
+      if (action !== "destroy") controller.destroy();
+    });
+
+    it("participates in native required validation without adding a tab stop", () => {
+      document.body.innerHTML = `
+        <form><div data-slot="select" data-name="fruit" data-required>
+          <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+          <div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div></div>
+        </div></form>
+      `;
+      const root = document.querySelector('[data-slot="select"]') as HTMLElement;
+      const form = document.querySelector("form")!;
+      const trigger = document.querySelector('[data-slot="select-trigger"]') as HTMLElement;
+      const controller = createSelect(root);
+
+      expect(form.checkValidity()).toBe(false);
+      const field = form.elements.namedItem("fruit") as HTMLSelectElement;
+      expect(field.validity.valueMissing).toBe(true);
+      expect(field.tabIndex).toBe(-1);
+      expect(document.activeElement).toBe(trigger);
+
+      controller.select("apple");
+      expect(form.checkValidity()).toBe(true);
+      expect(new FormData(form).getAll("fruit")).toEqual(["apple"]);
+      controller.destroy();
+    });
+
+    it("exempts disabled required selects from validation", () => {
+      const { root, controller } = setup({ name: "fruit", required: true, disabled: true });
+      const form = document.createElement("form");
+      root.parentElement?.insertBefore(form, root);
+      form.appendChild(root);
+
+      expect(form.checkValidity()).toBe(true);
+      controller.destroy();
+    });
+
+    it("routes reportValidity to the trigger and clears invalid state after selection", () => {
+      document.body.innerHTML = `<form><div data-slot="select" data-name="fruit" data-required><button data-slot="select-trigger"><span data-slot="select-value"></span></button><div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div></div></div></form>`;
+      const root = document.querySelector('[data-slot="select"]') as HTMLElement;
+      const form = document.querySelector("form")!;
+      const trigger = root.querySelector('[data-slot="select-trigger"]') as HTMLElement;
+      const controller = createSelect(root);
+      expect(form.reportValidity()).toBe(false);
+      expect(document.activeElement).toBe(trigger);
+      expect(trigger.getAttribute("aria-invalid")).toBe("true");
+      controller.select("");
+      expect(trigger.getAttribute("aria-invalid")).toBe("true");
+      controller.select("apple");
+      expect(form.checkValidity()).toBe(true);
+      expect(trigger.hasAttribute("aria-invalid")).toBe(false);
+      controller.destroy();
+    });
+
+    it("blocks requestSubmit while invalid and submits one selected value once valid", () => {
+      document.body.innerHTML = `<form><div data-slot="select" data-name="fruit" data-required><button data-slot="select-trigger"><span data-slot="select-value"></span></button><div data-slot="select-content"><div data-slot="select-item" data-value="apple">Apple</div></div></div></form>`;
+      const root = document.querySelector('[data-slot="select"]') as HTMLElement;
+      const form = document.querySelector("form")!;
+      const controller = createSelect(root);
+      const proxy = form.elements.namedItem("fruit") as HTMLSelectElement;
+      let invalidWasCancelled = false;
+      let submits = 0;
+      proxy.addEventListener("invalid", (event) => { invalidWasCancelled = event.defaultPrevented; });
+      form.addEventListener("submit", (event) => { event.preventDefault(); submits += 1; });
+
+      expect(proxy).toBeTruthy();
+      form.requestSubmit();
+      expect(submits).toBe(0);
+      expect(invalidWasCancelled).toBe(true);
+
+      controller.select("apple");
+      form.requestSubmit();
+      expect(submits).toBe(1);
+      expect(new FormData(form).getAll("fruit")).toEqual(["apple"]);
+      controller.destroy();
+    });
     it("creates hidden input when name is provided", () => {
       const { root, controller } = setup({ name: "fruit" });
 

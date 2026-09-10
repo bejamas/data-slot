@@ -557,6 +557,8 @@ export function createSelect(
     name,
     defaultValue,
     disabled,
+    required,
+    validationTarget: trigger,
     onReset: (value) => {
       updateValue(value, true);
       if (isOpen) {

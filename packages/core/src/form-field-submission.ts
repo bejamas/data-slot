@@ -4,7 +4,7 @@ import { on } from "./events.ts";
 export function observeFormFieldSubmission(
   root: Element,
   control: HTMLInputElement,
-  proxy: HTMLInputElement,
+  proxy: HTMLInputElement | HTMLSelectElement,
   disabled: boolean,
 ) {
   // The marker identifies this proxy's position without confusing it with other
