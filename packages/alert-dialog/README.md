@@ -134,8 +134,7 @@ Events:
 - Focus is trapped while open
 - Focus returns to the trigger or previously focused element when closed
 
-
-### Controller destruction
+## Controller destruction
 
 `destroy()` permanently disposes the controller and hides any open surface without
 emitting an additional change event. Repeated destruction is safe; methods on the

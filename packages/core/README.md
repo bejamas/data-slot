@@ -142,11 +142,7 @@ function createCustomComponent(root: Element) {
 }
 ```
 
-## License
-
-MIT
-
-### Terminal lifecycle
+## Terminal lifecycle
 
 `createTerminalLifecycle()` manages work that must stop permanently when a
 controller is destroyed. It returns a `TerminalLifecycleController`:
@@ -187,3 +183,7 @@ and interaction events remain the component's responsibility.
 `drainCleanups(cleanups)` removes the current callbacks from an array and invokes
 them in order. Repeating the call on the emptied array does nothing. Cleanup
 callbacks should complete synchronously without throwing.
+
+## License
+
+MIT

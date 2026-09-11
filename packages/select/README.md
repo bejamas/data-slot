@@ -271,12 +271,7 @@ emitting a value-change event, including when the select has no `name`.
 Synchronization happens on the next event-loop task, after the browser resets
 native controls. Calling `preventDefault()` on the reset event preserves the current state.
 
-## License
-
-MIT
-
-
-### Controller destruction
+## Controller destruction
 
 `destroy()` permanently disposes the controller and hides any open surface without
 emitting an additional change event. Repeated destruction is safe; methods on the
@@ -284,3 +279,7 @@ old controller become no-ops. Create a new controller on the same root to rebind
 
 Focus restoration already queued by a close survives destruction.
 Closing with Tab still skips focus restoration to preserve normal Tab navigation.
+
+## License
+
+MIT
