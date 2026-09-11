@@ -27,6 +27,7 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 | `@data-slot/tooltip` | 2.2 KB | Hover/focus tooltips |
 | `@data-slot/popover` | 2.0 KB | Anchored floating content |
 | `@data-slot/dialog` | 1.9 KB | Modal dialogs with focus management |
+| `@data-slot/drawer` | 6.8 KB | Swipeable drawers with snap points |
 | `@data-slot/alert-dialog` | 1.8 KB | Blocking confirmation dialogs |
 | `@data-slot/switch` | 1.8 KB | Form-ready on/off switch |
 | `@data-slot/toggle-group` | 1.7 KB | Single/multi toggle groups |
@@ -49,6 +50,7 @@ Available subpaths:
 - `@data-slot/ui/core`
 - `@data-slot/ui/tabs`
 - `@data-slot/ui/dialog`
+- `@data-slot/ui/drawer`
 - `@data-slot/ui/alert-dialog`
 - `@data-slot/ui/accordion`
 - `@data-slot/ui/popover`
@@ -69,13 +71,14 @@ Available subpaths:
 For the smallest bundle, install and import specific packages:
 
 ```bash
-npm install @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
+npm install @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/drawer
 ```
 
 ```typescript
 import { create } from "@data-slot/tabs";
 import { createDialog } from "@data-slot/dialog";
 import { createAlertDialog } from "@data-slot/alert-dialog";
+import { createDrawer } from "@data-slot/drawer";
 ```
 
 ### Barrel Import
@@ -83,7 +86,7 @@ import { createAlertDialog } from "@data-slot/alert-dialog";
 Import everything (larger bundle):
 
 ```typescript
-import { createTabs, createDialog, createAlertDialog } from "@data-slot/ui";
+import { createTabs, createDialog, createAlertDialog, createDrawer } from "@data-slot/ui";
 ```
 
 ## Quick Start
@@ -163,6 +166,7 @@ With Tailwind:
 |--------|---------|
 | `createTabs` | @data-slot/tabs |
 | `createDialog` | @data-slot/dialog |
+| `createDrawer` | @data-slot/drawer |
 | `createAlertDialog` | @data-slot/alert-dialog |
 | `createAccordion` | @data-slot/accordion |
 | `createPopover` | @data-slot/popover |
@@ -181,6 +185,7 @@ With Tailwind:
 |--------|---------|
 | `TabsOptions`, `TabsController` | @data-slot/tabs |
 | `DialogOptions`, `DialogController` | @data-slot/dialog |
+| `DrawerOptions`, `DrawerController`, `DrawerSnapPoint` | @data-slot/drawer |
 | `AlertDialogOptions`, `AlertDialogController` | @data-slot/alert-dialog |
 | `AccordionOptions`, `AccordionController` | @data-slot/accordion |
 | `PopoverOptions`, `PopoverController` | @data-slot/popover |

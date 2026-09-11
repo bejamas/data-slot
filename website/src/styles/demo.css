@@ -275,6 +275,145 @@ html {
 }
 
 /* ============================================
+   CSS Example: Drawer
+   ============================================ */
+.drawer-demo-trigger {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  color: var(--bg);
+  background: var(--text);
+  border: 0;
+  cursor: pointer;
+}
+
+.drawer-demo-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: rgb(0 0 0 / 45%);
+  opacity: calc(1 - var(--drawer-swipe-progress, 0));
+  transition: opacity 0.3s ease;
+}
+
+.drawer-demo-viewport {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 111;
+  display: flex;
+  align-items: end;
+  pointer-events: none;
+}
+
+.drawer-demo-popup {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 42rem);
+  height: 100dvh;
+  margin: 0 auto;
+  overflow: hidden;
+  pointer-events: auto;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 1rem 1rem 0 0;
+  box-shadow: 0 -18px 50px rgb(0 0 0 / 14%);
+  transform: translateY(
+    calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px))
+  );
+  transition: transform 0.3s ease;
+}
+
+.drawer-demo-backdrop[data-starting-style],
+.drawer-demo-backdrop[data-ending-style] {
+  opacity: 0;
+}
+
+.drawer-demo-popup[data-starting-style],
+.drawer-demo-popup[data-ending-style] {
+  transform: translateY(100%);
+}
+
+.drawer-demo-popup[data-swiping],
+.drawer-demo-backdrop[data-swiping] {
+  transition: none;
+}
+
+.drawer-demo-backdrop[hidden],
+.drawer-demo-viewport[hidden],
+.drawer-demo-popup[hidden] {
+  display: none;
+}
+
+.drawer-demo-swipe-area {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  padding: 1rem 2rem;
+  touch-action: none;
+}
+
+.drawer-demo-handle {
+  width: 3rem;
+  height: 0.25rem;
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.drawer-demo-content {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  min-height: 0;
+  gap: 1rem;
+  padding: 0 1.5rem 1.5rem;
+  overflow-y: auto;
+}
+
+.drawer-demo-title,
+.drawer-demo-description {
+  margin: 0;
+}
+
+.drawer-demo-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.drawer-demo-description {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.drawer-demo-field {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.drawer-demo-field input,
+.drawer-demo-close {
+  padding: 0.625rem 0.75rem;
+  font: inherit;
+  border: 1px solid var(--border);
+}
+
+.drawer-demo-field input {
+  background: white;
+}
+
+.drawer-demo-close {
+  background: transparent;
+  cursor: pointer;
+}
+
+.drawer-demo-close:hover {
+  background: var(--code-bg);
+}
+
+/* ============================================
    CSS Example: Collapsible
    ============================================ */
 .collapsible-trigger-btn {

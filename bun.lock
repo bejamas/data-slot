@@ -60,6 +60,13 @@
         "@data-slot/core": "workspace:*",
       },
     },
+    "packages/drawer": {
+      "name": "@data-slot/drawer",
+      "version": "0.2.166",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
     "packages/dropdown-menu": {
       "name": "@data-slot/dropdown-menu",
       "version": "0.2.166",
@@ -155,6 +162,7 @@
         "@data-slot/command": "workspace:*",
         "@data-slot/core": "workspace:*",
         "@data-slot/dialog": "workspace:*",
+        "@data-slot/drawer": "workspace:*",
         "@data-slot/dropdown-menu": "workspace:*",
         "@data-slot/hover-card": "workspace:*",
         "@data-slot/navigation-menu": "workspace:*",
@@ -251,6 +259,8 @@
     "@data-slot/core": ["@data-slot/core@workspace:packages/core"],
 
     "@data-slot/dialog": ["@data-slot/dialog@workspace:packages/dialog"],
+
+    "@data-slot/drawer": ["@data-slot/drawer@workspace:packages/drawer"],
 
     "@data-slot/dropdown-menu": ["@data-slot/dropdown-menu@workspace:packages/dropdown-menu"],
 

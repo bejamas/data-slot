@@ -1,0 +1,222 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+
+const cssCode = `<div
+  id="drawer-example"
+  data-slot="drawer"
+  data-swipe-direction="down"
+  data-snap-points='["180px",0.62,1]'
+  data-default-snap-point="0.62"
+>
+  <button data-slot="drawer-trigger" class="drawer-demo-trigger">Plan a trip</button>
+  <div data-slot="drawer-portal">
+    <div data-slot="drawer-backdrop" class="drawer-demo-backdrop" hidden></div>
+    <div data-slot="drawer-viewport" class="drawer-demo-viewport" hidden>
+      <div data-slot="drawer-popup" class="drawer-demo-popup" hidden>
+        <div class="drawer-demo-swipe-area" aria-hidden="true">
+          <span class="drawer-demo-handle"></span>
+        </div>
+        <div data-slot="drawer-content" class="drawer-demo-content">
+          <h2 data-slot="drawer-title" class="drawer-demo-title">Plan a trip</h2>
+          <p data-slot="drawer-description" class="drawer-demo-description">
+            Pick a destination. Drag the sheet to another snap point or swipe down to dismiss it.
+          </p>
+          <label class="drawer-demo-field">
+            Destination
+            <input value="Warsaw" />
+          </label>
+          <button data-slot="drawer-close" class="drawer-demo-close">Save trip</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { createDrawer } from "@data-slot/drawer";
+  createDrawer(document.querySelector("#drawer-example"));
+</script>
+
+<style>
+  .drawer-demo-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgb(0 0 0 / 45%);
+    opacity: calc(1 - var(--drawer-swipe-progress, 0));
+    transition: opacity 0.3s ease;
+  }
+  .drawer-demo-viewport {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    display: flex;
+    align-items: end;
+    pointer-events: none;
+  }
+  .drawer-demo-popup {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 42rem);
+    height: 100dvh;
+    margin: auto;
+    pointer-events: auto;
+    background: #faf9f7;
+    border-radius: 1rem 1rem 0 0;
+    transform: translateY(calc(
+      var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px)
+    ));
+    transition: transform 0.3s ease;
+  }
+  .drawer-demo-popup[data-starting-style],
+  .drawer-demo-popup[data-ending-style] { transform: translateY(100%); }
+  .drawer-demo-popup[data-swiping],
+  .drawer-demo-backdrop[data-swiping] { transition: none; }
+  .drawer-demo-content {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 1.5rem 1.5rem;
+  }
+</style>`;
+
+const tailwindCode = `<div
+  id="drawer-tailwind"
+  data-slot="drawer"
+  data-swipe-direction="down"
+  data-snap-points='["180px",0.62,1]'
+  data-default-snap-point="0.62"
+>
+  <button data-slot="drawer-trigger" class="border-0 bg-gray-900 px-4 py-2 text-white">
+    Plan a trip
+  </button>
+  <div data-slot="drawer-portal">
+    <div
+      data-slot="drawer-backdrop"
+      class="fixed inset-0 z-50 bg-black/45 opacity-[calc(1-var(--drawer-swipe-progress,0))]"
+      hidden
+    ></div>
+    <div data-slot="drawer-viewport" class="pointer-events-none fixed inset-0 z-[51] flex h-dvh w-screen items-end" hidden>
+      <div
+        data-slot="drawer-popup"
+        class="pointer-events-auto mx-auto flex h-[100dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-gray-300 bg-[#faf9f7] shadow-2xl transition-transform duration-300 [transform:translateY(calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-movement-y,0px)))] data-[starting-style]:[transform:translateY(100%)] data-[ending-style]:[transform:translateY(100%)] data-[swiping]:transition-none"
+        hidden
+      >
+        <div class="flex touch-none justify-center px-8 py-4" aria-hidden="true">
+          <span class="h-1 w-12 rounded-full bg-gray-300"></span>
+        </div>
+        <div data-slot="drawer-content" class="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-6 pb-6">
+          <h2 data-slot="drawer-title" class="m-0 text-lg font-bold">Plan a trip</h2>
+          <p data-slot="drawer-description" class="m-0 text-gray-500">
+            Pick a destination. Drag the sheet to another snap point or swipe down to dismiss it.
+          </p>
+          <label class="grid gap-2 text-sm">
+            Destination
+            <input class="border border-gray-300 bg-white px-3 py-2" value="Warsaw" />
+          </label>
+          <button data-slot="drawer-close" class="border border-gray-300 bg-transparent px-3 py-2">
+            Save trip
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+---
+
+<ExampleBlock label="drag, snap, or press Escape">
+  <div
+    slot="preview-css"
+    id="demo-drawer-css"
+    data-slot="drawer"
+    data-swipe-direction="down"
+    data-snap-points='["180px",0.62,1]'
+    data-default-snap-point="0.62"
+  >
+    <button data-slot="drawer-trigger" class="drawer-demo-trigger">Plan a trip</button>
+    <div data-slot="drawer-portal">
+      <div data-slot="drawer-backdrop" class="drawer-demo-backdrop" hidden></div>
+      <div data-slot="drawer-viewport" class="drawer-demo-viewport" hidden>
+        <div data-slot="drawer-popup" class="drawer-demo-popup" hidden>
+          <div class="drawer-demo-swipe-area" aria-hidden="true">
+            <span class="drawer-demo-handle"></span>
+          </div>
+          <div data-slot="drawer-content" class="drawer-demo-content">
+            <h2 data-slot="drawer-title" class="drawer-demo-title">Plan a trip</h2>
+            <p data-slot="drawer-description" class="drawer-demo-description">
+              Pick a destination. Drag the sheet to another snap point or swipe down to dismiss it.
+            </p>
+            <label class="drawer-demo-field">
+              Destination
+              <input value="Warsaw" />
+            </label>
+            <button data-slot="drawer-close" class="drawer-demo-close">Save trip</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    slot="preview-tailwind"
+    id="demo-drawer-tailwind"
+    data-slot="drawer"
+    data-swipe-direction="down"
+    data-snap-points='["180px",0.62,1]'
+    data-default-snap-point="0.62"
+  >
+    <button
+      data-slot="drawer-trigger"
+      class="cursor-pointer border-0 bg-gray-900 px-4 py-2 text-white transition-opacity hover:opacity-90"
+    >
+      Plan a trip
+    </button>
+    <div data-slot="drawer-portal">
+      <div
+        data-slot="drawer-backdrop"
+        class="fixed inset-0 z-50 bg-black/45 opacity-[calc(1-var(--drawer-swipe-progress,0))] transition-opacity duration-300 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0"
+        hidden
+      ></div>
+      <div
+        data-slot="drawer-viewport"
+        class="pointer-events-none fixed inset-0 z-[51] flex h-dvh w-screen items-end"
+        hidden
+      >
+        <div
+          data-slot="drawer-popup"
+          class="pointer-events-auto mx-auto flex h-[100dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-gray-300 bg-[#faf9f7] shadow-2xl transition-transform duration-300 [transform:translateY(calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-movement-y,0px)))] data-[starting-style]:[transform:translateY(100%)] data-[ending-style]:[transform:translateY(100%)] data-[swiping]:transition-none"
+          hidden
+        >
+          <div class="flex touch-none justify-center px-8 py-4" aria-hidden="true">
+            <span class="h-1 w-12 rounded-full bg-gray-300"></span>
+          </div>
+          <div data-slot="drawer-content" class="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-6 pb-6">
+            <h2 data-slot="drawer-title" class="m-0 text-lg font-bold">Plan a trip</h2>
+            <p data-slot="drawer-description" class="m-0 text-gray-500">
+              Pick a destination. Drag the sheet to another snap point or swipe down to dismiss it.
+            </p>
+            <label class="grid gap-2 text-sm">
+              Destination
+              <input class="border border-gray-300 bg-white px-3 py-2" value="Warsaw" />
+            </label>
+            <button
+              data-slot="drawer-close"
+              class="cursor-pointer border border-gray-300 bg-transparent px-3 py-2 hover:bg-[#f0eeeb]"
+            >
+              Save trip
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p slot="note" class="mt-4 text-sm text-[#666]">
+    Snap points are serializable HTML data. This example opens at 62% of the viewport and can be
+    dragged to 180px or full height.
+  </p>
+
+  <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
+</ExampleBlock>
