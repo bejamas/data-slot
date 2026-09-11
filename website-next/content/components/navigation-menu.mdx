@@ -1,0 +1,56 @@
+---
+title: Navigation Menu
+description: Site navigation with coordinated popups, an indicator, and a shared viewport.
+---
+
+<PackageInfo name="navigation-menu" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<nav data-slot="navigation-menu">
+  <ul data-slot="navigation-menu-list">
+    <li data-slot="navigation-menu-item" data-value="unique-id">
+      <button data-slot="navigation-menu-trigger">Label</button>
+      <div data-slot="navigation-menu-content">
+        <!-- Links, content -->
+      </div>
+    </li>
+    <!-- Optional hover indicator -->
+    <div data-slot="navigation-menu-indicator"></div>
+  </ul>
+  <div data-slot="navigation-menu-portal">
+    <div data-slot="navigation-menu-positioner">
+      <div data-slot="navigation-menu-popup">
+        <div data-slot="navigation-menu-viewport"></div>
+      </div>
+    </div>
+  </div>
+</nav>
+```
+
+## Examples
+
+Install `@data-slot/navigation-menu`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="navigation-menu" />
+
+### Fixed positioning
+
+Use fixed positioning when navigation lives inside a sticky or fixed header.
+
+<Example name="navigation-menu" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/navigation-menu
+```
+
+<include>../_generated/navigation-menu-api.md</include>

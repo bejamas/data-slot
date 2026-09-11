@@ -1,0 +1,45 @@
+---
+title: Dialog
+description: A modal window that moves focus into a task and returns it when dismissed.
+---
+
+<PackageInfo name="dialog" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="dialog">
+  <button data-slot="dialog-trigger">Open</button>
+  <div data-slot="dialog-content" role="dialog">
+    <h2 data-slot="dialog-title">Title</h2>
+    <p data-slot="dialog-description">Description</p>
+    <button data-slot="dialog-close">Close</button>
+  </div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/dialog`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="dialog" />
+
+### Explicit dismissal
+
+Keep the dialog open on outside clicks. It can still be closed using its close button or Escape.
+
+<Example name="dialog" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/dialog
+```
+
+<include>../_generated/dialog-api.md</include>

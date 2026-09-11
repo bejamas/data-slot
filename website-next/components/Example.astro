@@ -1,0 +1,8 @@
+---
+interface Props { name: string; variant?: 'basic' | 'extra' }
+const { name, variant = 'basic' } = Astro.props;
+const examples = import.meta.glob('../.generated/examples/*.astro', { eager: true, import: 'default' });
+const Demo = examples[`../.generated/examples/${name}-${variant}.astro`];
+if (!Demo) throw new Error(`Unknown documentation example: ${name}/${variant}`);
+---
+<Demo />

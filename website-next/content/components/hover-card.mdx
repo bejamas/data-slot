@@ -1,0 +1,41 @@
+---
+title: Hover Card
+description: A preview of linked content shown on hover or keyboard focus.
+---
+
+<PackageInfo name="hover-card" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="hover-card">
+  <button data-slot="hover-card-trigger">Trigger</button>
+  <div data-slot="hover-card-content">Content</div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/hover-card`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="hover-card" />
+
+### Position above the trigger
+
+Choose a preferred side with data-side. Collision handling keeps the card in view.
+
+<Example name="hover-card" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/hover-card
+```
+
+<include>../_generated/hover-card-api.md</include>

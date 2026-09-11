@@ -1,0 +1,41 @@
+---
+title: Collapsible
+description: A disclosure that shows and hides a single section of content.
+---
+
+<PackageInfo name="collapsible" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="collapsible">
+  <button data-slot="collapsible-trigger">Toggle</button>
+  <div data-slot="collapsible-content">Content</div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/collapsible`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="collapsible" />
+
+### Open by default
+
+Use data-default-open to show the content on first render.
+
+<Example name="collapsible" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/collapsible
+```
+
+<include>../_generated/collapsible-api.md</include>

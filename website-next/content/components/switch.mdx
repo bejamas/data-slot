@@ -1,0 +1,40 @@
+---
+title: Switch
+description: A two-state control for turning a setting on or off.
+---
+
+<PackageInfo name="switch" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<span data-slot="switch">
+  <span data-slot="switch-thumb"></span>
+</span>
+```
+
+## Examples
+
+Install `@data-slot/switch`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="switch" />
+
+### Disabled settings
+
+Disable interaction with data-disabled. The checked state stays available to assistive technology.
+
+<Example name="switch" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/switch
+```
+
+<include>../_generated/switch-api.md</include>

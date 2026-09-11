@@ -226,6 +226,17 @@ bun run preview:website
 
 Each package has its own directory in `packages/` with its own `package.json`, source code, and tests.
 
+### New Blume documentation preview
+
+The component-based documentation is being developed alongside the current site in [`website-next`](website-next/README.md). The existing website and its deployment commands remain available.
+
+```bash
+bun run install:docs
+bun run dev:docs       # http://localhost:4322
+bun run build:docs
+```
+
+
 ### Cloudflare Workers deployment
 
 The documentation website is served from the `data-slot` Worker in the Bejamas OSS Cloudflare account (`705e6a1ce1620c4ac2ce279a064dec41`) at `https://data-slot.com`. The Worker custom domain is managed in `wrangler.jsonc`. A local deployment can be created with:
