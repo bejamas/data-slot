@@ -37,3 +37,10 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 tmp
 .tmp-*
+
+# Blume generated documentation runtime
+.blume
+.blume-verify
+website-next/.generated/
+website-next/content/_generated/
+website-next/public/fonts/

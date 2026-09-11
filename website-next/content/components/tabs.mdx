@@ -1,0 +1,45 @@
+---
+title: Tabs
+description: Layered panels of content, with one panel displayed at a time.
+---
+
+<PackageInfo name="tabs" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="tabs" data-default-value="initial-tab">
+  <div data-slot="tabs-list">
+    <button data-slot="tabs-trigger" data-value="unique-id">Label</button>
+    <!-- Optional animated indicator -->
+    <div data-slot="tabs-indicator"></div>
+  </div>
+  <div data-slot="tabs-content" data-value="unique-id">Panel content</div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/tabs`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic tabs
+
+<Example name="tabs" />
+
+### Animated indicator
+
+Follow the active trigger with an indicator using the CSS variables exposed by the tab list.
+
+<Example name="tabs" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/tabs
+```
+
+<include>../_generated/tabs-api.md</include>

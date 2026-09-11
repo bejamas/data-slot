@@ -1,0 +1,63 @@
+---
+title: Slider
+description: A control for choosing a numeric value or range by dragging a thumb.
+---
+
+<PackageInfo name="slider" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<!-- Single value slider -->
+<div data-slot="slider" data-default-value="50">
+  <div data-slot="slider-track">
+    <div data-slot="slider-range"></div>
+  </div>
+  <div data-slot="slider-thumb"></div>
+</div>
+
+<!-- Optional control wrapper -->
+<div data-slot="slider" data-default-value="50">
+  <div data-slot="slider-control">
+    <div data-slot="slider-track">
+      <div data-slot="slider-range"></div>
+    </div>
+    <div data-slot="slider-thumb"></div>
+  </div>
+</div>
+
+<!-- Range slider (two thumbs) -->
+<div data-slot="slider" data-default-value="25,75">
+  <div data-slot="slider-track">
+    <div data-slot="slider-range"></div>
+  </div>
+  <div data-slot="slider-thumb"></div>
+  <div data-slot="slider-thumb"></div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/slider`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="slider" />
+
+### Disabled slider
+
+Use data-disabled to keep values visible while preventing user changes.
+
+<Example name="slider" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/slider
+```
+
+<include>../_generated/slider-api.md</include>

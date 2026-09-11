@@ -1,0 +1,44 @@
+---
+title: Tooltip
+description: A short, non-interactive description revealed on hover or keyboard focus.
+---
+
+<PackageInfo name="tooltip" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="tooltip">
+  <button data-slot="tooltip-trigger">Trigger</button>
+  <div data-slot="tooltip-content">
+    Content
+    <div data-slot="tooltip-arrow"></div>
+  </div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/tooltip`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="tooltip" />
+
+### Position below the trigger
+
+Set data-side to choose where the tooltip appears relative to its trigger.
+
+<Example name="tooltip" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/tooltip
+```
+
+<include>../_generated/tooltip-api.md</include>

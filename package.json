@@ -14,7 +14,12 @@
     "preview:website": "bun run build:website && wrangler dev",
     "deploy:website": "bun run build:website && wrangler deploy",
     "version": "bun run scripts/version.ts",
-    "release": "bun run version"
+    "release": "bun run version",
+    "dev:docs": "bun run build && bun run --cwd website-next dev",
+    "build:docs": "bun run build && bun run --cwd website-next build",
+    "preview:docs": "bun run --cwd website-next preview",
+    "check:docs": "bun run --cwd website-next check",
+    "install:docs": "npm install --prefix website-next --workspaces=false"
   },
   "devDependencies": {
     "@ai-sdk/openai": "^1.3.24",

@@ -1,0 +1,43 @@
+---
+import { Code } from 'astro:components';
+interface Props { label?: string; component: string }
+const { label = 'Interactive example', component } = Astro.props;
+const id = `example-${crypto.randomUUID()}`;
+const baseSetup = `import { create } from "@data-slot/${component}";\n\n// Initialize after the markup is in the document.\nconst controllers = create();\n\n// Clean up before removing the component.\n// controllers.forEach((controller) => controller.destroy());`;
+const setup = component === 'alert-dialog' ? baseSetup + "\n\ndocument.querySelectorAll('[data-slot=\"alert-dialog\"]').forEach((root) => {\n  root.querySelectorAll('[data-demo-alert-confirm]').forEach((button) => {\n    button.addEventListener(\"click\", () => {\n      root.dispatchEvent(new CustomEvent(\"alert-dialog:set\", { detail: { open: false } }));\n    });\n  });\n});" : baseSetup;
+---
+<data-slot-example class="ds-example not-prose" data-styling="css" data-component={component}>
+  <div class="ds-example-toolbar">
+    <span class="ds-preview-label"><span aria-hidden="true">↳</span> Preview</span>
+    <div class="ds-style-options" role="group" aria-label="Example styling">
+      <button type="button" data-style="tailwind" aria-pressed="false">Tailwind</button>
+      <button type="button" data-style="css" aria-pressed="true">CSS</button>
+    </div>
+  </div>
+  <div class="ds-preview-stage" aria-label={label}>
+    <div class="preview-css"><slot name="preview-css"><slot name="preview" /></slot></div>
+    <div class="preview-tailwind"><slot name="preview-tailwind" /></div>
+  </div>
+  <slot name="note" />
+  <details class="ds-source">
+    <summary><span aria-hidden="true">&lt;/&gt;</span> <span class="ds-show-code">Show code</span><span class="ds-hide-code">Hide code</span><span aria-hidden="true" class="ds-source-chevron">⌄</span></summary>
+    <div class="ds-code-toolbar">
+      <div class="ds-file-options" role="tablist" aria-label="Example source files">
+        <button type="button" id={`${id}-html-tab`} role="tab" aria-selected="true" aria-controls={`${id}-html`} data-file="html">index.html</button>
+        <button type="button" id={`${id}-js-tab`} role="tab" aria-selected="false" aria-controls={`${id}-js`} tabindex="-1" data-file="js">index.js</button>
+      </div>
+      <button type="button" class="ds-copy" aria-label="Copy example code">Copy</button>
+      <span class="ds-copy-status" role="status"></span>
+    </div>
+    <div id={`${id}-html`} role="tabpanel" aria-labelledby={`${id}-html-tab`} data-panel="html" tabindex="0">
+      <div class="code-css"><slot name="code-css" /></div>
+      <div class="code-tailwind"><slot name="code-tailwind" /></div>
+    </div>
+    <div id={`${id}-js`} role="tabpanel" aria-labelledby={`${id}-js-tab`} data-panel="js" tabindex="0" hidden>
+      <Code code={setup} lang="javascript" theme="vitesse-light" />
+    </div>
+  </details>
+</data-slot-example>
+<script>
+  import '../lib/examples-client';
+</script>

@@ -1,0 +1,48 @@
+---
+title: Accordion
+description: A set of collapsible sections that reveal one panel or several at a time.
+---
+
+<PackageInfo name="accordion" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="accordion">
+  <div data-slot="accordion-item" data-value="unique-id">
+    <button data-slot="accordion-trigger">
+      <span>Trigger</span>
+      <span data-slot="accordion-trigger-icon">+</span>
+    </button>
+    <div data-slot="accordion-content">
+      <div data-slot="accordion-content-inner">Content</div>
+    </div>
+  </div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/accordion`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Single panel
+
+<Example name="accordion" />
+
+### Multiple panels
+
+Allow several sections to stay open with data-multiple.
+
+<Example name="accordion" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/accordion
+```
+
+<include>../_generated/accordion-api.md</include>

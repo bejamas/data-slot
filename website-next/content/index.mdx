@@ -1,0 +1,86 @@
+---
+title: Quick start
+description: Headless UI for the HTML you already write.
+---
+
+<div className="ds-intro-tag">tiny · accessible · unstyled</div>
+
+data-slot adds accessible behavior to your markup with a few attributes and a small JavaScript module. Bring your own styles, use your favorite framework, or use none at all.
+
+## Install a component
+
+Install only the packages you need. Each component is available separately.
+
+<Tabs>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/tabs
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/tabs
+```
+
+  </Tab>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/tabs
+```
+
+  </Tab>
+</Tabs>
+
+## Assemble the markup
+
+Use `data-slot` to identify each part. Related triggers and panels share a `data-value`.
+
+```html
+<div data-slot="tabs" data-default-value="one">
+  <div data-slot="tabs-list" aria-label="Getting started">
+    <button data-slot="tabs-trigger" data-value="one">Overview</button>
+    <button data-slot="tabs-trigger" data-value="two">Details</button>
+  </div>
+  <div data-slot="tabs-content" data-value="one">Your overview.</div>
+  <div data-slot="tabs-content" data-value="two">Your details.</div>
+</div>
+```
+
+## Add the behavior
+
+Run `create()` after the markup is in the document. It discovers matching components and returns their controllers.
+
+```javascript
+import { create } from '@data-slot/tabs';
+
+const controllers = create();
+controllers[0]?.select('two');
+
+// Before removing the markup, clean up its listeners.
+// controllers.forEach((controller) => controller.destroy());
+```
+
+Use a bundler such as Vite to resolve package imports. In a script tag, use `type="module"`. If your framework mounts content dynamically, initialize after mounting and call `destroy()` before unmounting.
+
+## Make it yours
+
+Components provide behavior and accessibility attributes. Styling is yours. Every example includes CSS and Tailwind versions, plus the initialization code.
+
+<Example name="tabs" />
+
+Tailwind examples use Tailwind CSS v4. Examples with animation utilities also use `tw-animate-css`. See the [styling guide](/handbook/styling) for setup.
+
+## Explore the components
+
+Pick a component in the sidebar. Every page follows the same structure: **Anatomy → Examples → API reference**.
+
+<CardGroup cols={2}>
+  <Card title="Accordion" href="/components/accordion">Reveal one section or several.</Card>
+  <Card title="Dialog" href="/components/dialog">Keep focus on the task at hand.</Card>
+  <Card title="Select" href="/components/select">Choose from a list of options.</Card>
+  <Card title="Tabs" href="/components/tabs">Switch between related panels.</Card>
+</CardGroup>

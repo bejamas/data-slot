@@ -1,0 +1,59 @@
+---
+title: Combobox
+description: An input with a filterable list of suggestions and keyboard selection.
+---
+
+<PackageInfo name="combobox" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="combobox" data-placeholder="Search fruits...">
+  <input data-slot="combobox-input" />
+  <button data-slot="combobox-trigger">▼</button>
+  <div data-slot="combobox-content" hidden>
+    <div data-slot="combobox-list">
+      <div data-slot="combobox-empty">No results found</div>
+      <div data-slot="combobox-group">
+        <div data-slot="combobox-label">Fruits</div>
+        <div data-slot="combobox-item" data-value="apple">
+          Apple
+          <span data-slot="combobox-item-indicator">✓</span>
+        </div>
+        <div data-slot="combobox-item" data-value="banana">
+          Banana
+          <span data-slot="combobox-item-indicator">✓</span>
+        </div>
+      </div>
+      <div data-slot="combobox-separator"></div>
+      <div data-slot="combobox-item" data-value="other">Other</div>
+    </div>
+  </div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/combobox`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="combobox" />
+
+### Choose an initial value
+
+Set data-default-value to select a matching option when the component initializes.
+
+<Example name="combobox" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/combobox
+```
+
+<include>../_generated/combobox-api.md</include>

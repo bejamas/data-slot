@@ -1,0 +1,52 @@
+---
+title: Radio Group
+description: A group of radio controls for choosing exactly one value.
+---
+
+<PackageInfo name="radio-group" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="radio-group" data-default-value="pro" data-name="plan">
+  <label>
+    <span data-slot="radio-group-item" data-value="starter">
+      <span data-slot="radio-group-indicator"></span>
+    </span>
+    Starter
+  </label>
+
+  <label>
+    <span data-slot="radio-group-item" data-value="pro">
+      <span data-slot="radio-group-indicator"></span>
+    </span>
+    Pro
+  </label>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/radio-group`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="radio-group" />
+
+### Disabled group
+
+Disable the entire group with data-disabled while keeping the current selection visible.
+
+<Example name="radio-group" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/radio-group
+```
+
+<include>../_generated/radio-group-api.md</include>

@@ -1,0 +1,92 @@
+---
+title: Styling
+description: Your HTML. Your styles. The same accessible behavior.
+---
+
+Components are unstyled by default. Use regular CSS, Tailwind utilities, or your existing design system.
+
+## CSS
+
+Add classes to your markup, then style the state attributes set by the component. Keep selectors scoped to a component or example to avoid affecting other parts of your application.
+
+```css
+.tabs-trigger {
+  padding: 0.5rem 1rem;
+  border-bottom: 2px solid transparent;
+}
+
+.tabs-trigger[data-state="active"] {
+  border-bottom-color: currentColor;
+  font-weight: 500;
+}
+
+.tabs-content[hidden] {
+  display: none;
+}
+```
+
+## Tailwind
+
+The examples use Tailwind CSS v4. Add Tailwind to your build, then import the stylesheet in your application's CSS entry.
+
+```css
+@import "tailwindcss";
+```
+
+Use `data-*` and `aria-*` variants to respond to component state.
+
+```html
+<button
+  data-slot="tabs-trigger"
+  data-value="one"
+  class="border-b-2 border-transparent px-4 py-2 data-[state=active]:border-current data-[state=active]:font-medium"
+>
+  Overview
+</button>
+```
+
+Some examples use the site's `bg-code-bg` utility. Define its token to reproduce the warm neutral surface:
+
+```css
+@theme {
+  --color-code-bg: #f0eeeb;
+}
+```
+
+### Animation utilities
+
+Examples using `animate-in`, `fade-in`, or accordion animation utilities require `tw-animate-css`:
+
+```bash
+npm install tw-animate-css
+```
+
+```css
+@import "tailwindcss";
+@import "tw-animate-css";
+```
+
+## State and accessibility
+
+The API reference on each component page documents the attributes and CSS variables it exposes. These vary by component: tabs use `data-state="active"`, toggles use `data-state="on"`, and switches expose `data-checked` and `data-unchecked`.
+
+Preserve visible keyboard focus and the component's hidden states. Use real buttons for actions and give icon-only controls an accessible name with `aria-label`.
+
+```css
+button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accordion-content {
+    transition: none;
+  }
+}
+```
+
+## Try both styles
+
+Use the styling buttons on any example. Your preference is remembered for the next page. Open **Show code** to inspect the matching HTML and its JavaScript setup.
+
+<Example name="accordion" />

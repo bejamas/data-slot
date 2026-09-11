@@ -1,0 +1,58 @@
+---
+title: Alert Dialog
+description: A modal that asks for a decision before continuing with an important action.
+---
+
+<PackageInfo name="alert-dialog" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="alert-dialog">
+  <button data-slot="alert-dialog-trigger">Delete project</button>
+
+  <div data-slot="alert-dialog-portal">
+    <div data-slot="alert-dialog-overlay" hidden></div>
+    <div data-slot="alert-dialog-content" hidden>
+      <div data-slot="alert-dialog-header">
+        <div data-slot="alert-dialog-media">!</div>
+        <h2 data-slot="alert-dialog-title">Delete project?</h2>
+        <p data-slot="alert-dialog-description">
+          This action cannot be undone.
+        </p>
+      </div>
+
+      <div data-slot="alert-dialog-footer">
+        <button data-slot="alert-dialog-cancel">Cancel</button>
+        <button data-slot="alert-dialog-action">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/alert-dialog`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Confirm an action
+
+<Example name="alert-dialog" />
+
+### Require an explicit choice
+
+Set data-close-on-escape to false to require a decision. Choose Cancel or Continue to close the confirmation.
+
+<Example name="alert-dialog" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/alert-dialog
+```
+
+<include>../_generated/alert-dialog-api.md</include>
