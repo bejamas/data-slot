@@ -11,7 +11,7 @@ import {
   getFocusable,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
 const ACTIVATION_MODES = ["auto", "manual"] as const;
@@ -495,8 +495,8 @@ export function createTabs(
     const value = raw?.trim();
     if (value) applyState(value);
   };
-  cleanups.push(on(root, "tabs:set", handleSet));
-  cleanups.push(on(root, "tabs:select", handleSet)); // Deprecated alias
+  cleanups.push(onRoot(root, "tabs:set", handleSet));
+  cleanups.push(onRoot(root, "tabs:select", handleSet)); // Deprecated alias
 
   const controller: TabsController = {
     select: (value: string) => applyState(value),

@@ -1,6 +1,7 @@
 export {
   getPart,
   getParts,
+  getOwnedElements,
   getRoots,
   getRootBinding,
   hasRootBinding,
@@ -18,7 +19,7 @@ export {
 } from "./parts.ts";
 export type { PortalState } from "./parts.ts";
 export { ensureId, setAria, linkLabelledBy } from "./aria.ts";
-export { on, emit, composeHandlers } from "./events.ts";
+export { on, onRoot, emit, composeHandlers } from "./events.ts";
 export { createFormFieldAdapter, observeFormReset } from "./form-field.ts";
 export type { FormFieldAdapter, FormResetObserver } from "./form-field.ts";
 export { lockScroll, unlockScroll } from "./scroll.ts";

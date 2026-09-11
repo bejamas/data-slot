@@ -12,7 +12,7 @@ import {
   clearRootBinding,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 
 
 import { ORIENTATIONS, THUMB_ALIGNMENTS, parseDefaultValue, isRange, clampAndSnap, valueToPercent, percentToValue, clampPercent } from "./slider-math";
@@ -921,7 +921,7 @@ export function createSlider(
       }
     }
   };
-  cleanups.push(on(root, "slider:set", handleSet));
+  cleanups.push(onRoot(root, "slider:set", handleSet));
 
   const controller: SliderController = {
     setValue: (value: SliderValue) => {

@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from 'bun:test'
 import {
   getPart,
   getParts,
+  getOwnedElements,
   getRoots,
   getRootBinding,
   hasRootBinding,
@@ -182,6 +183,70 @@ describe('core/parts', () => {
     const items = getParts(root, 'item')
     expect(items).toHaveLength(3)
   })
+
+  it('keeps parts owned by a nested component out of its parent query', () => {
+    document.body.innerHTML = `
+      <div data-slot="accordion" id="outer">
+        <button data-slot="accordion-trigger" id="outer-trigger">Outer</button>
+        <div data-slot="accordion">
+          <button data-slot="accordion-trigger" id="inner-trigger">Inner</button>
+        </div>
+      </div>
+    `
+
+    const outer = document.getElementById('outer')!
+    expect(getPart(outer, 'accordion-trigger')?.id).toBe('outer-trigger')
+    expect(getParts(outer, 'accordion-trigger').map((part) => part.id)).toEqual([
+      'outer-trigger',
+    ])
+  })
+
+  it('keeps nested parts out of a portaled component scope', () => {
+    document.body.innerHTML = `
+      <div data-slot="dropdown-menu" id="outer"></div>
+      <div data-slot="dropdown-menu-content" id="content">
+        <button data-slot="dropdown-menu-item" id="outer-item">Outer</button>
+        <div data-slot="dropdown-menu">
+          <button data-slot="dropdown-menu-item" id="inner-item">Inner</button>
+        </div>
+      </div>
+    `
+
+    const outer = document.getElementById('outer')!
+    const content = document.getElementById('content')!
+    expect(
+      getOwnedElements(outer, content, '[data-slot="dropdown-menu-item"]').map(
+        (part) => part.id
+      )
+    ).toEqual(['outer-item'])
+  })
+
+  for (const scopeType of ['fragment', 'shadow root'] as const) {
+    it(`finds owned parts in a ${scopeType} while excluding nested components`, () => {
+      const root = document.createElement('div')
+      root.setAttribute('data-slot', 'dropdown-menu')
+      const scope = scopeType === 'fragment'
+        ? document.createDocumentFragment()
+        : document.createElement('div').attachShadow({ mode: 'open' })
+      const template = document.createElement('template')
+      template.innerHTML = `
+        <button data-slot="dropdown-menu-item" id="direct-item">Direct</button>
+        <div>
+          <button data-slot="dropdown-menu-item" id="wrapped-item">Wrapped</button>
+          <div data-slot="dropdown-menu">
+            <button data-slot="dropdown-menu-item" id="nested-item">Nested</button>
+          </div>
+        </div>
+      `
+      scope.appendChild(template.content)
+
+      expect(
+        getOwnedElements(root, scope, '[data-slot="dropdown-menu-item"]').map(
+          (part) => part.id
+        )
+      ).toEqual(['direct-item', 'wrapped-item'])
+    })
+  }
 
   it('getRoots finds all component roots by data-slot', () => {
     document.body.innerHTML = `

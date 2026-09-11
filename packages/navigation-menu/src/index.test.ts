@@ -4732,3 +4732,54 @@ describe("NavigationMenu", () => {
     });
   });
 });
+
+
+describe("NavigationMenu nested ownership", () => {
+  for (const bindInner of [false, true]) {
+    it(`skips an ${bindInner ? "initialized" : "uninitialized"} nested menu when resolving plain-item focus`, () => {
+      document.body.innerHTML = `
+        <nav data-slot="navigation-menu" id="outer">
+          <ul data-slot="navigation-menu-list">
+            <li data-slot="navigation-menu-item" data-value="first">
+              <button data-slot="navigation-menu-trigger" id="first">First</button>
+              <div data-slot="navigation-menu-content">First content</div>
+            </li>
+            <li data-slot="navigation-menu-item">
+              <nav data-slot="navigation-menu" id="inner">
+                <ul data-slot="navigation-menu-list">
+                  <li data-slot="navigation-menu-item" data-value="inner">
+                    <button data-slot="navigation-menu-trigger" id="inner-trigger">Inner</button>
+                    <div data-slot="navigation-menu-content">Inner content</div>
+                  </li>
+                </ul>
+              </nav>
+              <a href="#plain" id="plain">Plain</a>
+            </li>
+            <li data-slot="navigation-menu-item"><a href="#last" id="last">Last</a></li>
+          </ul>
+        </nav>
+      `;
+      const inner = bindInner ? createNavigationMenu(document.getElementById("inner")!) : null;
+      const outer = createNavigationMenu(document.getElementById("outer")!);
+      const pressRight = (element: HTMLElement) => element.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+      );
+      try {
+        const first = document.getElementById("first")!;
+        const plain = document.getElementById("plain")!;
+        const innerTrigger = document.getElementById("inner-trigger")!;
+        first.focus();
+        pressRight(first);
+        expect(document.activeElement?.id).toBe("plain");
+        pressRight(plain);
+        expect(document.activeElement?.id).toBe("last");
+        innerTrigger.focus();
+        pressRight(innerTrigger);
+        expect(document.activeElement?.id).toBe("inner-trigger");
+      } finally {
+        inner?.destroy();
+        outer.destroy();
+      }
+    });
+  }
+});

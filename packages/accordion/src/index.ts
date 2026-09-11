@@ -1,7 +1,7 @@
 import {
   getParts,
   getRoots,
-  getPart,
+  getOwnedElements,
   getDataBool,
   getDataString,
   getDataEnum,
@@ -12,7 +12,7 @@ import {
   createPresenceLifecycle,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
 type AccordionOrientation = (typeof ORIENTATIONS)[number];
@@ -671,8 +671,8 @@ export function createAccordion(
     const value = item.dataset["value"];
     if (!value) return;
 
-    const trigger = getPart<HTMLElement>(item, "accordion-trigger");
-    const content = getPart<HTMLElement>(item, "accordion-content");
+    const trigger = getOwnedElements<HTMLElement>(root, item, '[data-slot="accordion-trigger"]')[0] ?? null;
+    const content = getOwnedElements<HTMLElement>(root, item, '[data-slot="accordion-content"]')[0] ?? null;
 
     if (!trigger || !content) return;
 
@@ -867,7 +867,7 @@ export function createAccordion(
   );
 
   cleanups.push(
-    on(root, "accordion:set", (event) => {
+    onRoot(root, "accordion:set", (event) => {
       const detail = (event as CustomEvent).detail as { value?: string | string[] } | null;
       const value = detail?.value;
       if (value === undefined) return;

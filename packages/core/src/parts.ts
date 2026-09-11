@@ -1,18 +1,55 @@
 /**
- * Query a single part/slot within a component root
+ * Return whether a part belongs to this root rather than a nested instance of
+ * the same component. Roots without a data-slot retain the usual descendant
+ * query behavior for generic containers.
+ */
+const isOwnedPart = (root: Element, part: Element, scope: ParentNode): boolean => {
+  const rootSlot = root.getAttribute("data-slot");
+  if (!rootSlot) return true;
+
+  let ancestor: ParentNode | null = part.parentNode;
+  while (ancestor) {
+    if (ancestor.nodeType === 1 && (ancestor as Element).getAttribute("data-slot") === rootSlot) {
+      return ancestor === root;
+    }
+    if (ancestor === scope) return true;
+    ancestor = ancestor.parentNode;
+  }
+
+  return false;
+};
+
+/**
+ * Query elements in a scope that are owned by a component root. This supports
+ * component content that has been portaled away from its root while excluding
+ * nested instances of the same component.
+ */
+export const getOwnedElements = <T extends Element = Element>(
+  root: Element,
+  scope: ParentNode,
+  selector: string
+): T[] =>
+  [...scope.querySelectorAll<T>(selector)].filter((part) =>
+    isOwnedPart(root, part, scope)
+  );
+
+/**
+ * Query a single part/slot owned by a component root.
  */
 export const getPart = <T extends Element = Element>(
   root: Element,
   slot: string
-): T | null => root.querySelector<T>(`[data-slot="${slot}"]`);
+): T | null => getParts<T>(root, slot)[0] ?? null;
 
 /**
- * Query all parts/slots within a component root
+ * Query all parts/slots owned by a component root. Parts inside a nested root
+ * with the same data-slot are owned by that nested component instead.
  */
 export const getParts = <T extends Element = Element>(
   root: Element,
   slot: string
-): T[] => [...root.querySelectorAll<T>(`[data-slot="${slot}"]`)];
+): T[] =>
+  getOwnedElements<T>(root, root, `[data-slot="${slot}"]`);
 
 /**
  * Find all component roots within a scope by data-slot value

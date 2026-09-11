@@ -91,9 +91,23 @@ const cleanup = on(button, "click", () => console.log("clicked"));
 // Later: cleanup() to remove listener
 ```
 
+#### `onRoot(root, type, handler)`
+
+Listen for events dispatched directly on a component root. Events bubbling from
+descendants are ignored by this handler and continue to propagate. Returns a
+cleanup function, like `on`.
+
+Use this for inbound component commands so nested instances cannot change their
+parent's state:
+
+```typescript
+const cleanup = onRoot(root, "tabs:set", handleSet);
+```
+
 #### `emit(element, name, detail?)`
 
-Dispatch a custom event with optional detail.
+Dispatch a bubbling custom event with optional detail. Outbound component events
+can be observed on ancestors; check `event.target` to identify the source root.
 
 ```typescript
 emit(root, "tabs:change", { value: "tab-2" });

@@ -1,6 +1,7 @@
 import {
   getRoots,
   getParts,
+  getOwnedElements,
   getDataBool,
   getDataString,
   reuseRootBinding,
@@ -10,6 +11,7 @@ import {
   setAria,
   ensureId,
   on,
+  onRoot,
   emit,
   observeFormReset,
 } from "@data-slot/core";
@@ -215,7 +217,7 @@ export function createRadioGroup(
       el,
       value,
       authoredDisabled,
-      indicators: getParts<HTMLElement>(el, "radio-group-indicator"),
+      indicators: getOwnedElements<HTMLElement>(rootElement, el, '[data-slot="radio-group-indicator"]'),
       hiddenInput,
     };
 
@@ -514,7 +516,7 @@ export function createRadioGroup(
   cleanups.push(() => resetObserver.destroy());
 
   cleanups.push(
-    on(rootElement, "radio-group:set", (event) => {
+    onRoot(rootElement, "radio-group:set", (event) => {
       if (disabled || readOnly) return;
 
       const detail = (event as CustomEvent).detail;

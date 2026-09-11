@@ -1,5 +1,6 @@
 import {
   getPart,
+  getOwnedElements,
   getRoots,
   getDataBool,
   getDataNumber,
@@ -17,7 +18,7 @@ import {
   createPresenceLifecycle,
 } from "@data-slot/core";
 import { ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 
 const ROOT_BINDING_KEY = "@data-slot/tooltip";
 const DUPLICATE_BINDING_WARNING =
@@ -142,7 +143,9 @@ export function createTooltip(
 
   const trigger = getPart<HTMLElement>(root, "tooltip-trigger");
   const content = getPart<HTMLElement>(root, "tooltip-content");
-  const arrow = content?.querySelector<HTMLElement>('[data-slot="tooltip-arrow"]') ?? null;
+  const arrow = content
+    ? getOwnedElements<HTMLElement>(root, content, '[data-slot="tooltip-arrow"]')[0] ?? null
+    : null;
   const authoredPositionerCandidate = getPart<HTMLElement>(root, "tooltip-positioner");
   const authoredPositioner =
     authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)
@@ -561,7 +564,7 @@ export function createTooltip(
 
   // Inbound event
   cleanups.push(
-    on(root, "tooltip:set", (e) => {
+    onRoot(root, "tooltip:set", (e) => {
       const detail = (e as CustomEvent).detail;
       // Preferred: { open: boolean }
       // Deprecated: { value: boolean }

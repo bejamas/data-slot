@@ -1,5 +1,6 @@
 import {
   getPart,
+  getOwnedElements,
   containsWithPortals,
   reuseRootBinding,
   setRootBinding,
@@ -7,6 +8,7 @@ import {
   setAria,
   ensureId,
   on,
+  onRoot,
   emit,
   computeFloatingPosition,
   computeFloatingTransformOrigin,
@@ -68,11 +70,17 @@ export function createCombobox(
 
   const input = getPart<HTMLInputElement>(root, "combobox-input");
   const content = getPart<HTMLElement>(root, "combobox-content");
-  const list = getPart<HTMLElement>(root, "combobox-list") ?? getPart<HTMLElement>(content ?? root, "combobox-list");
+  const list = getPart<HTMLElement>(root, "combobox-list") ??
+    getOwnedElements<HTMLElement>(root, content ?? root, '[data-slot="combobox-list"]')[0] ??
+    null;
   const trigger = getPart<HTMLElement>(root, "combobox-trigger");
   const clearButton = getPart<HTMLElement>(root, "combobox-clear");
   const valueSlot = getPart<HTMLElement>(root, "combobox-value");
-  const emptySlot = getPart<HTMLElement>(list ?? content ?? root, "combobox-empty");
+  const emptySlot = getOwnedElements<HTMLElement>(
+    root,
+    list ?? content ?? root,
+    '[data-slot="combobox-empty"]'
+  )[0] ?? null;
   const authoredPositionerCandidate = getPart<HTMLElement>(root, "combobox-positioner");
   const authoredPositioner =
     authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)
@@ -681,7 +689,9 @@ export function createCombobox(
   cleanups.push(
     on(content, "click", (e) => {
       const item = (e.target as HTMLElement).closest?.('[data-slot="combobox-item"]') as HTMLElement | null;
-      if (item && !item.hidden) selectItem(item);
+      if (item && !item.hidden && getOwnedElements(root, list ?? content, '[data-slot="combobox-item"]').includes(item)) {
+        selectItem(item);
+      }
     }),
     on(content, "pointermove", (e) => {
       const item = (e.target as HTMLElement).closest?.('[data-slot="combobox-item"]') as HTMLElement | null;
@@ -732,7 +742,7 @@ export function createCombobox(
 
   // Inbound event
   cleanups.push(
-    on(root, "combobox:set", (e) => {
+    onRoot(root, "combobox:set", (e) => {
       const detail = (e as CustomEvent).detail;
       // Value first (syncs input to label), then inputValue can override
       if (detail?.value !== undefined) {

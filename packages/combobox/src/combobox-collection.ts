@@ -1,4 +1,4 @@
-import { ensureId, ensureItemVisibleInContainer, getPart, getParts, setAria } from "@data-slot/core";
+import { ensureId, ensureItemVisibleInContainer, getPart, getOwnedElements, setAria } from "@data-slot/core";
 import type { ComboboxItemToStringValue } from "./types";
 
 type ComboboxFilter = (inputValue: string, itemValue: string, itemLabel: string) => boolean;
@@ -60,7 +60,7 @@ export function createComboboxCollection({
 
   const itemByValue = (value: string | null): HTMLElement | null => {
     if (value === null) return null;
-    return getParts<HTMLElement>(container, "combobox-item").find((item) => valueOf(item) === value) ?? null;
+    return getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-item"]').find((item) => valueOf(item) === value) ?? null;
   };
 
   const labelFor = (value: string | null) => {
@@ -71,7 +71,7 @@ export function createComboboxCollection({
   const syncItemSelectedState = (item: HTMLElement, selected: boolean) => {
     setAria(item, "selected", selected);
     item.toggleAttribute("data-selected", selected);
-    for (const indicator of getParts<HTMLElement>(item, "combobox-item-indicator")) {
+    for (const indicator of getOwnedElements<HTMLElement>(root, item, '[data-slot="combobox-item-indicator"]')) {
       indicator.hidden = !selected;
     }
   };
@@ -82,7 +82,7 @@ export function createComboboxCollection({
   };
 
   const normalizeVisibleSeparators = () => {
-    for (const separator of getParts<HTMLElement>(container, "combobox-separator")) separator.hidden = true;
+    for (const separator of getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-separator"]')) separator.hidden = true;
     const children = Array.from(container.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
     for (let index = 0; index < children.length; index++) {
       const current = children[index]!;
@@ -108,7 +108,7 @@ export function createComboboxCollection({
 
   return {
     cache(selectedValue) {
-      allItems = getParts<HTMLElement>(container, "combobox-item");
+      allItems = getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-item"]');
       for (const item of allItems) {
         item.setAttribute("role", "option");
         ensureId(item, "combobox-item");
@@ -116,9 +116,9 @@ export function createComboboxCollection({
         if (isItemDisabled(item)) item.setAttribute("aria-disabled", "true");
         syncItemSelectedState(item, valueOf(item) === selectedValue);
       }
-      for (const group of getParts<HTMLElement>(container, "combobox-group")) {
+      for (const group of getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-group"]')) {
         group.setAttribute("role", "group");
-        const label = getPart<HTMLElement>(group, "combobox-label");
+        const label = getOwnedElements<HTMLElement>(root, group, '[data-slot="combobox-label"]')[0] ?? null;
         if (label) group.setAttribute("aria-labelledby", ensureId(label, "combobox-label"));
       }
       rebuildVisibleItems();
@@ -131,8 +131,8 @@ export function createComboboxCollection({
         item.hidden = !matches;
         if (matches) visibleCount++;
       }
-      for (const group of getParts<HTMLElement>(container, "combobox-group")) {
-        group.hidden = getParts<HTMLElement>(group, "combobox-item").every((item) => item.hidden);
+      for (const group of getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-group"]')) {
+        group.hidden = getOwnedElements<HTMLElement>(root, group, '[data-slot="combobox-item"]').every((item) => item.hidden);
       }
       normalizeVisibleSeparators();
       if (emptySlot) emptySlot.hidden = visibleCount > 0;
@@ -140,7 +140,7 @@ export function createComboboxCollection({
       rebuildVisibleItems();
     },
     select(value) {
-      const items = allItems.length > 0 ? allItems : getParts<HTMLElement>(container, "combobox-item");
+      const items = allItems.length > 0 ? allItems : getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-item"]');
       for (const item of items) syncItemSelectedState(item, valueOf(item) === value);
     },
     highlight(index) {

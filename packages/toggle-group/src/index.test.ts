@@ -725,4 +725,26 @@ describe("ToggleGroup", () => {
       expect(root.getAttribute("data-value")).toBe("");
     });
   });
+
+  it("keeps delegated interactions within the owning nested group", () => {
+    document.body.innerHTML = `
+      <div data-slot="toggle-group" id="outer">
+        <button data-slot="toggle-group-item" data-value="outer">Outer</button>
+        <div data-slot="toggle-group" id="inner">
+          <button data-slot="toggle-group-item" data-value="inner">Inner</button>
+        </div>
+      </div>
+    `;
+
+    const outer = createToggleGroup(document.getElementById("outer")!);
+    const inner = createToggleGroup(document.getElementById("inner")!);
+
+    (document.querySelector('#inner [data-slot="toggle-group-item"]') as HTMLElement).click();
+
+    expect(inner.value).toEqual(["inner"]);
+    expect(outer.value).toEqual([]);
+
+    outer.destroy();
+    inner.destroy();
+  });
 });

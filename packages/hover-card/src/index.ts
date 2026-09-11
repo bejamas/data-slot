@@ -17,7 +17,7 @@ import {
   createPresenceLifecycle,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 
 export type HoverCardSide = "top" | "right" | "bottom" | "left";
 const SIDES = ["top", "right", "bottom", "left"] as const;
@@ -599,7 +599,7 @@ export function createHoverCard(
 
   // Inbound event
   cleanups.push(
-    on(root, "hover-card:set", (e) => {
+    onRoot(root, "hover-card:set", (e) => {
       const detail = (e as CustomEvent).detail;
       // Preferred: { open: boolean }
       // Deprecated: { value: boolean }
