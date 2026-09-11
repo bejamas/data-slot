@@ -175,11 +175,11 @@ export function createNavigationMenuLayout(
       rootAlignOffset,
   });
   const clearMeasure = () => {
-    if (measureRaf !== null) cancelAnimationFrame(measureRaf);
+    if (measureRaf !== null) terminalLifecycle.cancelRaf(measureRaf);
     measureRaf = null;
   };
   const clearInstantRaf = () => {
-    if (instantRaf !== null) cancelAnimationFrame(instantRaf);
+    if (instantRaf !== null) terminalLifecycle.cancelRaf(instantRaf);
     instantRaf = null;
   };
   const syncInstant = () => {

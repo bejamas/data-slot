@@ -4,7 +4,7 @@ export function createNavigationMenuIndicator(indicator: HTMLElement | null, lis
   const terminalLifecycle = createTerminalLifecycle();
   let hovered: HTMLElement | null = null;
   let instantRaf: number | null = null;
-  const clearFrame = () => { if (instantRaf !== null) { cancelAnimationFrame(instantRaf); instantRaf = null; } };
+  const clearFrame = () => { if (instantRaf !== null) { terminalLifecycle.cancelRaf(instantRaf); instantRaf = null; } };
   const show = (target: HTMLElement | null) => {
     if (!indicator) return;
     hovered = target;

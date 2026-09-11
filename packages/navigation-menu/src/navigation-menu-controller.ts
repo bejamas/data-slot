@@ -149,7 +149,7 @@ export function createNavigationMenu(
   let indicatorSyncRaf: number | null = null;
   const clearIndicatorSyncRaf = () => {
     if (indicatorSyncRaf !== null) {
-      cancelAnimationFrame(indicatorSyncRaf);
+      terminalLifecycle.cancelRaf(indicatorSyncRaf);
       indicatorSyncRaf = null;
     }
   };
@@ -400,11 +400,11 @@ export function createNavigationMenu(
 
   const clearTimers = () => {
     if (openTimeout) {
-      clearTimeout(openTimeout);
+      terminalLifecycle.cancelTimeout(openTimeout);
       openTimeout = null;
     }
     if (closeTimeout) {
-      clearTimeout(closeTimeout);
+      terminalLifecycle.cancelTimeout(closeTimeout);
       closeTimeout = null;
     }
   };

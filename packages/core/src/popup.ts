@@ -549,6 +549,9 @@ export interface TerminalLifecycleController {
   onBeforeDestroy(callback: () => void): void;
   onDestroy(callback: () => void): void;
   trackRaf(callback: FrameRequestCallback): number | null;
+  /** Cancel tracked work and release its handle immediately. */
+  cancelRaf(handle: number | null): void;
+  cancelTimeout(handle: ReturnType<typeof setTimeout> | null): void;
   trackFinalRaf(callback: FrameRequestCallback): number | null;
   trackTimeout(callback: () => void, delay: number): ReturnType<typeof setTimeout> | null;
   destroy(): boolean;
@@ -583,6 +586,14 @@ export function createTerminalLifecycle(): TerminalLifecycleController {
       });
       rafs.add(handle);
       return handle;
+    },
+    cancelRaf: (handle) => {
+      if (handle === null || !rafs.delete(handle)) return;
+      cancelAnimationFrame(handle);
+    },
+    cancelTimeout: (handle) => {
+      if (handle === null || !timeouts.delete(handle)) return;
+      clearTimeout(handle);
     },
     trackFinalRaf: (callback) => {
       if (!isDestroying || isDestroyed) return null;

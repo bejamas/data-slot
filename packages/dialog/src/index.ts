@@ -127,8 +127,12 @@ export function createDialog(
   let didLockScroll = false;
   const restoreFocusOnDestroy = () => {
     terminalLifecycle.trackFinalRaf(() => {
-      if (previousActiveElement && document.contains(previousActiveElement)) {
-        focusElement(previousActiveElement);
+      if (previousActiveElement) {
+        if (document.contains(previousActiveElement)) {
+          focusElement(previousActiveElement);
+        } else if (trigger && document.contains(trigger)) {
+          focusElement(trigger);
+        }
       }
       previousActiveElement = null;
     });

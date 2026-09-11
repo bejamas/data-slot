@@ -446,7 +446,7 @@ export function createTooltip(
   const showWithDelay = (reason: TooltipReason) => {
     // Always reset timer on re-enter for predictable behavior
     if (showTimeout) {
-      clearTimeout(showTimeout);
+      terminalLifecycle.cancelTimeout(showTimeout);
       showTimeout = null;
     }
 
@@ -468,7 +468,7 @@ export function createTooltip(
     nextInstantType: TooltipInstantType = null
   ) => {
     if (showTimeout) {
-      clearTimeout(showTimeout);
+      terminalLifecycle.cancelTimeout(showTimeout);
       showTimeout = null;
     }
 
@@ -521,7 +521,7 @@ export function createTooltip(
 
       // If a delayed open is pending and user clicks first, cancel opening.
       if (showTimeout) {
-        clearTimeout(showTimeout);
+        terminalLifecycle.cancelTimeout(showTimeout);
         showTimeout = null;
         return;
       }
@@ -584,7 +584,7 @@ export function createTooltip(
       if (open) {
         if (isTriggerDisabled()) return; // Opening respects disabled
         if (showTimeout) {
-          clearTimeout(showTimeout);
+          terminalLifecycle.cancelTimeout(showTimeout);
           showTimeout = null;
         }
         updateState(true, "api");
@@ -611,7 +611,7 @@ export function createTooltip(
       // Respect disabled state even for programmatic calls
       if (isTriggerDisabled()) return;
       if (showTimeout) {
-        clearTimeout(showTimeout);
+        terminalLifecycle.cancelTimeout(showTimeout);
         showTimeout = null;
       }
       updateState(true, "api");
@@ -622,7 +622,7 @@ export function createTooltip(
     },
     destroy: () => {
       if (!terminalLifecycle.destroy()) return;
-      if (showTimeout) clearTimeout(showTimeout);
+      if (showTimeout) terminalLifecycle.cancelTimeout(showTimeout);
       showTimeout = null;
       isOpen = false;
       setDataState("closed");

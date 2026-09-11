@@ -118,6 +118,23 @@ describe("Dialog", () => {
     controller.destroy();
   });
 
+  it("restores trigger focus on destroy when the original focus target was removed", async () => {
+    const { trigger, controller } = setup();
+    const outside = document.createElement("button");
+    document.body.prepend(outside);
+    outside.focus();
+    try {
+      controller.open();
+      await waitForRaf();
+      outside.remove();
+      controller.destroy();
+      await waitForRaf();
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      controller.destroy();
+    }
+  });
+
   it("keeps outside focus when destroyed before opening", async () => {
     const { controller } = setup();
     const outside = document.createElement("button");

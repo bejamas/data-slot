@@ -230,13 +230,13 @@ export function createHoverCard(
 
   const clearOpenTimeout = () => {
     if (!openTimeout) return;
-    clearTimeout(openTimeout);
+    terminalLifecycle.cancelTimeout(openTimeout);
     openTimeout = null;
   };
 
   const clearCloseTimeout = () => {
     if (!closeTimeout) return;
-    clearTimeout(closeTimeout);
+    terminalLifecycle.cancelTimeout(closeTimeout);
     closeTimeout = null;
   };
 
