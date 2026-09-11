@@ -220,6 +220,44 @@ describe("Combobox", () => {
     }
   });
 
+  for (const mutation of ["append", "replace"] as const) {
+    it(`selects an item after ${mutation} while the popup is open`, () => {
+      const { root, list, items, controller } = setup({ name: "fruit" });
+      try {
+        controller.open();
+        const item = document.createElement("div");
+        item.dataset.slot = "combobox-item";
+        item.dataset.value = "loaded";
+        item.innerHTML = "<span>Loaded</span>";
+        if (mutation === "append") list.appendChild(item);
+        else items[0]!.replaceWith(item);
+
+        item.querySelector("span")!.click();
+        expect(controller.value).toBe("loaded");
+        expect(controller.isOpen).toBe(false);
+        expect(root.querySelector<HTMLInputElement>('input[type="hidden"]')?.value).toBe("loaded");
+      } finally {
+        controller.destroy();
+      }
+    });
+  }
+
+  it("ignores a cached item moved into a nested combobox while open", () => {
+    const { list, items, controller } = setup();
+    try {
+      controller.open();
+      const nestedRoot = document.createElement("div");
+      nestedRoot.dataset.slot = "combobox";
+      list.appendChild(nestedRoot);
+      nestedRoot.appendChild(items[0]!);
+      items[0]!.click();
+      expect(controller.value).toBeNull();
+      expect(controller.isOpen).toBe(true);
+    } finally {
+      controller.destroy();
+    }
+  });
+
   describe("initialization", () => {
     it("initializes with content hidden", () => {
       const { content, controller } = setup();

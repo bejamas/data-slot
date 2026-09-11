@@ -111,6 +111,44 @@ describe("Select", () => {
     }
   });
 
+  for (const mutation of ["append", "replace"] as const) {
+    it(`selects an item after ${mutation} while the popup is open`, () => {
+      const { root, content, items, controller } = setup({ name: "fruit" });
+      try {
+        controller.open();
+        const item = document.createElement("div");
+        item.dataset.slot = "select-item";
+        item.dataset.value = "loaded";
+        item.innerHTML = "<span>Loaded</span>";
+        if (mutation === "append") content.appendChild(item);
+        else items[0]!.replaceWith(item);
+
+        item.querySelector("span")!.click();
+        expect(controller.value).toBe("loaded");
+        expect(controller.isOpen).toBe(false);
+        expect(root.querySelector<HTMLInputElement>('input[type="hidden"]')?.value).toBe("loaded");
+      } finally {
+        controller.destroy();
+      }
+    });
+  }
+
+  it("ignores a cached item moved into a nested select while open", () => {
+    const { content, items, controller } = setup();
+    try {
+      controller.open();
+      const nestedRoot = document.createElement("div");
+      nestedRoot.dataset.slot = "select";
+      content.appendChild(nestedRoot);
+      nestedRoot.appendChild(items[0]!);
+      items[0]!.click();
+      expect(controller.value).toBeNull();
+      expect(controller.isOpen).toBe(true);
+    } finally {
+      controller.destroy();
+    }
+  });
+
   it("allows clicking an item enabled while the popup is open", () => {
     const { items, controller } = setup();
     try {

@@ -689,7 +689,9 @@ export function createCombobox(
   cleanups.push(
     on(content, "click", (e) => {
       const item = (e.target as HTMLElement).closest?.('[data-slot="combobox-item"]') as HTMLElement | null;
-      if (item && !item.hidden && collection.items.includes(item)) selectItem(item);
+      if (item && !item.hidden && getOwnedElements(root, list ?? content, '[data-slot="combobox-item"]').includes(item)) {
+        selectItem(item);
+      }
     }),
     on(content, "pointermove", (e) => {
       const item = (e.target as HTMLElement).closest?.('[data-slot="combobox-item"]') as HTMLElement | null;

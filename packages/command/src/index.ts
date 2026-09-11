@@ -19,7 +19,6 @@ import { commandScore } from "./command-score";
 import {
   getCommandItemText,
   getDirectCommandChildren,
-  getOwnedCommandElements,
   isCommandItemDisabled,
   normalizeCommandValue,
   parseCommandKeywords,
@@ -213,10 +212,10 @@ export function createCommand(
     }
     resizeObserver.disconnect();
     resizeObserver.observe(list);
-    for (const el of getOwnedCommandElements<HTMLElement>(
+    for (const el of getOwnedElements<HTMLElement>(
+      rootEl,
       list,
-      `${ITEM_SELECTOR}, ${GROUP_SELECTOR}, ${SEPARATOR_SELECTOR}, [data-slot="command-empty"]`,
-      rootEl
+      `${ITEM_SELECTOR}, ${GROUP_SELECTOR}, ${SEPARATOR_SELECTOR}, [data-slot="command-empty"]`
     )) {
       resizeObserver.observe(el);
     }
@@ -306,7 +305,7 @@ export function createCommand(
   };
   const getSelectedVisibleItem = (): HTMLElement | null => {
     if (currentValue === null) return null;
-    const items = getOwnedCommandElements<HTMLElement>(list, ITEM_SELECTOR, rootEl);
+    const items = getOwnedElements<HTMLElement>(rootEl, list, ITEM_SELECTOR);
     return (
       items.find((item) => {
         const meta = itemMetaByElement.get(item);
@@ -346,7 +345,7 @@ export function createCommand(
     }
   };
   const getAllVisibleItemsInDomOrder = (): ItemMeta[] =>
-    getOwnedCommandElements<HTMLElement>(list, ITEM_SELECTOR, rootEl)
+    getOwnedElements<HTMLElement>(rootEl, list, ITEM_SELECTOR)
       .map((el) => itemMetaByElement.get(el) ?? null)
       .filter(
         (meta): meta is ItemMeta =>
@@ -386,7 +385,7 @@ export function createCommand(
     groupMetas = [];
     itemMetaByElement = new Map();
     groupMetaByElement = new Map();
-    for (const groupEl of getOwnedCommandElements<HTMLElement>(list, GROUP_SELECTOR, rootEl)) {
+    for (const groupEl of getOwnedElements<HTMLElement>(rootEl, list, GROUP_SELECTOR)) {
       const heading = getDirectCommandChildren<HTMLElement>(groupEl, "command-group-heading")[0] ?? null;
       const resolved = resolveCommandValue(
         groupEl,
@@ -409,7 +408,7 @@ export function createCommand(
         groupEl.removeAttribute("aria-labelledby");
       }
     }
-    for (const itemEl of getOwnedCommandElements<HTMLElement>(list, ITEM_SELECTOR, rootEl)) {
+    for (const itemEl of getOwnedElements<HTMLElement>(rootEl, list, ITEM_SELECTOR)) {
       const groupEl = itemEl.closest(GROUP_SELECTOR);
       const group =
         groupEl instanceof HTMLElement && groupEl.closest('[data-slot="command"]') === rootEl
@@ -473,7 +472,7 @@ export function createCommand(
         itemMetas.some((meta) => meta.group === group && meta.rank > 0);
       group.el.hidden = !visible;
     }
-    for (const separator of getOwnedCommandElements<HTMLElement>(list, SEPARATOR_SELECTOR, rootEl)) {
+    for (const separator of getOwnedElements<HTMLElement>(rootEl, list, SEPARATOR_SELECTOR)) {
       const alwaysRender = getDataBool(separator, "alwaysRender") ?? false;
       separator.hidden = hasSearch && !alwaysRender;
       separator.setAttribute("role", "separator");
@@ -649,7 +648,7 @@ export function createCommand(
         sibling = change > 0 ? sibling.nextElementSibling : sibling.previousElementSibling;
       }
       if (!nextGroup) break;
-      const nextMeta = getOwnedCommandElements<HTMLElement>(nextGroup, ITEM_SELECTOR, rootEl)
+      const nextMeta = getOwnedElements<HTMLElement>(rootEl, nextGroup, ITEM_SELECTOR)
         .map((el) => itemMetaByElement.get(el) ?? null)
         .find((meta): meta is ItemMeta => meta !== null && !meta.disabled && !meta.el.hidden);
       if (nextMeta) {

@@ -587,7 +587,9 @@ export function createSelect(
     on(content, "keydown", handleKeydown),
     on(content, "click", (e) => {
       const item = (e.target as HTMLElement).closest?.('[data-slot="select-item"]') as HTMLElement | null;
-      if (item && items.includes(item)) selectItem(item);
+      if (item && getOwnedElements(root, content, '[data-slot="select-item"]').includes(item)) {
+        selectItem(item);
+      }
     }),
     on(content, "pointermove", (e) => {
       if (!highlightItemOnHover || !isHoverPointer(e)) return;
