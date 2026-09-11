@@ -275,6 +275,126 @@ html {
 }
 
 /* ============================================
+   CSS Example: Alert Dialog
+   ============================================ */
+.alert-dialog-trigger {
+  padding: 0.5rem 1rem;
+  background: #1a1a1a;
+  color: #faf9f7;
+  border: none;
+  cursor: pointer;
+}
+
+.alert-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.alert-dialog-overlay[data-open] {
+  opacity: 1;
+}
+
+.alert-dialog-overlay[data-starting-style],
+.alert-dialog-overlay[data-ending-style] {
+  opacity: 0;
+}
+
+.alert-dialog-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
+  background: #faf9f7;
+  padding: 2rem;
+  max-width: 400px;
+  width: calc(100% - 2rem);
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  z-index: 101;
+  opacity: 0;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.alert-dialog-panel[data-open] {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.alert-dialog-panel[data-starting-style],
+.alert-dialog-panel[data-ending-style] {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+.alert-dialog-header {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.alert-dialog-media {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f0eeeb;
+  border: 1px solid #ccc;
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.alert-dialog-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.alert-dialog-description {
+  margin: 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.alert-dialog-footer {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.5rem;
+}
+
+.alert-dialog-cancel,
+.alert-dialog-action {
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+}
+
+.alert-dialog-cancel {
+  background: none;
+  border: 1px solid #ccc;
+}
+
+.alert-dialog-action {
+  background: #1a1a1a;
+  color: #faf9f7;
+  border: none;
+}
+
+@media (min-width: 640px) {
+  .alert-dialog-footer {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+/* ============================================
    CSS Example: Collapsible
    ============================================ */
 .collapsible-trigger-btn {
