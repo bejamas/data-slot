@@ -1,0 +1,58 @@
+---
+title: Command
+description: A searchable command list for navigating actions with the keyboard.
+---
+
+<PackageInfo name="command" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="command" data-label="Command Menu">
+  <div data-slot="command-input-wrapper">
+    <input data-slot="command-input" placeholder="Type a command..." />
+  </div>
+  <div data-slot="command-list">
+    <div data-slot="command-empty" hidden>No results.</div>
+
+    <div data-slot="command-group">
+      <div data-slot="command-group-heading">Actions</div>
+      <div data-slot="command-item">Open Project</div>
+      <div data-slot="command-item">Invite Teammate</div>
+    </div>
+
+    <div data-slot="command-separator"></div>
+
+    <div data-slot="command-item" data-value="settings">
+      Settings
+      <span data-slot="command-shortcut">⌘,</span>
+    </div>
+  </div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/command`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="command" />
+
+### Loop keyboard navigation
+
+Use data-loop to wrap keyboard navigation from the last item to the first.
+
+<Example name="command" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/command
+```
+
+<include>../_generated/command-api.md</include>

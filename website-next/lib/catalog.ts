@@ -1,0 +1,21 @@
+/** Sidebar order and supported example variants. Reader-facing content lives in MDX. */
+export const components = [
+  { slug: 'accordion', demo: 'AccordionSingle', second: 'AccordionMultiple' },
+  { slug: 'alert-dialog', demo: 'AlertDialog', attrs: 'data-close-on-escape="false"' },
+  { slug: 'collapsible', demo: 'Collapsible', attrs: 'data-default-open' },
+  { slug: 'combobox', demo: 'Combobox', attrs: 'data-default-value="banana"' },
+  { slug: 'command', demo: 'Command', attrs: 'data-loop' },
+  { slug: 'dialog', demo: 'Dialog', attrs: 'data-close-on-click-outside="false"' },
+  { slug: 'dropdown-menu', demo: 'DropdownMenu', attrs: 'data-align="end"' },
+  { slug: 'hover-card', demo: 'HoverCard', attrs: 'data-side="top"' },
+  { slug: 'navigation-menu', demo: 'NavigationMenu', attrs: 'data-position-method="fixed"' },
+  { slug: 'popover', demo: 'Popover', attrs: 'data-side="top"' },
+  { slug: 'radio-group', demo: 'RadioGroup', attrs: 'data-disabled' },
+  { slug: 'select', demo: 'Select', attrs: 'data-default-value="banana"' },
+  { slug: 'slider', demo: 'Slider', attrs: 'data-disabled' },
+  { slug: 'switch', demo: 'Switch', attrs: 'data-disabled' },
+  { slug: 'tabs', demo: 'TabsBasic', second: 'TabsIndicator' },
+  { slug: 'toggle', demo: 'Toggle', attrs: 'data-disabled' },
+  { slug: 'toggle-group', demo: 'ToggleGroup', attrs: 'data-disabled' },
+  { slug: 'tooltip', demo: 'Tooltip', attrs: 'data-side="bottom"' },
+] as const;

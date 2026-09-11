@@ -1,0 +1,63 @@
+---
+title: Select
+description: A button that opens a list of options with keyboard navigation and typeahead.
+---
+
+<PackageInfo name="select" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="select" data-placeholder="Choose a fruit...">
+  <button data-slot="select-trigger">
+    <span data-slot="select-value"></span>
+    <!-- Add your own chevron icon -->
+  </button>
+  <div data-slot="select-content" hidden>
+    <div data-slot="select-viewport">
+      <div data-slot="select-group">
+        <div data-slot="select-label">Fruits</div>
+        <div data-slot="select-item" data-value="apple">
+          <span data-slot="select-item-text">Apple</span>
+        </div>
+        <div data-slot="select-item" data-value="banana">
+          <span data-slot="select-item-text">Banana</span>
+        </div>
+        <div data-slot="select-item" data-value="orange">
+          <span data-slot="select-item-text">Orange</span>
+        </div>
+      </div>
+      <div data-slot="select-separator"></div>
+      <div data-slot="select-item" data-value="other">
+        <span data-slot="select-item-text">Other</span>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/select`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="select" />
+
+### Choose an initial value
+
+Select an option on initialization with data-default-value.
+
+<Example name="select" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/select
+```
+
+<include>../_generated/select-api.md</include>

@@ -1,0 +1,38 @@
+---
+title: Toggle
+description: A button with a pressed state for toggling an option on or off.
+---
+
+<PackageInfo name="toggle" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<button data-slot="toggle">Label</button>
+```
+
+## Examples
+
+Install `@data-slot/toggle`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="toggle" />
+
+### Disabled toggles
+
+Use data-disabled to prevent interaction while preserving the pressed state.
+
+<Example name="toggle" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/toggle
+```
+
+<include>../_generated/toggle-api.md</include>

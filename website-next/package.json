@@ -1,0 +1,19 @@
+{
+  "name": "data-slot-docs-next",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run prepare && blume dev --port 4322",
+    "build": "bun run prepare && blume build",
+    "preview": "blume preview --port 4322",
+    "check": "bun run prepare && blume check --isolated",
+    "prepare": "bun run scripts/prepare.ts"
+  },
+  "dependencies": {
+    "@fontsource/geist-mono": "^5.2.7",
+    "astro": "7.3.2",
+    "blume": "1.6.4",
+    "js-yaml": "^5.4.1",
+    "tw-animate-css": "^1.0.0"
+  }
+}

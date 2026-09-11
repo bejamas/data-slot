@@ -1,0 +1,47 @@
+---
+title: Dropdown Menu
+description: A menu of actions or selectable items opened from a trigger.
+---
+
+<PackageInfo name="dropdown-menu" />
+
+## Anatomy
+
+Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+
+```html
+<div data-slot="dropdown-menu">
+  <button data-slot="dropdown-menu-trigger">Actions</button>
+  <div data-slot="dropdown-menu-content">
+    <button data-slot="dropdown-menu-item" data-value="edit">Edit</button>
+    <button data-slot="dropdown-menu-item" data-value="copy">Copy</button>
+    <button data-slot="dropdown-menu-item" data-variant="destructive" data-value="delete">
+      Delete
+    </button>
+  </div>
+</div>
+```
+
+## Examples
+
+Install `@data-slot/dropdown-menu`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
+
+### Basic usage
+
+<Example name="dropdown-menu" />
+
+### Align to the end
+
+Use data-align to align the menu with the trailing edge of its trigger.
+
+<Example name="dropdown-menu" variant="extra" />
+
+## API reference
+
+### Installation
+
+```bash
+npm install @data-slot/dropdown-menu
+```
+
+<include>../_generated/dropdown-menu-api.md</include>
