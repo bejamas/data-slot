@@ -364,7 +364,7 @@ export function createAlertDialog(
     get isOpen() {
       return isOpen;
     },
-    destroy: () => terminalLifecycle.destroy(),
+    destroy: () => { terminalLifecycle.destroy(); },
   };
 
   registerModalTerminalResources(terminalLifecycle, {

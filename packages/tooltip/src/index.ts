@@ -234,6 +234,22 @@ export function createTooltip(
 
   // ARIA setup - ensure content has stable id
   const contentId = ensureId(content, "tooltip-content");
+  let ownsDescription = false;
+  const descriptionIds = () =>
+    trigger.getAttribute("aria-describedby")?.split(/\s+/).filter(Boolean) ?? [];
+  const addDescription = () => {
+    const ids = descriptionIds();
+    if (ids.includes(contentId)) return;
+    trigger.setAttribute("aria-describedby", [...ids, contentId].join(" "));
+    ownsDescription = true;
+  };
+  const removeDescription = () => {
+    if (!ownsDescription) return;
+    const ids = descriptionIds().filter((id) => id !== contentId);
+    if (ids.length) trigger.setAttribute("aria-describedby", ids.join(" "));
+    else trigger.removeAttribute("aria-describedby");
+    ownsDescription = false;
+  };
   content.setAttribute("role", "tooltip");
   const resolveDirection = (): TooltipDirection => {
     const rootElement = root instanceof HTMLElement ? root : null;
@@ -422,7 +438,7 @@ export function createTooltip(
     isOpen = open;
 
     if (isOpen) {
-      trigger.setAttribute("aria-describedby", contentId);
+      addDescription();
       content.setAttribute("aria-hidden", "false");
       portal.mount();
       content.hidden = false;
@@ -433,7 +449,7 @@ export function createTooltip(
       positionSync.update();
     } else {
       setDataState("closed");
-      trigger.removeAttribute("aria-describedby");
+      removeDescription();
       content.setAttribute("aria-hidden", "true");
       presence.exit();
       positionSync.stop();
@@ -626,7 +642,7 @@ export function createTooltip(
       showTimeout = null;
       isOpen = false;
       setDataState("closed");
-      trigger.removeAttribute("aria-describedby");
+      removeDescription();
       content.setAttribute("aria-hidden", "true");
       content.hidden = true;
     },

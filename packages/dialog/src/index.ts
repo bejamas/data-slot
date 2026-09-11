@@ -421,7 +421,7 @@ export function createDialog(
     get isOpen() {
       return isOpen;
     },
-    destroy: () => terminalLifecycle.destroy(),
+    destroy: () => { terminalLifecycle.destroy(); },
     // Internal properties for global handler
     _handleKeydown: handleKeydown,
     _content: content,

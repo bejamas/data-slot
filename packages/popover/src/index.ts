@@ -301,17 +301,23 @@ export function createPopover(
     }
   };
 
-  const restoreFocus = () => {
-    terminalLifecycle.trackRaf(() => {
-      if (terminalLifecycle.isDestroyed) return;
-      if (previousActiveElement && previousActiveElement.isConnected) {
-        focusElement(previousActiveElement);
-      } else {
-        focusElement(trigger);
-      }
-      previousActiveElement = null;
-    });
+  let pendingFocusRestore = false;
+  const restoreFocusNow = () => {
+    pendingFocusRestore = false;
+    if (previousActiveElement && previousActiveElement.isConnected) {
+      focusElement(previousActiveElement);
+    } else {
+      focusElement(trigger);
+    }
+    previousActiveElement = null;
   };
+  const restoreFocus = () => {
+    pendingFocusRestore = true;
+    terminalLifecycle.trackRaf(restoreFocusNow);
+  };
+  terminalLifecycle.onBeforeDestroy(() => {
+    if (pendingFocusRestore) terminalLifecycle.trackFinalRaf(restoreFocusNow);
+  });
 
   const presence = createPresenceLifecycle({
     element: content,

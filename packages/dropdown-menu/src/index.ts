@@ -269,16 +269,23 @@ export function createDropdownMenu(
     ancestorScroll: lockScrollOption,
     onUpdate: updatePosition,
   });
-  const restoreFocus = () => {
-    terminalLifecycle.trackRaf(() => {
-      if (previousActiveElement && document.contains(previousActiveElement)) {
-        focusElement(previousActiveElement);
-      } else if (document.contains(trigger)) {
-        focusElement(trigger);
-      }
-      previousActiveElement = null;
-    });
+  let pendingFocusRestore = false;
+  const restoreFocusNow = () => {
+    pendingFocusRestore = false;
+    if (previousActiveElement && document.contains(previousActiveElement)) {
+      focusElement(previousActiveElement);
+    } else if (document.contains(trigger)) {
+      focusElement(trigger);
+    }
+    previousActiveElement = null;
   };
+  const restoreFocus = () => {
+    pendingFocusRestore = true;
+    terminalLifecycle.trackRaf(restoreFocusNow);
+  };
+  terminalLifecycle.onBeforeDestroy(() => {
+    if (pendingFocusRestore) terminalLifecycle.trackFinalRaf(restoreFocusNow);
+  });
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {

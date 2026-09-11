@@ -600,7 +600,7 @@ export function createTerminalLifecycle(): TerminalLifecycleController {
       return requestAnimationFrame(callback);
     },
     trackTimeout: (callback, delay) => {
-      if (isDestroyed) return null;
+      if (isDestroyed || isDestroying) return null;
       const handle = setTimeout(() => {
         timeouts.delete(handle);
         if (!isDestroyed) callback();

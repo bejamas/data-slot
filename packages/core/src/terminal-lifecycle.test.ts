@@ -59,3 +59,23 @@ it("does not run canceled callbacks while allowing other work to finish", async 
     lifecycle.destroy();
   }
 });
+
+
+it("rejects normal asynchronous work during before-destroy callbacks", () => {
+  const lifecycle = createTerminalLifecycle();
+  const scheduleTimeout = spyOn(globalThis, "setTimeout");
+  const scheduleRaf = spyOn(globalThis, "requestAnimationFrame");
+  try {
+    lifecycle.onBeforeDestroy(() => {
+      expect(lifecycle.trackTimeout(() => {}, 60_000)).toBeNull();
+      expect(lifecycle.trackRaf(() => {})).toBeNull();
+    });
+    lifecycle.destroy();
+    expect(scheduleTimeout).not.toHaveBeenCalled();
+    expect(scheduleRaf).not.toHaveBeenCalled();
+  } finally {
+    lifecycle.destroy();
+    scheduleTimeout.mockRestore();
+    scheduleRaf.mockRestore();
+  }
+});

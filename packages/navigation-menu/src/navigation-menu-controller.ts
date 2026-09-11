@@ -627,8 +627,8 @@ export function createNavigationMenu(
         updateIndicator(newData.trigger); // Indicator follows active trigger
       } else {
         clearIndicatorSyncRaf();
-      updateIndicator(null);
-      layout.stop();
+        updateIndicator(null);
+        layout.stop();
         safety.hideBridge();
         safety.clear();
         popupStackController.close(popupSizeBaseline);
@@ -1200,7 +1200,6 @@ export function createNavigationMenu(
       resetPointerIntent();
       clearIndicatorSyncRaf();
       updateIndicator(null);
-      layout.stop();
       itemMap.forEach(({ trigger, content, item }) => {
         setAria(trigger, "expanded", false);
         trigger.setAttribute("data-state", "closed");
@@ -1210,11 +1209,8 @@ export function createNavigationMenu(
         setInert(content, true);
         content.hidden = true;
         content.style.pointerEvents = "none";
-        presences.get(content)?.cleanup();
-        layout.restore(content);
       });
       currentValue = null;
-      popupStackController.destroy();
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };

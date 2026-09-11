@@ -133,3 +133,13 @@ Events:
 - `aria-labelledby` / `aria-describedby` wiring from title and description
 - Focus is trapped while open
 - Focus returns to the trigger or previously focused element when closed
+
+
+### Controller destruction
+
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+Destruction restores prior focus, falling back to a surviving trigger if the prior
+target was removed. Destroying an unopened modal does not move focus.

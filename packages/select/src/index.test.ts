@@ -34,6 +34,45 @@ describe("Select", () => {
     return { root, trigger, content, valueSlot, items, controller };
   };
 
+  it("preserves queued close focus restoration when destroyed before the next frame", async () => {
+    const { trigger, content, controller } = setup();
+    trigger.focus();
+    controller.open();
+    await waitForRaf();
+    await waitForRaf();
+    content.focus();
+    controller.close();
+    await waitForRaf();
+    controller.destroy();
+    controller.destroy();
+    await waitForRaf();
+    await waitForRaf();
+    expect(document.activeElement === trigger).toBe(true);
+  });
+
+  it("does not move outside focus when destroyed without a pending restoration", async () => {
+    const { controller } = setup();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+    controller.destroy();
+    await waitForRaf();
+    expect(document.activeElement === outside).toBe(true);
+  });
+
+  it("preserves Tab focus when destroyed after a close that skips restoration", async () => {
+    const { content, controller } = setup();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    controller.open();
+    content.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    outside.focus();
+    await waitForRaf();
+    controller.destroy();
+    await waitForRaf();
+    expect(document.activeElement === outside).toBe(true);
+  });
+
   const waitForRaf = () =>
     new Promise<void>((resolve) => {
       requestAnimationFrame(() => resolve());

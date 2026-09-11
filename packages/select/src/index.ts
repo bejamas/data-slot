@@ -294,17 +294,23 @@ export function createSelect(
     }
   };
 
-  const restoreFocus = () => {
-    terminalLifecycle.trackRaf(() => {
-      if (terminalLifecycle.isDestroyed) return;
-      if (previousActiveElement && document.contains(previousActiveElement)) {
-        focusElement(previousActiveElement);
-      } else if (trigger && document.contains(trigger)) {
-        focusElement(trigger);
-      }
-      previousActiveElement = null;
-    });
+  let pendingFocusRestore = false;
+  const restoreFocusNow = () => {
+    pendingFocusRestore = false;
+    if (previousActiveElement && document.contains(previousActiveElement)) {
+      focusElement(previousActiveElement);
+    } else if (trigger && document.contains(trigger)) {
+      focusElement(trigger);
+    }
+    previousActiveElement = null;
   };
+  const restoreFocus = () => {
+    pendingFocusRestore = true;
+    terminalLifecycle.trackRaf(restoreFocusNow);
+  };
+  terminalLifecycle.onBeforeDestroy(() => {
+    if (pendingFocusRestore) terminalLifecycle.trackFinalRaf(restoreFocusNow);
+  });
 
   const finishClose = () => {
     if (terminalLifecycle.isDestroyed) return;

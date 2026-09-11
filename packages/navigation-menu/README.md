@@ -427,3 +427,10 @@ element.dispatchEvent(
 ## License
 
 MIT
+
+
+### Controller destruction
+
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
