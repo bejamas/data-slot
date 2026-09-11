@@ -48,16 +48,16 @@ Install individual packages as needed:
 
 ```bash
 # npm
-npm install @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
+npm install @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/drawer
 
 # pnpm
-pnpm add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
+pnpm add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/drawer
 
 # yarn
-yarn add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
+yarn add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/drawer
 
 # bun
-bun add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
+bun add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/drawer
 ```
 
 ## Packages
@@ -75,6 +75,7 @@ All packages are independently installable. Each package includes its own README
 | `@data-slot/tooltip`         | 2.2 KB | Hover/focus tooltips        | [README](packages/tooltip/README.md)         |
 | `@data-slot/popover`         | 2.0 KB | Anchored floating content   | [README](packages/popover/README.md)         |
 | `@data-slot/dialog`          | 1.9 KB | Modal dialogs, focus trap   | [README](packages/dialog/README.md)          |
+| `@data-slot/drawer`          | 6.8 KB      | Swipeable drawers and sheets | [README](packages/drawer/README.md)        |
 | `@data-slot/alert-dialog`    | 1.8 KB | Blocking confirmation dialogs | [README](packages/alert-dialog/README.md)  |
 | `@data-slot/collapsible`     | 1.6 KB | Simple show/hide toggle     | [README](packages/collapsible/README.md)     |
 | `@data-slot/accordion`       | 1.4 KB | Collapsible sections        | [README](packages/accordion/README.md)       |
@@ -120,6 +121,7 @@ The same pattern applies to all components:
 ```typescript
 import { createDialog } from "@data-slot/dialog";
 import { createAlertDialog } from "@data-slot/alert-dialog";
+import { createDrawer } from "@data-slot/drawer";
 import { createAccordion } from "@data-slot/accordion";
 import { createPopover } from "@data-slot/popover";
 import { createHoverCard } from "@data-slot/hover-card";
@@ -127,6 +129,7 @@ import { createCommand } from "@data-slot/command";
 
 const dialog = createDialog(element);
 const alertDialog = createAlertDialog(element);
+const drawer = createDrawer(element);
 const accordion = createAccordion(element);
 const popover = createPopover(element);
 const hoverCard = createHoverCard(element);

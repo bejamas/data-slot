@@ -1,91 +1,97 @@
 [
   {
     "name": "@data-slot/navigation-menu",
-    "size": 10561,
-    "sizeFormatted": "10.3 KB",
+    "size": 10869,
+    "sizeFormatted": "10.6 KB",
     "description": "Dropdown navigation menus"
   },
   {
     "name": "@data-slot/core",
-    "size": 6001,
-    "sizeFormatted": "5.9 KB",
+    "size": 8194,
+    "sizeFormatted": "8.0 KB",
     "description": "Shared utilities"
   },
   {
+    "name": "@data-slot/drawer",
+    "size": 7009,
+    "sizeFormatted": "6.8 KB",
+    "description": "Swipeable drawers, snap points"
+  },
+  {
     "name": "@data-slot/dropdown-menu",
-    "size": 4968,
-    "sizeFormatted": "4.9 KB",
+    "size": 5091,
+    "sizeFormatted": "5.0 KB",
     "description": "Action menus, kbd nav"
   },
   {
+    "name": "@data-slot/combobox",
+    "size": 4856,
+    "sizeFormatted": "4.7 KB",
+    "description": "Autocomplete input"
+  },
+  {
+    "name": "@data-slot/select",
+    "size": 4847,
+    "sizeFormatted": "4.7 KB",
+    "description": "Dropdown select, form-ready"
+  },
+  {
     "name": "@data-slot/command",
-    "size": 4829,
+    "size": 4797,
     "sizeFormatted": "4.7 KB",
     "description": "Command palette, ranked search"
   },
   {
-    "name": "@data-slot/select",
-    "size": 4643,
-    "sizeFormatted": "4.5 KB",
-    "description": "Dropdown select, form-ready"
-  },
-  {
-    "name": "@data-slot/combobox",
-    "size": 4617,
-    "sizeFormatted": "4.5 KB",
-    "description": "Autocomplete input"
-  },
-  {
     "name": "@data-slot/accordion",
-    "size": 3647,
-    "sizeFormatted": "3.6 KB",
+    "size": 3634,
+    "sizeFormatted": "3.5 KB",
     "description": "Collapsible sections"
   },
   {
     "name": "@data-slot/slider",
-    "size": 3466,
+    "size": 3459,
     "sizeFormatted": "3.4 KB",
     "description": "Single/range value sliders"
   },
   {
     "name": "@data-slot/tooltip",
-    "size": 2796,
+    "size": 2784,
     "sizeFormatted": "2.7 KB",
     "description": "Hover/focus tooltips"
   },
   {
     "name": "@data-slot/tabs",
-    "size": 2369,
+    "size": 2320,
     "sizeFormatted": "2.3 KB",
     "description": "Tabbed interfaces, kbd nav"
   },
   {
     "name": "@data-slot/popover",
-    "size": 2068,
+    "size": 1997,
     "sizeFormatted": "2.0 KB",
     "description": "Anchored floating content"
   },
   {
-    "name": "@data-slot/dialog",
-    "size": 1903,
-    "sizeFormatted": "1.9 KB",
-    "description": "Modal dialogs, focus trap"
-  },
-  {
     "name": "@data-slot/switch",
-    "size": 1892,
+    "size": 1891,
     "sizeFormatted": "1.8 KB",
     "description": "Form-ready on/off switch"
   },
   {
+    "name": "@data-slot/dialog",
+    "size": 1875,
+    "sizeFormatted": "1.8 KB",
+    "description": "Modal dialogs, focus trap"
+  },
+  {
     "name": "@data-slot/alert-dialog",
-    "size": 1852,
+    "size": 1820,
     "sizeFormatted": "1.8 KB",
     "description": "Blocking confirmation dialogs"
   },
   {
     "name": "@data-slot/collapsible",
-    "size": 1683,
+    "size": 1678,
     "sizeFormatted": "1.6 KB",
     "description": "Simple show/hide toggle"
   }

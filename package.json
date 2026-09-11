@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "test": "bun test",
-    "test:parity": "bun test packages/dialog/src/index.test.ts packages/select/src/index.test.ts packages/tooltip/src/index.test.ts packages/hover-card/src/index.test.ts packages/combobox/src/index.test.ts",
+    "test:parity": "bun test packages/dialog/src/index.test.ts packages/drawer/src packages/select/src/index.test.ts packages/tooltip/src/index.test.ts packages/hover-card/src/index.test.ts packages/combobox/src/index.test.ts",
     "typecheck": "tsc --noEmit",
     "build": "bun run --filter './packages/*' build",
     "build:website": "bun run build && bun run --cwd website build",
