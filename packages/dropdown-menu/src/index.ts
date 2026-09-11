@@ -21,6 +21,8 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
+  createTerminalLifecycle,
+  registerFloatingTerminalResources,
   createDismissLayer,
   containsWithPortals,
   createTypeahead,
@@ -138,7 +140,13 @@ export function createDropdownMenu(
   const typeahead = createTypeahead();
   let keyboardMode = false;
   let didLockScroll = false;
-  let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroy(() => {
+    if (didLockScroll) {
+      unlockScroll();
+      didLockScroll = false;
+    }
+  });
   let pendingDismissMeta: Pick<DropdownMenuOpenChangeDetail, "source" | "reason"> | null = null;
   const cleanups: Array<() => void> = [];
   const portal = createPortalLifecycle({
@@ -261,20 +269,27 @@ export function createDropdownMenu(
     ancestorScroll: lockScrollOption,
     onUpdate: updatePosition,
   });
-  const restoreFocus = () => {
-    requestAnimationFrame(() => {
-      if (previousActiveElement && document.contains(previousActiveElement)) {
-        focusElement(previousActiveElement);
-      } else if (document.contains(trigger)) {
-        focusElement(trigger);
-      }
-      previousActiveElement = null;
-    });
+  let pendingFocusRestore = false;
+  const restoreFocusNow = () => {
+    pendingFocusRestore = false;
+    if (previousActiveElement && document.contains(previousActiveElement)) {
+      focusElement(previousActiveElement);
+    } else if (document.contains(trigger)) {
+      focusElement(trigger);
+    }
+    previousActiveElement = null;
   };
+  const restoreFocus = () => {
+    pendingFocusRestore = true;
+    terminalLifecycle.trackRaf(restoreFocusNow);
+  };
+  terminalLifecycle.onBeforeDestroy(() => {
+    if (pendingFocusRestore) terminalLifecycle.trackFinalRaf(restoreFocusNow);
+  });
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       portal.restore();
       content.hidden = true;
       restoreFocus();
@@ -409,6 +424,7 @@ export function createDropdownMenu(
     syncItems();
   };
   const updateOpenState = (open: boolean, { source, reason }: OpenTransitionOptions) => {
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
     pendingDismissMeta = null;
     const previousOpen = isOpen;
@@ -784,22 +800,23 @@ export function createDropdownMenu(
     }),
   );
   const controller: DropdownMenuController = {
-    open: () =>
+    open: () => !terminalLifecycle.isDestroyed &&
       updateOpenState(true, {
         source: "programmatic",
         reason: "programmatic",
       }),
-    close: () =>
+    close: () => !terminalLifecycle.isDestroyed &&
       updateOpenState(false, {
         source: "programmatic",
         reason: "programmatic",
       }),
-    toggle: () =>
+    toggle: () => !terminalLifecycle.isDestroyed &&
       updateOpenState(!isOpen, {
         source: "programmatic",
         reason: "programmatic",
       }),
     set: (detail) => {
+      if (terminalLifecycle.isDestroyed) return;
       applySet(detail);
     },
     get isOpen() {
@@ -815,20 +832,23 @@ export function createDropdownMenu(
       return itemCollection.valueFor(itemCollection.recordFor(highlightedItem));
     },
     destroy: () => {
-      isDestroyed = true;
+      if (!terminalLifecycle.destroy()) return;
       typeahead.destroy();
-      positionSync.stop();
-      presence.cleanup();
-      portal.cleanup();
-      if (didLockScroll) {
-        unlockScroll();
-        didLockScroll = false;
-      }
-      cleanups.forEach((cleanup) => cleanup());
-      cleanups.length = 0;
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
+      isOpen = false;
+      setAria(trigger, "expanded", false);
+      setDataState("closed");
+      content.hidden = true;
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
+
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   if (defaultOpen) {
     updateOpenState(true, {

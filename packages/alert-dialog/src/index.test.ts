@@ -121,6 +121,35 @@ describe("AlertDialog", () => {
     controller.destroy();
   });
 
+  it("restores trigger focus on destroy when the original focus target was removed", async () => {
+    const { trigger, controller } = setup();
+    const outside = document.createElement("button");
+    document.body.prepend(outside);
+    outside.focus();
+    try {
+      controller.open();
+      await waitForRaf();
+      outside.remove();
+      controller.destroy();
+      await waitForRaf();
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      controller.destroy();
+    }
+  });
+
+  it("keeps outside focus when destroyed before opening", async () => {
+    const { controller } = setup();
+    const outside = document.createElement("button");
+    document.body.prepend(outside);
+    outside.focus();
+
+    controller.destroy();
+    await waitForRaf();
+
+    expect(document.activeElement).toBe(outside);
+  });
+
   it("opens on trigger click and closes on cancel click", async () => {
     const { trigger, cancel, content, overlay, controller } = setup();
 
@@ -405,5 +434,31 @@ describe("AlertDialog", () => {
     expect(document.activeElement).toBe(first);
 
     controller.destroy();
+  });
+
+  it("keeps a retained controller inert, cancels queued focus, and releases scroll lock on destroy", async () => {
+    document.body.innerHTML = `
+      <button id="outside">Outside</button>
+      <div data-slot="alert-dialog" id="root">
+        <div data-slot="alert-dialog-overlay"></div>
+        <div data-slot="alert-dialog-content"><button id="inside">Inside</button></div>
+      </div>
+    `;
+    const outside = document.getElementById("outside") as HTMLButtonElement;
+    const root = document.getElementById("root")!;
+    const controller = createAlertDialog(root);
+
+    outside.focus();
+    controller.open();
+    await waitForRaf();
+    expect(document.activeElement).toBe(document.getElementById("inside"));
+    expect(document.documentElement.style.overflow).toBe("hidden");
+    controller.destroy();
+    controller.open();
+    controller.destroy();
+
+    await waitForRaf();
+    expect(document.activeElement).toBe(outside);
+    expect(document.documentElement.style.overflow).toBe("");
   });
 });

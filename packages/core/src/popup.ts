@@ -1,6 +1,7 @@
 import { on } from "./events.ts";
 import { containsWithPortals, portalToBody, restorePortal } from "./parts.ts";
 import type { PortalState } from "./parts.ts";
+import type { ModalStackItemController } from "./popup-geometry";
 
 export * from "./popup-geometry";
 
@@ -537,6 +538,151 @@ export interface PortalLifecycleController {
   mount(): void;
   restore(): void;
   cleanup(): void;
+}
+
+/**
+ * Shared terminal gate for controllers whose DOM and asynchronous work must
+ * become permanently inert after destroy().
+ */
+export interface TerminalLifecycleController {
+  readonly isDestroyed: boolean;
+  onBeforeDestroy(callback: () => void): void;
+  onDestroy(callback: () => void): void;
+  trackRaf(callback: FrameRequestCallback): number | null;
+  /** Cancel tracked work and release its handle immediately. */
+  cancelRaf(handle: number | null): void;
+  cancelTimeout(handle: ReturnType<typeof setTimeout> | null): void;
+  trackFinalRaf(callback: FrameRequestCallback): number | null;
+  trackTimeout(callback: () => void, delay: number): ReturnType<typeof setTimeout> | null;
+  destroy(): boolean;
+}
+
+export function createTerminalLifecycle(): TerminalLifecycleController {
+  let isDestroyed = false;
+  let isDestroying = false;
+  const beforeTeardowns: Array<() => void> = [];
+  const teardowns: Array<() => void> = [];
+  const rafs = new Set<number>();
+  const timeouts = new Set<ReturnType<typeof setTimeout>>();
+  return {
+    get isDestroyed() {
+      return isDestroyed;
+    },
+    onBeforeDestroy: (callback) => {
+      if (isDestroyed) return;
+      if (isDestroying) callback();
+      else beforeTeardowns.push(callback);
+    },
+    onDestroy: (callback) => {
+      if (isDestroyed) callback();
+      else teardowns.push(callback);
+    },
+    trackRaf: (callback) => {
+      if (isDestroyed || isDestroying) return null;
+      let handle = 0;
+      handle = requestAnimationFrame((time) => {
+        rafs.delete(handle);
+        if (!isDestroyed) callback(time);
+      });
+      rafs.add(handle);
+      return handle;
+    },
+    cancelRaf: (handle) => {
+      if (handle === null || !rafs.delete(handle)) return;
+      cancelAnimationFrame(handle);
+    },
+    cancelTimeout: (handle) => {
+      if (handle === null || !timeouts.delete(handle)) return;
+      clearTimeout(handle);
+    },
+    trackFinalRaf: (callback) => {
+      if (!isDestroying || isDestroyed) return null;
+      return requestAnimationFrame(callback);
+    },
+    trackTimeout: (callback, delay) => {
+      if (isDestroyed || isDestroying) return null;
+      const handle = setTimeout(() => {
+        timeouts.delete(handle);
+        if (!isDestroyed) callback();
+      }, delay);
+      timeouts.add(handle);
+      return handle;
+    },
+    destroy() {
+      if (isDestroyed || isDestroying) return false;
+      isDestroying = true;
+      for (const handle of rafs) cancelAnimationFrame(handle);
+      rafs.clear();
+      for (const handle of timeouts) clearTimeout(handle);
+      timeouts.clear();
+      for (const teardown of beforeTeardowns.splice(0)) teardown();
+      isDestroyed = true;
+      isDestroying = false;
+      for (const teardown of teardowns.splice(0)) teardown();
+      return true;
+    },
+  };
+}
+
+export interface FloatingTerminalResources {
+  cleanups: Array<() => void>;
+  positionSync: Pick<PositionSyncController, "stop">;
+  presence: Pick<PresenceLifecycleController, "cleanup">;
+  portal: Pick<PortalLifecycleController, "cleanup">;
+  unbind: () => void;
+}
+
+/** Registers the mechanical terminal disposal order shared by floating controls. */
+export function registerFloatingTerminalResources(
+  lifecycle: TerminalLifecycleController,
+  resources: FloatingTerminalResources,
+): void {
+  lifecycle.onDestroy(() => {
+    resources.positionSync.stop();
+    resources.presence.cleanup();
+    resources.portal.cleanup();
+    drainCleanups(resources.cleanups);
+    resources.unbind();
+  });
+}
+
+export interface ModalTerminalResources {
+  cleanups: Array<() => void>;
+  modalStack: Pick<ModalStackItemController, "destroy">;
+  presence: Array<Pick<PresenceLifecycleController, "cleanup">>;
+  portal: Pick<PortalLifecycleController, "cleanup"> | null;
+  beforeDestroy?: () => void;
+  reset: () => void;
+  releaseScrollLock: () => void;
+  cleanup: () => void;
+  unbind: () => void;
+}
+
+/**
+ * Registers the terminal disposal order shared by modal controls. Behavioral
+ * policy (events, dismissal, roles, and focus target selection) stays in the
+ * component; this owns only the resource disposal sequence.
+ */
+export function registerModalTerminalResources(
+  lifecycle: TerminalLifecycleController,
+  resources: ModalTerminalResources,
+): void {
+  if (resources.beforeDestroy) lifecycle.onBeforeDestroy(resources.beforeDestroy);
+  lifecycle.onDestroy(() => {
+    resources.modalStack.destroy();
+    for (const presence of resources.presence) presence.cleanup();
+    resources.reset();
+    resources.releaseScrollLock();
+    resources.cleanup();
+    resources.portal?.cleanup();
+    drainCleanups(resources.cleanups);
+    resources.unbind();
+  });
+}
+
+/** Run a component's listener cleanup collection exactly once. */
+export function drainCleanups(cleanups: Array<() => void>): void {
+  for (const cleanup of cleanups.splice(0)) cleanup();
 }
 
 export function createPortalLifecycle(options: PortalLifecycleOptions): PortalLifecycleController {

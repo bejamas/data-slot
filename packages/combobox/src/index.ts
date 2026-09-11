@@ -16,6 +16,8 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
+  createTerminalLifecycle,
+  registerFloatingTerminalResources,
   createDismissLayer,
   createFormFieldAdapter,
 } from "@data-slot/core";
@@ -130,7 +132,7 @@ export function createCombobox(
     container: authoredPositioner ?? undefined,
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
-  let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
 
   const matchesMediaQuery = (query: string): boolean => {
     if (typeof win.matchMedia !== "function") return false;
@@ -338,7 +340,7 @@ export function createCombobox(
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       portal.restore();
       content.hidden = true;
     },
@@ -361,6 +363,7 @@ export function createCombobox(
   };
 
   const updateOpenState = (open: boolean, skipFocusRestore = false) => {
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
     if (disabled && open) return;
 
@@ -380,8 +383,8 @@ export function createCombobox(
       updatePosition();
       positionSync.update();
 
-      requestAnimationFrame(() => {
-        if (!isOpen) return;
+      terminalLifecycle.trackRaf(() => {
+        if (terminalLifecycle.isDestroyed || !isOpen) return;
         positionSync.update();
       });
     } else {
@@ -766,26 +769,33 @@ export function createCombobox(
     get value() { return currentValue; },
     get inputValue() { return input.value; },
     get isOpen() { return isOpen; },
-    select: (value: string) => updateValue(value),
-    clear: () => updateValue(null),
-    open: () => updateOpenState(true),
-    close: () => updateOpenState(false),
+    select: (value: string) => { if (!terminalLifecycle.isDestroyed) updateValue(value); },
+    clear: () => { if (!terminalLifecycle.isDestroyed) updateValue(null); },
+    open: () => { if (!terminalLifecycle.isDestroyed) updateOpenState(true); },
+    close: () => { if (!terminalLifecycle.isDestroyed) updateOpenState(false); },
     setItemToStringValue: (nextItemToStringValue: ComboboxItemToStringValue | null) => {
+      if (terminalLifecycle.isDestroyed) return;
       itemToStringValue = nextItemToStringValue;
       collection.setItemToStringValue(itemToStringValue);
       updateValue(currentValue, true);
     },
     destroy: () => {
-      isDestroyed = true;
-      positionSync.stop();
-      presence.cleanup();
-      portal.cleanup();
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
+      if (!terminalLifecycle.destroy()) return;
+      isOpen = false;
+      setAria(input, "expanded", false);
+      setDataState("closed");
+      content.hidden = true;
       formField?.destroy();
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   if (defaultOpen) updateOpenState(true);

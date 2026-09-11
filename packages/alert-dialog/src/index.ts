@@ -15,6 +15,8 @@ import {
   createModalStackItem,
   createDismissLayer,
   createPresenceLifecycle,
+  createTerminalLifecycle,
+  registerModalTerminalResources,
   focusElement,
   getAutofocusOrFirstFocusable,
   getTabbables,
@@ -83,7 +85,7 @@ export function createAlertDialog(
   }
 
   let isOpen = false;
-  let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
   let previousActiveElement: HTMLElement | null = null;
   const cleanups: Array<() => void> = [];
 
@@ -92,6 +94,18 @@ export function createAlertDialog(
     : null;
 
   let didLockScroll = false;
+  const restoreFocusOnDestroy = () => {
+    terminalLifecycle.trackFinalRaf(() => {
+      if (previousActiveElement) {
+        if (document.contains(previousActiveElement)) {
+          focusElement(previousActiveElement);
+        } else if (trigger && document.contains(trigger)) {
+          focusElement(trigger);
+        }
+      }
+      previousActiveElement = null;
+    });
+  };
 
   ensureId(content, "alert-dialog-content");
   content.setAttribute("role", "alertdialog");
@@ -133,7 +147,7 @@ export function createAlertDialog(
   };
 
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
+    terminalLifecycle.trackRaf(() => {
       if (
         previousActiveElement &&
         document.contains(previousActiveElement) &&
@@ -181,7 +195,7 @@ export function createAlertDialog(
   let contentExitEpoch = 0;
 
   const finishClosePart = (element: HTMLElement, epoch: number) => {
-    if (isDestroyed || isOpen || epoch !== currentExitEpoch) return;
+    if (terminalLifecycle.isDestroyed || isOpen || epoch !== currentExitEpoch) return;
 
     element.hidden = true;
     pendingExitCount = Math.max(0, pendingExitCount - 1);
@@ -249,6 +263,7 @@ export function createAlertDialog(
   });
 
   const updateState = (open: boolean, force = false) => {
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open && !force) return;
 
     if (open) {
@@ -297,7 +312,7 @@ export function createAlertDialog(
     onOpenChange?.(isOpen);
 
     if (open) {
-      requestAnimationFrame(focusFirst);
+      terminalLifecycle.trackRaf(() => focusFirst());
     }
   };
 
@@ -343,19 +358,24 @@ export function createAlertDialog(
   );
 
   const controller: AlertDialogController = {
-    open: () => updateState(true),
-    close: () => updateState(false),
-    toggle: () => updateState(!isOpen),
+    open: () => { if (!terminalLifecycle.isDestroyed) updateState(true); },
+    close: () => { if (!terminalLifecycle.isDestroyed) updateState(false); },
+    toggle: () => { if (!terminalLifecycle.isDestroyed) updateState(!isOpen); },
     get isOpen() {
       return isOpen;
     },
-    destroy: () => {
-      isDestroyed = true;
-      modalStack.destroy();
+    destroy: () => { terminalLifecycle.destroy(); },
+  };
+
+  registerModalTerminalResources(terminalLifecycle, {
+    cleanups,
+    modalStack,
+    presence: [overlayPresence, contentPresence],
+    portal: portalLifecycle,
+    beforeDestroy: restoreFocusOnDestroy,
+    reset: () => {
       currentExitEpoch += 1;
       pendingExitCount = 0;
-      overlayPresence.cleanup();
-      contentPresence.cleanup();
       isOpen = false;
       setDataState("closed");
       overlay.hidden = true;
@@ -363,21 +383,16 @@ export function createAlertDialog(
       if (trigger) {
         setAria(trigger, "expanded", false);
       }
+    },
+    releaseScrollLock: () => {
       if (didLockScroll) {
         unlockScroll();
         didLockScroll = false;
       }
-      cleanupContentFocusable();
-      if (previousActiveElement !== null) {
-        restoreFocus();
-      }
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
-
-      portalLifecycle?.cleanup();
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
-  };
+    cleanup: cleanupContentFocusable,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   cleanups.push(
     onRoot(root, "alert-dialog:set", (e) => {

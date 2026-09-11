@@ -126,6 +126,46 @@ describe('Tooltip', () => {
     controller.destroy()
   })
 
+  it('preserves authored descriptions when destroyed before opening', () => {
+    const { trigger, controller } = setup()
+    trigger.setAttribute('aria-describedby', 'author-help other-help')
+    controller.destroy()
+    expect(trigger.getAttribute('aria-describedby')).toBe('author-help other-help')
+  })
+
+  it('only removes its own description after opening, closing, and destruction', () => {
+    const { trigger, content, controller } = setup()
+    trigger.setAttribute('aria-describedby', 'author-help')
+    controller.show()
+    expect(trigger.getAttribute('aria-describedby')).toBe(`author-help ${content.id}`)
+    controller.hide()
+    expect(trigger.getAttribute('aria-describedby')).toBe('author-help')
+    controller.show()
+    trigger.setAttribute('aria-describedby', `${trigger.getAttribute('aria-describedby')} added-later`)
+    controller.destroy()
+    expect(trigger.getAttribute('aria-describedby')).toBe('author-help added-later')
+  })
+
+  it('preserves an author-owned reference to the tooltip content itself', () => {
+    const { trigger, content, controller } = setup()
+    trigger.setAttribute('aria-describedby', content.id)
+    controller.show()
+    controller.destroy()
+    expect(trigger.getAttribute('aria-describedby')).toBe(content.id)
+  })
+
+  it('removes accessibility wiring when destroyed while open', () => {
+    const { trigger, content, controller } = setup()
+    controller.show()
+    expect(trigger.hasAttribute('aria-describedby')).toBe(true)
+
+    controller.destroy()
+
+    expect(trigger.hasAttribute('aria-describedby')).toBe(false)
+    expect(content.getAttribute('aria-hidden')).toBe('true')
+    expect(content.hidden).toBe(true)
+  })
+
   it('shows immediately via controller.show()', () => {
     const { root, controller } = setup()
 

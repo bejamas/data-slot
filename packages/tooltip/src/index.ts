@@ -16,6 +16,8 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
+  createTerminalLifecycle,
+  registerFloatingTerminalResources,
 } from "@data-slot/core";
 import { ensureId } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -217,7 +219,7 @@ export function createTooltip(
   let isOpen = false;
   let instantType: TooltipInstantType = null;
   let hasFocus = false;
-  let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
   const cleanups: Array<() => void> = [];
 
@@ -232,6 +234,22 @@ export function createTooltip(
 
   // ARIA setup - ensure content has stable id
   const contentId = ensureId(content, "tooltip-content");
+  let ownsDescription = false;
+  const descriptionIds = () =>
+    trigger.getAttribute("aria-describedby")?.split(/\s+/).filter(Boolean) ?? [];
+  const addDescription = () => {
+    const ids = descriptionIds();
+    if (ids.includes(contentId)) return;
+    trigger.setAttribute("aria-describedby", [...ids, contentId].join(" "));
+    ownsDescription = true;
+  };
+  const removeDescription = () => {
+    if (!ownsDescription) return;
+    const ids = descriptionIds().filter((id) => id !== contentId);
+    if (ids.length) trigger.setAttribute("aria-describedby", ids.join(" "));
+    else trigger.removeAttribute("aria-describedby");
+    ownsDescription = false;
+  };
   content.setAttribute("role", "tooltip");
   const resolveDirection = (): TooltipDirection => {
     const rootElement = root instanceof HTMLElement ? root : null;
@@ -387,7 +405,7 @@ export function createTooltip(
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       portal.restore();
       content.hidden = true;
     },
@@ -409,6 +427,7 @@ export function createTooltip(
     reason: TooltipReason,
     nextInstantType: TooltipInstantType = null
   ) => {
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
 
     if (!open && isOpen && skipDelayDuration > 0) {
@@ -419,7 +438,7 @@ export function createTooltip(
     isOpen = open;
 
     if (isOpen) {
-      trigger.setAttribute("aria-describedby", contentId);
+      addDescription();
       content.setAttribute("aria-hidden", "false");
       portal.mount();
       content.hidden = false;
@@ -430,7 +449,7 @@ export function createTooltip(
       positionSync.update();
     } else {
       setDataState("closed");
-      trigger.removeAttribute("aria-describedby");
+      removeDescription();
       content.setAttribute("aria-hidden", "true");
       presence.exit();
       positionSync.stop();
@@ -443,7 +462,7 @@ export function createTooltip(
   const showWithDelay = (reason: TooltipReason) => {
     // Always reset timer on re-enter for predictable behavior
     if (showTimeout) {
-      clearTimeout(showTimeout);
+      terminalLifecycle.cancelTimeout(showTimeout);
       showTimeout = null;
     }
 
@@ -453,7 +472,8 @@ export function createTooltip(
       return;
     }
 
-    showTimeout = setTimeout(() => {
+    showTimeout = terminalLifecycle.trackTimeout(() => {
+      if (terminalLifecycle.isDestroyed) return;
       updateState(true, reason, reason === "focus" ? "focus" : null);
       showTimeout = null;
     }, delay);
@@ -464,7 +484,7 @@ export function createTooltip(
     nextInstantType: TooltipInstantType = null
   ) => {
     if (showTimeout) {
-      clearTimeout(showTimeout);
+      terminalLifecycle.cancelTimeout(showTimeout);
       showTimeout = null;
     }
 
@@ -517,7 +537,7 @@ export function createTooltip(
 
       // If a delayed open is pending and user clicks first, cancel opening.
       if (showTimeout) {
-        clearTimeout(showTimeout);
+        terminalLifecycle.cancelTimeout(showTimeout);
         showTimeout = null;
         return;
       }
@@ -580,7 +600,7 @@ export function createTooltip(
       if (open) {
         if (isTriggerDisabled()) return; // Opening respects disabled
         if (showTimeout) {
-          clearTimeout(showTimeout);
+          terminalLifecycle.cancelTimeout(showTimeout);
           showTimeout = null;
         }
         updateState(true, "api");
@@ -603,29 +623,38 @@ export function createTooltip(
 
   const controller: TooltipController = {
     show: () => {
+      if (terminalLifecycle.isDestroyed) return;
       // Respect disabled state even for programmatic calls
       if (isTriggerDisabled()) return;
       if (showTimeout) {
-        clearTimeout(showTimeout);
+        terminalLifecycle.cancelTimeout(showTimeout);
         showTimeout = null;
       }
       updateState(true, "api");
     },
-    hide: () => hideImmediately("api"),
+    hide: () => { if (!terminalLifecycle.isDestroyed) hideImmediately("api"); },
     get isOpen() {
       return isOpen;
     },
     destroy: () => {
-      isDestroyed = true;
-      if (showTimeout) clearTimeout(showTimeout);
-      positionSync.stop();
-      presence.cleanup();
-      portal.cleanup();
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
+      if (!terminalLifecycle.destroy()) return;
+      if (showTimeout) terminalLifecycle.cancelTimeout(showTimeout);
+      showTimeout = null;
+      isOpen = false;
+      setDataState("closed");
+      removeDescription();
+      content.setAttribute("aria-hidden", "true");
+      content.hidden = true;
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;

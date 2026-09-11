@@ -10,6 +10,8 @@ import {
   setRootBinding,
   clearRootBinding,
   getTabbables,
+  createTerminalLifecycle,
+  drainCleanups,
 } from "@data-slot/core";
 import { createPresenceLifecycle, setAria } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -141,8 +143,16 @@ export function createNavigationMenu(
   let suppressFocusOpenForTrigger: HTMLElement | null = null;
   let pointerActivationTrigger: HTMLElement | null = null;
   let isRootHovered: boolean = false; // Track if pointer is over root
-  let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroy(() => drainCleanups(cleanups));
 
+  let indicatorSyncRaf: number | null = null;
+  const clearIndicatorSyncRaf = () => {
+    if (indicatorSyncRaf !== null) {
+      terminalLifecycle.cancelRaf(indicatorSyncRaf);
+      indicatorSyncRaf = null;
+    }
+  };
   const cleanups: Array<() => void> = [];
   const presences = new Map<
     HTMLElement,
@@ -178,7 +188,7 @@ export function createNavigationMenu(
   const popupStackController = createNavigationMenuPopupStack({
     root,
     viewport,
-    isDestroyed: () => isDestroyed,
+    isDestroyed: () => terminalLifecycle.isDestroyed,
     beforeRestore: () => resetLayout(),
   });
   const getCurrentPopup = () => popupStackController.popup;
@@ -197,7 +207,7 @@ export function createNavigationMenu(
       createPresenceLifecycle({
         element: content,
         onExitComplete: () => {
-          if (isDestroyed) return;
+          if (terminalLifecycle.isDestroyed) return;
           setContentSurfaceState(content, false);
           setContentActivationDirection(content, null);
           content.removeAttribute("data-motion");
@@ -377,7 +387,7 @@ export function createNavigationMenu(
   };
 
   const focusContentForValue = (value: string): void => {
-    requestAnimationFrame(() => {
+    terminalLifecycle.trackRaf(() => {
       if (currentValue !== value) return;
       const data = itemMap.get(value);
       if (!data) return;
@@ -390,11 +400,11 @@ export function createNavigationMenu(
 
   const clearTimers = () => {
     if (openTimeout) {
-      clearTimeout(openTimeout);
+      terminalLifecycle.cancelTimeout(openTimeout);
       openTimeout = null;
     }
     if (closeTimeout) {
-      clearTimeout(closeTimeout);
+      terminalLifecycle.cancelTimeout(closeTimeout);
       closeTimeout = null;
     }
   };
@@ -446,6 +456,7 @@ export function createNavigationMenu(
 
   // Update hover indicator position
   const updateIndicator = (trigger: HTMLElement | null) => {
+    if (!trigger) clearIndicatorSyncRaf();
     hoveredTrigger = trigger;
     navigationIndicator.show(trigger);
   };
@@ -476,6 +487,7 @@ export function createNavigationMenu(
   });
 
   const updateState = (value: string | null, immediate = false) => {
+    if (terminalLifecycle.isDestroyed) return;
     safety.clear();
     // Skip if value hasn't changed
     if (value === currentValue) {
@@ -614,6 +626,8 @@ export function createNavigationMenu(
         layout.observe(newData);
         updateIndicator(newData.trigger); // Indicator follows active trigger
       } else {
+        clearIndicatorSyncRaf();
+        updateIndicator(null);
         layout.stop();
         safety.hideBridge();
         safety.clear();
@@ -670,13 +684,13 @@ export function createNavigationMenu(
       doUpdate();
     } else if (value !== null && currentValue === null) {
       // Opening - use delay
-      openTimeout = setTimeout(doUpdate, delayOpen);
+      openTimeout = terminalLifecycle.trackTimeout(doUpdate, delayOpen);
     } else if (value !== null && currentValue !== null) {
       // Switching between items - instant
       doUpdate();
     } else {
       // Closing - use delay
-      closeTimeout = setTimeout(doUpdate, delayClose);
+      closeTimeout = terminalLifecycle.trackTimeout(doUpdate, delayClose);
     }
   };
 
@@ -1137,12 +1151,20 @@ export function createNavigationMenu(
   cleanups.push(
     on(window, "resize", () => {
       if (currentValue || hoveredTrigger) {
-        requestAnimationFrame(() => syncIndicator(hoveredTrigger));
+        clearIndicatorSyncRaf();
+        indicatorSyncRaf = terminalLifecycle.trackRaf(() => {
+          indicatorSyncRaf = null;
+          if (!terminalLifecycle.isDestroyed) syncIndicator(hoveredTrigger);
+        });
       }
     }),
     on(list, "scroll", () => {
       if (currentValue || hoveredTrigger) {
-        requestAnimationFrame(() => syncIndicator(hoveredTrigger));
+        clearIndicatorSyncRaf();
+        indicatorSyncRaf = terminalLifecycle.trackRaf(() => {
+          indicatorSyncRaf = null;
+          if (!terminalLifecycle.isDestroyed) syncIndicator(hoveredTrigger);
+        });
       }
     }),
   );
@@ -1170,13 +1192,25 @@ export function createNavigationMenu(
     get value() {
       return currentValue;
     },
-    open: (value: string) => updateState(value, true),
-    close: () => closeMenuAndUnlock(),
+    open: (value: string) => { if (!terminalLifecycle.isDestroyed) updateState(value, true); },
+    close: () => { if (!terminalLifecycle.isDestroyed) closeMenuAndUnlock(); },
     destroy: () => {
-      isDestroyed = true;
+      if (!terminalLifecycle.destroy()) return;
       resetPendingInteraction();
       resetPointerIntent();
-      for (const cleanup of cleanups.splice(0)) cleanup();
+      clearIndicatorSyncRaf();
+      updateIndicator(null);
+      itemMap.forEach(({ trigger, content, item }) => {
+        setAria(trigger, "expanded", false);
+        trigger.setAttribute("data-state", "closed");
+        item.setAttribute("data-state", "closed");
+        setContentSurfaceState(content, false);
+        content.setAttribute("aria-hidden", "true");
+        setInert(content, true);
+        content.hidden = true;
+        content.style.pointerEvents = "none";
+      });
+      currentValue = null;
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };

@@ -16,6 +16,8 @@ import {
   focusElement,
   createPortalLifecycle,
   createPresenceLifecycle,
+  createTerminalLifecycle,
+  registerFloatingTerminalResources,
   createDismissLayer,
 } from "@data-slot/core";
 import type { SelectController, SelectOptions } from "./types";
@@ -111,7 +113,13 @@ export function createSelect(
     container: authoredPositioner ?? undefined,
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
-  let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
+  terminalLifecycle.onDestroy(() => {
+    if (didLockScroll) {
+      unlockScroll();
+      didLockScroll = false;
+    }
+  });
   let shouldRestoreFocusOnClose = true;
 
   const isItemDisabled = (el: HTMLElement) =>
@@ -286,19 +294,26 @@ export function createSelect(
     }
   };
 
-  const restoreFocus = () => {
-    requestAnimationFrame(() => {
-      if (previousActiveElement && document.contains(previousActiveElement)) {
-        focusElement(previousActiveElement);
-      } else if (trigger && document.contains(trigger)) {
-        focusElement(trigger);
-      }
-      previousActiveElement = null;
-    });
+  let pendingFocusRestore = false;
+  const restoreFocusNow = () => {
+    pendingFocusRestore = false;
+    if (previousActiveElement && document.contains(previousActiveElement)) {
+      focusElement(previousActiveElement);
+    } else if (trigger && document.contains(trigger)) {
+      focusElement(trigger);
+    }
+    previousActiveElement = null;
   };
+  const restoreFocus = () => {
+    pendingFocusRestore = true;
+    terminalLifecycle.trackRaf(restoreFocusNow);
+  };
+  terminalLifecycle.onBeforeDestroy(() => {
+    if (pendingFocusRestore) terminalLifecycle.trackFinalRaf(restoreFocusNow);
+  });
 
   const finishClose = () => {
-    if (isDestroyed) return;
+    if (terminalLifecycle.isDestroyed) return;
     portal.restore();
     content.hidden = true;
     if (shouldRestoreFocusOnClose) {
@@ -331,6 +346,7 @@ export function createSelect(
     open: boolean,
     options: { skipFocusRestore?: boolean; immediate?: boolean } = {}
   ) => {
+    if (terminalLifecycle.isDestroyed) return;
     const { skipFocusRestore = false, immediate = false } = options;
 
     if (isOpen === open) return;
@@ -364,8 +380,8 @@ export function createSelect(
 
       // Use rAF to refine position after browser has fully rendered content,
       // and to highlight item under cursor if pointer opened the select
-      requestAnimationFrame(() => {
-        if (!isOpen) return;
+      terminalLifecycle.trackRaf(() => {
+        if (terminalLifecycle.isDestroyed || !isOpen) return;
         positioning.update();
         positioning.sync();
 
@@ -421,6 +437,7 @@ export function createSelect(
   };
 
   const updateValue = (value: string | null, init = false) => {
+    if (terminalLifecycle.isDestroyed) return;
     if (currentValue === value && !init) return;
 
     const oldValue = currentValue;
@@ -643,26 +660,27 @@ export function createSelect(
   const controller: SelectController = {
     get value() { return currentValue; },
     get isOpen() { return isOpen; },
-    select: (value: string) => updateValue(value),
-    open: () => updateOpenState(true),
-    close: () => updateOpenState(false),
+    select: (value: string) => { if (!terminalLifecycle.isDestroyed) updateValue(value); },
+    open: () => { if (!terminalLifecycle.isDestroyed) updateOpenState(true); },
+    close: () => { if (!terminalLifecycle.isDestroyed) updateOpenState(false); },
     destroy: () => {
-      isDestroyed = true;
+      if (!terminalLifecycle.destroy()) return;
       typeahead.destroy();
-      positioning.stop();
-      presence.cleanup();
-      portal.cleanup();
-      // Unlock scroll if still locked
-      if (didLockScroll) {
-        unlockScroll();
-        didLockScroll = false;
-      }
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
+      isOpen = false;
+      setAria(trigger, "expanded", false);
+      setDataState("closed");
+      content.hidden = true;
       formField?.destroy();
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync: positioning,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
 

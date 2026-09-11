@@ -34,6 +34,45 @@ describe("Select", () => {
     return { root, trigger, content, valueSlot, items, controller };
   };
 
+  it("preserves queued close focus restoration when destroyed before the next frame", async () => {
+    const { trigger, content, controller } = setup();
+    trigger.focus();
+    controller.open();
+    await waitForRaf();
+    await waitForRaf();
+    content.focus();
+    controller.close();
+    await waitForRaf();
+    controller.destroy();
+    controller.destroy();
+    await waitForRaf();
+    await waitForRaf();
+    expect(document.activeElement === trigger).toBe(true);
+  });
+
+  it("does not move outside focus when destroyed without a pending restoration", async () => {
+    const { controller } = setup();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+    controller.destroy();
+    await waitForRaf();
+    expect(document.activeElement === outside).toBe(true);
+  });
+
+  it("preserves Tab focus when destroyed after a close that skips restoration", async () => {
+    const { content, controller } = setup();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    controller.open();
+    content.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    outside.focus();
+    await waitForRaf();
+    controller.destroy();
+    await waitForRaf();
+    expect(document.activeElement === outside).toBe(true);
+  });
+
   const waitForRaf = () =>
     new Promise<void>((resolve) => {
       requestAnimationFrame(() => resolve());
@@ -3910,6 +3949,38 @@ describe("Select", () => {
 
       controller.destroy();
       expect(content.parentElement).toBe(root);
+    });
+
+    it("terminally closes without emitting when destroyed while open", () => {
+      const { root, trigger, content, controller } = setup();
+      const changes: boolean[] = [];
+      root.addEventListener("select:open-change", (event) => {
+        changes.push((event as CustomEvent<{ open: boolean }>).detail.open);
+      });
+
+      controller.open();
+      controller.destroy();
+      controller.destroy();
+
+      expect(controller.isOpen).toBe(false);
+      expect(root.getAttribute("data-state")).toBe("closed");
+      expect(content.getAttribute("data-state")).toBe("closed");
+      expect(content.hidden).toBe(true);
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      expect(changes).toEqual([true]);
+    });
+
+    it("keeps a retained controller inert after destruction", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      controller.open();
+      controller.select("apple");
+      controller.close();
+
+      expect(controller.isOpen).toBe(false);
+      expect(root.getAttribute("data-state")).toBe("closed");
+      expect(document.documentElement.style.overflow).toBe("");
     });
 
     it("uses authored portal and positioner slots when provided", async () => {

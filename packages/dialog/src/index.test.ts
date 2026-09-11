@@ -118,6 +118,35 @@ describe("Dialog", () => {
     controller.destroy();
   });
 
+  it("restores trigger focus on destroy when the original focus target was removed", async () => {
+    const { trigger, controller } = setup();
+    const outside = document.createElement("button");
+    document.body.prepend(outside);
+    outside.focus();
+    try {
+      controller.open();
+      await waitForRaf();
+      outside.remove();
+      controller.destroy();
+      await waitForRaf();
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      controller.destroy();
+    }
+  });
+
+  it("keeps outside focus when destroyed before opening", async () => {
+    const { controller } = setup();
+    const outside = document.createElement("button");
+    document.body.prepend(outside);
+    outside.focus();
+
+    controller.destroy();
+    await waitForRaf();
+
+    expect(document.activeElement).toBe(outside);
+  });
+
   it("opens on trigger click", () => {
     const { trigger, content, controller } = setup();
 
@@ -1025,6 +1054,30 @@ describe("Dialog", () => {
         resolve();
       });
     });
+  });
+
+  it("keeps a retained controller inert and cancels queued focus after destroy", async () => {
+    document.body.innerHTML = `
+      <button id="outside">Outside</button>
+      <div data-slot="dialog" id="root">
+        <div data-slot="dialog-overlay"></div>
+        <div data-slot="dialog-content"><button>Inside</button></div>
+      </div>
+    `;
+    const outside = document.getElementById("outside") as HTMLButtonElement;
+    const controller = createDialog(document.getElementById("root")!);
+
+    outside.focus();
+    controller.open();
+    await waitForRaf();
+    expect(document.activeElement).not.toBe(outside);
+    controller.destroy();
+    controller.open();
+    controller.destroy();
+
+    await waitForRaf();
+    expect(document.activeElement).toBe(outside);
+    expect(controller.isOpen).toBe(false);
   });
 
   // Data attribute tests

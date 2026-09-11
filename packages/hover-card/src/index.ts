@@ -15,6 +15,8 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
+  createTerminalLifecycle,
+  registerFloatingTerminalResources,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -197,7 +199,7 @@ export function createHoverCard(
 
   let isOpen = options.open ?? defaultOpen;
   let isInstantTransition = false;
-  let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
   let pointerOnTrigger = false;
   let pointerOnContent = false;
   let focusWithin = false;
@@ -228,13 +230,13 @@ export function createHoverCard(
 
   const clearOpenTimeout = () => {
     if (!openTimeout) return;
-    clearTimeout(openTimeout);
+    terminalLifecycle.cancelTimeout(openTimeout);
     openTimeout = null;
   };
 
   const clearCloseTimeout = () => {
     if (!closeTimeout) return;
-    clearTimeout(closeTimeout);
+    terminalLifecycle.cancelTimeout(closeTimeout);
     closeTimeout = null;
   };
 
@@ -357,7 +359,7 @@ export function createHoverCard(
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       portal.restore();
       content.hidden = true;
     },
@@ -371,6 +373,7 @@ export function createHoverCard(
   });
 
   const applyState = (open: boolean, reason: HoverCardReason, instant = false) => {
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
 
     if (!open && isOpen && skipDelayDuration > 0) {
@@ -447,8 +450,9 @@ export function createHoverCard(
       return;
     }
 
-    openTimeout = setTimeout(() => {
+    openTimeout = terminalLifecycle.trackTimeout(() => {
       openTimeout = null;
+      if (terminalLifecycle.isDestroyed) return;
       requestState(true, reason);
     }, delay);
   };
@@ -462,8 +466,9 @@ export function createHoverCard(
       return;
     }
 
-    closeTimeout = setTimeout(() => {
+    closeTimeout = terminalLifecycle.trackTimeout(() => {
       closeTimeout = null;
+      if (terminalLifecycle.isDestroyed) return;
       requestState(false, reason);
     }, closeDelay);
   };
@@ -621,14 +626,17 @@ export function createHoverCard(
 
   const controller: HoverCardController = {
     open: () => {
+      if (terminalLifecycle.isDestroyed) return;
       if (isTriggerDisabled()) return;
       clearTimers();
       requestState(true, "api");
     },
     close: () => {
+      if (terminalLifecycle.isDestroyed) return;
       requestClosedState("api");
     },
     toggle: () => {
+      if (terminalLifecycle.isDestroyed) return;
       if (!isOpen && isTriggerDisabled()) return;
       if (isOpen) {
         requestClosedState("api");
@@ -638,6 +646,7 @@ export function createHoverCard(
       }
     },
     setOpen: (open) => {
+      if (terminalLifecycle.isDestroyed) return;
       if (open) {
         clearTimers();
         forceState(true, "api");
@@ -649,16 +658,22 @@ export function createHoverCard(
       return isOpen;
     },
     destroy: () => {
-      isDestroyed = true;
+      if (!terminalLifecycle.destroy()) return;
       resetInteractionState();
-      positionSync.stop();
-      presence.cleanup();
-      portal.cleanup();
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
+      isOpen = false;
+      setAria(trigger, "expanded", false);
+      setDataState("closed");
+      content.hidden = true;
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
