@@ -303,7 +303,7 @@ describe('core/parts', () => {
     expect(getRootBinding(root, 'test')).toBeUndefined()
     expect(hasRootBinding(root, 'test')).toBe(false)
     expect(setRootBinding(root, 'test', controller)).toBe(controller)
-    expect(getRootBinding(root, 'test')).toBe(controller)
+    expect(getRootBinding<typeof controller>(root, 'test')).toBe(controller)
     expect(hasRootBinding(root, 'test')).toBe(true)
   })
 
@@ -315,7 +315,7 @@ describe('core/parts', () => {
     setRootBinding(root, 'test', first)
 
     expect(clearRootBinding(root, 'test', second)).toBe(false)
-    expect(getRootBinding(root, 'test')).toBe(first)
+    expect(getRootBinding<typeof first>(root, 'test')).toBe(first)
     expect(clearRootBinding(root, 'test', first)).toBe(true)
     expect(getRootBinding(root, 'test')).toBeUndefined()
     expect(hasRootBinding(root, 'test')).toBe(false)
@@ -351,8 +351,8 @@ describe('core/parts', () => {
 
     try {
       setRootBinding(root, 'test', controller)
-      expect(reuseRootBinding(root, 'test', 'duplicate')).toBe(controller)
-      expect(reuseRootBinding(root, 'test', 'duplicate')).toBe(controller)
+      expect(reuseRootBinding<typeof controller>(root, 'test', 'duplicate')).toBe(controller)
+      expect(reuseRootBinding<typeof controller>(root, 'test', 'duplicate')).toBe(controller)
     } finally {
       console.warn = originalWarn
     }
@@ -969,7 +969,7 @@ describe('core/portal', () => {
     const content = document.getElementById('content')!
 
     // Simulate ownership written by another bundled copy of core
-    ;(content as Element & { [key: symbol]: Element })[Symbol.for('data-slot.portal-owner')] = root
+    Reflect.set(content, Symbol.for('data-slot.portal-owner'), root)
     document.body.appendChild(content)
 
     expect(containsWithPortals(root, content)).toBe(true)
@@ -1202,7 +1202,7 @@ describe('core/popup', () => {
       if (original) {
         Object.defineProperty(window, 'visualViewport', original)
       } else {
-        Reflect.deleteProperty(window as Window & Record<string, unknown>, 'visualViewport')
+        Reflect.deleteProperty(window, 'visualViewport')
       }
     }
   })
@@ -1994,7 +1994,7 @@ describe('core/popup', () => {
     expect(wrapper?.style.isolation).toBe('isolate')
     expect(wrapper?.style.zIndex).toBe('50')
     expect(wrapper?.parentElement).toBe(document.body)
-    expect(lifecycle.container).toBe(wrapper)
+    expect(lifecycle.container).toBe(wrapper!)
 
     lifecycle.restore()
     expect(content.parentElement).toBe(root)
@@ -2056,7 +2056,7 @@ describe('core/popup', () => {
       }) as typeof window.cancelAnimationFrame,
       setTimeout: window.setTimeout.bind(window),
       clearTimeout: window.clearTimeout.bind(window),
-    } as Window
+    } as unknown as Window
 
     const flushOneRaf = () => {
       const pending = [...rafCallbacks.values()]

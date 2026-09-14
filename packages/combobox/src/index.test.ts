@@ -1033,7 +1033,7 @@ describe("Combobox", () => {
     });
 
     it("shows combobox-item-indicator only for the selected item", () => {
-      const { root, items, controller } = setup(
+      const { root, controller } = setup(
         { defaultValue: "apple" },
         `
         <div data-slot="combobox" id="root">

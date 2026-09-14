@@ -150,11 +150,11 @@ describe('Collapsible', () => {
 
   it('does not override auto panel vars when ResizeObserver fires while open', async () => {
     const OriginalResizeObserver = globalThis.ResizeObserver
-    let resizeCallback: ResizeObserverCallback | null = null
+    const resizeCallbacks: ResizeObserverCallback[] = []
 
     class MockResizeObserver {
       constructor(callback: ResizeObserverCallback) {
-        resizeCallback = callback
+        resizeCallbacks.push(callback)
       }
 
       observe() {}
@@ -184,9 +184,9 @@ describe('Collapsible', () => {
       expect(content.style.getPropertyValue('--collapsible-panel-width')).toBe('auto')
 
       setSize(140, 260)
-      if (resizeCallback) {
-        resizeCallback([], {} as ResizeObserver)
-      }
+      const resizeCallback = resizeCallbacks[0]
+      expect(resizeCallback).toBeDefined()
+      resizeCallback!([], {} as ResizeObserver)
 
       // At rest we keep auto, and let layout size itself naturally.
       expect(content.style.getPropertyValue('--collapsible-panel-height')).toBe('auto')

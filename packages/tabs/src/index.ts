@@ -219,7 +219,7 @@ export function createTabs(
       left += current.offsetLeft;
       top += current.offsetTop;
 
-      const parent = current.offsetParent;
+      const parent: Element | null = current.offsetParent;
       if (!(parent instanceof HTMLElement)) {
         return null;
       }
