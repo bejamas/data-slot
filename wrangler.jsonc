@@ -13,7 +13,7 @@
     }
   ],
   "assets": {
-    "directory": "./website/dist",
+    "directory": "./website-next/dist",
     "html_handling": "auto-trailing-slash"
   },
   "observability": {
