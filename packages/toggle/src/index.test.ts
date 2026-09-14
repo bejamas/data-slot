@@ -300,8 +300,8 @@ describe("Toggle", () => {
 
       const controllers = create();
       expect(controllers).toHaveLength(2);
-      expect(controllers[0].pressed).toBe(false);
-      expect(controllers[1].pressed).toBe(true);
+      expect(controllers[0]!.pressed).toBe(false);
+      expect(controllers[1]!.pressed).toBe(true);
     });
 
     it("scopes discovery to provided element", () => {

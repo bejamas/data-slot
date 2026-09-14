@@ -25,13 +25,15 @@ export function createComboboxAssertions(
       }
 
       expect(highlighted).toBeDefined();
-      expect(highlighted?.getAttribute("data-value")).toBe(expected);
-      expect(fixture.input.getAttribute("aria-activedescendant")).toBe(highlighted?.id);
+      if (!highlighted) throw new Error("Expected a highlighted combobox item");
+      expect(highlighted.getAttribute("data-value")).toBe(expected);
+      expect(fixture.input.getAttribute("aria-activedescendant")).toBe(highlighted.id);
     },
     expectActivedescendantFor(value) {
       const item = fixture.getItemByValue(value);
       expect(item).toBeDefined();
-      expect(fixture.input.getAttribute("aria-activedescendant")).toBe(item?.id);
+      if (!item) throw new Error(`Combobox fixture is missing item: ${value}`);
+      expect(fixture.input.getAttribute("aria-activedescendant")).toBe(item.id);
     },
     expectVisibleValues(expectedValues) {
       const actualValues = fixture

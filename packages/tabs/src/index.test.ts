@@ -778,7 +778,7 @@ describe('Tabs', () => {
 
       // In manual mode, ArrowRight just moves focus, doesn't change value
       expect(controller.value).toBe('one')
-      expect(document.activeElement).toBe(triggers[1])
+      expect(document.activeElement).toBe(triggers[1]!)
 
       // Press Enter to activate
       triggers[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))

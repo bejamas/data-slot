@@ -270,7 +270,7 @@ describe("NavigationMenu", () => {
         Object.defineProperty(window, "matchMedia", matchMediaDescriptor);
       } else {
         Reflect.deleteProperty(
-          window as Window & Record<string, unknown>,
+          window,
           "matchMedia",
         );
       }
@@ -551,7 +551,7 @@ describe("NavigationMenu", () => {
 
     triggers[1]!.focus();
 
-    expect(document.activeElement).toBe(triggers[1]);
+    expect(document.activeElement).toBe(triggers[1]!);
     expect(controller.value).toBe("products");
     expect(indicator.style.getPropertyValue("--indicator-left")).toBe("20px");
     expect(triggers[0]!.getAttribute("data-state")).toBe("open");
@@ -2391,9 +2391,6 @@ describe("NavigationMenu", () => {
     `;
 
     const root = document.getElementById("root") as HTMLElement;
-    const triggers = root.querySelectorAll(
-      '[data-slot="navigation-menu-trigger"]',
-    ) as NodeListOf<HTMLElement>;
     const contents = root.querySelectorAll(
       '[data-slot="navigation-menu-content"]',
     ) as NodeListOf<HTMLElement>;
@@ -2485,7 +2482,7 @@ describe("NavigationMenu", () => {
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
 
-    expect(document.activeElement).toBe(triggers[1]);
+    expect(document.activeElement).toBe(triggers[1]!);
 
     controller.destroy();
   });
@@ -2500,7 +2497,7 @@ describe("NavigationMenu", () => {
       new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
     );
 
-    expect(document.activeElement).toBe(triggers[0]);
+    expect(document.activeElement).toBe(triggers[0]!);
 
     controller.destroy();
   });
@@ -2515,13 +2512,13 @@ describe("NavigationMenu", () => {
     triggers[0]?.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
     );
-    expect(document.activeElement).toBe(triggers[2]);
+    expect(document.activeElement).toBe(triggers[2]!);
 
     // ArrowRight from last should go to first
     triggers[2]?.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
-    expect(document.activeElement).toBe(triggers[0]);
+    expect(document.activeElement).toBe(triggers[0]!);
 
     controller.destroy();
   });
@@ -2535,7 +2532,7 @@ describe("NavigationMenu", () => {
       new KeyboardEvent("keydown", { key: "Home", bubbles: true })
     );
 
-    expect(document.activeElement).toBe(triggers[0]);
+    expect(document.activeElement).toBe(triggers[0]!);
 
     controller.destroy();
   });
@@ -2549,7 +2546,7 @@ describe("NavigationMenu", () => {
       new KeyboardEvent("keydown", { key: "End", bubbles: true })
     );
 
-    expect(document.activeElement).toBe(triggers[2]);
+    expect(document.activeElement).toBe(triggers[2]!);
 
     controller.destroy();
   });
@@ -2578,13 +2575,13 @@ describe("NavigationMenu", () => {
     triggers[0]?.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
-    expect(document.activeElement).toBe(triggers[1]);
+    expect(document.activeElement).toBe(triggers[1]!);
     triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
 
     triggers[1]?.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
     );
-    expect(document.activeElement).toBe(triggers[0]);
+    expect(document.activeElement).toBe(triggers[0]!);
     triggers.forEach((trigger) => expect(trigger.tabIndex).toBe(0));
 
     controller.destroy();
@@ -2629,7 +2626,7 @@ describe("NavigationMenu", () => {
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
 
-    expect(document.activeElement).toBe(triggers[1]);
+    expect(document.activeElement).toBe(triggers[1]!);
 
     controller.destroy();
   });
@@ -2641,12 +2638,12 @@ describe("NavigationMenu", () => {
     triggers[0]?.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
     );
-    expect(document.activeElement).toBe(triggers[1]);
+    expect(document.activeElement).toBe(triggers[1]!);
 
     triggers[1]?.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
-    expect(document.activeElement).toBe(triggers[0]);
+    expect(document.activeElement).toBe(triggers[0]!);
 
     controller.destroy();
   });
@@ -2658,13 +2655,13 @@ describe("NavigationMenu", () => {
     plainLink.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Home", bubbles: true })
     );
-    expect(document.activeElement).toBe(triggers[0]);
+    expect(document.activeElement).toBe(triggers[0]!);
 
     plainLink.focus();
     plainLink.dispatchEvent(
       new KeyboardEvent("keydown", { key: "End", bubbles: true })
     );
-    expect(document.activeElement).toBe(triggers[1]);
+    expect(document.activeElement).toBe(triggers[1]!);
 
     controller.destroy();
   });
@@ -2730,7 +2727,7 @@ describe("NavigationMenu", () => {
     });
     plainLink.dispatchEvent(secondTab);
     expect(secondTab.defaultPrevented).toBe(true);
-    expect(document.activeElement).toBe(triggers[1]);
+    expect(document.activeElement).toBe(triggers[1]!);
     expect(controller.value).toBe("products");
     expect(root.getAttribute("data-state")).toBe("open");
 
@@ -3176,7 +3173,7 @@ describe("NavigationMenu", () => {
 
       await flushRAF();
       expect(controller.value).toBe("products");
-      expect(document.activeElement).toBe(triggers[0]);
+      expect(document.activeElement).toBe(triggers[0]!);
       expect(document.activeElement).not.toBe(link1);
 
       controller.destroy();
@@ -3189,7 +3186,7 @@ describe("NavigationMenu", () => {
 
       await flushRAF();
       expect(controller.value).toBe("products");
-      expect(document.activeElement).toBe(contents[0]);
+      expect(document.activeElement).toBe(contents[0]!);
 
       controller.destroy();
     });
@@ -3220,7 +3217,7 @@ describe("NavigationMenu", () => {
       triggers[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await flushRAF();
       expect(controller.value).toBe("products");
-      expect(document.activeElement).toBe(triggers[0]);
+      expect(document.activeElement).toBe(triggers[0]!);
 
       triggers[1]?.focus();
       triggers[1]?.dispatchEvent(
@@ -3229,7 +3226,7 @@ describe("NavigationMenu", () => {
       triggers[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await flushRAF();
       expect(controller.value).toBe("solutions");
-      expect(document.activeElement).toBe(triggers[1]);
+      expect(document.activeElement).toBe(triggers[1]!);
 
       controller.destroy();
     });
@@ -3279,7 +3276,7 @@ describe("NavigationMenu", () => {
       link1.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })
       );
-      expect(document.activeElement).toBe(triggers[0]);
+      expect(document.activeElement).toBe(triggers[0]!);
 
       controller.destroy();
     });
@@ -3335,7 +3332,7 @@ describe("NavigationMenu", () => {
         new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
       );
       expect(controller.value).toBe(null);
-      expect(document.activeElement).toBe(triggers[0]);
+      expect(document.activeElement).toBe(triggers[0]!);
 
       controller.destroy();
     });
@@ -3352,7 +3349,7 @@ describe("NavigationMenu", () => {
       );
 
       // Should stay on trigger since content has no focusable elements
-      expect(document.activeElement).toBe(triggers[0]);
+      expect(document.activeElement).toBe(triggers[0]!);
 
       controller.destroy();
     });
@@ -3434,7 +3431,7 @@ describe("NavigationMenu", () => {
       link1.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
       );
-      expect(document.activeElement).toBe(triggers[0]);
+      expect(document.activeElement).toBe(triggers[0]!);
 
       controller.destroy();
     });
@@ -3462,7 +3459,7 @@ describe("NavigationMenu", () => {
       link3.dispatchEvent(
         new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true })
       );
-      expect(document.activeElement).toBe(triggers[1]);
+      expect(document.activeElement).toBe(triggers[1]!);
 
       controller.destroy();
     });
@@ -3487,7 +3484,7 @@ describe("NavigationMenu", () => {
           cancelable: true,
         })
       );
-      expect(document.activeElement).toBe(triggers[0]);
+      expect(document.activeElement).toBe(triggers[0]!);
 
       controller.destroy();
     });
@@ -3674,7 +3671,7 @@ describe("NavigationMenu", () => {
       link1.dispatchEvent(
         new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true })
       );
-      expect(document.activeElement).toBe(triggers[1]);
+      expect(document.activeElement).toBe(triggers[1]!);
 
       const event = new KeyboardEvent("keydown", {
         key: "Tab",
@@ -4307,12 +4304,12 @@ describe("NavigationMenu", () => {
         if (scrollXDescriptor) {
           Object.defineProperty(window, "scrollX", scrollXDescriptor);
         } else {
-          Reflect.deleteProperty(window as Window & Record<string, unknown>, "scrollX");
+          Reflect.deleteProperty(window, "scrollX");
         }
         if (scrollYDescriptor) {
           Object.defineProperty(window, "scrollY", scrollYDescriptor);
         } else {
-          Reflect.deleteProperty(window as Window & Record<string, unknown>, "scrollY");
+          Reflect.deleteProperty(window, "scrollY");
         }
         controller.destroy();
       }
@@ -4384,12 +4381,12 @@ describe("NavigationMenu", () => {
         if (scrollXDescriptor) {
           Object.defineProperty(window, "scrollX", scrollXDescriptor);
         } else {
-          Reflect.deleteProperty(window as Window & Record<string, unknown>, "scrollX");
+          Reflect.deleteProperty(window, "scrollX");
         }
         if (scrollYDescriptor) {
           Object.defineProperty(window, "scrollY", scrollYDescriptor);
         } else {
-          Reflect.deleteProperty(window as Window & Record<string, unknown>, "scrollY");
+          Reflect.deleteProperty(window, "scrollY");
         }
         controller.destroy();
       }

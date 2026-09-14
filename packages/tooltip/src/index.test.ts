@@ -876,7 +876,7 @@ describe('Tooltip', () => {
         if (originalVisualViewport) {
           Object.defineProperty(window, 'visualViewport', originalVisualViewport)
         } else {
-          Reflect.deleteProperty(window as Window & Record<string, unknown>, 'visualViewport')
+          Reflect.deleteProperty(window, 'visualViewport')
         }
       }
 

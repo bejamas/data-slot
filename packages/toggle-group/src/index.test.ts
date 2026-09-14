@@ -23,9 +23,13 @@ describe("ToggleGroup", () => {
     `;
     const root = document.getElementById("root")!;
     const controller = createToggleGroup(root);
-    const buttons = Array.from(
-      root.querySelectorAll('[data-slot="toggle-group-item"]')
-    ) as HTMLButtonElement[];
+    const [left, center, right] = root.querySelectorAll<HTMLButtonElement>(
+      '[data-slot="toggle-group-item"]'
+    );
+    if (!left || !center || !right) {
+      throw new Error("Toggle-group fixture requires three buttons");
+    }
+    const buttons = [left, center, right] as const;
 
     return { root, controller, buttons };
   };
@@ -391,9 +395,11 @@ describe("ToggleGroup", () => {
       `;
       const root = document.getElementById("root")!;
       createToggleGroup(root, { loop: false });
-      const buttons = Array.from(
-        root.querySelectorAll("button")
-      ) as HTMLButtonElement[];
+      const [first, second] = root.querySelectorAll("button");
+      if (!first || !second) {
+        throw new Error("Toggle-group fixture requires two buttons");
+      }
+      const buttons = [first, second] as const;
 
       buttons[0].focus();
       keydown(buttons[0], "ArrowLeft");
@@ -632,8 +638,8 @@ describe("ToggleGroup", () => {
 
       const controllers = create();
       expect(controllers).toHaveLength(2);
-      expect(controllers[0].value).toEqual([]);
-      expect(controllers[1].value).toEqual(["b"]);
+      expect(controllers[0]!.value).toEqual([]);
+      expect(controllers[1]!.value).toEqual(["b"]);
     });
 
     it("scopes discovery to provided element", () => {

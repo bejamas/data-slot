@@ -706,7 +706,7 @@ describe("Slider", () => {
     });
 
     it("selects clicked thumb directly instead of by proximity", () => {
-      const { thumbs, track, control, controller } = setupRange("", [50, 50]); // Same position
+      const { thumbs, track, control } = setupRange("", [50, 50]); // Same position
 
       track.getBoundingClientRect = () => ({
         left: 0, right: 100, top: 0, bottom: 20,
@@ -937,7 +937,7 @@ describe("Slider", () => {
     });
 
     it("slider:set only emits commit if value changed", () => {
-      const { root, controller } = setupSingle('data-default-value="50"');
+      const { root } = setupSingle('data-default-value="50"');
       const commits: number[] = [];
 
       root.addEventListener("slider:commit", (e) => {
@@ -957,7 +957,7 @@ describe("Slider", () => {
 
   describe("Lifecycle", () => {
     it("destroy() cleans up all listeners", () => {
-      const { root, thumb, controller } = setupSingle('data-default-value="50"');
+      const { thumb, controller } = setupSingle('data-default-value="50"');
 
       controller.destroy();
 
@@ -1346,11 +1346,11 @@ describe("Slider", () => {
 
     it("recomputes inset positions when ResizeObserver fires", () => {
       const OriginalResizeObserver = globalThis.ResizeObserver;
-      let resizeCallback: ResizeObserverCallback | null = null;
+      const resizeCallbacks: ResizeObserverCallback[] = [];
 
       class MockResizeObserver {
         constructor(callback: ResizeObserverCallback) {
-          resizeCallback = callback;
+          resizeCallbacks.push(callback);
         }
 
         observe() {}
@@ -1391,7 +1391,9 @@ describe("Slider", () => {
           thumbRects: [thumbRect],
         });
 
-        resizeCallback?.([], {} as ResizeObserver);
+        const resizeCallback = resizeCallbacks[0];
+        expect(resizeCallback).toBeDefined();
+        resizeCallback!([], {} as ResizeObserver);
 
         expect(thumb.style.getPropertyValue("--position")).toBe("35%");
         expect(range.style.getPropertyValue("--start-position")).toBe("35%");

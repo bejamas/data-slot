@@ -651,7 +651,7 @@ export function createSlider(
     const rect = thumb?.getBoundingClientRect();
     const thumbSize = rect ? getAxisSize(rect) : 0;
 
-    if (!thumb || !Number.isFinite(thumbSize) || thumbSize <= 0) {
+    if (!thumb || !rect || !Number.isFinite(thumbSize) || thumbSize <= 0) {
       return 0;
     }
 
