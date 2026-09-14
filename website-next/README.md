@@ -1,6 +1,6 @@
 # data-slot documentation preview
 
-The new documentation site uses Blume 1.6.4. The existing Astro site remains in `../website`, and the production build and Cloudflare deployment commands still target it.
+The new documentation site uses Blume 1.6.4. The root `build:website` command and Cloudflare asset configuration target this site. The original Astro site remains in `../website` and can be built with `bun run build:website:legacy` from the repository root.
 
 ## Run locally
 
@@ -32,4 +32,8 @@ The original example components and website styles are read without changing the
 
 Tailwind previews use Tailwind v4 and `tw-animate-css`. Demos retain their light theme when the documentation chrome is switched to dark mode.
 
-There is deliberately no production deployment command for this preview. Migration of the public site can be handled separately after review.
+## Deployment
+
+The existing Cloudflare Workers Builds integration runs `bun run build:website`, which installs this directory's locked dependencies and builds the local packages and Blume site. Wrangler serves `website-next/dist`. The repository's `.node-version` pins a compatible Node.js runtime.
+
+Non-production branches use `wrangler versions upload`, so this PR's preview shows Blume for team review. The live site stays on its current version until the PR is merged into `main`, whose build deploys Blume to production. The original website source is retained.
