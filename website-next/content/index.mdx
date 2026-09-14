@@ -52,19 +52,31 @@ Use `data-slot` to identify each part. Related triggers and panels share a `data
 
 ## Add the behavior
 
-Run `create()` after the markup is in the document. It discovers matching components and returns their controllers.
+Import and call `create()` to make the tabs interactive:
 
 ```javascript
 import { create } from '@data-slot/tabs';
 
-const controllers = create();
-controllers[0]?.select('two');
-
-// Before removing the markup, clean up its listeners.
-// controllers.forEach((controller) => controller.destroy());
+// Find and initialize all [data-slot="tabs"] elements.
+create();
 ```
 
-Use a bundler such as Vite to resolve package imports. In a script tag, use `type="module"`. If your framework mounts content dynamically, initialize after mounting and call `destroy()` before unmounting.
+The tabs now respond to clicks and keyboard navigation.
+
+To target a specific element and control its tabs from JavaScript, use `createTabs()` instead:
+
+```javascript
+import { createTabs } from '@data-slot/tabs';
+
+const element = document.querySelector('[data-slot="tabs"]');
+const tabs = createTabs(element);
+
+tabs.select('two'); // Show the Details panel.
+```
+
+Call `tabs.destroy()` before removing that element to clean up its listeners.
+
+Run either setup after the markup is in the document. Use a bundler such as Vite to resolve package imports, and use `type="module"` if you add the code in a script tag.
 
 ## Make it yours
 
