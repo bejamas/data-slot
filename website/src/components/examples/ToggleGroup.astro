@@ -44,7 +44,7 @@ const cssCode = `<!-- Single selection (alignment) -->
   .toggle-group {
     display: inline-flex;
     gap: 0.25rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0;
   }
   .toggle-group-btn {
     padding: 0.5rem;
@@ -60,19 +60,20 @@ const cssCode = `<!-- Single selection (alignment) -->
     background: #f0eeeb;
   }
   .toggle-group-btn[data-state="on"] {
-    background: #333;
-    border-color: #333;
+    background: oklch(27.8% 0.033 256.848);
+    border-color: oklch(27.8% 0.033 256.848);
     color: white;
   }
+  .toggle-groups { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 </style>`;
 
 const tailwindCode = `<!-- Single selection (alignment) -->
-<div data-slot="toggle-group" data-default-value="center" class="inline-flex gap-1 mb-3">
+<div data-slot="toggle-group" data-default-value="center" class="inline-flex gap-1">
   <button
     data-slot="toggle-group-item"
     data-value="left"
     aria-label="Align left"
-    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+    class="p-2 bg-transparent border border-border cursor-pointer
            flex items-center justify-center transition-colors
            hover:bg-code-bg data-[state=on]:bg-gray-800
            data-[state=on]:border-gray-800 data-[state=on]:text-white"
@@ -85,7 +86,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
     data-slot="toggle-group-item"
     data-value="center"
     aria-label="Align center"
-    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+    class="p-2 bg-transparent border border-border cursor-pointer
            flex items-center justify-center transition-colors
            hover:bg-code-bg data-[state=on]:bg-gray-800
            data-[state=on]:border-gray-800 data-[state=on]:text-white"
@@ -98,7 +99,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
     data-slot="toggle-group-item"
     data-value="right"
     aria-label="Align right"
-    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+    class="p-2 bg-transparent border border-border cursor-pointer
            flex items-center justify-center transition-colors
            hover:bg-code-bg data-[state=on]:bg-gray-800
            data-[state=on]:border-gray-800 data-[state=on]:text-white"
@@ -115,7 +116,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
     data-slot="toggle-group-item"
     data-value="bold"
     aria-label="Bold"
-    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+    class="p-2 bg-transparent border border-border cursor-pointer
            flex items-center justify-center transition-colors
            hover:bg-code-bg data-[state=on]:bg-gray-800
            data-[state=on]:border-gray-800 data-[state=on]:text-white"
@@ -128,7 +129,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
     data-slot="toggle-group-item"
     data-value="italic"
     aria-label="Italic"
-    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+    class="p-2 bg-transparent border border-border cursor-pointer
            flex items-center justify-center transition-colors
            hover:bg-code-bg data-[state=on]:bg-gray-800
            data-[state=on]:border-gray-800 data-[state=on]:text-white"
@@ -141,7 +142,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
     data-slot="toggle-group-item"
     data-value="underline"
     aria-label="Underline"
-    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+    class="p-2 bg-transparent border border-border cursor-pointer
            flex items-center justify-center transition-colors
            hover:bg-code-bg data-[state=on]:bg-gray-800
            data-[state=on]:border-gray-800 data-[state=on]:text-white"
@@ -154,7 +155,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
 ---
 
 <ExampleBlock>
-  <div slot="preview-css">
+  <div slot="preview-css" class="toggle-groups">
     <!-- Single selection (alignment) -->
     <div data-slot="toggle-group" data-default-value="center" class="toggle-group" aria-label="Text alignment">
       <button data-slot="toggle-group-item" data-value="left" class="toggle-group-btn" aria-label="Align left">
@@ -192,14 +193,14 @@ const tailwindCode = `<!-- Single selection (alignment) -->
       </button>
     </div>
   </div>
-  <div slot="preview-tailwind">
+  <div slot="preview-tailwind" class="flex flex-wrap gap-3">
     <!-- Single selection (alignment) -->
-    <div data-slot="toggle-group" data-default-value="center" class="inline-flex gap-1 mb-3" aria-label="Text alignment">
+    <div data-slot="toggle-group" data-default-value="center" class="inline-flex gap-1" aria-label="Text alignment">
       <button
         data-slot="toggle-group-item"
         data-value="left"
         aria-label="Align left"
-        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+        class="p-2 bg-transparent border border-border cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/>
@@ -209,7 +210,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
         data-slot="toggle-group-item"
         data-value="center"
         aria-label="Align center"
-        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+        class="p-2 bg-transparent border border-border cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
@@ -219,7 +220,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
         data-slot="toggle-group-item"
         data-value="right"
         aria-label="Align right"
-        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+        class="p-2 bg-transparent border border-border cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/>
@@ -232,7 +233,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
         data-slot="toggle-group-item"
         data-value="bold"
         aria-label="Bold"
-        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+        class="p-2 bg-transparent border border-border cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
@@ -242,7 +243,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
         data-slot="toggle-group-item"
         data-value="italic"
         aria-label="Italic"
-        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+        class="p-2 bg-transparent border border-border cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/>
@@ -252,7 +253,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
         data-slot="toggle-group-item"
         data-value="underline"
         aria-label="Underline"
-        class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+        class="p-2 bg-transparent border border-border cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/>
@@ -268,7 +269,7 @@ const tailwindCode = `<!-- Single selection (alignment) -->
   .toggle-group {
     display: inline-flex;
     gap: 0.25rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0;
   }
   .toggle-group-btn {
     padding: 0.5rem;
@@ -284,8 +285,9 @@ const tailwindCode = `<!-- Single selection (alignment) -->
     background: #f0eeeb;
   }
   .toggle-group-btn[data-state="on"] {
-    background: #333;
-    border-color: #333;
+    background: oklch(27.8% 0.033 256.848);
+    border-color: oklch(27.8% 0.033 256.848);
     color: white;
   }
+  .toggle-groups { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 </style>

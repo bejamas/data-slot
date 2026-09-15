@@ -29,6 +29,7 @@ const cssCode = `<div class="toggle-group">
   .toggle-group {
     display: flex;
     gap: 0.25rem;
+    margin-bottom: 0;
   }
   .toggle-btn {
     padding: 0.5rem;
@@ -44,8 +45,8 @@ const cssCode = `<div class="toggle-group">
     background: #f0eeeb;
   }
   .toggle-btn[data-state="on"] {
-    background: #333;
-    border-color: #333;
+    background: oklch(27.8% 0.033 256.848);
+    border-color: oklch(27.8% 0.033 256.848);
     color: white;
   }
 </style>`;
@@ -53,7 +54,7 @@ const cssCode = `<div class="toggle-group">
 const tailwindCode = `<div class="flex gap-1">
   <button
     data-slot="toggle"
-    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+    class="p-2 bg-transparent border border-border cursor-pointer
            flex items-center justify-center transition-colors
            hover:bg-code-bg data-[state=on]:bg-gray-800
            data-[state=on]:border-gray-800 data-[state=on]:text-white"
@@ -65,7 +66,7 @@ const tailwindCode = `<div class="flex gap-1">
   </button>
   <button
     data-slot="toggle"
-    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+    class="p-2 bg-transparent border border-border cursor-pointer
            flex items-center justify-center transition-colors
            hover:bg-code-bg data-[state=on]:bg-gray-800
            data-[state=on]:border-gray-800 data-[state=on]:text-white"
@@ -79,7 +80,7 @@ const tailwindCode = `<div class="flex gap-1">
   <button
     data-slot="toggle"
     data-default-pressed
-    class="p-2 bg-transparent border border-gray-300 cursor-pointer
+    class="p-2 bg-transparent border border-border cursor-pointer
            flex items-center justify-center transition-colors
            hover:bg-code-bg data-[state=on]:bg-gray-800
            data-[state=on]:border-gray-800 data-[state=on]:text-white"
@@ -119,7 +120,7 @@ const tailwindCode = `<div class="flex gap-1">
   <div slot="preview-tailwind" class="flex gap-1">
     <button
       data-slot="toggle"
-      class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+      class="p-2 bg-transparent border border-border cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
@@ -128,7 +129,7 @@ const tailwindCode = `<div class="flex gap-1">
     </button>
     <button
       data-slot="toggle"
-      class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+      class="p-2 bg-transparent border border-border cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <line x1="19" y1="4" x2="10" y2="4"/>
@@ -139,7 +140,7 @@ const tailwindCode = `<div class="flex gap-1">
     <button
       data-slot="toggle"
       data-default-pressed
-      class="p-2 bg-transparent border border-gray-300 cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
+      class="p-2 bg-transparent border border-border cursor-pointer flex items-center justify-center transition-colors hover:bg-code-bg data-[state=on]:bg-gray-800 data-[state=on]:border-gray-800 data-[state=on]:text-white"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M6 4v16"/>
@@ -156,6 +157,7 @@ const tailwindCode = `<div class="flex gap-1">
   .toggle-group {
     display: flex;
     gap: 0.25rem;
+    margin-bottom: 0;
   }
   .toggle-btn {
     padding: 0.5rem;
@@ -171,8 +173,8 @@ const tailwindCode = `<div class="flex gap-1">
     background: #f0eeeb;
   }
   .toggle-btn[data-state="on"] {
-    background: #333;
-    border-color: #333;
+    background: oklch(27.8% 0.033 256.848);
+    border-color: oklch(27.8% 0.033 256.848);
     color: white;
   }
 </style>

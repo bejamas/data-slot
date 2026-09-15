@@ -131,15 +131,15 @@ The root also syncs:
     data-size="default"
     class="data-checked:bg-primary data-unchecked:bg-input
            focus-visible:border-ring focus-visible:ring-ring/50
-           shrink-0 rounded-full border border-transparent
+           shrink-0 rounded-full p-px
            focus-visible:ring-3 peer group/switch relative
            inline-flex items-center transition-all outline-none
-           h-[18.4px] w-[32px]"
+           h-4.5 w-8"
   >
     <span
       data-slot="switch-thumb"
       class="bg-background rounded-full size-4
-             data-checked:translate-x-[calc(100%-2px)]
+             data-checked:translate-x-3.5
              data-unchecked:translate-x-0
              pointer-events-none block transition-transform"
     ></span>

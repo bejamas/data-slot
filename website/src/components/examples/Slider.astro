@@ -20,12 +20,12 @@ const cssCodeBasic = `<div data-slot="slider" data-default-value="50" class="sli
   .slider-track {
     width: 100%;
     height: 4px;
-    background: #e5e5e5;
-    border-radius: 2px;
+    background: oklch(92.8% 0.006 264.531);
+    border-radius: 0.25rem;
   }
   .slider-range {
     background: #1a1a1a;
-    border-radius: 2px;
+    border-radius: 0.25rem;
   }
   .slider-thumb {
     width: 1.25rem;
@@ -34,26 +34,27 @@ const cssCodeBasic = `<div data-slot="slider" data-default-value="50" class="sli
     border: 2px solid #1a1a1a;
     border-radius: 50%;
     cursor: grab;
+    outline: none;
   }
   .slider-thumb:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.2);
+    box-shadow: 0 0 0 2px oklch(21% 0.034 264.665 / 0.2);
   }
   .slider-thumb[data-dragging] { cursor: grabbing; }
   .slider[data-disabled] .slider-thumb {
     cursor: not-allowed;
     opacity: 0.5;
+    outline: none;
   }
 </style>`;
 
 const tailwindCodeBasic = `<div data-slot="slider" data-default-value="50" class="relative flex h-5 w-full items-center">
   <div data-slot="slider-track" class="h-1 w-full rounded bg-gray-200">
-    <div data-slot="slider-range" class="rounded bg-gray-900"></div>
+    <div data-slot="slider-range" class="rounded bg-text"></div>
   </div>
   <div
     data-slot="slider-thumb"
-    class="h-5 w-5 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2
-           focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+    class="h-5 w-5 rounded-full border-2 border-text bg-white cursor-grab focus:outline-none focus:ring-2
+           focus:ring-gray-900/20 data-dragging:cursor-grabbing"
   ></div>
 </div>`;
 
@@ -70,12 +71,12 @@ const cssCodeEdgeAlignment = `<div data-slot="slider" data-default-value="25" da
 
 const tailwindCodeEdgeAlignment = `<div data-slot="slider" data-default-value="25" data-thumb-alignment="edge" class="relative flex h-5 w-full items-center">
   <div data-slot="slider-track" class="h-1 w-full rounded bg-gray-200">
-    <div data-slot="slider-range" class="rounded bg-gray-900"></div>
+    <div data-slot="slider-range" class="rounded bg-text"></div>
   </div>
   <div
     data-slot="slider-thumb"
-    class="h-5 w-5 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2
-           focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+    class="h-5 w-5 rounded-full border-2 border-text bg-white cursor-grab focus:outline-none focus:ring-2
+           focus:ring-gray-900/20 data-dragging:cursor-grabbing"
   ></div>
 </div>`;
 
@@ -93,17 +94,17 @@ const cssCodeRange = `<div data-slot="slider" data-default-value="25,75" class="
 
 const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" class="relative flex h-5 w-full items-center">
   <div data-slot="slider-track" class="h-1 w-full rounded bg-gray-200">
-    <div data-slot="slider-range" class="rounded bg-gray-900"></div>
+    <div data-slot="slider-range" class="rounded bg-text"></div>
   </div>
   <div
     data-slot="slider-thumb"
-    class="h-5 w-5 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2
-           focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+    class="h-5 w-5 rounded-full border-2 border-text bg-white cursor-grab focus:outline-none focus:ring-2
+           focus:ring-gray-900/20 data-dragging:cursor-grabbing"
   ></div>
   <div
     data-slot="slider-thumb"
-    class="h-5 w-5 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2
-           focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+    class="h-5 w-5 rounded-full border-2 border-text bg-white cursor-grab focus:outline-none focus:ring-2
+           focus:ring-gray-900/20 data-dragging:cursor-grabbing"
   ></div>
 </div>`;
 ---
@@ -119,11 +120,11 @@ const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" cl
 
   <div slot="preview-tailwind" data-slot="slider" data-default-value="50" id="slider-basic-tw" class="relative flex h-5 w-full items-center">
     <div data-slot="slider-track" class="h-1 w-full rounded bg-gray-200">
-      <div data-slot="slider-range" class="rounded bg-gray-900"></div>
+      <div data-slot="slider-range" class="rounded bg-text"></div>
     </div>
     <div
       data-slot="slider-thumb"
-      class="h-5 w-5 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+      class="h-5 w-5 rounded-full border-2 border-text bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-dragging:cursor-grabbing"
     ></div>
   </div>
 
@@ -156,11 +157,11 @@ const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" cl
     class="relative flex h-5 w-full items-center"
   >
     <div data-slot="slider-track" class="h-1 w-full rounded bg-gray-200">
-      <div data-slot="slider-range" class="rounded bg-gray-900"></div>
+      <div data-slot="slider-range" class="rounded bg-text"></div>
     </div>
     <div
       data-slot="slider-thumb"
-      class="h-5 w-5 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+      class="h-5 w-5 rounded-full border-2 border-text bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-dragging:cursor-grabbing"
     ></div>
   </div>
 
@@ -180,15 +181,15 @@ const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" cl
 
   <div slot="preview-tailwind" data-slot="slider" data-default-value="25,75" id="slider-range-tw" class="relative flex h-5 w-full items-center">
     <div data-slot="slider-track" class="h-1 w-full rounded bg-gray-200">
-      <div data-slot="slider-range" class="rounded bg-gray-900"></div>
+      <div data-slot="slider-range" class="rounded bg-text"></div>
     </div>
     <div
       data-slot="slider-thumb"
-      class="h-5 w-5 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+      class="h-5 w-5 rounded-full border-2 border-text bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-dragging:cursor-grabbing"
     ></div>
     <div
       data-slot="slider-thumb"
-      class="h-5 w-5 rounded-full border-2 border-gray-900 bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-[dragging]:cursor-grabbing"
+      class="h-5 w-5 rounded-full border-2 border-text bg-white cursor-grab focus:outline-none focus:ring-2 focus:ring-gray-900/20 data-dragging:cursor-grabbing"
     ></div>
   </div>
 
@@ -208,12 +209,12 @@ const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" cl
   .slider-track-css {
     width: 100%;
     height: 4px;
-    background: #e5e5e5;
-    border-radius: 2px;
+    background: oklch(92.8% 0.006 264.531);
+    border-radius: 0.25rem;
   }
   .slider-range-css {
     background: #1a1a1a;
-    border-radius: 2px;
+    border-radius: 0.25rem;
   }
   .slider-thumb-css {
     width: 1.25rem;
@@ -222,10 +223,10 @@ const tailwindCodeRange = `<div data-slot="slider" data-default-value="25,75" cl
     border: 2px solid #1a1a1a;
     border-radius: 50%;
     cursor: grab;
+    outline: none;
   }
   .slider-thumb-css:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.2);
+    box-shadow: 0 0 0 2px oklch(21% 0.034 264.665 / 0.2);
   }
   .slider-thumb-css[data-dragging] {
     cursor: grabbing;

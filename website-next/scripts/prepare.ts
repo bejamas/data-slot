@@ -24,6 +24,13 @@ for (const component of components) {
       if (!styles) throw new Error('Missing slider example stylesheet');
       source = source.replaceAll('  /* Same styles as basic slider */', styles);
     }
+    if (filename === 'Command') {
+      // These examples share a stylesheet; include it in both copyable snippets.
+      const styles = source.match(/<style>[\s\S]*?<\/style>/)?.[0];
+      if (!styles) throw new Error('Missing command example stylesheet');
+      source = source.replace(/(const (?:inline|dialog)CssCode = `)([\s\S]*?)(`;)/g,
+        (_, start, markup, end) => start + markup + '\n\n' + styles + end);
+    }
     // Use the same attribute in both the live markup and displayed source.
     if (variant === 'extra' && 'attrs' in component) {
       source = source.replace(new RegExp(`<[^>]+data-slot="${component.slug}${component.attrs.startsWith('data-side') ? '-content' : ''}"[^>]*>`, 'g'), tag => {

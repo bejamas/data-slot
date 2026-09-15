@@ -5,6 +5,7 @@
 @theme {
   --color-bg: #faf9f7;
   --color-text: #1a1a1a;
+  --color-code-bg: #f0eeeb;
 }
 
 :root {
@@ -65,7 +66,7 @@ blume-toc a { padding-block: 5px; }
 .ds-example :is(button,input,textarea,[tabindex]):focus-visible,
 [data-ds-preview] :focus-visible,
 .ds-source summary:focus-visible { outline: 2px solid #0066cc; outline-offset: 3px; }
-.ds-preview-stage { padding: 36px 28px; min-height: 180px; display: flex; flex-direction: column; justify-content: center; background: #faf9f7; color: #1a1a1a; color-scheme: light; font-family: 'Geist Mono', monospace; font-size: 13px; line-height: 1.65; }
+.ds-preview-stage { padding: 36px 28px; min-height: 180px; display: flex; flex-direction: column; justify-content: center; background: #faf9f7; color: #1a1a1a; color-scheme: light; font-family: 'Geist Mono', monospace; font-size: 14px; line-height: 1.25rem; }
 .ds-preview-stage button { cursor: pointer; }
 .ds-preview-stage, [data-ds-preview] {
   /* Demos stay light, including utilities whose names overlap Blume tokens. */
@@ -84,8 +85,8 @@ blume-toc a { padding-block: 5px; }
     color: #1a1a1a;
     color-scheme: light;
     font-family: 'Geist Mono', monospace;
-    font-size: 13px;
-    line-height: 1.65;
+    font-size: 14px;
+    line-height: 1.25rem;
   }
 }
 .ds-example-note { padding: 0 28px 24px; color: var(--blume-muted-foreground); font-size: 12px; overflow-wrap: anywhere; }
@@ -137,3 +138,9 @@ blume-toc a { padding-block: 5px; }
 }
 /* The example toolbar owns copying; suppress the automatic per-pre button. */
 .ds-source [data-blume-copy] { display: none; }
+
+/* Blume's prose rules are unlayered. Let example text use its Tailwind
+   utilities, including when popup content is portaled outside the preview. */
+:is(.preview-tailwind, [data-ds-preview='tailwind']) :where(h1, h2, h3, h4, p, a) {
+  all: revert-layer;
+}

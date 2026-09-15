@@ -40,23 +40,29 @@ const cssCode = `<div data-slot="dropdown-menu" data-align="center" class="dropd
     color: #faf9f7;
     border: none;
     cursor: pointer;
+    transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
+  .dropdown-trigger:hover { opacity: 0.9; }
   .dropdown-content {
     position: absolute;
     top: 100%;
     left: 0;
     margin-top: 0.25rem;
-    background: #faf9f7;
+    background: #fff;
     border: 1px solid #ccc;
-    min-width: 180px;
+    min-width: 12rem;
     padding: 0.25rem;
     z-index: 50;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    width: 14rem;
   }
   .dropdown-label {
     padding: 0.375rem 0.5rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #666;
+    color: oklch(44.6% 0.03 256.802);
+    line-height: 1rem;
   }
   .dropdown-item {
     display: flex;
@@ -68,26 +74,29 @@ const cssCode = `<div data-slot="dropdown-menu" data-align="center" class="dropd
     cursor: pointer;
     font-size: 0.875rem;
     text-align: left;
+    border-radius: 0.25rem;
+    line-height: 1.25rem;
   }
   .dropdown-item[data-highlighted] {
-    background: #e5e5e5;
+    background: oklch(96.7% 0.003 264.542);
   }
-  .dropdown-item.destructive { color: #dc2626; }
+  .dropdown-item.destructive { color: oklch(57.7% 0.245 27.325); }
   .dropdown-item.destructive[data-highlighted] {
-    background: #fef2f2;
+    background: oklch(97.1% 0.013 17.38);
   }
   .dropdown-item.disabled {
-    color: #aaa;
+    color: oklch(87.2% 0.01 258.338);
     cursor: not-allowed;
   }
   .dropdown-shortcut {
     margin-left: auto;
     font-size: 0.75rem;
-    color: #666;
+    color: oklch(44.6% 0.03 256.802);
+    line-height: 1rem;
   }
   .dropdown-separator {
     height: 1px;
-    background: #ddd;
+    background: oklch(92.8% 0.006 264.531);
     margin: 0.25rem 0;
   }
 </style>`;
@@ -95,15 +104,15 @@ const cssCode = `<div data-slot="dropdown-menu" data-align="center" class="dropd
 const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-block">
   <button
     data-slot="dropdown-menu-trigger"
-    class="px-4 py-2 bg-gray-900 text-white border-none cursor-pointer
+    class="px-4 py-2 bg-text text-bg border-none cursor-pointer
            hover:opacity-90 transition-opacity"
   >
     Actions ▼
   </button>
   <div
     data-slot="dropdown-menu-content"
-    class="absolute top-full left-0 mt-1 bg-white border border-gray-300
-           min-w-[180px] p-1 z-50 rounded-lg shadow-lg"
+    class="absolute top-full left-0 bg-white border border-border
+           w-56 p-1 z-50 rounded-lg shadow-lg"
     hidden
   >
     <div data-slot="dropdown-menu-group">
@@ -117,7 +126,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
         data-slot="dropdown-menu-item"
         data-value="cut"
         class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded
-               data-[highlighted]:bg-gray-100"
+               data-highlighted:bg-gray-100"
       >
         Cut
         <span data-slot="dropdown-menu-shortcut" class="ml-auto text-xs text-gray-600">⌘X</span>
@@ -126,7 +135,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
         data-slot="dropdown-menu-item"
         data-value="copy"
         class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded
-               data-[highlighted]:bg-gray-100"
+               data-highlighted:bg-gray-100"
       >
         Copy
         <span data-slot="dropdown-menu-shortcut" class="ml-auto text-xs text-gray-600">⌘C</span>
@@ -135,7 +144,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
         data-slot="dropdown-menu-item"
         data-value="paste"
         class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded
-               data-[highlighted]:bg-gray-100"
+               data-highlighted:bg-gray-100"
       >
         Paste
         <span data-slot="dropdown-menu-shortcut" class="ml-auto text-xs text-gray-600">⌘V</span>
@@ -147,7 +156,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
       data-value="delete"
       data-variant="destructive"
       class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded
-             text-red-600 data-[highlighted]:bg-red-50"
+             text-red-600 data-highlighted:bg-red-50"
     >
       Delete
     </button>
@@ -196,13 +205,13 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
   <div slot="preview-tailwind" data-slot="dropdown-menu" class="relative inline-block" id="dropdown-menu-tw">
     <button
       data-slot="dropdown-menu-trigger"
-      class="px-4 py-2 bg-gray-900 text-white border-none cursor-pointer hover:opacity-90 transition-opacity"
+      class="px-4 py-2 bg-text text-bg border-none cursor-pointer hover:opacity-90 transition-opacity"
     >
       Actions ▼
     </button>
     <div
       data-slot="dropdown-menu-content"
-      class="absolute top-full left-0 mt-1 bg-white border border-gray-300 min-w-[180px] p-1 z-50 rounded-lg shadow-lg"
+      class="absolute top-full left-0 bg-white border border-border w-56 p-1 z-50 rounded-lg shadow-lg"
       hidden
     >
       <div data-slot="dropdown-menu-group">
@@ -210,7 +219,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
         <button
           data-slot="dropdown-menu-item"
           data-value="cut"
-          class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded data-[highlighted]:bg-gray-100"
+          class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded data-highlighted:bg-gray-100"
         >
           Cut
           <span data-slot="dropdown-menu-shortcut" class="ml-auto text-xs text-gray-600">⌘X</span>
@@ -218,7 +227,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
         <button
           data-slot="dropdown-menu-item"
           data-value="copy"
-          class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded data-[highlighted]:bg-gray-100"
+          class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded data-highlighted:bg-gray-100"
         >
           Copy
           <span data-slot="dropdown-menu-shortcut" class="ml-auto text-xs text-gray-600">⌘C</span>
@@ -226,7 +235,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
         <button
           data-slot="dropdown-menu-item"
           data-value="paste"
-          class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded data-[highlighted]:bg-gray-100"
+          class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded data-highlighted:bg-gray-100"
         >
           Paste
           <span data-slot="dropdown-menu-shortcut" class="ml-auto text-xs text-gray-600">⌘V</span>
@@ -237,7 +246,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
         data-slot="dropdown-menu-item"
         data-value="delete"
         data-variant="destructive"
-        class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded text-red-600 data-[highlighted]:bg-red-50"
+        class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded text-red-600 data-highlighted:bg-red-50"
       >
         Delete
       </button>
@@ -262,19 +271,25 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
     color: #faf9f7;
     border: none;
     cursor: pointer;
+    transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
+  .dropdown-trigger:hover { opacity: 0.9; }
   .dropdown-content {
-    background: #faf9f7;
+    background: #fff;
     border: 1px solid #ccc;
-    min-width: 180px;
+    min-width: 12rem;
     padding: 0.25rem;
     z-index: 50;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    width: 14rem;
   }
   .dropdown-label {
     padding: 0.375rem 0.5rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #666;
+    color: oklch(44.6% 0.03 256.802);
+    line-height: 1rem;
   }
   .dropdown-item {
     display: flex;
@@ -286,26 +301,29 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
     cursor: pointer;
     font-size: 0.875rem;
     text-align: left;
+    border-radius: 0.25rem;
+    line-height: 1.25rem;
   }
   .dropdown-item[data-highlighted] {
-    background: #e5e5e5;
+    background: oklch(96.7% 0.003 264.542);
   }
-  .dropdown-item.destructive { color: #dc2626; }
+  .dropdown-item.destructive { color: oklch(57.7% 0.245 27.325); }
   .dropdown-item.destructive[data-highlighted] {
-    background: #fef2f2;
+    background: oklch(97.1% 0.013 17.38);
   }
   .dropdown-item.disabled {
-    color: #aaa;
+    color: oklch(87.2% 0.01 258.338);
     cursor: not-allowed;
   }
   .dropdown-shortcut {
     margin-left: auto;
     font-size: 0.75rem;
-    color: #666;
+    color: oklch(44.6% 0.03 256.802);
+    line-height: 1rem;
   }
   .dropdown-separator {
     height: 1px;
-    background: #ddd;
+    background: oklch(92.8% 0.006 264.531);
     margin: 0.25rem 0;
   }
 </style>

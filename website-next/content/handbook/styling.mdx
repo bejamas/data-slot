@@ -45,13 +45,20 @@ Use `data-*` and `aria-*` variants to respond to component state.
 </button>
 ```
 
-Some examples use the site's `bg-code-bg` utility. Define its token to reproduce the warm neutral surface:
+The examples use standard Tailwind sizing utilities and a shared neutral palette. Define these color tokens to reproduce the CSS previews:
 
 ```css
 @theme {
+  --color-bg: #faf9f7;
+  --color-text: #1a1a1a;
+  --color-muted: #666;
+  --color-border: #ccc;
+  --color-accent: #0066cc;
   --color-code-bg: #f0eeeb;
 }
 ```
+
+Utilities such as `h-(--accordion-panel-height)` and `w-(--active-tab-width)` use measurements supplied by the component. Keep those variables for content-driven heights and indicator positioning.
 
 ### Animation utilities
 
