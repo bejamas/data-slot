@@ -5,9 +5,13 @@ description: A two-state control for turning a setting on or off.
 
 <PackageInfo name="switch" />
 
+```bash
+npm install @data-slot/switch
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+Just a root and an optional thumb. The controller injects a visually hidden checkbox next to the root, so the switch works inside a `<label>` and submits with a form like a native one.
 
 ```html
 <span data-slot="switch">
@@ -17,24 +21,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/switch`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-### Basic usage
+### Toggle a setting
 
 <Example name="switch" />
 
-### Disabled settings
+### Disabled state
 
-Disable interaction with data-disabled. The checked state stays available to assistive technology.
+`data-disabled` blocks interaction while screen readers still report the on/off state.
 
 <Example name="switch" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/switch
-```
 
 <include>../_generated/switch-api.md</include>

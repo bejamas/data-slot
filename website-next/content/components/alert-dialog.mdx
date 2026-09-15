@@ -5,9 +5,13 @@ description: A modal that asks for a decision before continuing with an importan
 
 <PackageInfo name="alert-dialog" />
 
+```bash
+npm install @data-slot/alert-dialog
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+The overlay is required. The portal is optional and gets moved to `document.body` while the dialog is open. `alert-dialog-action` does not close the dialog on its own — wire it to your own handler.
 
 ```html
 <div data-slot="alert-dialog">
@@ -35,24 +39,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/alert-dialog`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
 ### Confirm an action
 
 <Example name="alert-dialog" />
 
 ### Require an explicit choice
 
-Set data-close-on-escape to false to require a decision. Choose Cancel or Continue to close the confirmation.
+Escape will not dismiss this one — `data-close-on-escape="false"` forces a choice between Cancel and Continue.
 
 <Example name="alert-dialog" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/alert-dialog
-```
 
 <include>../_generated/alert-dialog-api.md</include>

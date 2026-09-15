@@ -5,9 +5,13 @@ description: Site navigation with coordinated popups, an indicator, and a shared
 
 <PackageInfo name="navigation-menu" />
 
+```bash
+npm install @data-slot/navigation-menu
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+Top-level items live in the list. The portal, positioner, and popup wrappers are optional: author just a `navigation-menu-viewport` and the runtime creates the rest while the menu is open. The indicator is optional too.
 
 ```html
 <nav data-slot="navigation-menu">
@@ -33,24 +37,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/navigation-menu`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-### Basic usage
+### Menus with a shared viewport
 
 <Example name="navigation-menu" />
 
 ### Fixed positioning
 
-Use fixed positioning when navigation lives inside a sticky or fixed header.
+`data-position-method="fixed"` keeps popups aligned when the navigation sits in a sticky or fixed header.
 
 <Example name="navigation-menu" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/navigation-menu
-```
 
 <include>../_generated/navigation-menu-api.md</include>

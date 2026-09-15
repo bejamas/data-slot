@@ -5,9 +5,13 @@ description: A set of collapsible sections that reveal one panel or several at a
 
 <PackageInfo name="accordion" />
 
+```bash
+npm install @data-slot/accordion
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+One `accordion-item` per section, each with its own `data-value` — items without one are skipped. Inside an item, the trigger and content are wired together for you. `accordion-trigger-icon` and `accordion-content-inner` are optional styling hooks.
 
 ```html
 <div data-slot="accordion">
@@ -25,24 +29,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/accordion`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
 ### Single panel
 
 <Example name="accordion" />
 
 ### Multiple panels
 
-Allow several sections to stay open with data-multiple.
+Add `data-multiple` to let several sections stay open at once.
 
 <Example name="accordion" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/accordion
-```
 
 <include>../_generated/accordion-api.md</include>

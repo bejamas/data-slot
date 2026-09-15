@@ -5,9 +5,13 @@ description: A floating panel anchored to a trigger for contextual content and c
 
 <PackageInfo name="popover" />
 
+```bash
+npm install @data-slot/popover
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+A trigger and its content. `popover-close` is optional — Escape and a click outside already close the panel.
 
 ```html
 <div data-slot="popover">
@@ -21,24 +25,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/popover`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-### Basic usage
+### Anchored panel
 
 <Example name="popover" />
 
 ### Position above the trigger
 
-Use data-side to choose the preferred placement of the panel.
+`data-side="top"` opens the panel above the trigger when there is room.
 
 <Example name="popover" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/popover
-```
 
 <include>../_generated/popover-api.md</include>

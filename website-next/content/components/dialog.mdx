@@ -5,9 +5,13 @@ description: A modal window that moves focus into a task and returns it when dis
 
 <PackageInfo name="dialog" />
 
+```bash
+npm install @data-slot/dialog
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+Only `dialog-content` is required. Add `dialog-title` and `dialog-description` and they become the dialog’s accessible name and description.
 
 ```html
 <div data-slot="dialog">
@@ -22,24 +26,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/dialog`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-### Basic usage
+### Open a modal
 
 <Example name="dialog" />
 
-### Explicit dismissal
+### Require an explicit close
 
-Keep the dialog open on outside clicks. It can still be closed using its close button or Escape.
+`data-close-on-click-outside="false"` keeps the dialog open when you click outside. The close button and Escape still work.
 
 <Example name="dialog" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/dialog
-```
 
 <include>../_generated/dialog-api.md</include>
