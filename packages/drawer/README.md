@@ -137,9 +137,8 @@ Portal-specific attributes:
 - `drawer-title` — supplies `aria-labelledby`
 - `drawer-description` — supplies `aria-describedby`
 - `drawer-close` — closes the drawer
-- `drawer-swipe-area` — edge gesture surface that can open a closed drawer; it is commonly detached from the root with `data-drawer-target` and may override the root with its own `data-swipe-direction`
 
-Detached triggers and swipe areas can live outside the root when the root has an ID:
+Detached triggers can live outside the root when the root has an ID:
 
 ```html
 <button
@@ -149,17 +148,11 @@ Detached triggers and swipe areas can live outside the root when the root has an
 >
   Filters
 </button>
-
-<div
-  data-slot="drawer-swipe-area"
-  data-drawer-target="filters-drawer"
-  data-swipe-direction="up"
-></div>
 ```
 
 `data-payload` accepts JSON or a plain string. The parsed value is forwarded in change event details.
 
-SwipeArea's direction describes the opening gesture and defaults to the opposite of the root's dismissal direction. The popup follows the drag; releasing commits the opening or returns it to closed. Keep a normal trigger available for keyboard users. Use native `<button>` elements for triggers and close controls.
+Use native `<button>` elements for triggers and close controls.
 
 ### Composition slots
 
@@ -238,7 +231,7 @@ root.dispatchEvent(new CustomEvent("drawer:set", {
 
 ## State and styling
 
-Root, portal, backdrop, viewport, and popup expose `data-state="open|closed"`, `data-open`, `data-closed`, and `data-swipe-direction`. The active trigger gets `data-popup-open`. Swipe areas expose `data-open`, `data-closed`, and their resolved `data-swipe-direction`. During gestures the viewport, backdrop, and popup expose `data-swiping`. Nested popups additionally expose `data-nested`, `data-nested-drawer-open`, and `data-nested-swiping`; indentation parts expose `data-active` or `data-inactive`. A keyboard-aware viewport exposes `data-keyboard-open` while the on-screen keyboard overlaps it.
+Root, portal, backdrop, viewport, and popup expose `data-state="open|closed"`, `data-open`, `data-closed`, and `data-swipe-direction`. The active trigger gets `data-popup-open`. During gestures the viewport, backdrop, and popup expose `data-swiping`. Nested popups additionally expose `data-nested`, `data-nested-drawer-open`, and `data-nested-swiping`; indentation parts expose `data-active` or `data-inactive`. A keyboard-aware viewport exposes `data-keyboard-open` while the on-screen keyboard overlaps it.
 
 Popup and backdrop expose `data-starting-style` and `data-ending-style` for entry and exit transitions. The runtime waits for exit transitions before hiding or restoring the portal.
 

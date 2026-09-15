@@ -3,6 +3,7 @@ import { containsWithPortals, portalToBody, restorePortal } from "./parts.ts";
 import type { PortalState } from "./parts.ts";
 
 export * from "./popup-geometry";
+export * from "./modal-stack";
 
 export interface PositionSyncOptions {
   onUpdate: () => void;
@@ -312,10 +313,15 @@ export function createPositionSync(options: PositionSyncOptions): PositionSyncCo
   };
 }
 
+export type DismissLayerDetails =
+  | { reason: "escape-key"; originalEvent: KeyboardEvent }
+  | { reason: "outside-press"; originalEvent: MouseEvent }
+  | { reason: "focus-out"; originalEvent: FocusEvent };
+
 export interface DismissLayerOptions {
   root: Element;
   isOpen: () => boolean;
-  onDismiss: () => void;
+  onDismiss: (details: DismissLayerDetails) => void;
   closeOnClickOutside?: boolean;
   closeOnEscape?: boolean;
   preventEscapeDefault?: boolean;
@@ -324,7 +330,7 @@ export interface DismissLayerOptions {
 
 interface DismissLayerEntry {
   isOpen: () => boolean;
-  onDismiss: () => void;
+  onDismiss: (details: DismissLayerDetails) => void;
   isInside: (target: Node | null) => boolean;
   closeOnClickOutside: boolean;
   closeOnEscape: boolean;
@@ -399,7 +405,7 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
       return;
     }
     store.pendingTouchOutside = false;
-    topmost.onDismiss();
+    topmost.onDismiss({ reason: "outside-press", originalEvent: event });
   });
 
   const clickCleanup = on(doc, "click", (event) => {
@@ -410,14 +416,14 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
     const topmost = getTopmostOpenLayer(store);
     if (!topmost || !topmost.closeOnClickOutside) return;
     if (topmost.isInside(target)) return;
-    topmost.onDismiss();
+    topmost.onDismiss({ reason: "outside-press", originalEvent: event });
   });
 
   const pointerCancelCleanup = on(doc, "pointercancel", () => {
     store.pendingTouchOutside = false;
   });
 
-  const blurCleanup = on(win, "blur", () => {
+  const blurCleanup = on(win, "blur", (event) => {
     const topmost = getTopmostOpenLayer(store, (layer) => layer.closeOnClickOutside);
     if (!topmost) return;
 
@@ -434,7 +440,7 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
       if (!iframeCtor || !(activeElement instanceof iframeCtor)) return;
       if (refreshedTopmost.isInside(activeElement)) return;
 
-      refreshedTopmost.onDismiss();
+      refreshedTopmost.onDismiss({ reason: "focus-out", originalEvent: event });
     }, 0);
   });
 
@@ -455,7 +461,7 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
     if (topmost.preventEscapeDefault) {
       event.preventDefault();
     }
-    topmost.onDismiss();
+    topmost.onDismiss({ reason: "escape-key", originalEvent: event });
   });
 
   store.cleanup = () => {

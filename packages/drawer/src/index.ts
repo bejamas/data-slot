@@ -5,7 +5,7 @@ import {
   getTabbables, containsWithPortals,
 } from '@data-slot/core';
 import { createSwipeGesture, parseSnapPoint, snapPixels, type DrawerSnapPoint, type DrawerSwipeDirection } from './gestures';
-import { isolateOutside, registerVisuals, trackKeyboard } from './environment';
+import { registerVisuals, trackKeyboard } from './environment';
 export type { DrawerSnapPoint, DrawerSwipeDirection } from './gestures';
 
 export type DrawerChangeReason = 'trigger-press' | 'close-press' | 'outside-press' | 'escape-key' | 'focus-out' | 'imperative-action' | 'swipe' | 'none';
@@ -83,12 +83,10 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
   const title = ownParts(root, 'title')[0];
   const description = ownParts(root, 'description')[0];
   const triggers = ownParts(root, 'trigger');
-  const swipeAreas = ownParts(root, 'swipe-area');
   if (root.id) {
     for (const element of doc.querySelectorAll<HTMLElement>('[data-drawer-target]')) {
       if (element.getAttribute('data-drawer-target')?.replace(/^#/, '') !== root.id) continue;
       if (element.dataset.slot === 'drawer-trigger' && !triggers.includes(element)) triggers.push(element);
-      if (element.dataset.slot === 'drawer-swipe-area' && !swipeAreas.includes(element)) swipeAreas.push(element);
     }
   }
   const modalAttribute = getDataString(root, 'modal');
@@ -114,14 +112,12 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
   let mounted = false;
   let locked = false;
   let held = false;
-  let isolation: (() => void) | undefined;
   let keyboardCleanup: (() => void) | undefined;
   const keyboardAware = viewport && (root.closest('[data-slot="drawer-virtual-keyboard-provider"]') || ownParts(root, 'virtual-keyboard-provider').length);
   let previousFocus: HTMLElement | null = null;
   const initialTrigger = options.triggerId ?? options.defaultTriggerId ?? getDataString(root, 'triggerId') ?? getDataString(root, 'defaultTriggerId');
   let activeTrigger = triggers.find((trigger) => trigger.id === initialTrigger) ?? null;
   let epoch = 0;
-  let activeSwipeArea: HTMLElement | null = null;
   let completedOpenEpoch = -1;
   let pending = 0;
   const rafs = new Set<number>();
@@ -143,7 +139,7 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     trigger.setAttribute('aria-controls', popup.id);
     setAria(trigger, 'expanded', false);
   }
-  const visuals = registerVisuals(root, popup);
+  const visuals = registerVisuals(root, popup, { backdrop, viewport });
   const setState = () => {
     for (const part of parts) {
       part.setAttribute('data-state', opened ? 'open' : 'closed');
@@ -155,8 +151,7 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
       setAria(trigger, 'expanded', opened && trigger === activeTrigger);
       trigger.toggleAttribute('data-popup-open', opened && trigger === activeTrigger);
     }
-    for (const area of swipeAreas) { area.toggleAttribute('data-open', opened); area.toggleAttribute('data-closed', !opened); }
-    visuals.update(opened);
+    visuals.setOpen(opened);
   };
   const size = () => horizontal ? popup.getBoundingClientRect().width || win.innerWidth : popup.getBoundingClientRect().height || win.innerHeight;
   const visibleSize = () => currentSnap === null ? size() : Math.min(size(), snapPixels(currentSnap,
@@ -169,13 +164,13 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     popup.style.setProperty('--drawer-width', `${rect.width}px`);
     popup.style.setProperty('--drawer-snap-point-offset', `${offset() * sign}px`);
     if (currentSnap === null) root.removeAttribute('data-snap-point'); else root.setAttribute('data-snap-point', String(currentSnap));
-    visuals.update(opened);
+    visuals.refresh();
   };
-  const topmost = () => !visuals.hasOpenChild() && !Array.from(doc.querySelectorAll<HTMLElement>('[data-stack-index]')).some((element) => Number(element.dataset.stackIndex) > Number(popup.dataset.stackIndex ?? -1));
+
   const inside = (target: Node | null) => containsWithPortals(popup, target);
   const resolveFocus = (value: DrawerOptions['initialFocus']) => typeof value === 'string' ? selector(doc, value) : typeof value === 'object' ? value : null;
   const focusInitial = () => {
-    if (!opened || activeSwipeArea || !topmost() || initialFocus === false) return;
+    if (!opened || !stack.isTopmost || initialFocus === false) return;
     focusElement(resolveFocus(initialFocus) ?? (initialFocus === true ? getAutofocusOrFirstFocusable(popup) : null) ?? popup);
   };
   const restoreFocus = () => {
@@ -185,10 +180,10 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
   };
   const complete = (open: boolean) => { emit(root, 'drawer:change-complete', { open }); options.onOpenChangeComplete?.(open); };
   const completeOpening = (token: number) => {
-    if (!opened || activeSwipeArea || epoch !== token || completedOpenEpoch === token) return;
+    if (!opened || epoch !== token || completedOpenEpoch === token) return;
     const animations = animated.flatMap((element) => typeof element.getAnimations === 'function' ? element.getAnimations() : []);
     const finish = () => {
-      if (!destroyed && opened && !activeSwipeArea && epoch === token && completedOpenEpoch !== token) {
+      if (!destroyed && opened && epoch === token && completedOpenEpoch !== token) {
         completedOpenEpoch = token; complete(true);
       }
     };
@@ -224,7 +219,7 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     measure();
     emit(root, 'drawer:snapchange', detail);
   };
-  const stack = createModalStackItem({ content: popup, overlay: backdrop, cssVarPrefix: 'drawer', onTabKeydown: (event) => {
+  const stack = createModalStackItem({ content: popup, overlay: backdrop, cssVarPrefix: 'drawer', isolateOutside: modal === true, onTabKeydown: (event) => {
     if (modal === false || !opened) return;
     const tabbables = getTabbables(popup);
     const active = doc.activeElement as HTMLElement;
@@ -271,7 +266,6 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
       for (const element of [portal, viewport, backdrop, popup]) if (element) element.hidden = false;
       stack.open();
       if (modal === true) {
-        isolation = isolateOutside(popup, [popup, ...(backdrop ? [backdrop] : []), ...(activeSwipeArea ? [activeSwipeArea] : [])]);
         lockScroll(); locked = true;
       }
       if (keyboardAware && viewport) keyboardCleanup = trackKeyboard(viewport);
@@ -279,7 +273,7 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
       frame(focusInitial);
       frame(() => frame(() => completeOpening(token)));
     } else {
-      stack.close(); isolation?.(); isolation = undefined; keyboardCleanup?.(); keyboardCleanup = undefined;
+      stack.close(); keyboardCleanup?.(); keyboardCleanup = undefined;
       if (locked) { unlockScroll(); locked = false; }
       setState();
       pending = presence.length;
@@ -290,15 +284,11 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     }
     emit(root, 'drawer:change', detail);
   };
-  let dismissEvent: Event | undefined;
-  cleanups.push(on(doc, 'keydown', (event) => { if (event.key === 'Escape') dismissEvent = event; }, { capture: true }));
-  cleanups.push(on(doc, 'pointerdown', (event) => { dismissEvent = event; }, { capture: true }));
-  cleanups.push(on(doc, 'click', (event) => { dismissEvent = event; }, { capture: true }));
   cleanups.push(createDismissLayer({ root, isOpen: () => opened, closeOnEscape, closeOnClickOutside: pointerDismissal,
-    isInside: (target) => inside(target) || !!activeSwipeArea?.contains(target) || triggers.some((trigger) => trigger.contains(target)),
-    onDismiss: () => {
-      if (dismissEvent && 'button' in dismissEvent && (dismissEvent as MouseEvent).button !== 0) return;
-      update(false, dismissEvent?.type === 'keydown' ? 'escape-key' : 'outside-press', dismissEvent);
+    isInside: (target) => inside(target) || triggers.some((trigger) => trigger.contains(target)),
+    onDismiss: ({ reason, originalEvent }) => {
+      if (reason === 'outside-press' && originalEvent.button !== 0) return;
+      update(false, reason, originalEvent);
     },
   }));
   for (const trigger of triggers) cleanups.push(on(trigger, 'click', (event) => {
@@ -310,68 +300,21 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     if (!event.defaultPrevented && !disabled(close)) update(false, 'close-press', event);
   }));
   cleanups.push(on(doc, 'focusin', (event) => {
-    if (!opened || !topmost() || inside(event.target as Node)) return;
+    if (!opened || !stack.isTopmost || inside(event.target as Node)) return;
     if (modal !== false) focusElement(getAutofocusOrFirstFocusable(popup) ?? popup);
     else if (pointerDismissal && !triggers.includes(event.target as HTMLElement)) update(false, 'focus-out', event);
   }));
-  const resetSwipe = () => {
-    for (const element of [popup, backdrop, viewport]) {
-      element?.removeAttribute('data-swiping');
-      element?.style.setProperty('--drawer-swipe-progress', '0');
-    }
-    popup.style.setProperty('--drawer-swipe-movement-x', '0px');
-    popup.style.setProperty('--drawer-swipe-movement-y', '0px');
-    visuals.update(opened);
-  };
+  const resetSwipe = () => visuals.setSwipe(null);
   const moveSwipe = (distance: number) => {
     const movement = Math.max(-offset(), Math.min(visibleSize(), distance));
     const progress = Math.min(1, Math.max(0, movement / Math.max(1, visibleSize())));
-    for (const element of [popup, backdrop, viewport]) element?.setAttribute('data-swiping', '');
-    popup.style.setProperty(horizontal ? '--drawer-swipe-movement-x' : '--drawer-swipe-movement-y', `${movement * sign}px`);
-    for (const element of [popup, backdrop]) element?.style.setProperty('--drawer-swipe-progress', String(progress));
-    visuals.update(opened, progress, true);
+    visuals.setSwipe({ progress, x: horizontal ? movement * sign : 0, y: horizontal ? 0 : movement * sign });
   };
   const releaseSwipe = (distance: number, velocity: number, event: Event) => {
     popup.style.setProperty('--drawer-swipe-strength', String(Math.max(0.1, Math.min(1, 1 / Math.max(1, Math.abs(velocity))))));
     if (distance > visibleSize() * 0.35 || (velocity > 0.5 && distance > 12)) update(false, 'swipe', event);
   };
-  cleanups.push(createSwipeGesture({ element: popup, popup, direction, enabled: () => opened && topmost(), move: moveSwipe, release: releaseSwipe, reset: resetSwipe }));
-  for (const area of swipeAreas) {
-    const areaValue = getDataString(area, 'swipeDirection');
-    const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' } as const;
-    const areaDirection = ['up', 'down', 'left', 'right'].includes(areaValue ?? '') ? areaValue as DrawerSwipeDirection : opposite[direction];
-    area.setAttribute('data-swipe-direction', areaDirection);
-    let openingGesture = false;
-    let rejected = false;
-    let lastEvent: Event | undefined;
-    const finishArea = (commit: boolean, event = lastEvent) => {
-      if (!openingGesture) return;
-      openingGesture = false;
-      activeSwipeArea = null;
-      if (!commit) update(false, 'swipe', event);
-      resetSwipe();
-      // The edge surface is exempt from modal isolation only while it owns a drag.
-      if (opened && modal === true) { isolation?.(); isolation = isolateOutside(popup, [popup, ...(backdrop ? [backdrop] : [])]); }
-      if (opened) { focusInitial(); const token = epoch; frame(() => frame(() => completeOpening(token))); }
-    };
-    cleanups.push(createSwipeGesture({ element: area, popup, direction: opposite[areaDirection], opening: true,
-      enabled: () => !rejected && !disabled(area) && (openingGesture ? opened : !opened),
-      move: (distance, event) => {
-        lastEvent = event;
-        if (!openingGesture) {
-          activeSwipeArea = area;
-          update(true, 'swipe', event);
-          if (!opened) { activeSwipeArea = null; rejected = true; return; }
-          openingGesture = true;
-          presence.forEach((part) => part.cleanup());
-        }
-        area.setAttribute('data-swiping', '');
-        moveSwipe(Math.max(0, visibleSize() + distance));
-      },
-      release: (distance, velocity, event) => finishArea(!disabled(area) && (-distance > 40 || (-velocity > 0.5 && -distance > 12)), event),
-      reset: (event) => { finishArea(false, event); rejected = false; lastEvent = undefined; area.removeAttribute('data-swiping'); },
-    }));
-  }
+  cleanups.push(createSwipeGesture({ element: popup, popup, direction, enabled: () => opened && stack.isTopmost, move: moveSwipe, release: releaseSwipe, reset: resetSwipe }));
   cleanups.push(on(win, 'resize', measure));
   if (typeof win.ResizeObserver !== 'undefined') {
     const observer = new win.ResizeObserver(measure); observer.observe(popup); cleanups.push(() => observer.disconnect());
@@ -400,7 +343,7 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
       const hadFocus = opened && inside(doc.activeElement);
       destroyed = true; opened = false; epoch++;
       rafs.forEach((id) => win.cancelAnimationFrame(id)); rafs.clear();
-      presence.forEach((part) => part.cleanup()); stack.destroy(); isolation?.(); keyboardCleanup?.();
+      presence.forEach((part) => part.cleanup()); stack.destroy(); keyboardCleanup?.();
       if (locked) { unlockScroll(); locked = false; }
       cleanups.forEach((cleanup) => cleanup());
       setState(); visuals.destroy();

@@ -1,67 +1,23 @@
 import { containsWithPortals, on } from '@data-slot/core';
 
-interface IsolationSession { popup: HTMLElement; allowed: HTMLElement[] }
-interface IsolationStore {
-  sessions: IsolationSession[];
-  changed: Map<Element, { inert: boolean; aria: string | null }>;
-  observer: MutationObserver;
-  update(): void;
+interface SwipeState { progress: number; x: number; y: number }
+interface VisualParts { backdrop?: HTMLElement; viewport?: HTMLElement }
+interface VisualEntry {
+  root: Element;
+  popup: HTMLElement;
+  parts: VisualParts;
+  parent: Element | null;
+  provider: Element | null;
+  open: boolean;
+  swipe: SwipeState | null;
+  order: number;
 }
-const isolationStores = new WeakMap<Document, IsolationStore>();
-/** Recompute the frontmost modal's isolation as nested portals mount or disappear. */
-export function isolateOutside(popup: HTMLElement, allowed: HTMLElement[]): () => void {
-  const doc = popup.ownerDocument;
-  const win = doc.defaultView!;
-  let store = isolationStores.get(doc);
-  if (!store) {
-    const created: IsolationStore = {
-      sessions: [], changed: new Map(),
-      observer: new win.MutationObserver(() => created.update()),
-      update() {
-        for (const [element, state] of created.changed) {
-          if (!state.inert) element.removeAttribute('inert');
-          if (state.aria === null) element.removeAttribute('aria-hidden'); else element.setAttribute('aria-hidden', state.aria);
-        }
-        created.changed.clear();
-        const active = created.sessions.at(-1);
-        if (!active) return;
-        const permitted = [...active.allowed, ...Array.from(doc.body.querySelectorAll<HTMLElement>('*')).filter((element) => containsWithPortals(active.popup, element))];
-        const visit = (parent: Element) => {
-          for (const child of Array.from(parent.children)) {
-            if (permitted.includes(child as HTMLElement)) continue;
-            if (permitted.some((element) => child.contains(element))) { visit(child); continue; }
-            created.changed.set(child, { inert: child.hasAttribute('inert'), aria: child.getAttribute('aria-hidden') });
-            child.setAttribute('inert', '');
-            child.setAttribute('aria-hidden', 'true');
-          }
-        };
-        visit(doc.body);
-      },
-    };
-    created.observer.observe(doc.body, { childList: true, subtree: true });
-    isolationStores.set(doc, created);
-    store = created;
-  }
-  const session = { popup, allowed };
-  store.sessions.push(session);
-  store.update();
-  let cleaned = false;
-  return () => {
-    if (cleaned) return;
-    cleaned = true;
-    store.sessions.splice(store.sessions.indexOf(session), 1);
-    store.update();
-    if (!store.sessions.length) { store.observer.disconnect(); isolationStores.delete(doc); }
-  };
-}
-
-interface VisualEntry { root: Element; popup: HTMLElement; parent: Element | null; provider: Element | null; open: boolean; progress: number; swiping: boolean; order: number }
 const entries = new Set<VisualEntry>();
 let openOrder = 0;
-export function registerVisuals(root: Element, popup: HTMLElement) {
+export function registerVisuals(root: Element, popup: HTMLElement, parts: VisualParts = {}) {
   // An initially open ancestor may already have moved this root into a portal.
   const owner = [...entries].filter((item) => containsWithPortals(item.popup, root)).at(-1);
-  const entry: VisualEntry = { root, popup, parent: root.parentElement?.closest('[data-slot="drawer"]') ?? owner?.root ?? null, provider: root.closest('[data-slot="drawer-provider"]') ?? owner?.provider ?? null, open: false, progress: 0, swiping: false, order: 0 };
+  const entry: VisualEntry = { root, popup, parts, parent: root.parentElement?.closest('[data-slot="drawer"]') ?? owner?.root ?? null, provider: root.closest('[data-slot="drawer-provider"]') ?? owner?.provider ?? null, open: false, swipe: null, order: 0 };
   entries.add(entry);
   const update = () => {
     for (const item of entries) {
@@ -76,11 +32,18 @@ export function registerVisuals(root: Element, popup: HTMLElement) {
       });
       item.popup.toggleAttribute('data-nested', !!item.parent);
       item.popup.toggleAttribute('data-nested-drawer-open', descendants.length > 0);
-      item.popup.toggleAttribute('data-nested-swiping', descendants.some((child) => child.swiping));
+      item.popup.toggleAttribute('data-nested-swiping', descendants.some((child) => child.swipe !== null));
       item.popup.style.setProperty('--nested-drawers', String(descendants.length));
       const front = descendants.sort((a, b) => a.order - b.order).at(-1) ?? item;
       item.popup.style.setProperty('--drawer-frontmost-height', `${front.popup.getBoundingClientRect().height}px`);
-      if (front !== item) item.popup.style.setProperty('--drawer-swipe-progress', String(front.progress));
+      for (const element of [item.popup, item.parts.backdrop, item.parts.viewport]) {
+        if (!element) continue;
+        element.toggleAttribute('data-swiping', item.swipe !== null);
+        const swipe = element === item.popup ? front.swipe : item.swipe;
+        element.style.setProperty('--drawer-swipe-progress', String(swipe?.progress ?? 0));
+      }
+      item.popup.style.setProperty('--drawer-swipe-movement-x', `${item.swipe?.x ?? 0}px`);
+      item.popup.style.setProperty('--drawer-swipe-movement-y', `${item.swipe?.y ?? 0}px`);
     }
     const providers = new Set([...entries].map((item) => item.provider).filter(Boolean));
     if (entry.provider) providers.add(entry.provider);
@@ -90,7 +53,7 @@ export function registerVisuals(root: Element, popup: HTMLElement) {
         if (indent.closest('[data-slot="drawer-provider"]') !== provider) continue;
         indent.toggleAttribute('data-active', !!front);
         indent.toggleAttribute('data-inactive', !front);
-        indent.style.setProperty('--drawer-swipe-progress', String(front?.progress ?? 0));
+        indent.style.setProperty('--drawer-swipe-progress', String(front?.swipe?.progress ?? 0));
         indent.style.setProperty('--drawer-height', `${front?.popup.getBoundingClientRect().height ?? 0}px`);
       }
     }
@@ -98,8 +61,14 @@ export function registerVisuals(root: Element, popup: HTMLElement) {
   update();
   return {
     parent: entry.parent,
-    update(open: boolean, progress = 0, swiping = false) { if (open && !entry.open) entry.order = ++openOrder; entry.open = open; entry.progress = progress; entry.swiping = swiping; update(); },
-    hasOpenChild: () => [...entries].some((item) => item.parent === root && item.open),
+    setOpen(open: boolean) {
+      if (open && !entry.open) entry.order = ++openOrder;
+      entry.open = open;
+      if (!open) entry.swipe = null;
+      update();
+    },
+    setSwipe(swipe: SwipeState | null) { entry.swipe = swipe; update(); },
+    refresh: update,
     destroy() { entries.delete(entry); update(); },
   };
 }

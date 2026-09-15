@@ -238,41 +238,35 @@ it('preserves native scrolling and claims boundary touch drags only', () => {
   touch('touchend', 600, content); expect(controller.isOpen).toBe(false);
 });
 
-it('opens from a detached edge swipe surface and ignores disabled swipe areas', () => {
+it('leaves former swipe areas inert for pointer and touch opening gestures', () => {
   document.body.innerHTML = `<div data-slot="drawer-swipe-area" data-drawer-target="drawer" id="edge"></div>${markup()}`;
-  const controller = createDrawer(document.getElementById('drawer')!); controllers.push(controller);
-  const area = document.getElementById('edge')!;
-  area.dataset.disabled = ''; drag(area, 0, -100); expect(controller.isOpen).toBe(false);
-  delete area.dataset.disabled; drag(area, 0, -100); expect(controller.isOpen).toBe(true);
-});
-
-it('allows a fresh close-button click immediately after an opening swipe', () => {
-  document.body.innerHTML = `<div data-slot="drawer-swipe-area" data-drawer-target="drawer" id="edge"></div>${markup()}`;
-  const controller = createDrawer(document.getElementById('drawer')!); controllers.push(controller);
-  drag(document.getElementById('edge')!, 0, -100);
-  expect(controller.isOpen).toBe(true);
-  const close = document.querySelector('[data-slot="drawer-close"]')!;
-  close.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 2 }));
-  close.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
-  expect(controller.isOpen).toBe(false);
+  const root = document.getElementById('drawer')!;
+  const attached = document.createElement('div');
+  attached.dataset.slot = 'drawer-swipe-area';
+  root.append(attached);
+  const controller = createDrawer(root); controllers.push(controller);
+  let changes = 0;
+  root.addEventListener('drawer:beforechange', () => changes++);
+  for (const area of [attached, document.getElementById('edge')!]) {
+    drag(area, 0, -100);
+    expect(controller.isOpen).toBe(false);
+    for (const [type, y] of [['touchstart', 200], ['touchmove', 100], ['touchend', 100]] as const) {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      const point = { identifier: 7, clientX: 100, clientY: y };
+      Object.defineProperties(event, { touches: { value: type === 'touchend' ? [] : [point] }, changedTouches: { value: [point] } });
+      area.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(controller.isOpen).toBe(false);
+    }
+  }
+  expect(changes).toBe(0);
+  expect(root.querySelector<HTMLElement>('[data-slot="drawer-popup"]')!.hidden).toBe(true);
 });
 
 it('preserves outside focus when leaving a nonmodal drawer', async () => {
   const { controller } = setup('data-modal="false"'); controller.open(); await tick();
   const outside = document.querySelector<HTMLButtonElement>('#outside button')!; outside.focus();
   expect(controller.isOpen).toBe(false); expect(document.activeElement === outside).toBe(true);
-});
-
-it('interprets swipe-area direction as the actual opening direction', () => {
-  document.body.innerHTML = `<div data-slot="drawer-swipe-area" data-drawer-target="drawer" data-swipe-direction="up" id="edge"></div>${markup()}`;
-  const controller = createDrawer(document.getElementById('drawer')!); controllers.push(controller);
-  const area = document.getElementById('edge')!;
-  drag(area, 0, 100); expect(controller.isOpen).toBe(false);
-  area.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, isPrimary: true, pointerId: 2, clientX: 100, clientY: 100 }));
-  document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, pointerId: 2, clientX: 100, clientY: 20 }));
-  expect(area.hasAttribute('data-swiping')).toBe(true);
-  document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 2, clientX: 100, clientY: 20 }));
-  expect(controller.isOpen).toBe(true); expect(area.hasAttribute('data-swiping')).toBe(false);
 });
 
 it('passes the real touch event to change listeners', () => {
@@ -287,46 +281,6 @@ it('passes the real touch event to change listeners', () => {
   };
   touch('touchstart', 100); touch('touchmove', 700); const end = touch('touchend', 700);
   expect(original === end).toBe(true); expect(original?.type).toBe('touchend');
-});
-
-it('tracks opening swipe position live, defers completion and rolls back cancellation', async () => {
-  document.body.innerHTML = `<div data-slot="drawer-swipe-area" data-drawer-target="drawer" id="edge"></div>${markup()}`;
-  const root = document.getElementById('drawer')!;
-  const controller = createDrawer(root); controllers.push(controller);
-  const area = document.getElementById('edge')!;
-  const popup = document.querySelector<HTMLElement>('[data-slot="drawer-popup"]')!;
-  const completions: boolean[] = [];
-  root.addEventListener('drawer:change-complete', (event) => completions.push((event as CustomEvent).detail.open));
-  const pointer = (type: string, y: number) => area.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, isPrimary: true, pointerId: 21, clientX: 100, clientY: y }));
-  pointer('pointerdown', 500); pointer('pointermove', 450);
-  expect(controller.isOpen).toBe(true); expect(popup.hidden).toBe(false);
-  const first = parseFloat(popup.style.getPropertyValue('--drawer-swipe-movement-y'));
-  pointer('pointermove', 350);
-  expect(parseFloat(popup.style.getPropertyValue('--drawer-swipe-movement-y'))).toBeLessThan(first);
-  expect(area.hasAttribute('inert')).toBe(false);
-  await tick(); expect(completions).toEqual([]);
-  pointer('pointercancel', 350); await tick();
-  expect(controller.isOpen).toBe(false); expect(popup.hidden).toBe(true); expect(completions).toEqual([false]);
-  pointer('pointerdown', 500); pointer('pointermove', 350); pointer('pointerup', 350); await tick();
-  expect(controller.isOpen).toBe(true); expect(completions).toEqual([false, true]);
-  expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('0px');
-});
-
-it('honors canceled live swipe opening and disabling an active edge gesture', () => {
-  document.body.innerHTML = `<div data-slot="drawer-swipe-area" data-drawer-target="drawer" id="edge"></div>${markup()}`;
-  const root = document.getElementById('drawer')!;
-  const controller = createDrawer(root); controllers.push(controller);
-  const area = document.getElementById('edge')!;
-  const prevent = (event: Event) => event.preventDefault();
-  root.addEventListener('drawer:beforechange', prevent);
-  drag(area, 0, -100); expect(controller.isOpen).toBe(false);
-  root.removeEventListener('drawer:beforechange', prevent);
-  area.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, isPrimary: true, pointerId: 22, clientY: 300 }));
-  document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, pointerId: 22, clientY: 200 }));
-  expect(controller.isOpen).toBe(true);
-  area.dataset.disabled = '';
-  document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 22, clientY: 200 }));
-  expect(controller.isOpen).toBe(false); expect(area.hasAttribute('data-swiping')).toBe(false);
 });
 
 
@@ -359,23 +313,6 @@ describe('single drawer snap point', () => {
     viewportHeight = 600;
     window.dispatchEvent(new Event('resize'));
     expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe('500px');
-  });
-
-  it('opens from an edge using the visible height of the single point', () => {
-    document.body.innerHTML = `<div data-slot="drawer-swipe-area" data-drawer-target="drawer" id="edge"></div>${markup('data-snap-point="200px"')}`;
-    const root = document.getElementById('drawer')!;
-    const popup = root.querySelector<HTMLElement>('[data-slot="drawer-popup"]')!;
-    Object.defineProperty(popup, 'getBoundingClientRect', { value: () => ({ height: 800, width: 600 }) });
-    const controller = createDrawer(root); controllers.push(controller);
-    const area = document.getElementById('edge')!;
-    const pointer = (type: string, y: number) => area.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, isPrimary: true, pointerId: 31, clientX: 100, clientY: y }));
-    pointer('pointerdown', 500); pointer('pointermove', 450);
-    expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe('600px');
-    expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('150px');
-    pointer('pointerup', 450);
-    expect(controller.isOpen).toBe(true);
-    expect(controller.snapPoint).toBe('200px');
-    expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('0px');
   });
 
   it('uses defaults and gives JavaScript options precedence over HTML', () => {

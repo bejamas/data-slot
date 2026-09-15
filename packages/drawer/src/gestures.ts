@@ -21,7 +21,6 @@ interface GestureOptions {
   element: HTMLElement;
   popup: HTMLElement;
   direction: DrawerSwipeDirection;
-  opening?: boolean;
   enabled(): boolean;
   move(distance: number, event: Event): void;
   release(distance: number, velocity: number, event: Event): void;
@@ -61,7 +60,7 @@ export function createSwipeGesture(options: GestureOptions): () => void {
       if (event.defaultPrevented || event.button !== 0 || event.isPrimary === false || !options.enabled()) return;
       const target = event.target as Element;
       if (target.closest('[data-swipe-ignore],input,textarea,select,button,a,[contenteditable="true"]')) return;
-      if (!options.opening && target.closest('[data-slot="drawer-popup"]') !== popup) return;
+      if (target.closest('[data-slot="drawer-popup"]') !== popup) return;
       gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, time: event.timeStamp, target, started: false, distance: 0 };
   };
   const move = (event: PointerEvent, originalEvent: Event = event) => {
@@ -72,7 +71,7 @@ export function createSwipeGesture(options: GestureOptions): () => void {
       const distance = axis * sign;
       if (!gesture.started) {
         if (Math.abs(axis) < 8 && Math.abs(cross) < 8) return;
-        if (Math.abs(cross) > Math.abs(axis) || (!options.opening && canScroll(gesture.target, popup, horizontal, axis)) || (options.opening && distance >= 0)) {
+        if (Math.abs(cross) > Math.abs(axis) || canScroll(gesture.target, popup, horizontal, axis)) {
           gesture = null;
           return;
         }

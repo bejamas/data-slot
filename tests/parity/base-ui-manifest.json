@@ -10,7 +10,6 @@
       "name": "drawer",
       "baseUiSources": [
         "packages/react/src/drawer/root/DrawerRoot.test.tsx",
-        "packages/react/src/drawer/swipe-area/DrawerSwipeArea.test.tsx",
         "packages/react/src/drawer/virtual-keyboard-provider/DrawerVirtualKeyboardProvider.test.tsx"
       ],
       "scenarios": [

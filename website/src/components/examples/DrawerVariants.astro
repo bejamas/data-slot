@@ -24,7 +24,7 @@ const variants = [
     label: "basic bottom drawer",
     trigger: "View booking",
     title: "Your weekend in Warsaw",
-    description: "A compact drawer that sizes to its content. Swipe down, click outside, or press Escape to close.",
+    description: "A compact drawer that sizes to its content. Click outside, press Escape, or use Done to close.",
     body: "<p>Two guests · Three nights<br>Check-in Friday, 18 September</p>",
     close: "Done",
     note: "The sheet fits a short booking summary without a fixed height.",
@@ -79,6 +79,8 @@ const tailwind = {
 
 function markup(variant: typeof variants[number], mode: "css" | "tailwind") {
   const classes = mode === "css" ? css : tailwind;
+  const hasHandle = variant.id === "scroll";
+  const contentPadding = mode === "tailwind" && !hasHandle ? " pt-6" : "";
   const size = mode === "css" ? `drawer-showcase-${variant.id}` : variant.id === "side"
     ? "!m-0 !h-dvh !max-h-none !max-w-sm !rounded-none ![transform:translateX(var(--drawer-swipe-movement-x,0px))] data-[starting-style]:![transform:translateX(100%)] data-[ending-style]:![transform:translateX(100%)]"
     : variant.id === "scroll" ? "h-[75dvh]" : "";
@@ -88,8 +90,7 @@ function markup(variant: typeof variants[number], mode: "css" | "tailwind") {
     <div data-slot="drawer-backdrop" class="${classes.backdrop}" hidden></div>
     <div data-slot="drawer-viewport" class="${classes.viewport}" hidden>
       <div data-slot="drawer-popup" class="${classes.popup} ${size}" hidden>
-        <div class="${classes.handle}" aria-hidden="true"></div>
-        <div data-slot="drawer-content" class="${classes.content}">
+        ${hasHandle ? `<div class="${classes.handle}" aria-hidden="true"></div>\n        ` : ""}<div data-slot="drawer-content" class="${classes.content}${contentPadding}">
           <h2 data-slot="drawer-title" class="${classes.title}">${variant.title}</h2>
           <p data-slot="drawer-description" class="${classes.description}">${variant.description}</p>
           ${variant.body}
