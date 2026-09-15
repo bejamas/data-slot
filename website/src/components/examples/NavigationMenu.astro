@@ -34,7 +34,7 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
 
 <style>
   .nav-menu { position: relative; }
-  .nav-menu-list { display: flex; list-style: none; position: relative; }
+  .nav-menu-list { display: flex; flex-wrap: wrap; list-style: none; position: relative; }
   .nav-menu-trigger {
     padding: 0.6rem 1rem;
     background: none;
@@ -66,7 +66,7 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
     position: relative;
     box-sizing: border-box;
     width: var(--popup-width);
-    height: var(--popup-height);
+    height: var(--popup-height); max-height: var(--available-height);
     transform-origin: var(--transform-origin);
     background: #faf9f7;
     border-radius: 8px;
@@ -90,7 +90,7 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
     pointer-events: none;
   }
 
-  .nav-menu-viewport { position: relative; overflow: hidden; width: 100%; height: 100%; }
+  .nav-menu-viewport { position: relative; overflow: auto; width: 100%; height: 100%; }
   .nav-menu-content {
     position: relative;
     transform: translateX(0);
@@ -116,12 +116,13 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
   .nav-menu-content[data-ending-style][data-activation-direction="left"] {
     transform: translateX(24px);
   }
-  .nav-menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; width: 380px; padding: 0.75rem; }
+  .nav-menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; width: min(380px, calc(100vw - 48px)); max-width: 100%; padding: 0.75rem; }
+  @media (max-width: 400px) { .nav-menu-grid { grid-template-columns: 1fr; } }
 </style>`;
 
 const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -->
 <nav data-slot="navigation-menu" class="relative" data-side-offset="8">
-  <ul data-slot="navigation-menu-list" class="flex relative list-none">
+  <ul data-slot="navigation-menu-list" class="flex flex-wrap relative list-none">
     <li data-slot="navigation-menu-item" data-value="products" class="static">
       <button
         data-slot="navigation-menu-trigger"
@@ -139,7 +140,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         class="nav-menu-tw-content z-10"
         hidden
       >
-        <div class="grid grid-cols-2 gap-3 w-[380px] p-2">
+        <div class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3 w-[min(380px,calc(100vw-48px))] max-w-full p-2">
           <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
             <div class="mb-1 font-medium">Analytics</div>
             <div class="text-sm text-muted">Real-time metrics</div>
@@ -173,9 +174,9 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         data-slot="navigation-menu-popup"
         class="nav-menu-tw-popup relative overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_24px_rgba(0,0,0,0.12)]"
         hidden
-        style="width: var(--popup-width); height: var(--popup-height); transform-origin: var(--transform-origin);"
+        style="width: var(--popup-width); height: var(--popup-height); max-height: var(--available-height); transform-origin: var(--transform-origin);"
       >
-        <div data-slot="navigation-menu-viewport" class="relative h-full w-full overflow-hidden" hidden></div>
+        <div data-slot="navigation-menu-viewport" class="relative h-full w-full overflow-auto" hidden></div>
       </div>
     </div>
   </div>
@@ -352,7 +353,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
   </nav>
   
   <nav slot="preview-tailwind" data-slot="navigation-menu" class="relative" id="nav-menu-tw" data-side-offset="8">
-    <ul data-slot="navigation-menu-list" class="flex list-none relative z-10">
+    <ul data-slot="navigation-menu-list" class="flex flex-wrap list-none relative z-10">
       <li data-slot="navigation-menu-item" data-value="products" class="static">
         <button
           data-slot="navigation-menu-trigger"
@@ -365,7 +366,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           class="nav-menu-tw-content z-10"
           hidden
         >
-          <div class="grid grid-cols-2 gap-3 w-[380px] p-2">
+          <div class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3 w-[min(380px,calc(100vw-48px))] max-w-full p-2">
             <a href="#" class="block p-3 no-underline rounded transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Analytics</div>
               <div class="text-sm text-muted">Real-time metrics</div>
@@ -397,7 +398,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           class="nav-menu-tw-content z-10"
           hidden
         >
-          <div class="grid grid-cols-2 gap-2 w-[380px] p-2">
+          <div class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2 w-[min(380px,calc(100vw-48px))] max-w-full p-2">
             <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Startups</div>
               <div class="text-sm text-muted">Move fast</div>
@@ -437,7 +438,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           class="nav-menu-tw-content z-10"
           hidden
         >
-          <div class="grid grid-cols-3 gap-3 p-2 w-[520px]">
+          <div class="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 gap-3 p-2 w-[min(520px,calc(100vw-48px))] max-w-full">
             <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Documentation</div>
               <div class="text-sm text-muted">Get started</div>
@@ -497,9 +498,9 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           data-slot="navigation-menu-popup"
           class="nav-menu-tw-popup relative overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_24px_rgba(0,0,0,0.12)]"
           hidden
-          style="width: var(--popup-width); height: var(--popup-height); transform-origin: var(--transform-origin);"
+          style="width: var(--popup-width); height: var(--popup-height); max-height: var(--available-height); transform-origin: var(--transform-origin);"
         >
-          <div data-slot="navigation-menu-viewport" class="relative h-full w-full overflow-hidden" hidden></div>
+          <div data-slot="navigation-menu-viewport" class="relative h-full w-full overflow-auto" hidden></div>
         </div>
       </div>
     </div>
@@ -518,8 +519,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
       Use <code>data-align="start|center|end"</code> on items to control alignment.
     </p>
     <p class="mt-3 text-muted">
-      For sticky headers, opt into viewport anchoring with <code>data-position-method="fixed"</code>
-      or <code>createNavigationMenu(root, &#123; positionMethod: "fixed" &#125;)</code>.
+      For sticky headers, opt into viewport anchoring with <code>data-position-method="fixed"</code> or <code>createNavigationMenu(root, &#123; positionMethod: "fixed" &#125;)</code>.
     </p>
   </div>
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
