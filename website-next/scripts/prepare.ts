@@ -16,6 +16,7 @@ for (const component of components) {
     const filename = variant === 'extra' && 'second' in component ? component.second : component.demo;
     let source = await readFile(resolve(repo, `website/src/components/examples/${filename}.astro`), 'utf8');
     source = source.replace('"../ExampleBlock.astro"', '"../../components/ExampleBlock.astro"');
+    source = source.replaceAll('theme="vitesse-light"', 'theme="github-light-high-contrast"');
     // Initialization has its own tab; embedded snippets must not double-bind it.
     source = source.replace(/<script type="module">[\s\S]*?<\/script>/g, '');
     if (filename === 'Slider') {
@@ -38,6 +39,7 @@ for (const component of components) {
     source = source.replace(/\b(id|for|aria-labelledby|aria-describedby|aria-controls)="([^"]+)"/g,
       (_, attr, value) => `${attr}="${value.split(' ').map((id: string) => `${component.slug}-${variant}-${id}`).join(' ')}"`);
     source = source.replace(/<ExampleBlock(?=[\s>])/g, `<ExampleBlock component="${component.slug}"`);
+    source = source.replace(/<ExampleBlock component="command">(?=\s*<div slot="preview-css" data-slot="dialog")/g, '<ExampleBlock component="command" dialog>');
     if (filename === 'AccordionMultiple') {
       const single = await readFile(resolve(repo, 'website/src/components/examples/AccordionSingle.astro'), 'utf8');
       const styles = single.match(/<style>[\s\S]*?<\/style>/)?.[0];

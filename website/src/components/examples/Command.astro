@@ -56,18 +56,18 @@ const inlineTailwindCode = `<label for="command-inline" class="mb-2 block text-[
     data-slot="command-input-wrapper"
     class="flex items-center gap-2 border-b border-stone-300/60 px-4 py-3"
   >
-    <span class="text-sm text-stone-500">⌕</span>
+    <span class="text-sm text-stone-600">⌕</span>
     <input
       data-slot="command-input"
       id="command-inline"
-      class="w-full border-none bg-transparent text-[0.95rem] text-stone-950 outline-none placeholder:text-stone-400"
+      class="w-full border-none bg-transparent text-[0.95rem] text-stone-950 outline-none placeholder:text-stone-600"
       placeholder="Search commands..."
     />
   </div>
   <div data-slot="command-list" class="max-h-72 overflow-auto p-1.5">
-    <div data-slot="command-empty" class="px-3 py-4 text-center text-sm text-stone-500" hidden>No results.</div>
+    <div data-slot="command-empty" class="px-3 py-4 text-center text-sm text-stone-600" hidden>No results.</div>
     <div data-slot="command-group">
-      <div data-slot="command-group-heading" class="px-3 py-2 text-[0.72rem] font-bold uppercase tracking-[0.08em] text-stone-500">
+      <div data-slot="command-group-heading" class="px-3 py-2 text-[0.72rem] font-bold uppercase tracking-[0.08em] text-stone-600">
         Project
       </div>
       <div
@@ -75,7 +75,7 @@ const inlineTailwindCode = `<label for="command-inline" class="mb-2 block text-[
         class="flex cursor-default items-center gap-3 px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
       >
         Open Dashboard
-        <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">↵</span>
+        <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">↵</span>
       </div>
       <div
         data-slot="command-item"
@@ -83,12 +83,12 @@ const inlineTailwindCode = `<label for="command-inline" class="mb-2 block text-[
         class="flex cursor-default items-center gap-3 px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
       >
         Invite Teammate
-        <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">⌘I</span>
+        <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">⌘I</span>
       </div>
     </div>
     <div data-slot="command-separator" class="my-1 h-px bg-stone-300/70"></div>
     <div data-slot="command-group">
-      <div data-slot="command-group-heading" class="px-3 py-2 text-[0.72rem] font-bold uppercase tracking-[0.08em] text-stone-500">
+      <div data-slot="command-group-heading" class="px-3 py-2 text-[0.72rem] font-bold uppercase tracking-[0.08em] text-stone-600">
         Preferences
       </div>
       <div
@@ -97,7 +97,7 @@ const inlineTailwindCode = `<label for="command-inline" class="mb-2 block text-[
         class="flex cursor-default items-center gap-3 px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
       >
         Open Settings
-        <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">⌘,</span>
+        <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">⌘,</span>
       </div>
       <div
         data-slot="command-item"
@@ -170,35 +170,35 @@ const dialogTailwindCode = `<div data-slot="dialog">
       class="overflow-hidden rounded-[1rem] border border-stone-300 bg-[linear-gradient(180deg,#faf9f7_0%,#f2ece4_100%)]"
     >
       <div data-slot="command-input-wrapper" class="flex items-center gap-2 border-b border-stone-300/60 px-4 py-3">
-        <span class="text-sm text-stone-500">⌕</span>
+        <span class="text-sm text-stone-600">⌕</span>
         <input
           data-slot="command-input"
-          class="w-full border-none bg-transparent text-[0.95rem] text-stone-950 outline-none placeholder:text-stone-400"
+          class="w-full border-none bg-transparent text-[0.95rem] text-stone-950 outline-none placeholder:text-stone-600"
           placeholder="Search commands..."
         />
       </div>
       <div data-slot="command-list" class="max-h-72 overflow-auto p-1.5">
-        <div data-slot="command-empty" class="px-3 py-4 text-center text-sm text-stone-500" hidden>No results.</div>
+        <div data-slot="command-empty" class="px-3 py-4 text-center text-sm text-stone-600" hidden>No results.</div>
         <div
           data-slot="command-item"
           class="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
         >
           New Issue
-          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">⌘N</span>
+          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">⌘N</span>
         </div>
         <div
           data-slot="command-item"
           class="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
         >
           Jump to Inbox
-          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">G I</span>
+          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">G I</span>
         </div>
         <div
           data-slot="command-item"
           class="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
         >
           Open Settings
-          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">⌘,</span>
+          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">⌘,</span>
         </div>
       </div>
     </div>
@@ -256,18 +256,18 @@ const dialogTailwindCode = `<div data-slot="dialog">
     class="w-full max-w-[26rem] border border-stone-300 bg-[linear-gradient(180deg,#faf9f7_0%,#f4f0ea_100%)] shadow-[0_18px_40px_rgba(34,27,17,0.08)]"
   >
     <div data-slot="command-input-wrapper" class="flex items-center gap-2 border-b border-stone-300/60 px-4 py-3">
-      <span class="text-sm text-stone-500">⌕</span>
+      <span class="text-sm text-stone-600">⌕</span>
       <input
         data-slot="command-input"
         id="command-inline-tw"
-        class="w-full border-none bg-transparent text-[0.95rem] text-stone-950 outline-none placeholder:text-stone-400"
+        class="w-full border-none bg-transparent text-[0.95rem] text-stone-950 outline-none placeholder:text-stone-600"
         placeholder="Search commands..."
       />
     </div>
     <div data-slot="command-list" class="max-h-72 overflow-auto p-1.5">
-      <div data-slot="command-empty" class="px-3 py-4 text-center text-sm text-stone-500" hidden>No results.</div>
+      <div data-slot="command-empty" class="px-3 py-4 text-center text-sm text-stone-600" hidden>No results.</div>
       <div data-slot="command-group">
-        <div data-slot="command-group-heading" class="px-3 py-2 text-[0.72rem] font-bold uppercase tracking-[0.08em] text-stone-500">
+        <div data-slot="command-group-heading" class="px-3 py-2 text-[0.72rem] font-bold uppercase tracking-[0.08em] text-stone-600">
           Project
         </div>
         <div
@@ -275,7 +275,7 @@ const dialogTailwindCode = `<div data-slot="dialog">
           class="flex cursor-default items-center gap-3 px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
         >
           Open Dashboard
-          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">↵</span>
+          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">↵</span>
         </div>
         <div
           data-slot="command-item"
@@ -283,12 +283,12 @@ const dialogTailwindCode = `<div data-slot="dialog">
           class="flex cursor-default items-center gap-3 px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
         >
           Invite Teammate
-          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">⌘I</span>
+          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">⌘I</span>
         </div>
       </div>
       <div data-slot="command-separator" class="my-1 h-px bg-stone-300/70"></div>
       <div data-slot="command-group">
-        <div data-slot="command-group-heading" class="px-3 py-2 text-[0.72rem] font-bold uppercase tracking-[0.08em] text-stone-500">
+        <div data-slot="command-group-heading" class="px-3 py-2 text-[0.72rem] font-bold uppercase tracking-[0.08em] text-stone-600">
           Preferences
         </div>
         <div
@@ -297,7 +297,7 @@ const dialogTailwindCode = `<div data-slot="dialog">
           class="flex cursor-default items-center gap-3 px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
         >
           Open Settings
-          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">⌘,</span>
+          <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">⌘,</span>
         </div>
         <div
           data-slot="command-item"
@@ -380,35 +380,35 @@ const dialogTailwindCode = `<div data-slot="dialog">
         class="overflow-hidden rounded-[1rem] border border-stone-300 bg-[linear-gradient(180deg,#faf9f7_0%,#f2ece4_100%)]"
       >
         <div data-slot="command-input-wrapper" class="flex items-center gap-2 border-b border-stone-300/60 px-4 py-3">
-          <span class="text-sm text-stone-500">⌕</span>
+          <span class="text-sm text-stone-600">⌕</span>
           <input
             data-slot="command-input"
-            class="w-full border-none bg-transparent text-[0.95rem] text-stone-950 outline-none placeholder:text-stone-400"
+            class="w-full border-none bg-transparent text-[0.95rem] text-stone-950 outline-none placeholder:text-stone-600"
             placeholder="Search commands..."
           />
         </div>
         <div data-slot="command-list" class="max-h-72 overflow-auto p-1.5">
-          <div data-slot="command-empty" class="px-3 py-4 text-center text-sm text-stone-500" hidden>No results.</div>
+          <div data-slot="command-empty" class="px-3 py-4 text-center text-sm text-stone-600" hidden>No results.</div>
           <div
             data-slot="command-item"
             class="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
           >
             New Issue
-            <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">⌘N</span>
+            <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">⌘N</span>
           </div>
           <div
             data-slot="command-item"
             class="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
           >
             Jump to Inbox
-            <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">G I</span>
+            <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">G I</span>
           </div>
           <div
             data-slot="command-item"
             class="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-stone-950 data-[selected]:bg-stone-200"
           >
             Open Settings
-            <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-500">⌘,</span>
+            <span data-slot="command-shortcut" class="ml-auto text-[0.72rem] uppercase tracking-[0.08em] text-stone-600">⌘,</span>
           </div>
         </div>
       </div>
@@ -456,7 +456,7 @@ const dialogTailwindCode = `<div data-slot="dialog">
   }
 
   .command-search-icon {
-    color: #8a7b6b;
+    color: #706154;
     font-size: 0.9rem;
   }
 
@@ -470,7 +470,7 @@ const dialogTailwindCode = `<div data-slot="dialog">
   }
 
   .command-input::placeholder {
-    color: #9d9186;
+    color: #706154;
   }
 
   .command-list {
@@ -485,7 +485,7 @@ const dialogTailwindCode = `<div data-slot="dialog">
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #8a7b6b;
+    color: #706154;
   }
 
   .command-item {
@@ -503,7 +503,7 @@ const dialogTailwindCode = `<div data-slot="dialog">
 
   .command-shortcut {
     margin-left: auto;
-    color: #8a7b6b;
+    color: #706154;
     font-size: 0.72rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -522,7 +522,7 @@ const dialogTailwindCode = `<div data-slot="dialog">
   .command-empty {
     padding: 0.9rem;
     text-align: center;
-    color: #8a7b6b;
+    color: #706154;
     font-size: 0.9rem;
   }
 

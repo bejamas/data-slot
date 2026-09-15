@@ -1,6 +1,12 @@
 @import "tw-animate-css";
 @source "./.generated/examples";
 
+/* Legacy demo utilities that are not part of Blume's theme. */
+@theme {
+  --color-bg: #faf9f7;
+  --color-text: #1a1a1a;
+}
+
 :root {
   --blume-background: #faf9f7;
   --blume-foreground: #1a1a1a;
@@ -43,6 +49,7 @@ body { font-size: 14px; }
 [data-blume-nav-drawer] a[aria-current='page'] { background: var(--blume-muted); box-shadow: inset 2px 0 var(--blume-foreground); }
 blume-toc { font-size: 11px; line-height: 1.65; }
 blume-toc a { padding-block: 5px; }
+[data-blume-search-dialog] mark { color: var(--blume-foreground); }
 .ds-package { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 11px; padding-top: 16px; color: var(--blume-muted-foreground); }
 .ds-package code { padding: 4px 8px; background: var(--blume-muted); border: 1px dashed var(--blume-border); }
 .ds-package a { text-decoration: none; }
@@ -55,9 +62,35 @@ blume-toc a { padding-block: 5px; }
 .ds-style-options { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--blume-border); background: var(--blume-muted); }
 .ds-style-options button { font: inherit; font-size: 10px; padding: 4px 9px; cursor: pointer; color: var(--blume-muted-foreground); }
 .ds-style-options button[aria-pressed='true'] { background: var(--blume-background); color: var(--blume-foreground); box-shadow: 0 1px 2px #00000012; }
-.ds-example button:focus-visible, .ds-source summary:focus-visible { outline: 2px solid #0066cc; outline-offset: 3px; }
+.ds-example :is(button,input,textarea,[tabindex]):focus-visible,
+[data-ds-preview] :focus-visible,
+.ds-source summary:focus-visible { outline: 2px solid #0066cc; outline-offset: 3px; }
 .ds-preview-stage { padding: 36px 28px; min-height: 180px; display: flex; flex-direction: column; justify-content: center; background: #faf9f7; color: #1a1a1a; color-scheme: light; font-family: 'Geist Mono', monospace; font-size: 13px; line-height: 1.65; }
 .ds-preview-stage button { cursor: pointer; }
+.ds-preview-stage, [data-ds-preview] {
+  /* Demos stay light, including utilities whose names overlap Blume tokens. */
+  --blume-background: #faf9f7;
+  --blume-foreground: #1a1a1a;
+  --blume-muted: #666;
+  --blume-muted-foreground: #666;
+  --blume-border: #ccc;
+  --blume-accent: #0066cc;
+  --color-muted: #666;
+  --color-border: #ccc;
+  --color-accent: #0066cc;
+}
+@layer base {
+  [data-ds-preview] {
+    color: #1a1a1a;
+    color-scheme: light;
+    font-family: 'Geist Mono', monospace;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+}
+.ds-example-note { padding: 0 28px 24px; color: var(--blume-muted-foreground); font-size: 12px; overflow-wrap: anywhere; }
+.ds-example-note p { color: inherit; margin-top: 12px; }
+.ds-example-note code { color: var(--blume-foreground); background: var(--blume-muted); }
 .ds-preview-stage button[disabled] { cursor: not-allowed; }
 .ds-preview-stage :is(input,textarea) { max-width: 100%; }
 .ds-preview-stage [data-slot$='overlay'] { z-index: 100; }
@@ -80,7 +113,7 @@ blume-toc a { padding-block: 5px; }
 .ds-copy { padding: 5px 8px; font-size: 10px; cursor: pointer; }
 .ds-copy-status { position: absolute; right: 60px; font-size: 10px; background: var(--blume-muted); }
 .ds-source [data-panel][hidden] { display: none; }
-.ds-source .astro-code { margin: 0; padding: 20px; font-size: 11px; line-height: 1.75; max-height: 460px; overflow: auto; border: 0; border-radius: 0; background: #f0eeeb !important; color-scheme: light; }
+.ds-source .astro-code { margin: 0; padding: 20px; font-size: 11px; line-height: 1.75; max-height: 460px; overflow: auto; border: 0; border-radius: 0; background: #faf9f7 !important; color-scheme: light; }
 .ds-source .astro-code code { font-family: 'Geist Mono', monospace; background: none; padding: 0; }
 @media (min-width: 1024px) {
   [data-blume-doc-grid] { grid-template-columns: 240px minmax(0,1fr); }
@@ -95,6 +128,7 @@ blume-toc a { padding-block: 5px; }
   #blume-content { padding: 24px 18px; }
   .prose { font-size: 13px; }
   .ds-preview-stage { padding: 28px 16px; }
+  .ds-example-note { padding: 0 16px 20px; }
   .ds-package { flex-wrap: wrap; }
   .ds-source .astro-code { padding: 14px; }
 }

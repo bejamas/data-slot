@@ -34,9 +34,18 @@ class ComponentExample extends HTMLElement {
     this.addEventListener('keydown', this.onKeyDown, { signal });
     const component = this.dataset.component as keyof typeof loaders;
     const module = await loaders[component]();
+    const dialog = component === 'command' && this.querySelector('[data-slot="dialog"]')
+      ? await loaders.dialog() : undefined;
     if (signal.aborted) return;
+    // Popup content can move to document.body; keep its preview theme there.
+    this.querySelectorAll<HTMLElement>('.ds-preview-stage [data-slot]').forEach(element => {
+      if (/-(portal|positioner|popup|content)$/.test(element.dataset.slot ?? '')) {
+        element.dataset.dsPreview = '';
+      }
+    });
     // Scope discovery to this example so page chrome never gets initialized.
     this.controllers = module.create(this);
+    if (dialog) this.controllers.push(...dialog.create(this));
     if (component === 'alert-dialog') {
       this.querySelectorAll<HTMLElement>('[data-slot="alert-dialog"]').forEach(root => {
         root.querySelectorAll('[data-demo-alert-confirm]').forEach(button => {

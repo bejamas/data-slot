@@ -32,6 +32,6 @@ export default defineConfig({
   feedback: false,
   lastModified: false,
   toc: { minHeadingLevel: 2, maxHeadingLevel: 3 },
-  markdown: { codeBlocks: { theme: { light: 'vitesse-light', dark: 'vitesse-dark' } } },
+  markdown: { codeBlocks: { theme: { light: 'github-light-high-contrast', dark: 'github-dark-high-contrast' } } },
   seo: { og: { enabled: false } },
 });

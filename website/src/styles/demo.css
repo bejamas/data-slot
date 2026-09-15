@@ -890,6 +890,7 @@ html {
 
 .nav-menu-list {
   display: flex;
+  flex-wrap: wrap;
   list-style: none;
   gap: 0;
   position: relative;
@@ -981,6 +982,7 @@ html {
   box-sizing: border-box;
   width: var(--popup-width);
   height: var(--popup-height);
+  max-height: var(--available-height);
   transform-origin: var(--transform-origin);
   background: var(--bg);
   border-radius: 8px;
@@ -1015,7 +1017,7 @@ html {
 
 .nav-menu-viewport {
   position: relative;
-  overflow: hidden;
+  overflow: auto;
   width: 100%;
   height: 100%;
 }
@@ -1063,7 +1065,8 @@ html {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
-  width: 380px;
+  width: min(380px, calc(100vw - 48px));
+  max-width: 100%;
   padding: 0.75rem;
 }
 
@@ -1071,8 +1074,17 @@ html {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
-  width: 520px;
+  width: min(520px, calc(100vw - 48px));
+  max-width: 100%;
   padding: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .nav-menu-grid-wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 400px) {
+  .nav-menu-grid, .nav-menu-grid-wide { grid-template-columns: 1fr; }
 }
 
 .nav-menu-single {
@@ -1266,6 +1278,7 @@ html.mode-tailwind .preview-css {
 }
 
 .nav-menu-tw-popup {
+  max-height: var(--available-height);
   position: relative;
   box-sizing: border-box;
   transition-property: transform, width, height, opacity !important;
@@ -1292,9 +1305,9 @@ html.mode-tailwind .preview-css {
   transform: scale(0.96);
 }
 
-.preview-tailwind [data-slot="navigation-menu-viewport"] {
+.nav-menu-tw-popup [data-slot="navigation-menu-viewport"] {
   position: relative;
-  overflow: hidden;
+  overflow: auto;
   width: 100%;
   height: 100%;
 }
