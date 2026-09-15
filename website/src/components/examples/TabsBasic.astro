@@ -24,6 +24,7 @@ const cssCode = `<div data-slot="tabs" data-default-value="one">
     border-bottom: 2px solid transparent;
     cursor: pointer;
     color: #666;
+    margin-bottom: 0;
   }
   .tabs-trigger[data-state="active"] {
     color: #1a1a1a;
@@ -35,12 +36,12 @@ const cssCode = `<div data-slot="tabs" data-default-value="one">
 </style>`;
 
 const tailwindCode = `<div data-slot="tabs" data-default-value="one">
-  <div data-slot="tabs-list" class="flex border-b border-gray-300 mb-4">
+  <div data-slot="tabs-list" class="flex border-b border-border mb-4">
     <button
       data-slot="tabs-trigger"
       data-value="one"
-      class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer
-             data-[state=active]:text-gray-900 data-[state=active]:border-gray-900
+      class="px-4 py-2 border-b-2 border-transparent text-muted cursor-pointer
+             data-[state=active]:text-text data-[state=active]:border-text
              data-[state=active]:font-medium"
     >
       Tab One
@@ -48,8 +49,8 @@ const tailwindCode = `<div data-slot="tabs" data-default-value="one">
     <button
       data-slot="tabs-trigger"
       data-value="two"
-      class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer
-             data-[state=active]:text-gray-900 data-[state=active]:border-gray-900
+      class="px-4 py-2 border-b-2 border-transparent text-muted cursor-pointer
+             data-[state=active]:text-text data-[state=active]:border-text
              data-[state=active]:font-medium"
     >
       Tab Two
@@ -107,25 +108,25 @@ console.log(tabs.value); // "css"`}
     </div>
   </div>
   <div slot="preview-tailwind" data-slot="tabs" data-default-value="html" id="tabs-basic-tw">
-    <div data-slot="tabs-list" class="flex border-b border-gray-300 mb-4">
+    <div data-slot="tabs-list" class="flex border-b border-border mb-4">
       <button
         data-slot="tabs-trigger"
         data-value="html"
-        class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer data-[state=active]:text-gray-900 data-[state=active]:border-gray-900 data-[state=active]:font-medium"
+        class="px-4 py-2 border-b-2 border-transparent text-muted cursor-pointer data-[state=active]:text-text data-[state=active]:border-text data-[state=active]:font-medium"
       >
         HTML
       </button>
       <button
         data-slot="tabs-trigger"
         data-value="css"
-        class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer data-[state=active]:text-gray-900 data-[state=active]:border-gray-900 data-[state=active]:font-medium"
+        class="px-4 py-2 border-b-2 border-transparent text-muted cursor-pointer data-[state=active]:text-text data-[state=active]:border-text data-[state=active]:font-medium"
       >
         CSS
       </button>
       <button
         data-slot="tabs-trigger"
         data-value="js"
-        class="px-4 py-2 border-b-2 border-transparent text-gray-500 cursor-pointer data-[state=active]:text-gray-900 data-[state=active]:border-gray-900 data-[state=active]:font-medium"
+        class="px-4 py-2 border-b-2 border-transparent text-muted cursor-pointer data-[state=active]:text-text data-[state=active]:border-text data-[state=active]:font-medium"
       >
         JS
       </button>

@@ -40,7 +40,7 @@ class ComponentExample extends HTMLElement {
     // Popup content can move to document.body; keep its preview theme there.
     this.querySelectorAll<HTMLElement>('.ds-preview-stage [data-slot]').forEach(element => {
       if (/-(portal|positioner|popup|content)$/.test(element.dataset.slot ?? '')) {
-        element.dataset.dsPreview = '';
+        element.dataset.dsPreview = element.closest('.preview-tailwind') ? 'tailwind' : 'css';
       }
     });
     // Scope discovery to this example so page chrome never gets initialized.

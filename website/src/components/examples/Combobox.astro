@@ -46,14 +46,15 @@ const cssCode = `<label for="fruit-combo" class="combobox-field-label">Fruit</la
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #333;
+    color: oklch(37.3% 0.034 259.733);
     margin-bottom: 0.25rem;
+    line-height: 1.25rem;
   }
   .combobox-input-wrapper {
     display: flex;
     align-items: center;
     background: #1a1a1a;
-    min-width: 220px;
+    min-width: 14rem;
   }
   .combobox-input {
     flex: 1;
@@ -63,30 +64,35 @@ const cssCode = `<label for="fruit-combo" class="combobox-field-label">Fruit</la
     border: none;
     outline: none;
     font-size: 0.875rem;
+    line-height: 1.25rem;
   }
-  .combobox-input::placeholder { color: #888; }
+  .combobox-input::placeholder { color: oklch(70.7% 0.022 261.325); }
   .combobox-trigger-btn {
     padding: 0.5rem;
     background: transparent;
-    color: #888;
+    color: oklch(70.7% 0.022 261.325);
     border: none;
     cursor: pointer;
     font-size: 0.75rem;
+    line-height: 1rem;
   }
   .combobox-content {
-    background: #faf9f7;
+    background: #fff;
     border: 1px solid #ccc;
-    min-width: 220px;
-    max-height: 200px;
+    min-width: 14rem;
+    max-height: 12rem;
     overflow-y: auto;
     padding: 0.25rem;
     z-index: 50;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
   .combobox-label {
     padding: 0.375rem 0.5rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #666;
+    color: oklch(44.6% 0.03 256.802);
+    line-height: 1rem;
   }
   .combobox-item {
     display: flex;
@@ -95,6 +101,8 @@ const cssCode = `<label for="fruit-combo" class="combobox-field-label">Fruit</la
     padding: 0.375rem 0.5rem;
     cursor: pointer;
     font-size: 0.875rem;
+    border-radius: 0.25rem;
+    line-height: 1.25rem;
   }
   .combobox-check {
     margin-left: auto;
@@ -104,10 +112,10 @@ const cssCode = `<label for="fruit-combo" class="combobox-field-label">Fruit</la
     visibility: visible;
   }
   .combobox-item[data-highlighted] {
-    background: #e5e5e5;
+    background: oklch(96.7% 0.003 264.542);
   }
   .combobox-item.disabled {
-    color: #aaa;
+    color: oklch(87.2% 0.01 258.338);
     cursor: not-allowed;
   }
   .combobox-empty {
@@ -118,18 +126,18 @@ const cssCode = `<label for="fruit-combo" class="combobox-field-label">Fruit</la
   }
   .combobox-separator {
     height: 1px;
-    background: #ddd;
+    background: oklch(92.8% 0.006 264.531);
     margin: 0.25rem 0;
   }
 </style>`;
 
 const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium text-gray-700 mb-1">Fruit</label>
 <div data-slot="combobox" data-placeholder="Search fruits..." class="relative inline-block">
-  <div class="flex items-center bg-gray-900 min-w-[220px]">
+  <div class="flex items-center bg-text min-w-56">
     <input
       data-slot="combobox-input"
       id="fruit-combo"
-      class="flex-1 px-3 py-2 bg-transparent text-white border-none outline-none text-sm
+      class="flex-1 px-3 py-2 bg-transparent text-bg border-none outline-none text-sm
              placeholder:text-gray-400"
     />
     <button
@@ -139,7 +147,7 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
   </div>
   <div
     data-slot="combobox-content"
-    class="bg-white border border-gray-300 min-w-[220px] max-h-[200px] overflow-y-auto
+    class="bg-white border border-border min-w-56 max-h-48 overflow-y-auto
            p-1 z-50 rounded-lg shadow-lg"
     hidden
   >
@@ -156,27 +164,27 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
           data-value="apple"
           data-label="Apple"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
-                 data-[highlighted]:bg-gray-100"
+                 data-highlighted:bg-gray-100"
         >
-          Apple<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          Apple<span class="ml-auto invisible group-data-selected:visible">✓</span>
         </div>
         <div
           data-slot="combobox-item"
           data-value="banana"
           data-label="Banana"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
-                 data-[highlighted]:bg-gray-100"
+                 data-highlighted:bg-gray-100"
         >
-          Banana<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          Banana<span class="ml-auto invisible group-data-selected:visible">✓</span>
         </div>
         <div
           data-slot="combobox-item"
           data-value="orange"
           data-label="Orange"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
-                 data-[highlighted]:bg-gray-100"
+                 data-highlighted:bg-gray-100"
         >
-          Orange<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          Orange<span class="ml-auto invisible group-data-selected:visible">✓</span>
         </div>
       </div>
       <div data-slot="combobox-separator" class="h-px bg-gray-200 my-1"></div>
@@ -189,18 +197,18 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
           data-value="carrot"
           data-label="Carrot"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
-                 data-[highlighted]:bg-gray-100"
+                 data-highlighted:bg-gray-100"
         >
-          Carrot<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          Carrot<span class="ml-auto invisible group-data-selected:visible">✓</span>
         </div>
         <div
           data-slot="combobox-item"
           data-value="broccoli"
           data-label="Broccoli"
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer
-                 data-[highlighted]:bg-gray-100"
+                 data-highlighted:bg-gray-100"
         >
-          Broccoli<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          Broccoli<span class="ml-auto invisible group-data-selected:visible">✓</span>
         </div>
         <div
           data-slot="combobox-item"
@@ -210,7 +218,7 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
           class="group flex items-center w-full px-2 py-1.5 text-sm rounded
                  text-gray-300 cursor-not-allowed"
         >
-          Spinach (out of stock)<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+          Spinach (out of stock)<span class="ml-auto invisible group-data-selected:visible">✓</span>
         </div>
       </div>
     </div>
@@ -258,11 +266,11 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
   </div>
   <label slot="preview-tailwind" for="combobox-tw" class="block text-sm font-medium text-gray-700 mb-1">Fruit</label>
   <div slot="preview-tailwind" data-slot="combobox" data-placeholder="Search fruits..." class="relative inline-block">
-    <div class="flex items-center bg-gray-900 min-w-[220px]">
+    <div class="flex items-center bg-text min-w-56">
       <input
         data-slot="combobox-input"
         id="combobox-tw"
-        class="flex-1 px-3 py-2 bg-transparent text-white border-none outline-none text-sm placeholder:text-gray-400"
+        class="flex-1 px-3 py-2 bg-transparent text-bg border-none outline-none text-sm placeholder:text-gray-400"
       />
       <button
         data-slot="combobox-trigger"
@@ -271,7 +279,7 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
     </div>
     <div
       data-slot="combobox-content"
-      class="bg-white border border-gray-300 min-w-[220px] max-h-[200px] overflow-y-auto p-1 z-50 rounded-lg shadow-lg"
+      class="bg-white border border-border min-w-56 max-h-48 overflow-y-auto p-1 z-50 rounded-lg shadow-lg"
       hidden
     >
       <div data-slot="combobox-list">
@@ -284,25 +292,25 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
             data-slot="combobox-item"
             data-value="apple"
             data-label="Apple"
-            class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+            class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-highlighted:bg-gray-100"
           >
-            Apple<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+            Apple<span class="ml-auto invisible group-data-selected:visible">✓</span>
           </div>
           <div
             data-slot="combobox-item"
             data-value="banana"
             data-label="Banana"
-            class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+            class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-highlighted:bg-gray-100"
           >
-            Banana<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+            Banana<span class="ml-auto invisible group-data-selected:visible">✓</span>
           </div>
           <div
             data-slot="combobox-item"
             data-value="orange"
             data-label="Orange"
-            class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+            class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-highlighted:bg-gray-100"
           >
-            Orange<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+            Orange<span class="ml-auto invisible group-data-selected:visible">✓</span>
           </div>
         </div>
         <div data-slot="combobox-separator" class="h-px bg-gray-200 my-1"></div>
@@ -312,17 +320,17 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
             data-slot="combobox-item"
             data-value="carrot"
             data-label="Carrot"
-            class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+            class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-highlighted:bg-gray-100"
           >
-            Carrot<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+            Carrot<span class="ml-auto invisible group-data-selected:visible">✓</span>
           </div>
           <div
             data-slot="combobox-item"
             data-value="broccoli"
             data-label="Broccoli"
-            class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-[highlighted]:bg-gray-100"
+            class="group flex items-center w-full px-2 py-1.5 text-sm rounded cursor-pointer data-highlighted:bg-gray-100"
           >
-            Broccoli<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+            Broccoli<span class="ml-auto invisible group-data-selected:visible">✓</span>
           </div>
           <div
             data-slot="combobox-item"
@@ -331,7 +339,7 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
             data-disabled
             class="group flex items-center w-full px-2 py-1.5 text-sm rounded text-gray-300 cursor-not-allowed"
           >
-            Spinach (out of stock)<span class="ml-auto invisible group-data-[selected]:visible">✓</span>
+            Spinach (out of stock)<span class="ml-auto invisible group-data-selected:visible">✓</span>
           </div>
         </div>
       </div>
@@ -347,14 +355,15 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #333;
+    color: oklch(37.3% 0.034 259.733);
     margin-bottom: 0.25rem;
+    line-height: 1.25rem;
   }
   .combobox-input-wrapper {
     display: flex;
     align-items: center;
     background: #1a1a1a;
-    min-width: 220px;
+    min-width: 14rem;
   }
   .combobox-input {
     flex: 1;
@@ -364,30 +373,35 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
     border: none;
     outline: none;
     font-size: 0.875rem;
+    line-height: 1.25rem;
   }
-  .combobox-input::placeholder { color: #888; }
+  .combobox-input::placeholder { color: oklch(70.7% 0.022 261.325); }
   .combobox-trigger-btn {
     padding: 0.5rem;
     background: transparent;
-    color: #888;
+    color: oklch(70.7% 0.022 261.325);
     border: none;
     cursor: pointer;
     font-size: 0.75rem;
+    line-height: 1rem;
   }
   .combobox-content {
-    background: #faf9f7;
+    background: #fff;
     border: 1px solid #ccc;
-    min-width: 220px;
-    max-height: 200px;
+    min-width: 14rem;
+    max-height: 12rem;
     overflow-y: auto;
     padding: 0.25rem;
     z-index: 50;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
   .combobox-label {
     padding: 0.375rem 0.5rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #666;
+    color: oklch(44.6% 0.03 256.802);
+    line-height: 1rem;
   }
   .combobox-item {
     display: flex;
@@ -396,6 +410,8 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
     padding: 0.375rem 0.5rem;
     cursor: pointer;
     font-size: 0.875rem;
+    border-radius: 0.25rem;
+    line-height: 1.25rem;
   }
   .combobox-check {
     margin-left: auto;
@@ -405,10 +421,10 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
     visibility: visible;
   }
   .combobox-item[data-highlighted] {
-    background: #e5e5e5;
+    background: oklch(96.7% 0.003 264.542);
   }
   .combobox-item.disabled {
-    color: #aaa;
+    color: oklch(87.2% 0.01 258.338);
     cursor: not-allowed;
   }
   .combobox-empty {
@@ -419,7 +435,7 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
   }
   .combobox-separator {
     height: 1px;
-    background: #ddd;
+    background: oklch(92.8% 0.006 264.531);
     margin: 0.25rem 0;
   }
 </style>
