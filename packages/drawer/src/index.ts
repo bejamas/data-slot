@@ -31,10 +31,8 @@ export interface DrawerOptions {
   disablePointerDismissal?: boolean;
   closeOnEscape?: boolean;
   swipeDirection?: DrawerSwipeDirection;
-  snapPoints?: DrawerSnapPoint[];
   snapPoint?: DrawerSnapPoint | null;
   defaultSnapPoint?: DrawerSnapPoint | null;
-  snapToSequentialPoints?: boolean;
   triggerId?: string | null;
   defaultTriggerId?: string | null;
   initialFocus?: boolean | string | HTMLElement;
@@ -101,15 +99,8 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
   const direction: DrawerSwipeDirection = ['up', 'down', 'left', 'right'].includes(directionValue ?? '') ? directionValue as DrawerSwipeDirection : 'down';
   const horizontal = direction === 'left' || direction === 'right';
   const sign = direction === 'left' || direction === 'up' ? -1 : 1;
-  let rawPoints: unknown = options.snapPoints;
-  if (rawPoints === undefined) {
-    try { rawPoints = JSON.parse(getDataString(root, 'snapPoints') ?? '[]'); } catch { rawPoints = []; }
-  }
-  const points = Array.isArray(rawPoints) ? rawPoints.map(parseSnapPoint).filter((point): point is DrawerSnapPoint => point !== null) : [];
-  const defaultSnap = options.defaultSnapPoint !== undefined ? options.defaultSnapPoint : parseSnapPoint(getDataString(root, 'defaultSnapPoint')) ?? points[0] ?? null;
-  let currentSnap = options.snapPoint !== undefined ? options.snapPoint : defaultSnap;
-  if (currentSnap !== null && !points.includes(currentSnap)) currentSnap = points[0] ?? null;
-  const sequential = options.snapToSequentialPoints ?? getDataBool(root, 'snapToSequentialPoints') ?? false;
+  const initialSnap = options.snapPoint !== undefined ? options.snapPoint : options.defaultSnapPoint !== undefined ? options.defaultSnapPoint : getDataString(root, 'snapPoint') ?? getDataString(root, 'defaultSnapPoint');
+  let currentSnap = parseSnapPoint(initialSnap);
   const initialFocus = options.initialFocus ?? focusOption(popup, 'initialFocus');
   const finalFocus = options.finalFocus ?? focusOption(popup, 'finalFocus');
   const keepMounted = options.keepMounted ?? (portal ? getDataBool(portal, 'keepMounted') : undefined) ?? false;
@@ -168,8 +159,10 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     visuals.update(opened);
   };
   const size = () => horizontal ? popup.getBoundingClientRect().width || win.innerWidth : popup.getBoundingClientRect().height || win.innerHeight;
-  const pointSize = (point: DrawerSnapPoint) => Math.min(size(), snapPixels(point, horizontal ? viewport?.clientWidth || doc.documentElement.clientWidth || win.innerWidth : viewport?.clientHeight || doc.documentElement.clientHeight || win.innerHeight, parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16));
-  const offset = () => currentSnap === null ? 0 : Math.max(0, size() - pointSize(currentSnap));
+  const visibleSize = () => currentSnap === null ? size() : Math.min(size(), snapPixels(currentSnap,
+    horizontal ? viewport?.clientWidth || doc.documentElement.clientWidth || win.innerWidth : viewport?.clientHeight || doc.documentElement.clientHeight || win.innerHeight,
+    parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16));
+  const offset = () => Math.max(0, size() - visibleSize());
   const measure = () => {
     const rect = popup.getBoundingClientRect();
     popup.style.setProperty('--drawer-height', `${rect.height}px`);
@@ -217,15 +210,16 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
   };
   const animated = [popup, backdrop].filter((element): element is HTMLElement => !!element);
   const presence = animated.map((element) => createPresenceLifecycle({ element, win, onExitComplete: finishExit }));
-  const setSnap = (point: DrawerSnapPoint | null, reason: DrawerChangeReason = 'imperative-action', originalEvent?: Event) => {
-    if (destroyed || point === currentSnap || (point !== null && !points.includes(point))) return;
+  const setSnap = (value: DrawerSnapPoint | null, reason: DrawerChangeReason = 'imperative-action', originalEvent?: Event) => {
+    const point = parseSnapPoint(value);
+    if (destroyed || (value !== null && point === null) || point === currentSnap) return;
     let canceled = false;
     const detail: DrawerSnapChangeDetails = { snapPoint: point, reason, originalEvent, cancel: () => { canceled = true; } };
     const event = new CustomEvent('drawer:beforesnapchange', { bubbles: true, cancelable: true, detail });
     root.dispatchEvent(event);
-    if (event.defaultPrevented || canceled) return;
+    if (event.defaultPrevented || canceled || destroyed) return;
     options.onSnapPointChange?.(point, detail);
-    if (canceled) return;
+    if (canceled || destroyed) return;
     currentSnap = point;
     measure();
     emit(root, 'drawer:snapchange', detail);
@@ -270,6 +264,9 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     held = !next && preventUnmount;
     if (next) {
       previousFocus = doc.activeElement as HTMLElement;
+      // Establish the off-screen styles before mounting or measuring can flush
+      // layout, otherwise the browser starts a transition from the open position.
+      presence.forEach((part) => part.enter());
       if (!mounted) { portalLifecycle.mount(); if (container) container.appendChild(mountElement); mounted = true; }
       for (const element of [portal, viewport, backdrop, popup]) if (element) element.hidden = false;
       stack.open();
@@ -279,7 +276,6 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
       }
       if (keyboardAware && viewport) keyboardCleanup = trackKeyboard(viewport);
       setState(); measure();
-      presence.forEach((part) => part.enter());
       frame(focusInitial);
       frame(() => frame(() => completeOpening(token)));
     } else {
@@ -291,7 +287,6 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
       const outsideTarget = originalEvent?.target as Element | null;
       const preserveOutsideFocus = finalFocus === undefined && (reason === 'focus-out' || (reason === 'outside-press' && modal === false && outsideTarget?.closest?.('button,input,textarea,select,a[href],[tabindex]')));
       if (preserveOutsideFocus) previousFocus = null; else restoreFocus();
-      setSnap(defaultSnap, reason, originalEvent);
     }
     emit(root, 'drawer:change', detail);
   };
@@ -329,8 +324,8 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     visuals.update(opened);
   };
   const moveSwipe = (distance: number) => {
-    const movement = Math.max(-offset(), Math.min(size() - offset(), distance));
-    const progress = Math.min(1, Math.max(0, movement / Math.max(1, size() - offset())));
+    const movement = Math.max(-offset(), Math.min(visibleSize(), distance));
+    const progress = Math.min(1, Math.max(0, movement / Math.max(1, visibleSize())));
     for (const element of [popup, backdrop, viewport]) element?.setAttribute('data-swiping', '');
     popup.style.setProperty(horizontal ? '--drawer-swipe-movement-x' : '--drawer-swipe-movement-y', `${movement * sign}px`);
     for (const element of [popup, backdrop]) element?.style.setProperty('--drawer-swipe-progress', String(progress));
@@ -338,16 +333,9 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
   };
   const releaseSwipe = (distance: number, velocity: number, event: Event) => {
     popup.style.setProperty('--drawer-swipe-strength', String(Math.max(0.1, Math.min(1, 1 / Math.max(1, Math.abs(velocity))))));
-    if (!points.length) {
-      if (distance > size() * 0.35 || (velocity > 0.5 && distance > 12)) update(false, 'swipe', event);
-      return;
-    }
-    const snaps = [{ point: null as DrawerSnapPoint | null, visible: 0 }, ...points.map((point) => ({ point, visible: pointSize(point) }))].sort((a, b) => a.visible - b.visible);
-    const projected = size() - offset() - distance - (sequential ? 0 : velocity * 180);
-    const closest = snaps.reduce((best, snap) => Math.abs(snap.visible - projected) < Math.abs(best.visible - projected) ? snap : best);
-    if (closest.point === null) update(false, 'swipe', event); else setSnap(closest.point, 'swipe', event);
+    if (distance > visibleSize() * 0.35 || (velocity > 0.5 && distance > 12)) update(false, 'swipe', event);
   };
-  cleanups.push(createSwipeGesture({ element: popup, popup, direction, enabled: () => opened && topmost(), size, offset, move: moveSwipe, release: releaseSwipe, reset: resetSwipe }));
+  cleanups.push(createSwipeGesture({ element: popup, popup, direction, enabled: () => opened && topmost(), move: moveSwipe, release: releaseSwipe, reset: resetSwipe }));
   for (const area of swipeAreas) {
     const areaValue = getDataString(area, 'swipeDirection');
     const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' } as const;
@@ -367,7 +355,7 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
       if (opened) { focusInitial(); const token = epoch; frame(() => frame(() => completeOpening(token))); }
     };
     cleanups.push(createSwipeGesture({ element: area, popup, direction: opposite[areaDirection], opening: true,
-      enabled: () => !rejected && !disabled(area) && (openingGesture ? opened : !opened), size, offset,
+      enabled: () => !rejected && !disabled(area) && (openingGesture ? opened : !opened),
       move: (distance, event) => {
         lastEvent = event;
         if (!openingGesture) {
@@ -378,7 +366,7 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
           presence.forEach((part) => part.cleanup());
         }
         area.setAttribute('data-swiping', '');
-        moveSwipe(Math.max(0, size() - offset() + distance));
+        moveSwipe(Math.max(0, visibleSize() + distance));
       },
       release: (distance, velocity, event) => finishArea(!disabled(area) && (-distance > 40 || (-velocity > 0.5 && -distance > 12)), event),
       reset: (event) => { finishArea(false, event); rejected = false; lastEvent = undefined; area.removeAttribute('data-swiping'); },
@@ -393,8 +381,8 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     const detail = event.detail;
     if (!detail || typeof detail !== 'object') return;
     const trigger = typeof detail.triggerId === 'string' ? triggers.find((item) => item.id === detail.triggerId) ?? activeTrigger : activeTrigger;
-    if (typeof detail.open === 'boolean') update(detail.open, 'imperative-action', event, trigger);
     if ('snapPoint' in detail) setSnap(detail.snapPoint, 'imperative-action', event);
+    if (typeof detail.open === 'boolean') update(detail.open, 'imperative-action', event, trigger);
   });
   inbound('drawer:open', (event) => update(true, 'imperative-action', event));
   inbound('drawer:close', (event) => update(false, 'imperative-action', event));

@@ -13,9 +13,9 @@
   },
   {
     "name": "@data-slot/drawer",
-    "size": 7009,
-    "sizeFormatted": "6.8 KB",
-    "description": "Swipeable drawers, snap points"
+    "size": 6812,
+    "sizeFormatted": "6.7 KB",
+    "description": "Swipeable drawers, nested dialogs"
   },
   {
     "name": "@data-slot/dropdown-menu",

@@ -10,7 +10,6 @@
       "name": "drawer",
       "baseUiSources": [
         "packages/react/src/drawer/root/DrawerRoot.test.tsx",
-        "packages/react/src/drawer/root/DrawerSnapPoints.test.tsx",
         "packages/react/src/drawer/swipe-area/DrawerSwipeArea.test.tsx",
         "packages/react/src/drawer/virtual-keyboard-provider/DrawerVirtualKeyboardProvider.test.tsx"
       ],
@@ -18,7 +17,7 @@
         {
           "id": "drawer-cancel-before-change",
           "status": "implemented",
-          "localTest": "packages/drawer/src/index.test.ts::honors canceled changes without mutating focus, snap point or visibility"
+          "localTest": "packages/drawer/src/index.test.ts::honors canceled changes without mutating focus or visibility"
         },
         {
           "id": "drawer-trap-focus-mode",
@@ -29,11 +28,6 @@
           "id": "drawer-touch-scroll-boundary",
           "status": "implemented",
           "localTest": "packages/drawer/src/index.test.ts::preserves native scrolling and claims boundary touch drags only"
-        },
-        {
-          "id": "drawer-sequential-snap-reset",
-          "status": "implemented",
-          "localTest": "packages/drawer/src/index.test.ts::uses drag distance for sequential snaps and resets the snap on close"
         },
         {
           "id": "drawer-software-keyboard-inset",

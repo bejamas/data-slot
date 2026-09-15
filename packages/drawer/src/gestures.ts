@@ -4,10 +4,11 @@ export type DrawerSwipeDirection = 'down' | 'up' | 'left' | 'right';
 export type DrawerSnapPoint = number | string;
 
 export function parseSnapPoint(value: unknown): DrawerSnapPoint | null {
-  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) return value;
-  if (typeof value !== 'string') return null;
-  if (/^\d*\.?\d+(px|rem)$/.test(value) && parseFloat(value) >= 0) return value;
-  const number = Number(value);
+  if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : null;
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const text = value.trim();
+  if (/^\d*\.?\d+(px|rem)$/.test(text)) return text;
+  const number = Number(text);
   return Number.isFinite(number) && number >= 0 ? number : null;
 }
 
@@ -22,8 +23,6 @@ interface GestureOptions {
   direction: DrawerSwipeDirection;
   opening?: boolean;
   enabled(): boolean;
-  size(): number;
-  offset(): number;
   move(distance: number, event: Event): void;
   release(distance: number, velocity: number, event: Event): void;
   reset(event?: Event): void;

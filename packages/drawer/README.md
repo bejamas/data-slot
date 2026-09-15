@@ -1,6 +1,6 @@
 # @data-slot/drawer
 
-Accessible, unstyled drawers for vanilla JavaScript. The component supports modal and non-modal behavior, swipe-to-dismiss, snap points, detached triggers, and nested drawers.
+Accessible, unstyled drawers for vanilla JavaScript. The component supports modal and non-modal behavior, swipe-to-dismiss, a single snap point, detached triggers, and nested drawers.
 
 ## Installation
 
@@ -15,8 +15,7 @@ npm install @data-slot/drawer
   id="filters-drawer"
   data-slot="drawer"
   data-swipe-direction="down"
-  data-snap-points='["160px",0.6,1]'
-  data-default-snap-point="0.6"
+  data-snap-point="0.6"
 >
   <button data-slot="drawer-trigger">Edit filters</button>
 
@@ -44,7 +43,7 @@ npm install @data-slot/drawer
 </script>
 ```
 
-`drawer-popup` is the dialog surface. `drawer-content` is an optional inner content or scroll container.
+`drawer-popup` is the dialog surface. Set its full height or width with CSS. A single optional snap point sets how much of that surface is visible when open. `drawer-content` is an optional inner content or scroll container.
 
 ## API
 
@@ -68,13 +67,11 @@ import { createDrawer } from "@data-slot/drawer";
 const drawer = createDrawer(element, {
   modal: true,
   swipeDirection: "down",
-  snapPoints: ["160px", 0.6, 1],
-  defaultSnapPoint: 0.6,
-  snapToSequentialPoints: true,
+  snapPoint: 0.6,
 });
 
 drawer.open();
-drawer.setSnapPoint(1);
+drawer.setSnapPoint("320px");
 ```
 
 ### Options and root attributes
@@ -86,19 +83,17 @@ drawer.setSnapPoint(1);
 | `disablePointerDismissal` | `data-disable-pointer-dismissal` | `boolean` | `false` | Ignore outside pointer presses. |
 | `closeOnEscape` | `data-close-on-escape` | `boolean` | `true` | Close when `Escape` is pressed. |
 | `swipeDirection` | `data-swipe-direction` | `"down" \| "up" \| "left" \| "right"` | `"down"` | Direction used to dismiss the drawer. |
-| `snapPoints` | `data-snap-points` | `DrawerSnapPoint[]` | — | Snap points as JSON. Numbers from `0` to `1` are viewport fractions, numbers over `1` are pixels, and strings accept `px` or `rem`. |
-| `snapPoint` / `defaultSnapPoint` | `data-default-snap-point` | `DrawerSnapPoint \| null` | first snap point | Initial active snap point. |
-| `snapToSequentialPoints` | `data-snap-to-sequential-points` | `boolean` | `false` | Settle on snap points in sequence instead of skipping points based on release velocity. A sufficiently long drag can still cross more than one point. |
+| `snapPoint` / `defaultSnapPoint` | `data-snap-point` / `data-default-snap-point` | `DrawerSnapPoint \| null` | `null` | Initial single open position. `snapPoint` takes precedence over the default. `null` uses the full CSS size. |
 | `triggerId` / `defaultTriggerId` | `data-default-trigger-id` | `string \| null` | — | Initial detached trigger identifier. |
 | `initialFocus` | popup `data-initial-focus` | `boolean \| string \| HTMLElement` | popup | Choose focus when the drawer opens. |
 | `finalFocus` | popup `data-final-focus` | `boolean \| string \| HTMLElement` | trigger or previous focus | Choose focus when the drawer closes. |
 | `keepMounted` | portal `data-keep-mounted` | `boolean` | `false` | Keep portal content mounted while closed. |
 | `container` | portal `data-container` | `string \| HTMLElement` | `document.body` | Portal destination. |
 | `onOpenChange` | — | `(open, details) => void` | — | Called before committing an open-state change. Call `details.cancel()` to stop it. |
+| `onSnapPointChange` | — | `(snapPoint, details) => void` | — | Called before replacing the single snap point. Call `details.cancel()` to stop it. |
 | `onOpenChangeComplete` | — | `(open) => void` | — | Called when the opening or closing transition completes. |
-| `onSnapPointChange` | — | `(snapPoint, details) => void` | — | Called before committing a snap-point change. Call `details.cancel()` to stop it. |
 
-At runtime a snap point is a number or string. Supported strings use `px` or `rem`. Keep `data-snap-points` valid JSON; for example, `data-snap-points='["160px",0.6,1]'`.
+A snap point is a viewport fraction (`0` to `1`), a pixel number greater than `1`, or a string in `px` or `rem`. It is capped at the popup's CSS size. Only one open position is supported; arrays and sequential snap points are not supported. A swipe returns to that position or dismisses the drawer. Use `setSnapPoint()` or `drawer:set` to replace it at runtime; the value persists across close/open cycles. Options and data attributes are read at initialization.
 
 Popup-specific attributes:
 
@@ -121,10 +116,10 @@ Portal-specific attributes:
 | `open(triggerId?)` | Open the drawer, optionally associating an identified trigger. |
 | `close()` | Close the drawer. |
 | `toggle()` | Toggle the open state. |
-| `setSnapPoint(value)` | Move to a configured snap point. |
+| `setSnapPoint(value)` | Replace the single open position; `null` restores the full CSS size. |
+| `snapPoint` | Current snap point (readonly). |
 | `unmount()` | Unmount closed portal content. |
 | `isOpen` | Current open state (readonly). |
-| `snapPoint` | Current snap point (readonly). |
 | `triggerId` | Trigger associated with the current open cycle (readonly). |
 | `destroy()` | Remove listeners and restore DOM state. |
 
@@ -212,8 +207,8 @@ Serializable data attributes and DOM events make the component usable directly f
 | `drawer:beforechange` | `{ open, reason, trigger, payload, originalEvent?, cancel(), preventUnmountOnClose() }` | yes | Fires before the open state changes. Call `event.preventDefault()` or `detail.cancel()` to cancel it. |
 | `drawer:change` | `{ open, reason, trigger, payload, originalEvent?, cancel(), preventUnmountOnClose() }` | no | Fires after the open state changes. The methods have no effect after the change commits. |
 | `drawer:change-complete` | `{ open }` | no | Fires after the opening or closing transition completes. |
-| `drawer:beforesnapchange` | `{ snapPoint, reason, originalEvent?, cancel() }` | yes | Fires before the snap point changes. Call `event.preventDefault()` or `detail.cancel()` to cancel it. |
-| `drawer:snapchange` | `{ snapPoint, reason, originalEvent?, cancel() }` | no | Fires after the snap point changes. `cancel()` has no effect after the change commits. |
+| `drawer:beforesnapchange` | `{ snapPoint, reason, originalEvent?, cancel() }` | yes | Fires before replacing the single snap point. Cancel with `event.preventDefault()` or `detail.cancel()`. |
+| `drawer:snapchange` | `{ snapPoint, reason, originalEvent?, cancel() }` | no | Fires after the snap point changes. |
 
 Reasons are `trigger-press`, `close-press`, `outside-press`, `escape-key`, `focus-out`, `imperative-action`, `swipe`, or `none`.
 
@@ -222,10 +217,6 @@ Reasons are `trigger-press`, `close-press`, `outside-press`, `escape-key`, `focu
 ```js
 root.addEventListener("drawer:beforechange", (event) => {
   if (!event.detail.open && formIsDirty) event.preventDefault();
-});
-
-root.addEventListener("drawer:snapchange", (event) => {
-  console.log(event.detail.snapPoint);
 });
 ```
 
@@ -254,7 +245,7 @@ Popup and backdrop expose `data-starting-style` and `data-ending-style` for entr
 CSS variables include:
 
 - `--drawer-height` and `--drawer-width`
-- `--drawer-snap-point-offset`
+- `--drawer-snap-point-offset` (signed offset for the configured direction)
 - `--drawer-swipe-movement-x` and `--drawer-swipe-movement-y`
 - `--drawer-swipe-progress` and release `--drawer-swipe-strength` (`0.1` to `1`)
 - `--nested-drawers` and `--drawer-frontmost-height`
@@ -266,9 +257,7 @@ CSS variables include:
 }
 
 [data-slot="drawer-popup"] {
-  transform: translateY(
-    calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px))
-  );
+  transform: translateY(calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px)));
 }
 ```
 
@@ -278,4 +267,4 @@ The runtime sets `role="dialog"`, `aria-labelledby`, and `aria-describedby` on t
 
 ## Base UI adaptation
 
-The DOM parts and interaction model follow Base UI Drawer where they translate to static HTML. React-only facilities such as JSX render props, React context, controlled `open`/`snapPoint` values, and React animation internals are represented by ordinary wrappers, data attributes, native pointer gestures, controller methods, callbacks, and cancelable custom events. Initial values in HTML are read once; dispatch `drawer:set` or call the controller to update live state.
+The DOM parts and interaction model follow Base UI Drawer where they translate to static HTML. React-only facilities such as JSX render props, React context, controlled `open` values, and React animation internals are represented by ordinary wrappers, data attributes, native pointer gestures, controller methods, callbacks, and cancelable custom events. Initial values in HTML are read once; dispatch `drawer:set` or call the controller to update live state.

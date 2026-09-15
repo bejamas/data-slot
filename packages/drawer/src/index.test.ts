@@ -20,13 +20,48 @@ function setup(attrs = '', options: Parameters<typeof createDrawer>[1] = {}) {
   const controller = createDrawer(root, options); controllers.push(controller);
   return { root, popup, trigger, close, portal, controller };
 }
-function drag(element: HTMLElement, x: number, y: number, canceled = false) {
-  element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, isPrimary: true, pointerId: 1, clientX: 100, clientY: 100 }));
+function drag(element: HTMLElement, x: number, y: number, canceled = false, duration = 1) {
+  const down = new PointerEvent('pointerdown', { bubbles: true, button: 0, isPrimary: true, pointerId: 1, clientX: 100, clientY: 100 });
+  Object.defineProperty(down, 'timeStamp', { value: 0 });
+  element.dispatchEvent(down);
   document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, pointerId: 1, clientX: 100 + x, clientY: 100 + y }));
-  document.dispatchEvent(new PointerEvent(canceled ? 'pointercancel' : 'pointerup', { bubbles: true, pointerId: 1, clientX: 100 + x, clientY: 100 + y }));
+  const up = new PointerEvent(canceled ? 'pointercancel' : 'pointerup', { bubbles: true, pointerId: 1, clientX: 100 + x, clientY: 100 + y });
+  Object.defineProperty(up, 'timeStamp', { value: duration });
+  document.dispatchEvent(up);
 }
 
 describe('Drawer', () => {
+  it('establishes entry styles before measuring a newly visible drawer', async () => {
+    const { popup, portal, controller } = setup();
+    const backdrop = portal.querySelector<HTMLElement>('[data-slot="drawer-backdrop"]')!;
+    const measure = popup.getBoundingClientRect.bind(popup);
+    const visibleMeasurements: boolean[] = [];
+    const recordMeasurement = () => {
+      if (!popup.hidden) {
+        visibleMeasurements.push(
+          popup.hasAttribute('data-starting-style') && backdrop.hasAttribute('data-starting-style'),
+        );
+      }
+      return measure();
+    };
+
+    for (let cycle = 0; cycle < 2; cycle++) {
+      visibleMeasurements.length = 0;
+      popup.getBoundingClientRect = recordMeasurement;
+      controller.open();
+      expect(visibleMeasurements.length).toBeGreaterThan(0);
+      expect(visibleMeasurements.every(Boolean)).toBe(true);
+      // Only inspect synchronous opening measurements, before the entry frames run.
+      popup.getBoundingClientRect = measure;
+      await tick();
+      expect(popup.hasAttribute('data-starting-style')).toBe(false);
+      expect(backdrop.hasAttribute('data-starting-style')).toBe(false);
+      controller.close();
+      await tick();
+      expect(popup.hidden).toBe(true);
+    }
+  });
+
   it('announces only the active trigger and allows canceling payload changes while open', () => {
     document.body.innerHTML = markup('data-modal="false"');
     const root = document.getElementById('drawer')!;
@@ -69,12 +104,13 @@ describe('Drawer', () => {
     expect(popup.hidden).toBe(true);
     expect(document.getElementById('outside')!.hasAttribute('inert')).toBe(false);
   });
-  it('honors canceled changes without mutating focus, snap point or visibility', () => {
-    const { root, popup, controller } = setup('data-snap-points="[0.5,1]"');
-    controller.open(); controller.setSnapPoint(1);
+  it('honors canceled changes without mutating focus or visibility', () => {
+    const { root, popup, controller } = setup();
+    controller.open();
+    popup.focus();
     root.addEventListener('drawer:beforechange', (event) => event.preventDefault());
     controller.close();
-    expect(controller.isOpen).toBe(true); expect(controller.snapPoint).toBe(1); expect(popup.hidden).toBe(false);
+    expect(controller.isOpen).toBe(true); expect(document.activeElement).toBe(popup); expect(popup.hidden).toBe(false);
   });
   it('exposes reason, original event, payload and callback cancellation', () => {
     const { root, trigger, controller } = setup('', { onOpenChange: (_open, detail) => detail.cancel() });
@@ -138,16 +174,32 @@ describe('Drawer', () => {
     document.getElementById('detached')!.click(); expect(controller.triggerId).toBe('detached');
     root.dispatchEvent(new CustomEvent('drawer:set', { detail: { open: false } })); expect(controller.isOpen).toBe(false);
   });
-  it('allows canceling snap point changes, and supports fractions/pixels/rem/zero', () => {
-    const { root, popup, controller } = setup(`data-snap-points='[0,0.5,"148px","30rem",1]'`, { defaultSnapPoint: 0.5 });
-    Object.defineProperty(popup, 'getBoundingClientRect', { value: () => ({ height: 800, width: 600 }) });
-    controller.open(); controller.setSnapPoint('148px');
-    expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe('652px');
-    root.addEventListener('drawer:beforesnapchange', (event) => event.preventDefault()); controller.setSnapPoint(1); expect(controller.snapPoint).toBe('148px');
-  });
   for (const [direction, x, y] of [['down', 0, 500], ['up', 0, -500], ['left', -600, 0], ['right', 600, 0]] as const) {
     it(`dismisses by ${direction} swipe`, () => { const { popup, controller } = setup(`data-swipe-direction="${direction}"`); controller.open(); drag(popup, x, y); expect(controller.isOpen).toBe(false); });
+    it(`returns short ${direction} drags to open and dismisses longer drags using the popup size`, () => {
+      const { popup, controller } = setup(`data-swipe-direction="${direction}"`);
+      Object.defineProperty(popup, 'getBoundingClientRect', { value: () => ({ height: 400, width: 400 }) });
+      controller.open();
+      const dx = Math.sign(x);
+      const dy = Math.sign(y);
+      drag(popup, dx * 100, dy * 100, false, 1000);
+      expect(controller.isOpen).toBe(true);
+      expect(popup.style.getPropertyValue('--drawer-swipe-movement-x')).toBe('0px');
+      expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('0px');
+      expect(popup.hasAttribute('data-swiping')).toBe(false);
+      drag(popup, dx * 160, dy * 160, false, 1000);
+      expect(controller.isOpen).toBe(false);
+    });
   }
+  it('returns to open when swipe dismissal is canceled', () => {
+    const { root, popup, controller } = setup();
+    controller.open();
+    root.addEventListener('drawer:beforechange', (event) => event.preventDefault());
+    drag(popup, 0, 700);
+    expect(controller.isOpen).toBe(true);
+    expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('0px');
+    expect(popup.hasAttribute('data-swiping')).toBe(false);
+  });
   it('ignores cross-axis, interactive descendants and pointer cancellation', () => {
     const { popup, controller } = setup(); controller.open(); drag(popup, 600, 2); expect(controller.isOpen).toBe(true);
     drag(popup.querySelector('input')!, 0, 700); expect(controller.isOpen).toBe(true);
@@ -184,14 +236,6 @@ it('preserves native scrolling and claims boundary touch drags only', () => {
   touch('touchstart', 100, content);
   expect(touch('touchmove', 600, content).defaultPrevented).toBe(true);
   touch('touchend', 600, content); expect(controller.isOpen).toBe(false);
-});
-
-it('uses drag distance for sequential snaps and resets the snap on close', () => {
-  const { controller, popup } = setup(`data-snap-points='[0.25,0.5,1]' data-snap-to-sequential-points`, { defaultSnapPoint: 1 });
-  Object.defineProperty(popup, 'getBoundingClientRect', { value: () => ({ height: window.innerHeight, width: 600 }) });
-  controller.open(); drag(popup, 0, window.innerHeight * 0.49);
-  expect(controller.snapPoint).toBe(0.5); expect(controller.isOpen).toBe(true);
-  controller.close(); expect(controller.snapPoint).toBe(1);
 });
 
 it('opens from a detached edge swipe surface and ignores disabled swipe areas', () => {
@@ -283,4 +327,125 @@ it('honors canceled live swipe opening and disabling an active edge gesture', ()
   area.dataset.disabled = '';
   document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 22, clientY: 200 }));
   expect(controller.isOpen).toBe(false); expect(area.hasAttribute('data-swiping')).toBe(false);
+});
+
+
+describe('single drawer snap point', () => {
+  it('supports fractions, pixels, rem, zero and clearing the point', () => {
+    const { root, popup, controller } = setup('data-snap-point="0.5"');
+    const viewport = popup.parentElement!;
+    Object.defineProperty(viewport, 'clientHeight', { configurable: true, value: 800 });
+    Object.defineProperty(popup, 'getBoundingClientRect', { value: () => ({ height: 800, width: 600 }) });
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    controller.open();
+    expect(controller.snapPoint).toBe(0.5);
+    expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe('400px');
+    for (const [point, visible] of [[148, 148], ['148px', 148], ['10rem', 10 * rem], [0, 0], [1, 800], [1000, 800], [null, 800]] as const) {
+      controller.setSnapPoint(point);
+      expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe(`${800 - visible}px`);
+      expect(controller.snapPoint).toBe(point);
+    }
+    expect(root.hasAttribute('data-snap-point')).toBe(false);
+  });
+
+  it('recalculates a fractional point when the viewport resizes', () => {
+    const { popup, controller } = setup('', { snapPoint: 0.5 });
+    const viewport = popup.parentElement!;
+    let viewportHeight = 800;
+    Object.defineProperty(viewport, 'clientHeight', { get: () => viewportHeight });
+    Object.defineProperty(popup, 'getBoundingClientRect', { value: () => ({ height: 800, width: 600 }) });
+    controller.open();
+    expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe('400px');
+    viewportHeight = 600;
+    window.dispatchEvent(new Event('resize'));
+    expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe('500px');
+  });
+
+  it('opens from an edge using the visible height of the single point', () => {
+    document.body.innerHTML = `<div data-slot="drawer-swipe-area" data-drawer-target="drawer" id="edge"></div>${markup('data-snap-point="200px"')}`;
+    const root = document.getElementById('drawer')!;
+    const popup = root.querySelector<HTMLElement>('[data-slot="drawer-popup"]')!;
+    Object.defineProperty(popup, 'getBoundingClientRect', { value: () => ({ height: 800, width: 600 }) });
+    const controller = createDrawer(root); controllers.push(controller);
+    const area = document.getElementById('edge')!;
+    const pointer = (type: string, y: number) => area.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, isPrimary: true, pointerId: 31, clientX: 100, clientY: y }));
+    pointer('pointerdown', 500); pointer('pointermove', 450);
+    expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe('600px');
+    expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('150px');
+    pointer('pointerup', 450);
+    expect(controller.isOpen).toBe(true);
+    expect(controller.snapPoint).toBe('200px');
+    expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('0px');
+  });
+
+  it('uses defaults and gives JavaScript options precedence over HTML', () => {
+    for (const [attrs, options, expected] of [
+      ['data-default-snap-point="0.4"', {}, 0.4],
+      ['data-default-snap-point="0.4" data-snap-point="0.6"', {}, 0.6],
+      ['data-snap-point="0.6"', { defaultSnapPoint: 0.3 }, 0.3],
+      ['data-snap-point="0.6"', { snapPoint: null, defaultSnapPoint: 0.3 }, null],
+    ] as const) {
+      const { controller } = setup(attrs, options);
+      expect(controller.snapPoint).toBe(expected);
+      controller.destroy();
+    }
+  });
+
+  it('replaces the point through inbound events and retains it across reopen', () => {
+    const { root, controller } = setup('', { defaultSnapPoint: 0.5 });
+    const changes: unknown[] = [];
+    root.addEventListener('drawer:snapchange', (event) => changes.push((event as CustomEvent).detail));
+    const event = new CustomEvent('drawer:set', { detail: { open: true, snapPoint: '320px' } });
+    root.dispatchEvent(event);
+    expect(controller.isOpen).toBe(true);
+    expect(controller.snapPoint).toBe('320px');
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ snapPoint: '320px', reason: 'imperative-action', originalEvent: event });
+    controller.close(); controller.open();
+    expect(controller.snapPoint).toBe('320px');
+  });
+
+  it('honors event and callback cancellation without changing the point or offset', () => {
+    const { root, popup, controller } = setup('', { snapPoint: 0.5, onSnapPointChange: (_point, detail) => detail.cancel() });
+    const offset = popup.style.getPropertyValue('--drawer-snap-point-offset');
+    let changes = 0;
+    root.addEventListener('drawer:snapchange', () => changes++);
+    root.addEventListener('drawer:beforesnapchange', (event) => event.preventDefault(), { once: true });
+    controller.setSnapPoint('320px');
+    controller.setSnapPoint(1);
+    expect(controller.snapPoint).toBe(0.5);
+    expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe(offset);
+    expect(changes).toBe(0);
+  });
+
+  it('ignores invalid replacements and does not read multiple snap points', () => {
+    const { root, controller } = setup('data-snap-points="[0.5,1]" data-snap-to-sequential-points');
+    expect(controller.snapPoint).toBeNull();
+    controller.setSnapPoint(0.5);
+    for (const value of [[0.5, 1], -1, NaN, Infinity, '', 'bad', '20%', undefined]) {
+      root.dispatchEvent(new CustomEvent('drawer:set', { detail: { snapPoint: value } }));
+      expect(controller.snapPoint).toBe(0.5);
+    }
+  });
+
+  for (const [direction, dx, dy, sign] of [['down', 0, 1, 1], ['up', 0, -1, -1], ['left', -1, 0, -1], ['right', 1, 0, 1]] as const) {
+    it(`returns to the single ${direction} position and dismisses relative to its visible size`, () => {
+      const { popup, controller } = setup(`data-swipe-direction="${direction}"`, { snapPoint: '200px' });
+      Object.defineProperty(popup, 'getBoundingClientRect', { value: () => ({ height: 800, width: 800 }) });
+      controller.open();
+      expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe(`${600 * sign}px`);
+      drag(popup, dx * 40, dy * 40, false, 1000);
+      expect(controller.isOpen).toBe(true);
+      expect(controller.snapPoint).toBe('200px');
+      drag(popup, -dx * 300, -dy * 300, false, 1000);
+      expect(controller.isOpen).toBe(true);
+      expect(popup.style.getPropertyValue('--drawer-swipe-movement-x')).toBe('0px');
+      expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('0px');
+      expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe(`${600 * sign}px`);
+      drag(popup, dx * 80, dy * 80, false, 1000);
+      expect(controller.isOpen).toBe(false);
+      controller.open();
+      expect(controller.snapPoint).toBe('200px');
+    });
+  }
 });

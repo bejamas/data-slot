@@ -19,7 +19,7 @@ interface PackageInfo {
 // Package descriptions
 const descriptions: Record<string, string> = {
   dialog: "Modal dialogs, focus trap",
-  drawer: "Swipeable drawers, snap points",
+  drawer: "Swipeable drawers, nested dialogs",
   "alert-dialog": "Blocking confirmation dialogs",
   tabs: "Tabbed interfaces, kbd nav",
   accordion: "Collapsible sections",

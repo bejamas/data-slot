@@ -27,7 +27,7 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 | `@data-slot/tooltip` | 2.2 KB | Hover/focus tooltips |
 | `@data-slot/popover` | 2.0 KB | Anchored floating content |
 | `@data-slot/dialog` | 1.9 KB | Modal dialogs with focus management |
-| `@data-slot/drawer` | 6.8 KB | Swipeable drawers with snap points |
+| `@data-slot/drawer` | 6.7 KB | Swipeable drawers with nested dialogs |
 | `@data-slot/alert-dialog` | 1.8 KB | Blocking confirmation dialogs |
 | `@data-slot/switch` | 1.8 KB | Form-ready on/off switch |
 | `@data-slot/toggle-group` | 1.7 KB | Single/multi toggle groups |
