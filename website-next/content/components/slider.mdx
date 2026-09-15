@@ -5,9 +5,13 @@ description: A control for choosing a numeric value or range by dragging a thumb
 
 <PackageInfo name="slider" />
 
+```bash
+npm install @data-slot/slider
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+The thumb count defines the slider: one thumb for a single value, two for a range. `slider-control` is an optional wrapper for when you need another box to style.
 
 ```html
 <!-- Single value slider -->
@@ -40,24 +44,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/slider`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-### Basic usage
+### Drag to set a value
 
 <Example name="slider" />
 
-### Disabled slider
+### Disabled state
 
-Use data-disabled to keep values visible while preventing user changes.
+`data-disabled` keeps the current value visible but blocks dragging and keyboard changes.
 
 <Example name="slider" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/slider
-```
 
 <include>../_generated/slider-api.md</include>

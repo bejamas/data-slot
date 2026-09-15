@@ -5,9 +5,13 @@ description: A searchable command list for navigating actions with the keyboard.
 
 <PackageInfo name="command" />
 
+```bash
+npm install @data-slot/command
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+Item values are inferred from their text, so `command-shortcut` hints never affect search matches. `command-empty` appears when nothing ranks.
 
 ```html
 <div data-slot="command" data-label="Command Menu">
@@ -35,30 +39,22 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/command`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-The modal palettes also use `@data-slot/dialog`. Install both packages to run those examples:
+The modal palette examples also need `@data-slot/dialog`:
 
 ```bash
 npm install @data-slot/command @data-slot/dialog
 ```
 
-### Basic usage
+### Inline command list
 
 <Example name="command" />
 
 ### Loop keyboard navigation
 
-Use data-loop to wrap keyboard navigation from the last item to the first.
+With `data-loop`, pressing Down on the last item wraps back to the first.
 
 <Example name="command" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/command
-```
 
 <include>../_generated/command-api.md</include>

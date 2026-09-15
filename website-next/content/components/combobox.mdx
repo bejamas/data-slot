@@ -5,9 +5,13 @@ description: An input with a filterable list of suggestions and keyboard selecti
 
 <PackageInfo name="combobox" />
 
+```bash
+npm install @data-slot/combobox
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+The input and content are required; the rest is optional. `combobox-trigger` toggles the popup, `combobox-empty` appears when nothing matches, and `combobox-item-indicator` is hidden automatically on unselected items.
 
 ```html
 <div data-slot="combobox" data-placeholder="Search fruits...">
@@ -36,24 +40,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/combobox`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-### Basic usage
+### Filter as you type
 
 <Example name="combobox" />
 
 ### Choose an initial value
 
-Set data-default-value to select a matching option when the component initializes.
+`data-default-value="banana"` preselects the matching option on load.
 
 <Example name="combobox" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/combobox
-```
 
 <include>../_generated/combobox-api.md</include>

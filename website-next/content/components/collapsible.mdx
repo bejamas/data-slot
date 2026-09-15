@@ -5,9 +5,13 @@ description: A disclosure that shows and hides a single section of content.
 
 <PackageInfo name="collapsible" />
 
+```bash
+npm install @data-slot/collapsible
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+Both parts are required: a `collapsible-trigger` to toggle, and a `collapsible-content` to reveal.
 
 ```html
 <div data-slot="collapsible">
@@ -18,24 +22,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/collapsible`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-### Basic usage
+### Show and hide a section
 
 <Example name="collapsible" />
 
 ### Open by default
 
-Use data-default-open to show the content on first render.
+Start expanded with `data-default-open`.
 
 <Example name="collapsible" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/collapsible
-```
 
 <include>../_generated/collapsible-api.md</include>

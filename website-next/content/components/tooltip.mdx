@@ -5,9 +5,13 @@ description: A short, non-interactive description revealed on hover or keyboard 
 
 <PackageInfo name="tooltip" />
 
+```bash
+npm install @data-slot/tooltip
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+A trigger and its content. `tooltip-arrow` is optional and gets positioned against the trigger for you.
 
 ```html
 <div data-slot="tooltip">
@@ -21,24 +25,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/tooltip`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-### Basic usage
+### Describe a control
 
 <Example name="tooltip" />
 
 ### Position below the trigger
 
-Set data-side to choose where the tooltip appears relative to its trigger.
+`data-side="bottom"` puts the tooltip below the trigger.
 
 <Example name="tooltip" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/tooltip
-```
 
 <include>../_generated/tooltip-api.md</include>

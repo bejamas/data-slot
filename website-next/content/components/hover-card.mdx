@@ -5,9 +5,13 @@ description: A preview of linked content shown on hover or keyboard focus.
 
 <PackageInfo name="hover-card" />
 
+```bash
+npm install @data-slot/hover-card
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+A trigger and its content. The card opens on hover and on keyboard focus after a short delay, so keep the trigger focusable.
 
 ```html
 <div data-slot="hover-card">
@@ -18,24 +22,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/hover-card`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-### Basic usage
+### Preview on hover
 
 <Example name="hover-card" />
 
 ### Position above the trigger
 
-Choose a preferred side with data-side. Collision handling keeps the card in view.
+`data-side="top"` is a preference, not a rule — the card flips to stay in the viewport.
 
 <Example name="hover-card" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/hover-card
-```
 
 <include>../_generated/hover-card-api.md</include>

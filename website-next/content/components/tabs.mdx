@@ -5,9 +5,13 @@ description: Layered panels of content, with one panel displayed at a time.
 
 <PackageInfo name="tabs" />
 
+```bash
+npm install @data-slot/tabs
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+Triggers and panels are paired by matching `data-value`. The indicator is optional.
 
 ```html
 <div data-slot="tabs" data-default-value="initial-tab">
@@ -22,24 +26,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/tabs`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-### Basic tabs
+### Switch between panels
 
 <Example name="tabs" />
 
 ### Animated indicator
 
-Follow the active trigger with an indicator using the CSS variables exposed by the tab list.
+The tab list publishes `--active-tab-left` and `--active-tab-width`, so a plain element can slide under the active trigger.
 
 <Example name="tabs" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/tabs
-```
 
 <include>../_generated/tabs-api.md</include>

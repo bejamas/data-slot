@@ -5,9 +5,13 @@ description: A group of radio controls for choosing exactly one value.
 
 <PackageInfo name="radio-group" />
 
+```bash
+npm install @data-slot/radio-group
+```
+
 ## Anatomy
 
-Assemble the component with HTML elements and `data-slot` attributes. Each slot connects a part of the markup to its behavior.
+Each item needs a `data-value`. Add `data-name` to the root and the controller generates hidden native radios that share that field name, so the group submits and resets with the form.
 
 ```html
 <div data-slot="radio-group" data-default-value="pro" data-name="plan">
@@ -29,24 +33,16 @@ Assemble the component with HTML elements and `data-slot` attributes. Each slot 
 
 ## Examples
 
-Install `@data-slot/radio-group`, then initialize the examples with the JavaScript shown in the **index.js** tab. Choose **CSS** for class-based styles or **Tailwind** for utility classes.
-
-### Basic usage
+### Pick one option
 
 <Example name="radio-group" />
 
-### Disabled group
+### Disabled state
 
-Disable the entire group with data-disabled while keeping the current selection visible.
+`data-disabled` on the root disables every item while the current selection stays visible.
 
 <Example name="radio-group" variant="extra" />
 
 ## API reference
-
-### Installation
-
-```bash
-npm install @data-slot/radio-group
-```
 
 <include>../_generated/radio-group-api.md</include>
