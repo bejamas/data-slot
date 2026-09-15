@@ -205,6 +205,8 @@ Serializable data attributes and DOM events make the component usable directly f
 
 Reasons are `trigger-press`, `close-press`, `outside-press`, `escape-key`, `focus-out`, `imperative-action`, `swipe`, or `none`.
 
+Open-state requests made inside change listeners or `onOpenChange` run after the current change finishes. If a callback makes several requests, the latest state and trigger win. Requesting the same state and trigger as the current change does not repeat its callbacks; use `details.cancel()` to cancel that change.
+
 `preventUnmountOnClose()` on `drawer:beforechange` keeps the portal mounted for the current close. This is useful when an application needs to coordinate its own exit animation.
 
 ```js

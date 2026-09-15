@@ -1,6 +1,7 @@
 import { afterEach, expect, it } from 'bun:test';
 import { createDialog } from '@data-slot/dialog';
 import { createDrawer, type DrawerChangeDetails } from './index';
+import { getScrollLockCount } from '../../core/src/scroll';
 
 const controllers: Array<{ destroy(): void }> = [];
 const tick = () => new Promise((resolve) => setTimeout(resolve, 50));
@@ -25,6 +26,84 @@ function setup(options: Parameters<typeof createDrawer>[1] = {}) {
   const drawer = createDrawer(root, options);
   controllers.push(drawer);
   return { drawer, popup, backdrop, viewport, indent };
+}
+
+for (const source of ['event', 'callback'] as const) {
+  it(`acquires resources once when a before-change ${source} reenters open`, async () => {
+    const locks = getScrollLockCount();
+    let calls = 0;
+    const onOpen = (open: boolean) => {
+      if (open) { calls++; drawer.open(); }
+    };
+    const { drawer, popup } = setup(source === 'callback' ? { onOpenChange: onOpen } : {});
+    if (source === 'event') document.getElementById('drawer')!.addEventListener('drawer:beforechange', (event) => onOpen((event as CustomEvent<DrawerChangeDetails>).detail.open));
+    drawer.open();
+    expect(calls).toBe(1);
+    expect(getScrollLockCount()).toBe(locks + 1);
+    drawer.close();
+    await tick();
+    drawer.destroy();
+    expect(getScrollLockCount()).toBe(locks);
+    expect(popup.hidden).toBe(true);
+    expect(document.getElementById('outside')!.hasAttribute('inert')).toBe(false);
+  });
+}
+
+it('finishes an opening commit before applying a callback-requested close', async () => {
+  const locks = getScrollLockCount();
+  const { drawer, popup } = setup({ onOpenChange(open) { if (open) drawer.close(); } });
+  const changes: boolean[] = [];
+  document.getElementById('drawer')!.addEventListener('drawer:change', (event) => {
+    const open = (event as CustomEvent<DrawerChangeDetails>).detail.open;
+    expect(drawer.isOpen).toBe(open);
+    changes.push(open);
+  });
+  drawer.open();
+  await tick();
+  expect(changes).toEqual([true, false]);
+  expect(drawer.isOpen).toBe(false);
+  expect(popup.hidden).toBe(true);
+  expect(document.activeElement).not.toBe(popup);
+  expect(getScrollLockCount()).toBe(locks);
+});
+
+it('keeps the latest requested state when callbacks close then reaffirm open', () => {
+  const { drawer } = setup({ onOpenChange(open) { if (open) { drawer.close(); drawer.open(); } } });
+  drawer.open();
+  expect(drawer.isOpen).toBe(true);
+});
+
+it('changes the requested trigger after opening without reacquiring resources', () => {
+  const locks = getScrollLockCount();
+  document.body.innerHTML = '<div data-slot="drawer"><button id="first" data-slot="drawer-trigger"></button><button id="second" data-slot="drawer-trigger"></button><section data-slot="drawer-popup"></section></div>';
+  const root = document.querySelector('[data-slot="drawer"]')!;
+  const drawer = createDrawer(root, { onOpenChange(open, details) {
+    if (open && details.trigger?.id === 'first') drawer.open('second');
+  } });
+  controllers.push(drawer);
+  drawer.open('first');
+  expect(drawer.triggerId).toBe('second');
+  expect(document.getElementById('first')!.getAttribute('aria-expanded')).toBe('false');
+  expect(document.getElementById('second')!.getAttribute('aria-expanded')).toBe('true');
+  expect(getScrollLockCount()).toBe(locks + 1);
+  drawer.destroy();
+  expect(getScrollLockCount()).toBe(locks);
+});
+
+for (const action of ['cancel', 'destroy'] as const) {
+  it(`does not acquire resources when a reentrant opening callback requests ${action}`, () => {
+    const locks = getScrollLockCount();
+    const { drawer, popup } = setup({ onOpenChange(open, details) {
+      if (!open) return;
+      drawer.open();
+      if (action === 'cancel') details.cancel();
+      else drawer.destroy();
+    } });
+    drawer.open();
+    expect(drawer.isOpen).toBe(false);
+    expect(popup.hidden).toBe(true);
+    expect(getScrollLockCount()).toBe(locks);
+  });
 }
 
 it('keeps a newer dialog usable and returns focus and isolation to the drawer', async () => {

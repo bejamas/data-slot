@@ -5,7 +5,8 @@ import {
   getTabbables, containsWithPortals,
 } from '@data-slot/core';
 import { createSwipeGesture, parseSnapPoint, snapPixels, type DrawerSnapPoint, type DrawerSwipeDirection } from './gestures';
-import { registerVisuals, trackKeyboard } from './environment';
+import { trackKeyboard } from './environment';
+import { registerVisuals } from './visuals';
 export type { DrawerSnapPoint, DrawerSwipeDirection } from './gestures';
 
 export type DrawerChangeReason = 'trigger-press' | 'close-press' | 'outside-press' | 'escape-key' | 'focus-out' | 'imperative-action' | 'swipe' | 'none';
@@ -164,7 +165,7 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     popup.style.setProperty('--drawer-width', `${rect.width}px`);
     popup.style.setProperty('--drawer-snap-point-offset', `${offset() * sign}px`);
     if (currentSnap === null) root.removeAttribute('data-snap-point'); else root.setAttribute('data-snap-point', String(currentSnap));
-    visuals.refresh();
+    visuals.refresh(rect.height);
   };
 
   const inside = (target: Node | null) => containsWithPortals(popup, target);
@@ -232,7 +233,7 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
       event.preventDefault(); focusElement(event.shiftKey ? last : first);
     }
   } });
-  const update = (next: boolean, reason: DrawerChangeReason = 'imperative-action', originalEvent?: Event, trigger = activeTrigger) => {
+  const commitOpen = ({ next, reason, originalEvent, trigger }: OpenRequest) => {
     if (destroyed) return;
     const changingTrigger = opened && next && trigger !== activeTrigger;
     if (opened === next && !changingTrigger) return;
@@ -283,6 +284,35 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
       if (preserveOutsideFocus) previousFocus = null; else restoreFocus();
     }
     emit(root, 'drawer:change', detail);
+  };
+  interface OpenRequest {
+    next: boolean;
+    reason: DrawerChangeReason;
+    originalEvent?: Event;
+    trigger: HTMLElement | null;
+  }
+  let applyingOpen: OpenRequest | null = null;
+  let queuedOpen: OpenRequest | null = null;
+  const update = (next: boolean, reason: DrawerChangeReason = 'imperative-action', originalEvent?: Event, trigger = activeTrigger) => {
+    if (destroyed) return;
+    // Reaffirming the in-flight state must not repeat its cancellable callbacks.
+    if (applyingOpen?.next === next && applyingOpen.trigger === trigger) {
+      queuedOpen = null;
+      return;
+    }
+    queuedOpen = { next, reason, originalEvent, trigger };
+    if (applyingOpen) return;
+    try {
+      // Finish each commit before applying the latest request made by its callbacks.
+      while (queuedOpen && !destroyed) {
+        applyingOpen = queuedOpen;
+        queuedOpen = null;
+        commitOpen(applyingOpen);
+      }
+    } finally {
+      applyingOpen = null;
+      queuedOpen = null;
+    }
   };
   cleanups.push(createDismissLayer({ root, isOpen: () => opened, closeOnEscape, closeOnClickOutside: pointerDismissal,
     isInside: (target) => inside(target) || triggers.some((trigger) => trigger.contains(target)),
