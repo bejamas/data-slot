@@ -7,9 +7,10 @@ import "./drawer.css";
 const css = {
   trigger: "drawer-demo-trigger",
   backdrop: "drawer-demo-backdrop",
-  viewport: "drawer-demo-viewport",
-  popup: "drawer-demo-popup",
-  content: "drawer-demo-content",
+  viewport: "drawer-demo-viewport drawer-sheet-viewport",
+  popup: "drawer-demo-popup drawer-sheet-popup",
+  content: "drawer-demo-content drawer-sheet-content",
+  handle: "drawer-sheet-handle",
   title: "drawer-demo-title",
   description: "drawer-demo-description",
   close: "drawer-demo-close",
@@ -17,9 +18,10 @@ const css = {
 const tailwind = {
   trigger: "cursor-pointer border-0 bg-[#1a1a1a] px-4 py-2 text-[#faf9f7]",
   backdrop: "fixed inset-0 z-[110] bg-black/45 opacity-[calc(1-var(--drawer-swipe-progress,0))] transition-opacity duration-300 ease-[ease] motion-reduce:transition-none data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[swiping]:transition-none hidden:hidden",
-  viewport: "pointer-events-none fixed inset-0 z-[111] flex h-dvh w-full justify-end hidden:hidden",
-  popup: "pointer-events-auto flex h-full w-full max-w-sm flex-col border-l border-[#ccc] bg-[#faf9f7] text-[#1a1a1a] shadow-[0_0_50px_rgb(0_0_0/20%)] transition-transform duration-300 ease-[ease] motion-reduce:transition-none [transform:translateX(calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-movement-x,0px)))] data-[starting-style]:[transform:translateX(100%)] data-[ending-style]:[transform:translateX(100%)] data-[swiping]:transition-none hidden:hidden",
-  content: "grid min-h-0 content-start gap-4 overflow-y-auto overscroll-contain p-6",
+  viewport: "pointer-events-none fixed inset-0 z-[111] flex h-dvh w-full items-end justify-center overflow-hidden hidden:hidden",
+  popup: "pointer-events-auto flex h-[80dvh] w-full max-w-lg flex-col rounded-t-2xl border border-[#ccc] bg-[#faf9f7] text-[#1a1a1a] shadow-[0_0_50px_rgb(0_0_0/20%)] transition-transform duration-300 ease-[ease] motion-reduce:transition-none [transform:translateY(calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-movement-y,0px)))] data-[starting-style]:[transform:translateY(100%)] data-[ending-style]:[transform:translateY(100%)] data-[swiping]:transition-none hidden:hidden",
+  handle: "mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-[#ccc]",
+  content: "grid min-h-0 max-h-[calc(100%_-_var(--drawer-snap-point-offset,0px)_-_1rem)] content-start gap-4 overflow-y-auto overscroll-contain p-6",
   title: "m-0 text-lg leading-7 font-bold",
   description: "m-0 text-sm leading-[1.5] text-[#666]",
   close: "cursor-pointer border border-[#ccc] bg-transparent px-3 py-2 hover:bg-[#f0eeeb]",
@@ -27,16 +29,17 @@ const tailwind = {
 
 function markup(mode: "css" | "tailwind") {
   const c = mode === "css" ? css : tailwind;
-  return `<div id="drawer-${mode}" data-slot="drawer" data-swipe-direction="right">
-  <button type="button" data-slot="drawer-trigger" class="${c.trigger}">Open drawer</button>
+  return `<div id="drawer-sheet-${mode}" data-slot="drawer" data-swipe-direction="down" data-snap-point="0.6">
+  <button type="button" data-slot="drawer-trigger" class="${c.trigger}">Open bottom sheet</button>
   <div data-slot="drawer-portal">
     <div data-slot="drawer-backdrop" class="${c.backdrop}" hidden></div>
     <div data-slot="drawer-viewport" class="${c.viewport}" hidden>
       <div data-slot="drawer-popup" class="${c.popup}" hidden>
+        <div class="${c.handle}" aria-hidden="true"></div>
         <div data-slot="drawer-content" class="${c.content}">
-          <h2 data-slot="drawer-title" class="${c.title}">Drawer</h2>
-          <p data-slot="drawer-description" class="${c.description}">This drawer slides in from the right. Swipe right, click outside, or press Escape to close it.</p>
-          <button type="button" data-slot="drawer-close" class="${c.close}">Close drawer</button>
+          <h2 data-slot="drawer-title" class="${c.title}">A little room to focus</h2>
+          <p data-slot="drawer-description" class="${c.description}">This sheet opens to 60% of the viewport. Drag it down to dismiss, or release a short drag to return to its open position.</p>
+          <button type="button" data-slot="drawer-close" class="${c.close}">Got it</button>
         </div>
       </div>
     </div>
@@ -49,12 +52,12 @@ function source(mode: "css" | "tailwind") {
 
 <script type="module">
   import { createDrawer } from "@data-slot/drawer";
-  createDrawer(document.querySelector("#drawer-${mode}"));
+  createDrawer(document.querySelector("#drawer-sheet-${mode}"));
 </script>${mode === "css" ? `\n\n<style>\n${styles}</style>` : ""}`;
 }
 ---
 
-<ExampleBlock label="right-side drawer">
+<ExampleBlock label="bottom sheet with a single snap point">
   <Fragment slot="preview-css" set:html={markup("css")} />
   <Fragment slot="preview-tailwind" set:html={markup("tailwind")} />
   <Code slot="code-css" code={source("css")} lang="html" theme="vitesse-light" />

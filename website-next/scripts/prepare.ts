@@ -16,6 +16,8 @@ for (const component of components) {
     const filename = variant === 'extra' && 'second' in component ? component.second : component.demo;
     let source = await readFile(resolve(repo, `website/src/components/examples/${filename}.astro`), 'utf8');
     source = source.replace('"../ExampleBlock.astro"', '"../../components/ExampleBlock.astro"');
+    // Keep sibling stylesheet imports relative to the original example directory.
+    source = source.replace(/((?:from|import)\s+")\.\//g, '$1../../../website/src/components/examples/');
     source = source.replaceAll('theme="vitesse-light"', 'theme="github-light-high-contrast"');
     // Initialization has its own tab; embedded snippets must not double-bind it.
     source = source.replace(/<script type="module">[\s\S]*?<\/script>/g, '');
@@ -59,7 +61,7 @@ for (const component of components) {
   const readme = await readFile(resolve(repo, `packages/${component.slug}/README.md`), 'utf8');
   // Retain all reference/behavior sections, but avoid repeating introductory demos.
   const sections = readme.split(/^## /m).slice(1);
-  const reference = sections.filter(section => !/^(Installation|Quick Start|Usage|License)\s*\n/.test(section));
+  const reference = sections.filter(section => !/^(Installation|Quick Start|Usage|License)\s*\n/i.test(section));
   const demote = (text: string) => {
     let fenced = false;
     return text.split('\n').map(line => {

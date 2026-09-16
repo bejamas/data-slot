@@ -7,6 +7,7 @@ const loaders = {
   combobox: () => import('../../packages/combobox/dist/index.js'),
   command: () => import('../../packages/command/dist/index.js'),
   dialog: () => import('../../packages/dialog/dist/index.js'),
+  drawer: () => import('../../packages/drawer/dist/index.js'),
   'dropdown-menu': () => import('../../packages/dropdown-menu/dist/index.js'),
   'hover-card': () => import('../../packages/hover-card/dist/index.js'),
   'navigation-menu': () => import('../../packages/navigation-menu/dist/index.js'),
@@ -29,7 +30,7 @@ class ComponentExample extends HTMLElement {
     if (this.abort) return;
     this.abort = new AbortController();
     const { signal } = this.abort;
-    try { this.setStyle(localStorage.getItem('data-slot-docs-style') === 'tailwind' ? 'tailwind' : 'css'); } catch { /* Storage is optional. */ }
+    this.setStyle('css');
     this.addEventListener('click', this.onClick, { signal });
     this.addEventListener('keydown', this.onKeyDown, { signal });
     const component = this.dataset.component as keyof typeof loaders;
@@ -90,7 +91,6 @@ class ComponentExample extends HTMLElement {
     if (!button) return;
     if (button.dataset.style) {
       this.setStyle(button.dataset.style);
-      try { localStorage.setItem('data-slot-docs-style', button.dataset.style); } catch { /* Storage is optional. */ }
       window.dispatchEvent(new Event('resize'));
     }
     if (button.dataset.file) this.setFile(button.dataset.file);

@@ -37,7 +37,7 @@
   background: #faf9f7;
   color: #1a1a1a;
   box-shadow: 0 0 50px rgb(0 0 0 / 20%);
-  transform: translateX(var(--drawer-swipe-movement-x, 0px));
+  transform: translateX(calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-x, 0px)));
   transition: transform 0.3s ease;
 }
 
@@ -69,6 +69,7 @@
 .drawer-demo-title {
   margin: 0;
   font-size: 1.125rem;
+  line-height: 1.75rem;
   font-weight: 700;
 }
 
@@ -95,4 +96,45 @@
 .drawer-demo-viewport[hidden],
 .drawer-demo-popup[hidden] {
   display: none;
+}
+
+/* Bottom sheet: keep its content inside the visible snap-point height. */
+.drawer-sheet-viewport {
+  align-items: end;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.drawer-sheet-popup {
+  width: 100%;
+  max-width: 32rem;
+  height: 80dvh;
+  border: 1px solid #ccc;
+  border-radius: 1rem 1rem 0 0;
+  transform: translateY(calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px)));
+}
+
+.drawer-sheet-popup[data-starting-style],
+.drawer-sheet-popup[data-ending-style] {
+  transform: translateY(100%);
+}
+
+.drawer-sheet-handle {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 0.25rem;
+  margin: 0.75rem auto 0;
+  border-radius: 9999px;
+  background: #ccc;
+}
+
+.drawer-sheet-content {
+  max-height: calc(100% - var(--drawer-snap-point-offset, 0px) - 1rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-demo-popup,
+  .drawer-demo-backdrop {
+    transition: none;
+  }
 }

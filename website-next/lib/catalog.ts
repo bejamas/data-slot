@@ -6,6 +6,7 @@ export const components = [
   { slug: 'combobox', demo: 'Combobox', attrs: 'data-default-value="banana"' },
   { slug: 'command', demo: 'Command', attrs: 'data-loop' },
   { slug: 'dialog', demo: 'Dialog', attrs: 'data-close-on-click-outside="false"' },
+  { slug: 'drawer', demo: 'Drawer', second: 'DrawerSnapPoint' },
   { slug: 'dropdown-menu', demo: 'DropdownMenu', attrs: 'data-align="end"' },
   { slug: 'hover-card', demo: 'HoverCard', attrs: 'data-side="top"' },
   { slug: 'navigation-menu', demo: 'NavigationMenu', attrs: 'data-position-method="fixed"' },
