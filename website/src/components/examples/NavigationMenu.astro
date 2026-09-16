@@ -510,23 +510,6 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
       </div>
     </div>
   </nav>
-  <div slot="note">
-    <p class="mt-3 text-muted">
-      Hover between items. The popup shell animates on full open and close, and panel switches resize the shell with CSS while the content slides.
-    </p>
-    <p class="mt-3 text-muted">
-      CSS variables: <code>--popup-width</code>, <code>--popup-height</code>, <code>--positioner-width</code>, <code>--positioner-height</code>, <code>--available-width</code>, <code>--available-height</code>, <code>--transform-origin</code>.
-    </p>
-    <p class="mt-3 text-muted">
-      Legacy <code>--viewport-width</code> and <code>--viewport-height</code> are still emitted, but the demo uses the popup shell as the canonical sizing surface.
-    </p>
-    <p class="mt-3 text-muted">
-      Use <code>data-align="start|center|end"</code> on items to control alignment.
-    </p>
-    <p class="mt-3 text-muted">
-      For sticky headers, opt into viewport anchoring with <code>data-position-method="fixed"</code> or <code>createNavigationMenu(root, &#123; positionMethod: "fixed" &#125;)</code>.
-    </p>
-  </div>
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
   <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
 </ExampleBlock>

@@ -58,8 +58,6 @@ The examples use standard Tailwind sizing utilities and a shared neutral palette
 }
 ```
 
-Utilities such as `h-(--accordion-panel-height)` and `w-(--active-tab-width)` use measurements supplied by the component. Keep those variables for content-driven heights and indicator positioning.
-
 ### Animation utilities
 
 Examples using `animate-in`, `fade-in`, or accordion animation utilities require `tw-animate-css`:
@@ -72,6 +70,25 @@ npm install tw-animate-css
 @import "tailwindcss";
 @import "tw-animate-css";
 ```
+
+## CSS variables
+
+Components expose measurements as CSS variables for content sizing, indicator positioning, and animation. Use them with `var()` in CSS or Tailwind utilities such as `h-(--accordion-panel-height)` and `w-(--active-tab-width)`.
+
+For navigation menus, style the popup shell with `--popup-width` and `--popup-height`. These measured pixel values let CSS animate size changes when switching panels. Use `--positioner-width` and `--positioner-height` to size the positioner, `--available-width` and `--available-height` to constrain the popup to the available space, and `--transform-origin` to anchor animations to the trigger.
+
+```css
+[data-slot="navigation-menu-popup"] {
+  width: var(--popup-width);
+  height: var(--popup-height);
+  max-width: var(--available-width);
+  max-height: var(--available-height);
+  transform-origin: var(--transform-origin);
+  transition: width 200ms, height 200ms;
+}
+```
+
+The navigation menu's `--viewport-width` and `--viewport-height` variables are deprecated aliases for the active panel dimensions. Use the popup variables for new styles. Each component's API reference lists its available variables and the elements that expose them.
 
 ## State and accessibility
 
