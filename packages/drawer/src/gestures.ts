@@ -1,6 +1,14 @@
 import { on } from '@data-slot/core';
 
+/** Direction in which a swipe dismisses the drawer. */
 export type DrawerSwipeDirection = 'down' | 'up' | 'left' | 'right';
+
+/**
+ * A single visible open size: a viewport fraction from `0` to `1` (inclusive),
+ * a pixel number greater than `1`, or a non-negative `px`/`rem` string.
+ * Numeric strings are normalized to numbers. The visible size is capped at the
+ * popup's CSS size; pass `null` to the options/controller to use its full size.
+ */
 export type DrawerSnapPoint = number | string;
 
 export function parseSnapPoint(value: unknown): DrawerSnapPoint | null {

@@ -9,51 +9,116 @@ import { trackKeyboard } from './environment';
 import { registerVisuals } from './visuals';
 export type { DrawerSnapPoint, DrawerSwipeDirection } from './gestures';
 
+/** Source of a state change. Initial opening uses `none`; controller methods use `imperative-action`. */
 export type DrawerChangeReason = 'trigger-press' | 'close-press' | 'outside-press' | 'escape-key' | 'focus-out' | 'imperative-action' | 'swipe' | 'none';
+
+/** Details shared by `onOpenChange`, `drawer:beforechange`, and `drawer:change`. */
 export interface DrawerChangeDetails {
+  /** Requested open state; available before the controller commits the change. */
   open: boolean;
+  /** Interaction or API call that requested the change. */
   reason: DrawerChangeReason;
+  /** Trigger associated with this request, or `null` when none has been selected. */
   trigger: HTMLElement | null;
+  /** Trigger's `data-payload`, parsed as JSON when valid, otherwise a string; absent values are `undefined`. */
   payload: unknown;
+  /** DOM event that initiated the request, if any. */
   originalEvent?: Event;
+  /** Cancel synchronously in `drawer:beforechange` or `onOpenChange`; has no effect after commit. */
   cancel(): void;
+  /**
+   * Keep the closing content mounted and unhidden until `controller.unmount()`.
+   * Call synchronously in `drawer:beforechange` or `onOpenChange` for a close request.
+   * The drawer still closes logically and releases its modal effects and focus.
+   */
   preventUnmountOnClose(): void;
 }
+
+/** Details shared by `onSnapPointChange`, `drawer:beforesnapchange`, and `drawer:snapchange`. */
 export interface DrawerSnapChangeDetails {
+  /** Requested open position, or `null` to use the popup's full CSS size. */
   snapPoint: DrawerSnapPoint | null;
+  /** Source of the snap-point request. */
   reason: DrawerChangeReason;
+  /** DOM event that initiated the request, if any. */
   originalEvent?: Event;
+  /** Cancel synchronously in `drawer:beforesnapchange` or `onSnapPointChange`; has no effect after commit. */
   cancel(): void;
 }
+
+/** Initialization options. JavaScript values take precedence over corresponding data attributes. */
 export interface DrawerOptions {
+  /** Initial open state, overriding `defaultOpen`. Read once; use the controller for later changes. */
   open?: boolean;
+  /** Initial open state when `open` is omitted (default: `data-default-open`, then `false`). */
   defaultOpen?: boolean;
+  /**
+   * `true` traps focus, makes outside content inert, and locks scrolling (default).
+   * `"trap-focus"` traps focus without inertness or scroll locking; `false` is non-modal.
+   * Also configurable with root `data-modal`.
+   */
   modal?: boolean | 'trap-focus';
+  /** Ignore outside pointer presses and non-modal focus-out dismissal (default: `false`). */
   disablePointerDismissal?: boolean;
+  /** Allow Escape to dismiss the drawer (default: `true`). */
   closeOnEscape?: boolean;
+  /** Direction of the dismissal swipe (default: `"down"`). */
   swipeDirection?: DrawerSwipeDirection;
+  /** Initial single open position, overriding `defaultSnapPoint`; `null` uses the full CSS size. */
   snapPoint?: DrawerSnapPoint | null;
+  /** Fallback initial position, before root snap-point attributes (default: `null`). Read once. */
   defaultSnapPoint?: DrawerSnapPoint | null;
+  /** Initial associated trigger ID, taking precedence over `defaultTriggerId` when non-null. */
   triggerId?: string | null;
+  /** Fallback initial trigger ID, before root trigger-ID attributes. Defaults to no associated trigger. */
   defaultTriggerId?: string | null;
+  /**
+   * Focus target on open: an element or document selector, `true` for autofocus/first
+   * focusable content, or `false` to skip initial focus. Defaults to the popup itself.
+   * Also configurable with popup `data-initial-focus`.
+   */
   initialFocus?: boolean | string | HTMLElement;
+  /**
+   * Focus target on close: an element or document selector, `true` for the associated
+   * trigger/previous focus, or `false` to skip restoration. When omitted, defaults to
+   * trigger/previous focus but preserves outside focus after focus-out dismissal or
+   * a non-modal outside press on a focusable control. Also uses popup `data-final-focus`.
+   */
   finalFocus?: boolean | string | HTMLElement;
+  /** Keep content at its portal destination while closed and hidden (default: `false`; portal `data-keep-mounted`). */
   keepMounted?: boolean;
+  /** Portal destination element or document selector (default: `document.body`; portal `data-container`). */
   container?: string | HTMLElement;
+  /**
+   * Called before committing an open-state or active-trigger change, after an uncanceled
+   * `drawer:beforechange`. Call `details.cancel()` to stop the change.
+   */
   onOpenChange?: (open: boolean, details: DrawerChangeDetails) => void;
+  /** Called after the opening/closing transition finishes; also emits `drawer:change-complete`. */
   onOpenChangeComplete?: (open: boolean) => void;
+  /** Called before replacing the snap point, after an uncanceled `drawer:beforesnapchange`; cancel with `details.cancel()`. */
   onSnapPointChange?: (snapPoint: DrawerSnapPoint | null, details: DrawerSnapChangeDetails) => void;
 }
+
+/** Imperative drawer state and lifecycle controls. State-change requests can be canceled by listeners. */
 export interface DrawerController {
+  /** Open or switch the active trigger. An omitted or unknown trigger ID retains the current trigger. */
   open(triggerId?: string): void;
+  /** Request closing; content stays visible until its exit transition finishes. */
   close(): void;
+  /** Toggle the open state while retaining the associated trigger. */
   toggle(): void;
+  /** Replace the single open position across close/open cycles; `null` restores full CSS size. Invalid values are ignored. */
   setSnapPoint(point: DrawerSnapPoint | null): void;
-  /** Finish a close held by preventUnmountOnClose(). Does not close an open drawer. */
+  /** Finish a close held by `preventUnmountOnClose()`. Honors `keepMounted` and does not close an open drawer. */
   unmount(): void;
+  /** Current committed open state, independent of enter/exit animation progress. */
   readonly isOpen: boolean;
+  /** Current normalized snap point, or `null` for the popup's full CSS size. */
   readonly snapPoint: DrawerSnapPoint | null;
+  /** Associated trigger ID, retained after close, or `null` when none is selected. */
   readonly triggerId: string | null;
+  /** Remove listeners and observers, release modal effects, hide content, and restore portal placement. Allows rebinding. */
   destroy(): void;
 }
 const KEY = '@data-slot/drawer';
@@ -70,7 +135,48 @@ const parsePayload = (element: HTMLElement | null): unknown => {
   try { return JSON.parse(value); } catch { return value; }
 };
 
-/** Bind serializable drawer markup. Function-valued React props map to cancellable DOM events. */
+/**
+ * Create a drawer controller for a root element.
+ *
+ * Canonical markup (supply CSS for positioning, sizing, and transitions):
+ * ```html
+ * <div id="filters-drawer" data-slot="drawer" data-swipe-direction="down">
+ *   <button data-slot="drawer-trigger">Edit filters</button>
+ *   <div data-slot="drawer-portal">
+ *     <div data-slot="drawer-backdrop" hidden></div>
+ *     <div data-slot="drawer-viewport" hidden>
+ *       <div data-slot="drawer-popup" hidden>
+ *         <h2 data-slot="drawer-title">Filters</h2>
+ *         <p data-slot="drawer-description">Narrow the results.</p>
+ *         <button data-slot="drawer-close">Apply filters</button>
+ *       </div>
+ *     </div>
+ *   </div>
+ * </div>
+ * ```
+ *
+ * Only `drawer-popup` is required inside the root. Optional title and description
+ * slots supply accessible labels. Detached triggers use `data-drawer-target` with
+ * the root's ID; parts inside nested drawer roots belong to their own controllers.
+ *
+ * Options and data attributes are read at initialization. Use controller methods
+ * or `drawer:set` events to update live state. Open and snap changes emit cancellable
+ * `drawer:beforechange` / `drawer:beforesnapchange` events before their callbacks,
+ * followed by `drawer:change` / `drawer:snapchange` after commit.
+ *
+ * @param root - Element containing this drawer's slots.
+ * @param options - Initial configuration, overriding corresponding data attributes.
+ * @returns A drawer controller, reusing the existing one if already bound. Destroy it before rebinding with new options.
+ * @throws If the root has no `drawer-popup` belonging to this drawer.
+ *
+ * @example
+ * ```ts
+ * const root = document.getElementById('filters-drawer')!;
+ * const drawer = createDrawer(root, { snapPoint: 0.6 });
+ * drawer.open();
+ * drawer.setSnapPoint('320px');
+ * ```
+ */
 export function createDrawer(root: Element, options: DrawerOptions = {}): DrawerController {
   const existing = reuseRootBinding<DrawerController>(root, KEY, '[@data-slot/drawer] Drawer already initialized; returning its controller.');
   if (existing) return existing;
@@ -389,6 +495,18 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
   return controller;
 }
 
+/**
+ * Bind uninitialized `[data-slot="drawer"]` descendants of a scope.
+ * The scope itself and already-bound roots are excluded.
+ *
+ * @param scope - DOM subtree to scan (default: `document`).
+ * @returns Controllers created by this call.
+ * @example
+ * ```ts
+ * import { create } from '@data-slot/drawer';
+ * const drawers = create();
+ * ```
+ */
 export function create(scope: ParentNode = document): DrawerController[] {
   return getRoots(scope, 'drawer').filter((root) => !hasRootBinding(root, KEY)).map((root) => createDrawer(root));
 }
