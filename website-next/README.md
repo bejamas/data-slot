@@ -28,6 +28,25 @@ This directory has an independent npm lockfile and dependency installation. Blum
 
 `prepare` runs before development, builds, and type checks. It adapts existing Astro examples into ignored `.generated/` files and imports reference sections from package READMEs into ignored `content/_generated/` includes. Generated references participate in Blume's search, table of contents, and Markdown exports. Edit the package README to change an API reference. Edit `lib/catalog.ts` to change a variant. Restart the dev command after changing those sources to regenerate them.
 
+### API reference structure
+
+Keep each component's reference inside the package README's `## API` section. Use these H3 headings in this order, including only sections with documented content:
+
+1. Initialization
+2. Slots
+3. Options
+4. Data Attributes
+5. Controller
+6. Events
+7. Styling
+8. Keyboard Navigation
+9. Accessibility
+10. Form Integration
+11. Behavior
+12. Migration Notes
+
+Use H4 for details within a section, and H5 for their children. For example, put `create(scope?)` and the component constructor under Initialization, Controller Destruction under Controller, and Outbound Events / Inbound Events under Events. Keep component-specific topics under the relevant shared heading, such as CSS Variables under Styling or Warm-up Behavior under Behavior. The website includes this hierarchy under `## API reference`; its table of contents shows the shared H3 sections.
+
 The original example components and website styles are read without changing them. Generated examples get unique ID prefixes, CSS/Tailwind controls, and per-example initialization. Package builds run before the root `dev:docs` and `build:docs` commands so the previews use the current local library.
 
 Tailwind previews use Tailwind v4 and `tw-animate-css`. Demos retain their light theme when the documentation chrome is switched to dark mode.

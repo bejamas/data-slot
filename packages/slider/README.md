@@ -72,7 +72,9 @@ slider.destroy();
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Find and bind uninitialized `[data-slot="slider"]` descendants of `scope` (defaults to `document`). Returns `SliderController[]` for newly bound roots. To initialize the scope element itself, use `createSlider`.
 
@@ -82,7 +84,7 @@ import { create } from "@data-slot/slider";
 const controllers = create();
 ```
 
-### `createSlider(root, options?)`
+#### `createSlider(root, options?)`
 
 Create a `SliderController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
 
@@ -109,18 +111,7 @@ JavaScript options take precedence over root data attributes.
 | `onValueChange` | `(value: number \| [number, number]) => void` | `undefined` | Called for value changes, including programmatic updates; silent on initialization and unchanged values |
 | `onValueCommit` | `(value: number \| [number, number]) => void` | `undefined` | Called on pointer release/cancel, blur after a keyboard value change, or a changed `slider:set` update |
 
-### Controller
-
-| Method/Property | Description |
-| --- | --- |
-| `setValue(value: number \| [number, number])` | Update the value, including when disabled. Emits change when the value changes, but does not emit commit. |
-| `value` | Current value (readonly `number \| [number, number]`) |
-| `min` | Resolved minimum (readonly `number`) |
-| `max` | Resolved maximum (readonly `number`) |
-| `disabled` | Whether interaction is disabled (readonly `boolean`) |
-| `destroy()` | Remove listeners and release the root binding |
-
-## Data Attributes
+### Data Attributes
 
 | Attribute | Description | Default |
 |-----------|-------------|---------|
@@ -133,43 +124,33 @@ JavaScript options take precedence over root data attributes.
 | `data-thumb-alignment` | `center`, `edge`, or `edge-client-only` | `center` |
 | `data-disabled` | Disable the slider | - |
 
-## Thumb Alignment
+### Controller
 
-By default, slider thumbs are centered on the active value. That means the thumb can
-extend beyond the track when the value is at `min` or `max`.
+| Method/Property | Description |
+| --- | --- |
+| `setValue(value: number \| [number, number])` | Update the value, including when disabled. Emits change when the value changes, but does not emit commit. |
+| `value` | Current value (readonly `number \| [number, number]`) |
+| `min` | Resolved minimum (readonly `number`) |
+| `max` | Resolved maximum (readonly `number`) |
+| `disabled` | Whether interaction is disabled (readonly `boolean`) |
+| `destroy()` | Remove listeners and release the root binding |
 
-Use `thumbAlignment` or `data-thumb-alignment` to change that behavior:
+### Events
 
-- `"center"` - Default. The thumb is centered on the value and may overflow the track edges.
-- `"edge"` - Insets the thumb so its edge aligns with the track edge at `min` and `max`.
-- `"edge-client-only"` - Accepted for Base UI API parity. In this vanilla package it behaves the same as `"edge"`.
+#### Outbound Events
 
-```html
-<div data-slot="slider" data-default-value="25" data-thumb-alignment="edge">
-  <div data-slot="slider-track">
-    <div data-slot="slider-range"></div>
-  </div>
-  <div data-slot="slider-thumb"></div>
-</div>
-```
+Listen for these events on the root element.
 
-```javascript
-createSlider(element, {
-  defaultValue: 25,
-  thumbAlignment: "edge",
-});
-```
-
-## Events
-
-### Outbound Events (on root)
 
 | Event | Detail | Description |
 |-------|--------|-------------|
 | `slider:change` | `{ value: number \| [number, number] }` | Fires during value changes |
 | `slider:commit` | `{ value: number \| [number, number] }` | Fires on pointer release/cancel, blur after a keyboard value change, or a changed `slider:set` update |
 
-### Inbound Events (on root)
+#### Inbound Events
+
+Dispatch these events on the root element.
+
 
 | Event | Detail | Description |
 |-------|--------|-------------|
@@ -194,7 +175,7 @@ root.dispatchEvent(new CustomEvent("slider:set", {
 
 **Note:** Blocked when slider is disabled.
 
-### Deprecated Shapes
+#### Deprecated Shapes
 
 The following shapes are deprecated and will be removed in v1.0:
 
@@ -212,19 +193,7 @@ root.dispatchEvent(new CustomEvent("slider:set", {
 
 Use `{ value: ... }` instead.
 
-## Keyboard Navigation
-
-| Key | Action |
-|-----|--------|
-| `ArrowRight` / `ArrowLeft` | Increase / decrease by step in horizontal sliders |
-| `ArrowUp` / `ArrowDown` | Increase / decrease by step in vertical sliders |
-| `PageUp` | Increase by largeStep |
-| `PageDown` | Decrease by largeStep |
-| `Home` | Set to min |
-| `End` | Set to max |
-| `Shift+Arrow` | Move by largeStep |
-
-## Styling
+### Styling
 
 The component sets data attributes and inline styles for CSS hooks:
 
@@ -278,7 +247,46 @@ track and thumb size to keep the thumb inside the visible track. In those modes,
 `--position` and the range start/size vars represent rendered layout positions rather
 than raw value percentages.
 
-## Accessibility
+#### Thumb Alignment
+
+By default, slider thumbs are centered on the active value. That means the thumb can
+extend beyond the track when the value is at `min` or `max`.
+
+Use `thumbAlignment` or `data-thumb-alignment` to change that behavior:
+
+- `"center"` - Default. The thumb is centered on the value and may overflow the track edges.
+- `"edge"` - Insets the thumb so its edge aligns with the track edge at `min` and `max`.
+- `"edge-client-only"` - Accepted for Base UI API parity. In this vanilla package it behaves the same as `"edge"`.
+
+```html
+<div data-slot="slider" data-default-value="25" data-thumb-alignment="edge">
+  <div data-slot="slider-track">
+    <div data-slot="slider-range"></div>
+  </div>
+  <div data-slot="slider-thumb"></div>
+</div>
+```
+
+```javascript
+createSlider(element, {
+  defaultValue: 25,
+  thumbAlignment: "edge",
+});
+```
+
+### Keyboard Navigation
+
+| Key | Action |
+|-----|--------|
+| `ArrowRight` / `ArrowLeft` | Increase / decrease by step in horizontal sliders |
+| `ArrowUp` / `ArrowDown` | Increase / decrease by step in vertical sliders |
+| `PageUp` | Increase by largeStep |
+| `PageDown` | Decrease by largeStep |
+| `Home` | Set to min |
+| `End` | Set to max |
+| `Shift+Arrow` | Move by largeStep |
+
+### Accessibility
 
 Each thumb element receives:
 - `role="slider"`

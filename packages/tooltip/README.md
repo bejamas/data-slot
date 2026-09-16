@@ -27,7 +27,9 @@ npm install @data-slot/tooltip
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all tooltip instances in a scope (defaults to `document`).
 
@@ -37,7 +39,7 @@ import { create } from "@data-slot/tooltip";
 const controllers = create(); // Returns TooltipController[]
 ```
 
-### `createTooltip(root, options?)`
+#### `createTooltip(root, options?)`
 
 Create a controller for a specific element.
 
@@ -51,6 +53,45 @@ const tooltip = createTooltip(element, {
   align: "center",
   onOpenChange: (open) => console.log(open),
 });
+```
+
+### Slots
+
+```html
+<div data-slot="tooltip">
+  <button data-slot="tooltip-trigger">Trigger</button>
+  <div data-slot="tooltip-content">
+    Content
+    <div data-slot="tooltip-arrow"></div>
+  </div>
+</div>
+```
+
+#### Required Slots
+
+- `tooltip-trigger`
+- `tooltip-content`
+
+#### Optional Slots
+
+- `tooltip-positioner` - Optional authored positioning wrapper
+- `tooltip-portal` - Optional authored portal wrapper that can contain `tooltip-positioner`
+- `tooltip-arrow` - Optional arrow element positioned against the trigger
+
+#### Composed Portal Markup (Optional)
+
+```html
+<div data-slot="tooltip">
+  <button data-slot="tooltip-trigger">Trigger</button>
+  <div data-slot="tooltip-portal">
+    <div data-slot="tooltip-positioner">
+      <div data-slot="tooltip-content">
+        Content
+        <div data-slot="tooltip-arrow"></div>
+      </div>
+    </div>
+  </div>
+</div>
 ```
 
 ### Options
@@ -116,55 +157,7 @@ Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align
 </div>
 ```
 
-### Controller
-
-| Method/Property | Description |
-|-----------------|-------------|
-| `show()` | Show the tooltip immediately. Respects disabled state. |
-| `hide()` | Hide the tooltip |
-| `isOpen` | Current visibility state (readonly `boolean`) |
-| `destroy()` | Cleanup all event listeners and timers |
-
-## Markup Structure
-
-```html
-<div data-slot="tooltip">
-  <button data-slot="tooltip-trigger">Trigger</button>
-  <div data-slot="tooltip-content">
-    Content
-    <div data-slot="tooltip-arrow"></div>
-  </div>
-</div>
-```
-
-### Required Slots
-
-- `tooltip-trigger`
-- `tooltip-content`
-
-### Optional Slots
-
-- `tooltip-positioner` - Optional authored positioning wrapper
-- `tooltip-portal` - Optional authored portal wrapper that can contain `tooltip-positioner`
-- `tooltip-arrow` - Optional arrow element positioned against the trigger
-
-### Composed Portal Markup (Optional)
-
-```html
-<div data-slot="tooltip">
-  <button data-slot="tooltip-trigger">Trigger</button>
-  <div data-slot="tooltip-portal">
-    <div data-slot="tooltip-positioner">
-      <div data-slot="tooltip-content">
-        Content
-        <div data-slot="tooltip-arrow"></div>
-      </div>
-    </div>
-  </div>
-</div>
-```
-
-### Output Attributes
+#### Output Attributes
 
 The component sets these attributes automatically:
 
@@ -194,7 +187,86 @@ The component sets these attributes automatically:
 | Arrow | `aria-hidden` | `"true"` |
 | Trigger | `aria-describedby` | Content ID when open, removed when closed |
 
-## Styling
+### Controller
+
+| Method/Property | Description |
+|-----------------|-------------|
+| `show()` | Show the tooltip immediately. Respects disabled state. |
+| `hide()` | Hide the tooltip |
+| `isOpen` | Current visibility state (readonly `boolean`) |
+| `destroy()` | Cleanup all event listeners and timers |
+
+#### Controller Destruction
+
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+Cleanup removes only the description reference added by this tooltip; authored
+`aria-describedby` references are preserved.
+
+### Events
+
+#### Outbound Events
+
+Listen for changes via custom events:
+
+```javascript
+element.addEventListener("tooltip:change", (e) => {
+  const { open, trigger, content, reason } = e.detail;
+  console.log(`Tooltip ${open ? 'opened' : 'closed'} via ${reason}`);
+});
+```
+
+##### Event Detail
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `open` | `boolean` | Current visibility state |
+| `trigger` | `HTMLElement` | The trigger element |
+| `content` | `HTMLElement` | The content element |
+| `reason` | `string` | What caused the change: `"pointer"`, `"focus"`, `"blur"`, `"escape"`, `"api"` |
+
+#### Inbound Events
+
+Control the tooltip via events:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `tooltip:set` | `{ open: boolean }` | Set visibility programmatically |
+
+```javascript
+// Show the tooltip
+element.dispatchEvent(
+  new CustomEvent("tooltip:set", { detail: { open: true } })
+);
+
+// Hide the tooltip
+element.dispatchEvent(
+  new CustomEvent("tooltip:set", { detail: { open: false } })
+);
+```
+
+**Note:** Opening respects disabled state (trigger has `disabled` attribute or `aria-disabled="true"`). Closing is always allowed.
+
+##### Deprecated Shapes
+
+The following attributes and shapes are deprecated and will be removed in v1.0:
+
+- Legacy `data-state="open|closed"` styling on `tooltip` root and `tooltip-content`
+
+Use `data-open` / `data-closed`, `data-starting-style`, `data-ending-style`, and `data-instant` instead.
+
+```javascript
+// Deprecated: { value: boolean }
+element.dispatchEvent(
+  new CustomEvent("tooltip:set", { detail: { value: true } })
+);
+```
+
+Use `{ open: boolean }` instead.
+
+### Styling
 
 Position is computed in JavaScript and applied to the positioner as `position: absolute` + `transform: translate3d(...)`.
 By default, content is portaled to `document.body` while open.
@@ -203,7 +275,7 @@ Use `data-open` / `data-closed`, `data-starting-style` / `data-ending-style`, `d
 Placement uses layout dimensions, so `scale`/`zoom` animations on `tooltip-content` remain stable without adding an extra wrapper.
 Tooltip arrow geometry is runtime-owned: the controller writes inline `top` / `left` coordinates and `position: absolute` on `tooltip-arrow`. CSS should only handle edge attachment, rotation, and optional cosmetic nudges. Avoid overriding the arrow cross-axis with helpers like `top-1/2`, `left-1/2`, or `-translate-y-1/2`.
 
-### Recommended CSS
+#### Recommended CSS
 
 The example below matches the Base/shadcn composition style: real `tooltip-arrow`, logical side support, and valued `data-instant`.
 
@@ -279,7 +351,7 @@ The example below matches the Base/shadcn composition style: real `tooltip-arrow
 }
 ```
 
-### Tailwind Example
+#### Tailwind Example
 
 Use content and arrow data attributes for open-state styling:
 
@@ -316,7 +388,24 @@ Use content and arrow data attributes for open-state styling:
 </div>
 ```
 
-## Warm-up Behavior
+### Accessibility
+
+The component automatically handles:
+
+- `role="tooltip"` on content
+- `aria-describedby` on trigger only when open (prevents stale announcements)
+- `aria-hidden` on content: explicit `"true"`/`"false"` for consistent AT behavior
+- Unique ID generation for content via `ensureId`
+
+#### Disabled Triggers
+
+If the trigger has `disabled` attribute or `aria-disabled="true"`:
+- Pointer and focus events will not open the tooltip
+- Programmatic `.show()` also respects the disabled state
+
+### Behavior
+
+#### Warm-up Behavior
 
 When a user closes one tooltip and quickly hovers another, the second tooltip shows instantly (no delay). This creates a fluid browsing experience similar to native OS tooltips.
 
@@ -327,22 +416,7 @@ When a user closes one tooltip and quickly hovers another, the second tooltip sh
 - Dismiss-style closes (for example `Escape`) use `data-instant="dismiss"`
 - Warm window is set only when a tooltip actually closes (not when a pending open is cancelled)
 
-## Accessibility
-
-The component automatically handles:
-
-- `role="tooltip"` on content
-- `aria-describedby` on trigger only when open (prevents stale announcements)
-- `aria-hidden` on content: explicit `"true"`/`"false"` for consistent AT behavior
-- Unique ID generation for content via `ensureId`
-
-### Disabled Triggers
-
-If the trigger has `disabled` attribute or `aria-disabled="true"`:
-- Pointer and focus events will not open the tooltip
-- Programmatic `.show()` also respects the disabled state
-
-## Interaction Model
+#### Interaction Model
 
 | Input | Behavior |
 |-------|----------|
@@ -359,76 +433,6 @@ If the trigger has `disabled` attribute or `aria-disabled="true"`:
 **Hoverable Content:** Moving the pointer from trigger to content (or vice versa) keeps the tooltip open. This allows users to interact with links or selectable text in tooltips.
 
 **Focus Priority:** While the trigger has keyboard focus, the tooltip stays open even if the pointer leaves. This prevents jarring closures during keyboard navigation.
-
-## Events
-
-### Outbound Events
-
-Listen for changes via custom events:
-
-```javascript
-element.addEventListener("tooltip:change", (e) => {
-  const { open, trigger, content, reason } = e.detail;
-  console.log(`Tooltip ${open ? 'opened' : 'closed'} via ${reason}`);
-});
-```
-
-#### Event Detail
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `open` | `boolean` | Current visibility state |
-| `trigger` | `HTMLElement` | The trigger element |
-| `content` | `HTMLElement` | The content element |
-| `reason` | `string` | What caused the change: `"pointer"`, `"focus"`, `"blur"`, `"escape"`, `"api"` |
-
-### Inbound Events
-
-Control the tooltip via events:
-
-| Event | Detail | Description |
-|-------|--------|-------------|
-| `tooltip:set` | `{ open: boolean }` | Set visibility programmatically |
-
-```javascript
-// Show the tooltip
-element.dispatchEvent(
-  new CustomEvent("tooltip:set", { detail: { open: true } })
-);
-
-// Hide the tooltip
-element.dispatchEvent(
-  new CustomEvent("tooltip:set", { detail: { open: false } })
-);
-```
-
-**Note:** Opening respects disabled state (trigger has `disabled` attribute or `aria-disabled="true"`). Closing is always allowed.
-
-#### Deprecated Shapes
-
-The following attributes and shapes are deprecated and will be removed in v1.0:
-
-- Legacy `data-state="open|closed"` styling on `tooltip` root and `tooltip-content`
-
-Use `data-open` / `data-closed`, `data-starting-style`, `data-ending-style`, and `data-instant` instead.
-
-```javascript
-// Deprecated: { value: boolean }
-element.dispatchEvent(
-  new CustomEvent("tooltip:set", { detail: { value: true } })
-);
-```
-
-Use `{ open: boolean }` instead.
-
-## Controller destruction
-
-`destroy()` permanently disposes the controller and hides any open surface without
-emitting an additional change event. Repeated destruction is safe; methods on the
-old controller become no-ops. Create a new controller on the same root to rebind it.
-
-Cleanup removes only the description reference added by this tooltip; authored
-`aria-describedby` references are preserved.
 
 ## License
 

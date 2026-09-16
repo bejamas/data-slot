@@ -50,7 +50,9 @@ generates the popup stack while the menu is open and restores the original DOM o
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all navigation menu instances in a scope (defaults to `document`).
 
@@ -60,7 +62,7 @@ import { create } from "@data-slot/navigation-menu";
 const controllers = create(); // Returns NavigationMenuController[]
 ```
 
-### `createNavigationMenu(root, options?)`
+#### `createNavigationMenu(root, options?)`
 
 Create a controller for a specific element.
 
@@ -73,6 +75,45 @@ const menu = createNavigationMenu(element, {
   onValueChange: (value) => console.log(value),
 });
 ```
+
+### Slots
+
+```html
+<nav data-slot="navigation-menu">
+  <ul data-slot="navigation-menu-list">
+    <li data-slot="navigation-menu-item" data-value="unique-id">
+      <button data-slot="navigation-menu-trigger">Label</button>
+      <div data-slot="navigation-menu-content">
+        <!-- Links, content -->
+      </div>
+    </li>
+    <!-- Optional hover indicator -->
+    <div data-slot="navigation-menu-indicator"></div>
+  </ul>
+  <div data-slot="navigation-menu-portal">
+    <div data-slot="navigation-menu-positioner">
+      <div data-slot="navigation-menu-popup">
+        <div data-slot="navigation-menu-viewport"></div>
+      </div>
+    </div>
+  </div>
+</nav>
+```
+
+If you only author `navigation-menu-viewport`, the runtime synthesizes the missing
+`navigation-menu-portal`, `navigation-menu-positioner`, and `navigation-menu-popup`
+wrappers while the menu is open.
+
+#### Slot Reference
+
+- `navigation-menu-indicator` - Animated highlight that follows top-level hover/focus targets; when a submenu is open, it stays anchored to the active trigger
+- `navigation-menu-portal` - Portal wrapper that is moved to `document.body` while the menu is open
+- `navigation-menu-positioner` - Canonical popup positioning surface; receives resolved side/alignment output and sizing vars
+- `navigation-menu-popup` - Canonical animated popup shell that wraps the viewport
+- `navigation-menu-viewport` - Clipping viewport that holds the active content panel
+- `navigation-menu-viewport-positioner` - Deprecated alias for `navigation-menu-positioner`
+- `navigation-menu-bridge` - Hover safety shield (gap bridge + triangle corridor)
+- `navigation-menu-safe-triangle` - Debug-only hover safety polygon (rendered when enabled)
 
 ### Options
 
@@ -140,55 +181,7 @@ Can be set on:
 </li>
 ```
 
-### Controller
-
-| Method/Property | Description |
-|-----------------|-------------|
-| `open(value)` | Open a specific item |
-| `close()` | Close the menu |
-| `value` | Currently active item value (readonly `string \| null`) |
-| `destroy()` | Cleanup all event listeners |
-
-## Markup Structure
-
-```html
-<nav data-slot="navigation-menu">
-  <ul data-slot="navigation-menu-list">
-    <li data-slot="navigation-menu-item" data-value="unique-id">
-      <button data-slot="navigation-menu-trigger">Label</button>
-      <div data-slot="navigation-menu-content">
-        <!-- Links, content -->
-      </div>
-    </li>
-    <!-- Optional hover indicator -->
-    <div data-slot="navigation-menu-indicator"></div>
-  </ul>
-  <div data-slot="navigation-menu-portal">
-    <div data-slot="navigation-menu-positioner">
-      <div data-slot="navigation-menu-popup">
-        <div data-slot="navigation-menu-viewport"></div>
-      </div>
-    </div>
-  </div>
-</nav>
-```
-
-If you only author `navigation-menu-viewport`, the runtime synthesizes the missing
-`navigation-menu-portal`, `navigation-menu-positioner`, and `navigation-menu-popup`
-wrappers while the menu is open.
-
-### Slots
-
-- `navigation-menu-indicator` - Animated highlight that follows top-level hover/focus targets; when a submenu is open, it stays anchored to the active trigger
-- `navigation-menu-portal` - Portal wrapper that is moved to `document.body` while the menu is open
-- `navigation-menu-positioner` - Canonical popup positioning surface; receives resolved side/alignment output and sizing vars
-- `navigation-menu-popup` - Canonical animated popup shell that wraps the viewport
-- `navigation-menu-viewport` - Clipping viewport that holds the active content panel
-- `navigation-menu-viewport-positioner` - Deprecated alias for `navigation-menu-positioner`
-- `navigation-menu-bridge` - Hover safety shield (gap bridge + triangle corridor)
-- `navigation-menu-safe-triangle` - Debug-only hover safety polygon (rendered when enabled)
-
-### Output Attributes
+#### Output Attributes
 
 | Surface | Attributes |
 |---------|------------|
@@ -201,7 +194,54 @@ wrappers while the menu is open.
 `data-activation-direction` is only emitted while switching between open top-level panels.
 A full close is intentionally non-directional.
 
-## Styling
+### Controller
+
+| Method/Property | Description |
+|-----------------|-------------|
+| `open(value)` | Open a specific item |
+| `close()` | Close the menu |
+| `value` | Currently active item value (readonly `string \| null`) |
+| `destroy()` | Cleanup all event listeners |
+
+#### Controller Destruction
+
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+### Events
+
+#### Outbound Events
+
+Listen for changes via custom events:
+
+```javascript
+element.addEventListener("navigation-menu:change", (e) => {
+  console.log("Active item:", e.detail.value);
+});
+```
+
+#### Inbound Events
+
+Control the navigation menu via events:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `navigation-menu:set` | `{ value: string \| null }` | Set active item or close menu |
+
+```javascript
+// Open a specific item
+element.dispatchEvent(
+  new CustomEvent("navigation-menu:set", { detail: { value: "products" } })
+);
+
+// Close the menu
+element.dispatchEvent(
+  new CustomEvent("navigation-menu:set", { detail: { value: null } })
+);
+```
+
+### Styling
 
 `navigation-menu-portal` is moved to `document.body` while open. If authored popup-stack slots
 are present, they are reused. Otherwise, missing `portal` / `positioner` / `popup` wrappers are
@@ -216,7 +256,7 @@ or closed.
 Use `positionMethod: "fixed"` or `data-position-method="fixed"` when the menu needs viewport-based
 anchoring, such as inside sticky headers.
 
-### Basic Styling
+#### Basic Styling
 
 ```css
 /* Hidden by default */
@@ -280,7 +320,7 @@ anchoring, such as inside sticky headers.
 closing, or after the tracking update settles. Use it to skip those reposition transitions without
 suppressing exit animations.
 
-### Motion Animations
+#### Motion Animations
 
 Use `data-starting-style` / `data-ending-style` on `navigation-menu-popup` for full popup
 open/close animations, and on `navigation-menu-content` for panel presence.
@@ -329,7 +369,7 @@ at fixed pixel values so CSS can animate panel-to-panel size changes directly be
 Initial open writes the measured size synchronously; the shell does not need an `auto` reset while
 open.
 
-### CSS Variables
+#### CSS Variables
 
 | Variable | Element | Description |
 |----------|---------|-------------|
@@ -348,15 +388,15 @@ open.
 | `--indicator-height` | indicator | Height of hovered trigger |
 | `--motion-direction` | viewport | Legacy switching direction output: `1` (right) or `-1` (left) |
 
-### Deprecated Compatibility
+#### Deprecated Compatibility
 
 - `navigation-menu-viewport-positioner` is a deprecated alias for `navigation-menu-positioner`.
 - `--viewport-width`, `--viewport-height`, root/content `data-motion`, and `--motion-direction` are deprecated and planned for removal in the next major release.
 - Content-wrapped `navigation-menu-portal` / `navigation-menu-positioner` shells are restore-only compatibility and are also planned for removal in the next major release.
 
-## Keyboard Navigation
+### Keyboard Navigation
 
-### Within Top-Level Items
+#### Within Top-Level Items
 
 | Key | Action |
 |-----|--------|
@@ -371,7 +411,7 @@ open.
 
 Top-level submenu triggers and plain links remain in the natural tab order.
 
-### Within Content Panel
+#### Within Content Panel
 
 | Key | Action |
 |-----|--------|
@@ -381,7 +421,7 @@ Top-level submenu triggers and plain links remain in the natural tab order.
 | `Shift+Tab` | From first content item, move focus back to owning trigger |
 | `Escape` | Close menu and return focus to trigger |
 
-## Behavior
+### Behavior
 
 - **Hover**: Opens after `delayOpen` ms, closes after `delayClose` ms
 - **Click**: Locks menu open until explicit action (click same trigger, click another trigger, click outside, or `Escape`); hover does not switch/close while locked
@@ -391,44 +431,6 @@ Top-level submenu triggers and plain links remain in the natural tab order.
   - Keyboard activation/programmatic click moves focus into menu content (first focusable item, or content panel fallback)
 - **Indicator**: Plain top-level links participate in indicator positioning when no submenu is open; open submenu state takes precedence
 - **Switching**: Instant transition between items (no delay)
-
-## Events
-
-### Outbound Events
-
-Listen for changes via custom events:
-
-```javascript
-element.addEventListener("navigation-menu:change", (e) => {
-  console.log("Active item:", e.detail.value);
-});
-```
-
-### Inbound Events
-
-Control the navigation menu via events:
-
-| Event | Detail | Description |
-|-------|--------|-------------|
-| `navigation-menu:set` | `{ value: string \| null }` | Set active item or close menu |
-
-```javascript
-// Open a specific item
-element.dispatchEvent(
-  new CustomEvent("navigation-menu:set", { detail: { value: "products" } })
-);
-
-// Close the menu
-element.dispatchEvent(
-  new CustomEvent("navigation-menu:set", { detail: { value: null } })
-);
-```
-
-## Controller destruction
-
-`destroy()` permanently disposes the controller and hides any open surface without
-emitting an additional change event. Repeated destruction is safe; methods on the
-old controller become no-ops. Create a new controller on the same root to rebind it.
 
 ## License
 

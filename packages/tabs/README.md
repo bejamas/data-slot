@@ -32,7 +32,9 @@ npm install @data-slot/tabs
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all tabs instances in a scope (defaults to `document`).
 
@@ -42,7 +44,7 @@ import { create } from "@data-slot/tabs";
 const controllers = create(); // Returns TabsController[]
 ```
 
-### `createTabs(root, options?)`
+#### `createTabs(root, options?)`
 
 Create a controller for a specific element.
 
@@ -55,6 +57,23 @@ const tabs = createTabs(element, {
   onValueChange: (value) => console.log(value),
 });
 ```
+
+### Slots
+
+```html
+<div data-slot="tabs" data-default-value="initial-tab">
+  <div data-slot="tabs-list">
+    <button data-slot="tabs-trigger" data-value="unique-id">Label</button>
+    <!-- Optional animated indicator -->
+    <div data-slot="tabs-indicator"></div>
+  </div>
+  <div data-slot="tabs-content" data-value="unique-id">Panel content</div>
+</div>
+```
+
+#### Optional Slots
+
+- `tabs-indicator` - Animated highlight that follows the selected tab
 
 ### Options
 
@@ -91,26 +110,54 @@ Options can also be set via data attributes on the root element. JS options take
 | `updateIndicator()` | Recalculate indicator position after layout changes |
 | `destroy()` | Cleanup all event listeners |
 
-## Markup Structure
+### Events
 
-```html
-<div data-slot="tabs" data-default-value="initial-tab">
-  <div data-slot="tabs-list">
-    <button data-slot="tabs-trigger" data-value="unique-id">Label</button>
-    <!-- Optional animated indicator -->
-    <div data-slot="tabs-indicator"></div>
-  </div>
-  <div data-slot="tabs-content" data-value="unique-id">Panel content</div>
-</div>
+#### Outbound Events
+
+Listen for changes via custom events:
+
+```javascript
+element.addEventListener("tabs:change", (e) => {
+  console.log("Selected tab:", e.detail.value);
+});
 ```
 
-### Optional Slots
+#### Inbound Events
 
-- `tabs-indicator` - Animated highlight that follows the selected tab
+Control the tabs via events:
 
-## Styling
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `tabs:set` | `{ value: string }` | Select a tab programmatically |
 
-### Basic Styling
+```javascript
+// Select a tab
+element.dispatchEvent(
+  new CustomEvent("tabs:set", { detail: { value: "two" } })
+);
+```
+
+#### Deprecated Events
+
+The following event is deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: tabs:select event
+element.dispatchEvent(
+  new CustomEvent("tabs:select", { detail: { value: "two" } })
+);
+
+// Deprecated: string detail
+element.dispatchEvent(
+  new CustomEvent("tabs:select", { detail: "two" })
+);
+```
+
+Use `tabs:set` with `{ value: string }` instead.
+
+### Styling
+
+#### Basic Styling
 
 ```css
 /* Hidden panels */
@@ -134,7 +181,7 @@ Options can also be set via data attributes on the root element. JS options take
 }
 ```
 
-### Panel Activation Direction
+#### Panel Activation Direction
 
 Panels receive `data-activation-direction` after tab changes (not on initial mount):
 
@@ -153,7 +200,7 @@ Use it for directional content animations:
 }
 ```
 
-### Animated Indicator
+#### Animated Indicator
 
 The indicator receives CSS variables for positioning:
 
@@ -175,7 +222,7 @@ The indicator receives CSS variables for positioning:
 }
 ```
 
-### CSS Variables
+#### CSS Variables
 
 | Variable | Description |
 |----------|-------------|
@@ -184,7 +231,7 @@ The indicator receives CSS variables for positioning:
 | `--active-tab-top` | Top offset of active trigger |
 | `--active-tab-height` | Height of active trigger |
 
-### Tailwind Example
+#### Tailwind Example
 
 ```html
 <div data-slot="tabs">
@@ -208,11 +255,11 @@ The indicator receives CSS variables for positioning:
 </div>
 ```
 
-## Keyboard Navigation
+### Keyboard Navigation
 
 The tables below describe `activationMode: "auto"` (the default). In `"manual"` mode, arrow keys, `Home`, and `End` only move focus; `Enter` or `Space` selects the focused tab. Disabled triggers are skipped.
 
-### Horizontal Orientation
+#### Horizontal Orientation
 
 | Key | Action |
 |-----|--------|
@@ -221,7 +268,7 @@ The tables below describe `activationMode: "auto"` (the default). In `"manual"` 
 | `Home` | Select first tab |
 | `End` | Select last tab |
 
-### Vertical Orientation
+#### Vertical Orientation
 
 | Key | Action |
 |-----|--------|
@@ -230,7 +277,7 @@ The tables below describe `activationMode: "auto"` (the default). In `"manual"` 
 | `Home` | Select first tab |
 | `End` | Select last tab |
 
-## Accessibility
+### Accessibility
 
 The component automatically handles:
 
@@ -242,51 +289,6 @@ The component automatically handles:
 - `aria-controls` linking triggers to panels
 - `aria-labelledby` linking panels to triggers
 - `tabindex` management (only the selected enabled tab is in the tab order)
-
-## Events
-
-### Outbound Events
-
-Listen for changes via custom events:
-
-```javascript
-element.addEventListener("tabs:change", (e) => {
-  console.log("Selected tab:", e.detail.value);
-});
-```
-
-### Inbound Events
-
-Control the tabs via events:
-
-| Event | Detail | Description |
-|-------|--------|-------------|
-| `tabs:set` | `{ value: string }` | Select a tab programmatically |
-
-```javascript
-// Select a tab
-element.dispatchEvent(
-  new CustomEvent("tabs:set", { detail: { value: "two" } })
-);
-```
-
-### Deprecated Events
-
-The following event is deprecated and will be removed in v1.0:
-
-```javascript
-// Deprecated: tabs:select event
-element.dispatchEvent(
-  new CustomEvent("tabs:select", { detail: { value: "two" } })
-);
-
-// Deprecated: string detail
-element.dispatchEvent(
-  new CustomEvent("tabs:select", { detail: "two" })
-);
-```
-
-Use `tabs:set` with `{ value: string }` instead.
 
 ## License
 

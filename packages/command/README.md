@@ -42,7 +42,9 @@ npm install @data-slot/command
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all command palettes in a scope (defaults to `document`).
 
@@ -52,7 +54,7 @@ import { create } from "@data-slot/command";
 const controllers = create();
 ```
 
-### `createCommand(root, options?)`
+#### `createCommand(root, options?)`
 
 Create a controller for a specific element.
 
@@ -65,7 +67,7 @@ const command = createCommand(element, {
 });
 ```
 
-## Slots
+### Slots
 
 | Slot | Description |
 |------|-------------|
@@ -80,94 +82,7 @@ const command = createCommand(element, {
 | `command-shortcut` | Optional shortcut hint inside an item |
 | `command-separator` | Visual divider between sections |
 
-## Item and Group Attributes
-
-| Attribute | Applies To | Description |
-|-----------|------------|-------------|
-| `data-value` | `command-item`, `command-group` | Explicit value. If omitted on an item, value is inferred from `data-label` or text content |
-| `data-label` | `command-item` | Alternate text source for value inference |
-| `data-keywords` | `command-item` | Comma-separated aliases used during filtering |
-| `data-disabled` / `disabled` | `command-item` | Prevents navigation and selection |
-| `data-force-mount` | `command-item`, `command-group` | Keeps the node rendered during filtering |
-| `data-always-render` | `command-separator` | Keeps the separator visible while searching |
-
-`command-shortcut` text is ignored when inferring an item value, so shadcn-style shortcut hints do not affect search matches.
-
-## Options
-
-Options can be passed via JavaScript or data attributes on the root element. JavaScript options take precedence.
-
-| Option | Data Attribute | Type | Default | Description |
-|--------|----------------|------|---------|-------------|
-| `label` | `data-label` | `string` | `"Command Menu"` | Accessible label announced for the search input |
-| `defaultValue` | `data-default-value` | `string` | First enabled visible item, or `null` | Initial active item value; a nonempty `defaultSearch` selects the first enabled result instead |
-| `defaultSearch` | `data-default-search` | `string` | `""` | Initial search text |
-| `shouldFilter` | `data-should-filter` | `boolean` | `true` | Enable built-in filtering and sorting; set `false` to manage results yourself |
-| `loop` | `data-loop` | `boolean` | `false` | Wrap arrow-key navigation |
-| `disablePointerSelection` | `data-disable-pointer-selection` | `boolean` | `false` | Disable hover-driven selection |
-| `vimBindings` | `data-vim-bindings` | `boolean` | `true` | Enable `Ctrl+J/K/N/P` shortcuts |
-| `filter` | - | `(value, search, keywords?) => number` | `commandScore` | Custom ranking function |
-| `onValueChange` | - | `(value: string \| null) => void` | - | Called when the active item changes |
-| `onSearchChange` | - | `(search: string) => void` | - | Called when the search query changes |
-| `onSelect` | - | `(value: string) => void` | - | Called on click or Enter selection |
-
-## Controller
-
-```typescript
-interface CommandController {
-  readonly value: string | null;
-  readonly search: string;
-  select(value: string | null): void;
-  setSearch(search: string): void;
-  destroy(): void;
-}
-```
-
-## Events
-
-### Outbound Events
-
-```javascript
-root.addEventListener("command:change", (event) => {
-  console.log("Active item:", event.detail.value);
-});
-
-root.addEventListener("command:search-change", (event) => {
-  console.log("Search:", event.detail.search);
-});
-
-root.addEventListener("command:select", (event) => {
-  console.log("Selected:", event.detail.value);
-});
-```
-
-### Inbound Event
-
-```javascript
-root.dispatchEvent(
-  new CustomEvent("command:set", {
-    detail: {
-      search: "set",
-      value: "settings",
-    },
-  })
-);
-```
-
-## Keyboard Navigation
-
-| Key | Action |
-|-----|--------|
-| `ArrowDown` / `ArrowUp` | Move to the next or previous enabled item |
-| `Home` / `End` | Jump to the first or last enabled item |
-| `Alt+ArrowDown` / `Alt+ArrowUp` | Jump between groups |
-| `Ctrl+J` / `Ctrl+N` | Next item |
-| `Ctrl+K` / `Ctrl+P` | Previous item |
-| `Enter` | Trigger `command:select` for the active item |
-
-Arrow navigation is handled on the command root like cmdk. Selecting from the input or a focused command root keeps keyboard flow intact, but clicking non-interactive palette chrome does not auto-focus the input.
-
-## Dialog Composition
+#### Dialog Composition
 
 Use `@data-slot/dialog` when you want modal presentation:
 
@@ -199,7 +114,81 @@ Use `@data-slot/dialog` when you want modal presentation:
 </script>
 ```
 
-## Styling
+### Options
+
+Options can be passed via JavaScript or data attributes on the root element. JavaScript options take precedence.
+
+| Option | Data Attribute | Type | Default | Description |
+|--------|----------------|------|---------|-------------|
+| `label` | `data-label` | `string` | `"Command Menu"` | Accessible label announced for the search input |
+| `defaultValue` | `data-default-value` | `string` | First enabled visible item, or `null` | Initial active item value; a nonempty `defaultSearch` selects the first enabled result instead |
+| `defaultSearch` | `data-default-search` | `string` | `""` | Initial search text |
+| `shouldFilter` | `data-should-filter` | `boolean` | `true` | Enable built-in filtering and sorting; set `false` to manage results yourself |
+| `loop` | `data-loop` | `boolean` | `false` | Wrap arrow-key navigation |
+| `disablePointerSelection` | `data-disable-pointer-selection` | `boolean` | `false` | Disable hover-driven selection |
+| `vimBindings` | `data-vim-bindings` | `boolean` | `true` | Enable `Ctrl+J/K/N/P` shortcuts |
+| `filter` | - | `(value, search, keywords?) => number` | `commandScore` | Custom ranking function |
+| `onValueChange` | - | `(value: string \| null) => void` | - | Called when the active item changes |
+| `onSearchChange` | - | `(search: string) => void` | - | Called when the search query changes |
+| `onSelect` | - | `(value: string) => void` | - | Called on click or Enter selection |
+
+### Data Attributes
+
+| Attribute | Applies To | Description |
+|-----------|------------|-------------|
+| `data-value` | `command-item`, `command-group` | Explicit value. If omitted on an item, value is inferred from `data-label` or text content |
+| `data-label` | `command-item` | Alternate text source for value inference |
+| `data-keywords` | `command-item` | Comma-separated aliases used during filtering |
+| `data-disabled` / `disabled` | `command-item` | Prevents navigation and selection |
+| `data-force-mount` | `command-item`, `command-group` | Keeps the node rendered during filtering |
+| `data-always-render` | `command-separator` | Keeps the separator visible while searching |
+
+`command-shortcut` text is ignored when inferring an item value, so shadcn-style shortcut hints do not affect search matches.
+
+### Controller
+
+```typescript
+interface CommandController {
+  readonly value: string | null;
+  readonly search: string;
+  select(value: string | null): void;
+  setSearch(search: string): void;
+  destroy(): void;
+}
+```
+
+### Events
+
+#### Outbound Events
+
+```javascript
+root.addEventListener("command:change", (event) => {
+  console.log("Active item:", event.detail.value);
+});
+
+root.addEventListener("command:search-change", (event) => {
+  console.log("Search:", event.detail.search);
+});
+
+root.addEventListener("command:select", (event) => {
+  console.log("Selected:", event.detail.value);
+});
+```
+
+#### Inbound Events
+
+```javascript
+root.dispatchEvent(
+  new CustomEvent("command:set", {
+    detail: {
+      search: "set",
+      value: "settings",
+    },
+  })
+);
+```
+
+### Styling
 
 ```css
 [data-slot="command-item"][data-selected] {
@@ -216,6 +205,19 @@ Use `@data-slot/dialog` when you want modal presentation:
   transition: height 150ms ease;
 }
 ```
+
+### Keyboard Navigation
+
+| Key | Action |
+|-----|--------|
+| `ArrowDown` / `ArrowUp` | Move to the next or previous enabled item |
+| `Home` / `End` | Jump to the first or last enabled item |
+| `Alt+ArrowDown` / `Alt+ArrowUp` | Jump between groups |
+| `Ctrl+J` / `Ctrl+N` | Next item |
+| `Ctrl+K` / `Ctrl+P` | Previous item |
+| `Enter` | Trigger `command:select` for the active item |
+
+Arrow navigation is handled on the command root like cmdk. Selecting from the input or a focused command root keeps keyboard flow intact, but clicking non-interactive palette chrome does not auto-focus the input.
 
 ## License
 

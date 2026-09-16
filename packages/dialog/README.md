@@ -30,7 +30,9 @@ npm install @data-slot/dialog
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all dialog instances in a scope (defaults to `document`).
 
@@ -40,7 +42,7 @@ import { create } from "@data-slot/dialog";
 const controllers = create(); // Returns DialogController[]
 ```
 
-### `createDialog(root, options?)`
+#### `createDialog(root, options?)`
 
 Create a controller for a specific element.
 
@@ -55,6 +57,33 @@ const dialog = createDialog(element, {
   onOpenChange: (open) => console.log(open),
 });
 ```
+
+### Slots
+
+```html
+<div data-slot="dialog">
+  <button data-slot="dialog-trigger">Open</button>
+  <div data-slot="dialog-overlay" hidden></div>
+  <div data-slot="dialog-content" role="dialog">
+    <h2 data-slot="dialog-title">Title</h2>
+    <p data-slot="dialog-description">Description</p>
+    <button data-slot="dialog-close">Close</button>
+  </div>
+</div>
+```
+
+#### Required Slots
+
+- `dialog-content` - The dialog panel (required)
+- `dialog-overlay` - The backdrop (required)
+
+#### Optional Slots
+
+- `dialog-trigger` - Button to open the dialog
+- `dialog-portal` - Optional wrapper portaled to `document.body` while open
+- `dialog-title` - Title for `aria-labelledby`
+- `dialog-description` - Description for `aria-describedby`
+- `dialog-close` - Button to close the dialog
 
 ### Options
 
@@ -103,34 +132,61 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
 | `isOpen` | Current open state (readonly `boolean`) |
 | `destroy()` | Cleanup all event listeners |
 
-## Markup Structure
+#### Controller Destruction
 
-```html
-<div data-slot="dialog">
-  <button data-slot="dialog-trigger">Open</button>
-  <div data-slot="dialog-overlay" hidden></div>
-  <div data-slot="dialog-content" role="dialog">
-    <h2 data-slot="dialog-title">Title</h2>
-    <p data-slot="dialog-description">Description</p>
-    <button data-slot="dialog-close">Close</button>
-  </div>
-</div>
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+Destruction restores prior focus, falling back to a surviving trigger if the prior
+target was removed. Destroying an unopened modal does not move focus.
+
+### Events
+
+#### Outbound Events
+
+Listen for changes via custom events:
+
+```javascript
+element.addEventListener("dialog:change", (e) => {
+  console.log("Dialog open:", e.detail.open);
+});
 ```
 
-### Required Slots
+#### Inbound Events
 
-- `dialog-content` - The dialog panel (required)
-- `dialog-overlay` - The backdrop (required)
+Control the dialog via events:
 
-### Optional Slots
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `dialog:set` | `{ open: boolean }` | Set open state programmatically |
 
-- `dialog-trigger` - Button to open the dialog
-- `dialog-portal` - Optional wrapper portaled to `document.body` while open
-- `dialog-title` - Title for `aria-labelledby`
-- `dialog-description` - Description for `aria-describedby`
-- `dialog-close` - Button to close the dialog
+```javascript
+// Open the dialog
+element.dispatchEvent(
+  new CustomEvent("dialog:set", { detail: { open: true } })
+);
 
-## Styling
+// Close the dialog
+element.dispatchEvent(
+  new CustomEvent("dialog:set", { detail: { open: false } })
+);
+```
+
+##### Deprecated Shapes
+
+The following shape is deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: { value: boolean }
+element.dispatchEvent(
+  new CustomEvent("dialog:set", { detail: { value: true } })
+);
+```
+
+Use `{ open: boolean }` instead.
+
+### Styling
 
 Dialog exposes both `data-state="open|closed"` and popup-style animation hooks:
 
@@ -202,7 +258,15 @@ With Tailwind:
 </div>
 ```
 
-## Accessibility
+### Keyboard Navigation
+
+| Key | Action |
+|-----|--------|
+| `Escape` | Close dialog |
+| `Tab` | Cycle focus within dialog |
+| `Shift+Tab` | Cycle focus backwards |
+
+### Accessibility
 
 The component automatically handles:
 
@@ -214,68 +278,6 @@ The component automatically handles:
 - `aria-expanded` state on trigger
 - Focus trap within dialog
 - Focus restoration on close
-
-## Keyboard Navigation
-
-| Key | Action |
-|-----|--------|
-| `Escape` | Close dialog |
-| `Tab` | Cycle focus within dialog |
-| `Shift+Tab` | Cycle focus backwards |
-
-## Events
-
-### Outbound Events
-
-Listen for changes via custom events:
-
-```javascript
-element.addEventListener("dialog:change", (e) => {
-  console.log("Dialog open:", e.detail.open);
-});
-```
-
-### Inbound Events
-
-Control the dialog via events:
-
-| Event | Detail | Description |
-|-------|--------|-------------|
-| `dialog:set` | `{ open: boolean }` | Set open state programmatically |
-
-```javascript
-// Open the dialog
-element.dispatchEvent(
-  new CustomEvent("dialog:set", { detail: { open: true } })
-);
-
-// Close the dialog
-element.dispatchEvent(
-  new CustomEvent("dialog:set", { detail: { open: false } })
-);
-```
-
-#### Deprecated Shapes
-
-The following shape is deprecated and will be removed in v1.0:
-
-```javascript
-// Deprecated: { value: boolean }
-element.dispatchEvent(
-  new CustomEvent("dialog:set", { detail: { value: true } })
-);
-```
-
-Use `{ open: boolean }` instead.
-
-## Controller destruction
-
-`destroy()` permanently disposes the controller and hides any open surface without
-emitting an additional change event. Repeated destruction is safe; methods on the
-old controller become no-ops. Create a new controller on the same root to rebind it.
-
-Destruction restores prior focus, falling back to a surviving trigger if the prior
-target was removed. Destroying an unopened modal does not move focus.
 
 ## License
 

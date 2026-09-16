@@ -47,7 +47,9 @@ npm install @data-slot/drawer
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Find and bind every `[data-slot="drawer"]` in `scope` (the document by default).
 
@@ -57,7 +59,7 @@ import { create } from "@data-slot/drawer";
 const drawers = create();
 ```
 
-### `createDrawer(root, options?)`
+#### `createDrawer(root, options?)`
 
 Create one drawer controller. JavaScript options take precedence over data attributes.
 
@@ -74,58 +76,9 @@ drawer.open();
 drawer.setSnapPoint("320px");
 ```
 
-### Options and root attributes
+### Slots
 
-| Option | Data attribute | Type | Default | Description |
-| --- | --- | --- | --- | --- |
-| `open` / `defaultOpen` | `data-default-open` | `boolean` | `false` | Initial open state. `open` and the attribute are initialization values, not controlled state. |
-| `modal` | `data-modal` | `boolean \| "trap-focus"` | `true` | `true` makes outside content inert and locks scroll; `"trap-focus"` traps focus without making outside content inert. |
-| `disablePointerDismissal` | `data-disable-pointer-dismissal` | `boolean` | `false` | Ignore outside pointer presses. |
-| `closeOnEscape` | `data-close-on-escape` | `boolean` | `true` | Close when `Escape` is pressed. |
-| `swipeDirection` | `data-swipe-direction` | `"down" \| "up" \| "left" \| "right"` | `"down"` | Direction used to dismiss the drawer. |
-| `snapPoint` / `defaultSnapPoint` | `data-snap-point` / `data-default-snap-point` | `DrawerSnapPoint \| null` | `null` | Initial single open position. `snapPoint` takes precedence over the default. `null` uses the full CSS size. |
-| `triggerId` / `defaultTriggerId` | `data-trigger-id` / `data-default-trigger-id` | `string \| null` | — | Initial detached trigger identifier. |
-| `initialFocus` | popup `data-initial-focus` | `boolean \| string \| HTMLElement` | popup | Choose focus when the drawer opens. |
-| `finalFocus` | popup `data-final-focus` | `boolean \| string \| HTMLElement` | trigger or previous focus | Choose focus when the drawer closes. |
-| `keepMounted` | portal `data-keep-mounted` | `boolean` | `false` | Keep portal content mounted while closed. |
-| `container` | portal `data-container` | `string \| HTMLElement` | `document.body` | Portal destination. |
-| `onOpenChange` | — | `(open, details) => void` | — | Called before committing an open-state change. Call `details.cancel()` to stop it. |
-| `onSnapPointChange` | — | `(snapPoint, details) => void` | — | Called before replacing the single snap point. Call `details.cancel()` to stop it. |
-| `onOpenChangeComplete` | — | `(open) => void` | — | Called when the opening or closing transition completes. |
-
-A snap point is a viewport fraction (`0` to `1`), a pixel number greater than `1`, or a string in `px` or `rem`. It is capped at the popup's CSS size. Only one open position is supported; arrays and sequential snap points are not supported. A swipe returns to that position or dismisses the drawer. Use `setSnapPoint()` or `drawer:set` to replace it at runtime; the value persists across close/open cycles. Options and data attributes are read at initialization.
-
-Popup-specific attributes:
-
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `data-initial-focus` | boolean or selector | popup | Use `true` for the first focusable element, a selector for an explicit target, or `false` to skip automatic focus. |
-| `data-final-focus` | boolean or selector | `true` | Choose the focus target after close, or set `false` to skip focus restoration. |
-
-Portal-specific attributes:
-
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `data-container` | selector | `body` | Element that receives the portal. |
-| `data-keep-mounted` | boolean | `false` | Keep portal content mounted while closed. |
-
-### Controller
-
-| Method or property | Description |
-| --- | --- |
-| `open(triggerId?)` | Open the drawer, optionally associating an identified trigger. |
-| `close()` | Close the drawer. |
-| `toggle()` | Toggle the open state. |
-| `setSnapPoint(value)` | Replace the single open position; `null` restores the full CSS size. |
-| `snapPoint` | Current snap point (readonly). |
-| `unmount()` | Unmount closed portal content. |
-| `isOpen` | Current open state (readonly). |
-| `triggerId` | Trigger associated with the current open cycle (readonly). |
-| `destroy()` | Remove listeners and restore DOM state. |
-
-## Slots
-
-### Core structure
+#### Core Structure
 
 - `drawer` — root and event target
 - `drawer-trigger` — opens or toggles the drawer
@@ -154,7 +107,7 @@ Detached triggers can live outside the root when the root has an ID:
 
 Use native `<button>` elements for triggers and close controls. Native `disabled`, `data-disabled`, and `aria-disabled="true"` block their activation.
 
-### Composition slots
+#### Composition Slots
 
 The package also recognizes `drawer-provider`, `drawer-indent`, `drawer-indent-background`, and `drawer-virtual-keyboard-provider`. They are ordinary DOM wrappers rather than React context providers.
 
@@ -189,11 +142,64 @@ Wrap the viewport inside `drawer-virtual-keyboard-provider` when form controls i
 </div>
 ```
 
-## Events
+### Options
+
+| Option | Data attribute | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `open` / `defaultOpen` | `data-default-open` | `boolean` | `false` | Initial open state. `open` and the attribute are initialization values, not controlled state. |
+| `modal` | `data-modal` | `boolean \| "trap-focus"` | `true` | `true` makes outside content inert and locks scroll; `"trap-focus"` traps focus without making outside content inert. |
+| `disablePointerDismissal` | `data-disable-pointer-dismissal` | `boolean` | `false` | Ignore outside pointer presses. |
+| `closeOnEscape` | `data-close-on-escape` | `boolean` | `true` | Close when `Escape` is pressed. |
+| `swipeDirection` | `data-swipe-direction` | `"down" \| "up" \| "left" \| "right"` | `"down"` | Direction used to dismiss the drawer. |
+| `snapPoint` / `defaultSnapPoint` | `data-snap-point` / `data-default-snap-point` | `DrawerSnapPoint \| null` | `null` | Initial single open position. `snapPoint` takes precedence over the default. `null` uses the full CSS size. |
+| `triggerId` / `defaultTriggerId` | `data-trigger-id` / `data-default-trigger-id` | `string \| null` | — | Initial detached trigger identifier. |
+| `initialFocus` | popup `data-initial-focus` | `boolean \| string \| HTMLElement` | popup | Choose focus when the drawer opens. |
+| `finalFocus` | popup `data-final-focus` | `boolean \| string \| HTMLElement` | trigger or previous focus | Choose focus when the drawer closes. |
+| `keepMounted` | portal `data-keep-mounted` | `boolean` | `false` | Keep portal content mounted while closed. |
+| `container` | portal `data-container` | `string \| HTMLElement` | `document.body` | Portal destination. |
+| `onOpenChange` | — | `(open, details) => void` | — | Called before committing an open-state change. Call `details.cancel()` to stop it. |
+| `onSnapPointChange` | — | `(snapPoint, details) => void` | — | Called before replacing the single snap point. Call `details.cancel()` to stop it. |
+| `onOpenChangeComplete` | — | `(open) => void` | — | Called when the opening or closing transition completes. |
+
+A snap point is a viewport fraction (`0` to `1`), a pixel number greater than `1`, or a string in `px` or `rem`. It is capped at the popup's CSS size. Only one open position is supported; arrays and sequential snap points are not supported. A swipe returns to that position or dismisses the drawer. Use `setSnapPoint()` or `drawer:set` to replace it at runtime; the value persists across close/open cycles. Options and data attributes are read at initialization.
+
+### Data Attributes
+
+Root attributes and their JavaScript equivalents are listed in [Options](#options).
+
+Popup-specific attributes:
+
+| Attribute | Type | Default | Description |
+| --- | --- | --- | --- |
+| `data-initial-focus` | boolean or selector | popup | Use `true` for the first focusable element, a selector for an explicit target, or `false` to skip automatic focus. |
+| `data-final-focus` | boolean or selector | `true` | Choose the focus target after close, or set `false` to skip focus restoration. |
+
+Portal-specific attributes:
+
+| Attribute | Type | Default | Description |
+| --- | --- | --- | --- |
+| `data-container` | selector | `body` | Element that receives the portal. |
+| `data-keep-mounted` | boolean | `false` | Keep portal content mounted while closed. |
+
+### Controller
+
+| Method or property | Description |
+| --- | --- |
+| `open(triggerId?)` | Open the drawer, optionally associating an identified trigger. |
+| `close()` | Close the drawer. |
+| `toggle()` | Toggle the open state. |
+| `setSnapPoint(value)` | Replace the single open position; `null` restores the full CSS size. |
+| `snapPoint` | Current snap point (readonly). |
+| `unmount()` | Unmount closed portal content. |
+| `isOpen` | Current open state (readonly). |
+| `triggerId` | Trigger associated with the current open cycle (readonly). |
+| `destroy()` | Remove listeners and restore DOM state. |
+
+### Events
 
 Serializable data attributes and DOM events make the component usable directly from Astro markup and across framework boundaries. JavaScript consumers can use the matching callback options.
 
-### Outbound events
+#### Outbound Events
 
 | Event | Detail | Cancelable | Description |
 | --- | --- | --- | --- |
@@ -215,7 +221,7 @@ root.addEventListener("drawer:beforechange", (event) => {
 });
 ```
 
-### Inbound events
+#### Inbound Events
 
 | Event | Detail | Description |
 | --- | --- | --- |
@@ -231,7 +237,7 @@ root.dispatchEvent(new CustomEvent("drawer:set", {
 }));
 ```
 
-## State and styling
+### Styling
 
 Root, portal, backdrop, viewport, and popup expose `data-state="open|closed"`, `data-open`, `data-closed`, and `data-swipe-direction`. The active trigger gets `data-popup-open`. During gestures the viewport, backdrop, and popup expose `data-swiping`. Nested popups additionally expose `data-nested`, `data-nested-drawer-open`, and `data-nested-swiping`; indentation parts expose `data-active` or `data-inactive`. A keyboard-aware viewport exposes `data-keyboard-open` while the on-screen keyboard overlaps it.
 
@@ -256,10 +262,12 @@ CSS variables include:
 }
 ```
 
-## Accessibility and interaction
+### Accessibility
 
 The runtime sets `role="dialog"`, `aria-labelledby`, and `aria-describedby` on the popup, adds `aria-modal="true"` in fully modal mode, and maintains `aria-expanded`, `aria-controls`, and `aria-haspopup="dialog"` on triggers. Modal and `"trap-focus"` drawers trap focus and restore it after close; fully modal drawers also make outside content inert and lock body scroll. `Escape`, close controls, allowed outside presses, and a swipe in the configured direction dismiss the drawer.
 
-## Base UI adaptation
+### Behavior
+
+#### Base UI Adaptation
 
 The DOM parts and interaction model follow Base UI Drawer where they translate to static HTML. React-only facilities such as JSX render props, React context, controlled `open` values, and React animation internals are represented by ordinary wrappers, data attributes, native pointer gestures, controller methods, callbacks, and cancelable custom events. Initial values in HTML are read once; dispatch `drawer:set` or call the controller to update live state.

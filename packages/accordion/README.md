@@ -40,7 +40,9 @@ npm install @data-slot/accordion
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all accordion instances in a scope (defaults to `document`).
 
@@ -50,7 +52,7 @@ import { create } from "@data-slot/accordion";
 const controllers = create(); // Returns AccordionController[]
 ```
 
-### `createAccordion(root, options?)`
+#### `createAccordion(root, options?)`
 
 Create a controller for a specific element.
 
@@ -67,6 +69,24 @@ const accordion = createAccordion(element, {
 });
 ```
 
+### Slots
+
+```html
+<div data-slot="accordion">
+  <div data-slot="accordion-item" data-value="unique-id">
+    <button data-slot="accordion-trigger">
+      <span>Trigger</span>
+      <span data-slot="accordion-trigger-icon">+</span>
+    </button>
+    <div data-slot="accordion-content">
+      <div data-slot="accordion-content-inner">Content</div>
+    </div>
+  </div>
+</div>
+```
+
+`data-slot="accordion-trigger-icon"` and `data-slot="accordion-content-inner"` are optional styling hooks.
+
 ### Options
 
 | Option | Type | Default | Description |
@@ -80,7 +100,7 @@ const accordion = createAccordion(element, {
 | `onValueChange` | `(value: string[]) => void` | `undefined` | Callback when expanded items change |
 | `collapsible` | `boolean` | `true` | Deprecated single-mode alias for “can close the last open item” |
 
-### Deprecated Option
+#### Deprecated Option
 
 The following option is deprecated and will be removed in the next major release:
 
@@ -140,27 +160,41 @@ For multiple default items in HTML, encode the value as JSON:
 | `value` | Currently expanded values (readonly `string[]`) |
 | `destroy()` | Cleanup all event listeners |
 
-## Markup Structure
+### Events
 
-```html
-<div data-slot="accordion">
-  <div data-slot="accordion-item" data-value="unique-id">
-    <button data-slot="accordion-trigger">
-      <span>Trigger</span>
-      <span data-slot="accordion-trigger-icon">+</span>
-    </button>
-    <div data-slot="accordion-content">
-      <div data-slot="accordion-content-inner">Content</div>
-    </div>
-  </div>
-</div>
+#### Outbound Events
+
+Listen for changes via custom events:
+
+```javascript
+element.addEventListener("accordion:change", (e) => {
+  console.log("Expanded items:", e.detail.value);
+});
 ```
 
-`data-slot="accordion-trigger-icon"` and `data-slot="accordion-content-inner"` are optional styling hooks.
+#### Inbound Events
 
-## Styling
+Control the accordion via events:
 
-### State Hooks
+| Event | Detail | Description |
+| --- | --- | --- |
+| `accordion:set` | `{ value: string \| string[] }` | Set expanded items programmatically |
+
+```javascript
+element.dispatchEvent(
+  new CustomEvent("accordion:set", { detail: { value: "one" } })
+);
+
+element.dispatchEvent(
+  new CustomEvent("accordion:set", { detail: { value: ["one", "two"] } })
+);
+```
+
+`accordion:set` and controller methods still work when the accordion is disabled. User-triggered click and keyboard interaction do not.
+
+### Styling
+
+#### State Hooks
 
 The accordion exposes these useful styling hooks:
 
@@ -171,7 +205,7 @@ The accordion exposes these useful styling hooks:
 | trigger | `data-state`, `data-panel-open`, `data-disabled`, `aria-expanded` |
 | content | `data-state`, `data-open`, `data-closed`, `data-index`, `data-disabled`, `data-orientation`, `data-starting-style`, `data-ending-style` |
 
-### CSS Variables
+#### CSS Variables
 
 The content element exposes size variables for height or width transitions:
 
@@ -182,7 +216,7 @@ The content element exposes size variables for height or width transitions:
 | `--radix-accordion-content-height` | Compatibility alias for Tailwind/Radix accordion keyframes |
 | `--radix-accordion-content-width` | Compatibility alias for width-based integrations |
 
-### CSS Example
+#### CSS Example
 
 ```css
 [data-slot="accordion-item"] {
@@ -227,7 +261,7 @@ The content element exposes size variables for height or width transitions:
 }
 ```
 
-### Tailwind Example
+#### Tailwind Example
 
 ```html
 <div data-slot="accordion" class="overflow-hidden rounded-2xl border">
@@ -264,7 +298,7 @@ The content element exposes size variables for height or width transitions:
 </div>
 ```
 
-## Keyboard Navigation
+### Keyboard Navigation
 
 | Key | Action |
 | --- | --- |
@@ -275,38 +309,6 @@ The content element exposes size variables for height or width transitions:
 | `End` | Move focus to last enabled trigger |
 
 Disabled items are skipped during roving focus.
-
-## Events
-
-### Outbound Events
-
-Listen for changes via custom events:
-
-```javascript
-element.addEventListener("accordion:change", (e) => {
-  console.log("Expanded items:", e.detail.value);
-});
-```
-
-### Inbound Events
-
-Control the accordion via events:
-
-| Event | Detail | Description |
-| --- | --- | --- |
-| `accordion:set` | `{ value: string \| string[] }` | Set expanded items programmatically |
-
-```javascript
-element.dispatchEvent(
-  new CustomEvent("accordion:set", { detail: { value: "one" } })
-);
-
-element.dispatchEvent(
-  new CustomEvent("accordion:set", { detail: { value: ["one", "two"] } })
-);
-```
-
-`accordion:set` and controller methods still work when the accordion is disabled. User-triggered click and keyboard interaction do not.
 
 ## License
 

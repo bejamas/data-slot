@@ -27,7 +27,9 @@ npm install @data-slot/switch
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all switch instances in a scope (defaults to `document`).
 
@@ -37,7 +39,7 @@ import { create } from "@data-slot/switch";
 const controllers = create(); // Returns SwitchController[]
 ```
 
-### `createSwitch(root, options?)`
+#### `createSwitch(root, options?)`
 
 Create a controller for a specific element.
 
@@ -51,6 +53,18 @@ const controller = createSwitch(element, {
   onCheckedChange: (checked) => console.log(checked),
 });
 ```
+
+### Slots
+
+The authored API is just a root and an optional thumb:
+
+```html
+<span data-slot="switch">
+  <span data-slot="switch-thumb"></span>
+</span>
+```
+
+Use a neutral root element (`span` or `div`) when you want Base UI-style label wrapping and shadcn-like composition. The controller injects a visually hidden checkbox next to the root for form submission, label support, and native validation.
 
 ### Options
 
@@ -79,7 +93,7 @@ JS options take precedence over data attributes on the root element.
 | `data-value` | `string` | native checkbox `"on"` | Submitted value when checked |
 | `data-unchecked-value` / `data-uncheckedValue` | `string` | - | Submitted value when unchecked |
 
-## Controller
+### Controller
 
 | Method/Property | Description |
 |-----------------|-------------|
@@ -90,21 +104,27 @@ JS options take precedence over data attributes on the root element.
 | `setChecked(checked)` | Set the checked state explicitly |
 | `destroy()` | Remove listeners and generated inputs |
 
-## Markup Structure
+### Events
 
-The authored API is just a root and an optional thumb:
+#### Outbound Events
 
-```html
-<span data-slot="switch">
-  <span data-slot="switch-thumb"></span>
-</span>
+```javascript
+element.addEventListener("switch:change", (event) => {
+  console.log(event.detail.checked);
+});
 ```
 
-Use a neutral root element (`span` or `div`) when you want Base UI-style label wrapping and shadcn-like composition. The controller injects a visually hidden checkbox next to the root for form submission, label support, and native validation.
+#### Inbound Events
 
-## Styling
+```javascript
+element.dispatchEvent(
+  new CustomEvent("switch:set", { detail: { checked: true } })
+);
+```
 
-### State Attributes
+### Styling
+
+#### State Attributes
 
 The root and thumb expose presence attributes:
 
@@ -122,7 +142,7 @@ The root also syncs:
 - `aria-readonly="true"` when read-only
 - `aria-required="true"` when required
 
-### Tailwind Example
+#### Tailwind Example
 
 ```html
 <label class="inline-flex items-center gap-3">
@@ -146,24 +166,6 @@ The root also syncs:
   </span>
   Notifications
 </label>
-```
-
-## Events
-
-### Outbound
-
-```javascript
-element.addEventListener("switch:change", (event) => {
-  console.log(event.detail.checked);
-});
-```
-
-### Inbound
-
-```javascript
-element.dispatchEvent(
-  new CustomEvent("switch:set", { detail: { checked: true } })
-);
 ```
 
 ## License

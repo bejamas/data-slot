@@ -23,7 +23,9 @@ npm install @data-slot/toggle
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all toggle instances in a scope (defaults to `document`).
 
@@ -33,7 +35,7 @@ import { create } from "@data-slot/toggle";
 const controllers = create(); // Returns ToggleController[]
 ```
 
-### `createToggle(root, options?)`
+#### `createToggle(root, options?)`
 
 Create a controller for a specific element.
 
@@ -46,6 +48,14 @@ const toggle = createToggle(element, {
   onPressedChange: (pressed) => console.log(pressed),
 });
 ```
+
+### Slots
+
+```html
+<button data-slot="toggle">Label</button>
+```
+
+The toggle is a simple single-element component. Always use a native `<button>` element—keyboard support (Enter/Space) and focus handling are only guaranteed with `<button>`. Non-button elements (e.g., `<div>`, `<span>`) are not recommended and would require manual keyboard handling.
 
 ### Options
 
@@ -81,24 +91,61 @@ Options can also be set via data attributes on the root element. JS options take
 
 **Note:** Controller methods always work, even when disabled. This allows programmatic control regardless of user interaction state. If you need to check disabled state before calling controller methods, check the element's attributes yourself.
 
-## Markup Structure
+### Events
 
-```html
-<button data-slot="toggle">Label</button>
+#### Outbound Events
+
+Listen for changes via custom events:
+
+```javascript
+element.addEventListener("toggle:change", (e) => {
+  console.log("Pressed:", e.detail.pressed);
+});
 ```
 
-The toggle is a simple single-element component. Always use a native `<button>` element—keyboard support (Enter/Space) and focus handling are only guaranteed with `<button>`. Non-button elements (e.g., `<div>`, `<span>`) are not recommended and would require manual keyboard handling.
+#### Inbound Events
 
-## Styling
+Control the toggle via events (ignored when disabled):
 
-### State Attributes
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `toggle:set` | `{ value: boolean }` | Set pressed state programmatically |
+
+```javascript
+// Set to specific state
+element.dispatchEvent(
+  new CustomEvent("toggle:set", { detail: { value: true } })
+);
+```
+
+#### Deprecated Shapes
+
+The following shapes are deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: boolean detail
+element.dispatchEvent(
+  new CustomEvent("toggle:set", { detail: true })
+);
+
+// Deprecated: { pressed } shape
+element.dispatchEvent(
+  new CustomEvent("toggle:set", { detail: { pressed: true } })
+);
+```
+
+Use `{ value: boolean }` instead.
+
+### Styling
+
+#### State Attributes
 
 The component sets these attributes for styling:
 
 - `aria-pressed="true|false"` - ARIA state
 - `data-state="on|off"` - CSS styling hook
 
-### Basic Styling
+#### Basic Styling
 
 ```css
 /* Unpressed state */
@@ -128,7 +175,7 @@ The component sets these attributes for styling:
 }
 ```
 
-### Tailwind Example
+#### Tailwind Example
 
 ```html
 <button
@@ -139,7 +186,7 @@ The component sets these attributes for styling:
 </button>
 ```
 
-## Keyboard Support
+### Keyboard Navigation
 
 The toggle uses a native `<button>` element, so keyboard support is automatic:
 
@@ -148,7 +195,17 @@ The toggle uses a native `<button>` element, so keyboard support is automatic:
 | `Enter` | Toggle state |
 | `Space` | Toggle state |
 
-## Disabled Behavior
+### Accessibility
+
+The component automatically handles:
+
+- `aria-pressed` state on the button
+- Native `disabled` and `aria-disabled` when disabled (for buttons)
+- `type="button"` to prevent form submission
+
+### Behavior
+
+#### Disabled Behavior
 
 When disabled (via `disabled` option, `data-disabled` attribute, native `disabled` attribute, or `aria-disabled="true"`):
 
@@ -159,59 +216,6 @@ When disabled (via `disabled` option, `data-disabled` attribute, native `disable
 | Controller methods (`toggle()`, `press()`, `release()`) | No |
 
 For `<button>` elements, the `disabled` option sets both the native `disabled` attribute and `aria-disabled="true"`. For other elements, only `aria-disabled` is set.
-
-## Accessibility
-
-The component automatically handles:
-
-- `aria-pressed` state on the button
-- Native `disabled` and `aria-disabled` when disabled (for buttons)
-- `type="button"` to prevent form submission
-
-## Events
-
-### Outbound Events
-
-Listen for changes via custom events:
-
-```javascript
-element.addEventListener("toggle:change", (e) => {
-  console.log("Pressed:", e.detail.pressed);
-});
-```
-
-### Inbound Events
-
-Control the toggle via events (ignored when disabled):
-
-| Event | Detail | Description |
-|-------|--------|-------------|
-| `toggle:set` | `{ value: boolean }` | Set pressed state programmatically |
-
-```javascript
-// Set to specific state
-element.dispatchEvent(
-  new CustomEvent("toggle:set", { detail: { value: true } })
-);
-```
-
-### Deprecated Shapes
-
-The following shapes are deprecated and will be removed in v1.0:
-
-```javascript
-// Deprecated: boolean detail
-element.dispatchEvent(
-  new CustomEvent("toggle:set", { detail: true })
-);
-
-// Deprecated: { pressed } shape
-element.dispatchEvent(
-  new CustomEvent("toggle:set", { detail: { pressed: true } })
-);
-```
-
-Use `{ value: boolean }` instead.
 
 ## License
 

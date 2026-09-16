@@ -27,7 +27,9 @@ npm install @data-slot/hover-card
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all hover-card instances in a scope (defaults to `document`).
 
@@ -37,7 +39,7 @@ import { create } from "@data-slot/hover-card";
 const controllers = create(); // Returns HoverCardController[]
 ```
 
-### `createHoverCard(root, options?)`
+#### `createHoverCard(root, options?)`
 
 Create a controller for a specific element.
 
@@ -52,6 +54,38 @@ const hoverCard = createHoverCard(element, {
   portal: true,
   onOpenChange: (open) => console.log(open),
 });
+```
+
+### Slots
+
+```html
+<div data-slot="hover-card">
+  <button data-slot="hover-card-trigger">Trigger</button>
+  <div data-slot="hover-card-content">Content</div>
+</div>
+```
+
+#### Required Slots
+
+- `hover-card-trigger`
+- `hover-card-content`
+
+#### Optional Slots
+
+- `hover-card-positioner` - Optional authored positioning wrapper
+- `hover-card-portal` - Optional authored portal wrapper that can contain `hover-card-positioner`
+
+#### Composed Portal Markup (Optional)
+
+```html
+<div data-slot="hover-card">
+  <button data-slot="hover-card-trigger">Trigger</button>
+  <div data-slot="hover-card-portal">
+    <div data-slot="hover-card-positioner">
+      <div data-slot="hover-card-content">Content</div>
+    </div>
+  </div>
+</div>
 ```
 
 ### Options
@@ -74,55 +108,12 @@ const hoverCard = createHoverCard(element, {
 | `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
 
-### Controlled Mode
+#### Controlled Mode
 
 When `open` is provided, hover/focus/outside interactions emit `onOpenChange` but do not mutate internal state.
 Use controller `setOpen(open)` or the `hover-card:set` event to apply state.
 
-### Controller
-
-| Method/Property | Description |
-|-----------------|-------------|
-| `open()` | Request open state (`setOpen(true)` for forced update) |
-| `close()` | Request closed state (`setOpen(false)` for forced update) |
-| `toggle()` | Request toggle |
-| `setOpen(open)` | Force open/closed update (works in controlled mode) |
-| `isOpen` | Current open state (readonly `boolean`) |
-| `destroy()` | Cleanup all event listeners and timers |
-
-## Markup Structure
-
-```html
-<div data-slot="hover-card">
-  <button data-slot="hover-card-trigger">Trigger</button>
-  <div data-slot="hover-card-content">Content</div>
-</div>
-```
-
-### Required Slots
-
-- `hover-card-trigger`
-- `hover-card-content`
-
-### Optional Slots
-
-- `hover-card-positioner` - Optional authored positioning wrapper
-- `hover-card-portal` - Optional authored portal wrapper that can contain `hover-card-positioner`
-
-### Composed Portal Markup (Optional)
-
-```html
-<div data-slot="hover-card">
-  <button data-slot="hover-card-trigger">Trigger</button>
-  <div data-slot="hover-card-portal">
-    <div data-slot="hover-card-positioner">
-      <div data-slot="hover-card-content">Content</div>
-    </div>
-  </div>
-</div>
-```
-
-## Data Attributes
+### Data Attributes
 
 Options can be set via data attributes. JS options take precedence.
 
@@ -151,9 +142,26 @@ Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align
 
 Boolean attributes: present/`"true"` = true, `"false"` = false, absent = default.
 
-## Events
+### Controller
 
-### Outbound
+| Method/Property | Description |
+|-----------------|-------------|
+| `open()` | Request open state (`setOpen(true)` for forced update) |
+| `close()` | Request closed state (`setOpen(false)` for forced update) |
+| `toggle()` | Request toggle |
+| `setOpen(open)` | Force open/closed update (works in controlled mode) |
+| `isOpen` | Current open state (readonly `boolean`) |
+| `destroy()` | Cleanup all event listeners and timers |
+
+#### Controller Destruction
+
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+### Events
+
+#### Outbound Events
 
 - `hover-card:change` - emitted when open state changes or is requested in controlled mode.
 
@@ -168,7 +176,7 @@ root.addEventListener("hover-card:change", (e) => {
 Focus opening is keyboard-intent based (`Tab` navigation). Programmatic focus (for example, dialog auto-focus on open) does not auto-open the hover-card.
 Hover opening is pointer-intent based (recent mouse movement). Synthetic `pointerenter` caused by newly shown UI under a static cursor does not auto-open the hover-card.
 
-### Inbound
+#### Inbound Events
 
 - `hover-card:set` - force open state
 
@@ -182,7 +190,7 @@ Deprecated shape is still supported:
 root.dispatchEvent(new CustomEvent("hover-card:set", { detail: { value: true } }));
 ```
 
-## Styling
+### Styling
 
 Position is computed in JavaScript and applied as `position: absolute` + `transform: translate3d(...)`.
 By default, content is portaled to `document.body` while open.
@@ -227,17 +235,7 @@ Placement uses layout dimensions, so `scale`/`zoom` animations on `hover-card-co
 }
 ```
 
-## Warm-up Behavior
-
-When one hover-card closes, another hovered shortly after can open immediately (delay skipped).
-
-- Controlled by `skipDelayDuration` / `data-skip-delay-duration`
-- Set to `0` to disable warm-up behavior
-- Warm-up applies across hover-card instances
-- Warm-up opens add `data-instant` (root/content/positioner) for that open cycle, so CSS can disable animations
-- During warm handoff to another hover-card trigger, the stale popup closes immediately (bypasses `closeDelay`) and that close cycle is marked with `data-instant`
-
-## Accessibility
+### Accessibility
 
 The component automatically handles:
 
@@ -246,11 +244,17 @@ The component automatically handles:
 - `aria-expanded` state on trigger
 - Unique content IDs via `ensureId`
 
-## Controller destruction
+### Behavior
 
-`destroy()` permanently disposes the controller and hides any open surface without
-emitting an additional change event. Repeated destruction is safe; methods on the
-old controller become no-ops. Create a new controller on the same root to rebind it.
+#### Warm-up Behavior
+
+When one hover-card closes, another hovered shortly after can open immediately (delay skipped).
+
+- Controlled by `skipDelayDuration` / `data-skip-delay-duration`
+- Set to `0` to disable warm-up behavior
+- Warm-up applies across hover-card instances
+- Warm-up opens add `data-instant` (root/content/positioner) for that open cycle, so CSS can disable animations
+- During warm handoff to another hover-card trigger, the stale popup closes immediately (bypasses `closeDelay`) and that close cycle is marked with `data-instant`
 
 ## License
 

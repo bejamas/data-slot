@@ -70,7 +70,9 @@ controller.destroy();
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Find and bind uninitialized `[data-slot="select"]` descendants of `scope` (defaults to `document`). Returns `SelectController[]` for newly bound roots. To initialize the scope element itself, use `createSelect`.
 
@@ -80,7 +82,7 @@ import { create } from "@data-slot/select";
 const controllers = create();
 ```
 
-### `createSelect(root, options?)`
+#### `createSelect(root, options?)`
 
 Create a `SelectController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
 
@@ -90,7 +92,7 @@ import { createSelect } from "@data-slot/select";
 const controller = createSelect(element, {});
 ```
 
-## Slots
+### Slots
 
 | Slot | Description |
 |------|-------------|
@@ -109,7 +111,7 @@ const controller = createSelect(element, {});
 
 Item labels resolve from authored `data-label`, then `select-item-text`, then the item's text content. `data-label` is an input attribute, not generated state.
 
-### Composed Portal Markup (Optional)
+#### Composed Portal Markup (Optional)
 
 ```html
 <div data-slot="select">
@@ -124,7 +126,7 @@ Item labels resolve from authored `data-label`, then `select-item-text`, then th
 </div>
 ```
 
-### Native Label Support
+#### Native Label Support
 
 Use a standard HTML `<label for="...">` element to label the select. The `for` attribute should match the `id` on the trigger button. Clicking the label opens the select, and `aria-labelledby` is set automatically.
 
@@ -143,7 +145,7 @@ Use a standard HTML `<label for="...">` element to label the select. The `for` a
 </div>
 ```
 
-## Options
+### Options
 
 Options can be passed via JavaScript or data attributes (JS takes precedence).
 Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, `avoidCollisions`, `collisionPadding`) resolve in this order:
@@ -167,7 +169,7 @@ Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, 
 | `lockScroll` | `data-lock-scroll` | `boolean` | `true` | Lock page scroll while the popup is open |
 | `highlightItemOnHover` | `data-highlight-item-on-hover` | `boolean` | `true` | Highlight and focus items on pointer hover |
 
-### Positioning Modes
+#### Positioning Modes
 
 **`item-aligned` (default)**: The popup positions itself so the selected item aligns with the trigger, similar to native `<select>` elements. The popup width matches the trigger width.
 
@@ -192,14 +194,28 @@ The controller also mirrors the resolved positioning mode onto the DOM for styli
 
 Consumers can style against these attributes directly and do not need to author them manually.
 
-### Callbacks
+#### Callbacks
 
 | Callback | Type | Description |
 |----------|------|-------------|
 | `onValueChange` | `(value: string \| null) => void` | Called when selection changes |
 | `onOpenChange` | `(open: boolean) => void` | Called when popup opens/closes |
 
-## Controller API
+### Data Attributes
+
+The component sets these attributes to reflect state:
+
+| Attribute | Element | Values | Description |
+|-----------|---------|--------|-------------|
+| `data-state` | root, trigger, content | `"open" \| "closed"` | Open state |
+| `data-position` | content, viewport | `"item-aligned" \| "popper"` | Resolved positioning mode authored by the controller |
+| `data-align-trigger` | content | `"true" \| "false"` | Whether the current mode aligns the selected item to the trigger |
+| `data-value` | root | `string` | Current selected value |
+| `data-selected` | item | (presence) | Selected item |
+| `data-highlighted` | item | (presence) | Focused/highlighted item |
+| `data-placeholder` | trigger | (presence) | When showing placeholder |
+
+### Controller
 
 ```typescript
 interface SelectController {
@@ -212,9 +228,18 @@ interface SelectController {
 }
 ```
 
-## Events
+#### Controller Destruction
 
-### Outbound Events (component emits)
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+Focus restoration already queued by a close survives destruction.
+Closing with Tab still skips focus restoration to preserve normal Tab navigation.
+
+### Events
+
+#### Outbound Events
 
 ```javascript
 root.addEventListener('select:change', (e) => {
@@ -226,7 +251,7 @@ root.addEventListener('select:open-change', (e) => {
 });
 ```
 
-### Inbound Events (component listens)
+#### Inbound Events
 
 `select:set` accepts `{ value?: string | null, open?: boolean }`. Use `value: null` to clear the selection. When both fields are supplied, the value is applied before the open state. Programmatic selection works while disabled, but opening is blocked.
 
@@ -242,21 +267,7 @@ root.dispatchEvent(new CustomEvent('select:set', {
 }));
 ```
 
-## Data Attributes (State)
-
-The component sets these attributes to reflect state:
-
-| Attribute | Element | Values | Description |
-|-----------|---------|--------|-------------|
-| `data-state` | root, trigger, content | `"open" \| "closed"` | Open state |
-| `data-position` | content, viewport | `"item-aligned" \| "popper"` | Resolved positioning mode authored by the controller |
-| `data-align-trigger` | content | `"true" \| "false"` | Whether the current mode aligns the selected item to the trigger |
-| `data-value` | root | `string` | Current selected value |
-| `data-selected` | item | (presence) | Selected item |
-| `data-highlighted` | item | (presence) | Focused/highlighted item |
-| `data-placeholder` | trigger | (presence) | When showing placeholder |
-
-## Keyboard Navigation
+### Keyboard Navigation
 
 | Key | Action |
 |-----|--------|
@@ -270,7 +281,7 @@ The component sets these attributes to reflect state:
 | `Tab` | Close popup and move focus |
 | Type characters | Jump to matching item |
 
-## Accessibility
+### Accessibility
 
 - Trigger: `role="combobox"`, `aria-haspopup="listbox"`, `aria-expanded`, `aria-controls`
 - Content: `role="listbox"`, `aria-labelledby`
@@ -278,7 +289,7 @@ The component sets these attributes to reflect state:
 - Group: `role="group"`, `aria-labelledby`
 - Disabled items are skipped during keyboard navigation
 
-## Form Integration
+### Form Integration
 
 When `name` is provided, an internal control is automatically created for form submission and kept out of the visual and keyboard flow:
 
@@ -297,15 +308,6 @@ Resetting the form restores `defaultValue` and its displayed selection without
 emitting a value-change event, including when the select has no `name`.
 Synchronization happens on the next event-loop task, after the browser resets
 native controls. Calling `preventDefault()` on the reset event preserves the current state.
-
-## Controller destruction
-
-`destroy()` permanently disposes the controller and hides any open surface without
-emitting an additional change event. Repeated destruction is safe; methods on the
-old controller become no-ops. Create a new controller on the same root to rebind it.
-
-Focus restoration already queued by a close survives destruction.
-Closing with Tab still skips focus restoration to preserve normal Tab navigation.
 
 ## License
 
