@@ -54,6 +54,28 @@ console.log(group.value); // ["left"]
 group.destroy();
 ```
 
+## API
+
+### `create(scope?)`
+
+Find and bind uninitialized `[data-slot="toggle-group"]` descendants of `scope` (defaults to `document`). Returns `ToggleGroupController[]` for newly bound roots. To initialize the scope element itself, use `createToggleGroup`.
+
+```typescript
+import { create } from "@data-slot/toggle-group";
+
+const controllers = create();
+```
+
+### `createToggleGroup(root, options?)`
+
+Create a `ToggleGroupController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
+
+```typescript
+import { createToggleGroup } from "@data-slot/toggle-group";
+
+const controller = createToggleGroup(element, {});
+```
+
 ## Options
 
 | Option | Type | Default | Description |
@@ -65,6 +87,17 @@ group.destroy();
 | `disabled` | `boolean` | `false` | Disable the entire group. |
 | `onValueChange` | `(value: string[]) => void` | - | Callback when selection changes. |
 
+## Controller
+
+| Method/Property | Description |
+| --- | --- |
+| `setValue(value: string \| string[])` | Replace the selection. Strings are space-separated; unknown values are ignored and single mode keeps the first matching value. |
+| `toggle(value: string)` | Toggle one value; single mode clears the previous selection. |
+| `value` | Current selection (readonly `string[]`, including in single mode). |
+| `destroy()` | Remove listeners and release the root binding. |
+
+Controller methods work while the group is disabled. User interaction and `toggle-group:set` are blocked while disabled.
+
 ## Data Attributes
 
 ### Root Element
@@ -75,6 +108,7 @@ group.destroy();
 | `data-default-value` | Initial selected value(s). Space-separated for multiple values. |
 | `data-multiple` | Enable multiple selection mode. |
 | `data-orientation` | `"horizontal"` or `"vertical"` for keyboard navigation. |
+| `data-loop` | Wrap keyboard focus at the ends (default `true`); use `"false"` to stop at the ends. |
 | `data-disabled` | Disable the entire group. |
 
 ### Item Elements

@@ -81,6 +81,17 @@ const alertDialog = createAlertDialog(element, {
 | `closeOnEscape` | `boolean` | `true` | Close when pressing `Escape` |
 | `lockScroll` | `boolean` | `true` | Lock page scroll while open |
 
+#### Data Attributes
+
+Set these on the `alert-dialog` root. JavaScript options take precedence. Empty attributes or `"true"` enable a boolean; `"false"` disables it.
+
+| Attribute | Type | Default | Description |
+| --- | --- | --- | --- |
+| `data-default-open` | `boolean` | `false` | Initial open state |
+| `data-close-on-click-outside` | `boolean` | `false` | Close when clicking the overlay |
+| `data-close-on-escape` | `boolean` | `true` | Close on Escape |
+| `data-lock-scroll` | `boolean` | `true` | Lock page scroll while open |
+
 #### Controller
 
 | Method | Description |

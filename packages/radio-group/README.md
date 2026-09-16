@@ -57,6 +57,28 @@ console.log(radioGroup.value); // null
 radioGroup.destroy();
 ```
 
+## API
+
+### `create(scope?)`
+
+Find and bind uninitialized `[data-slot="radio-group"]` descendants of `scope` (defaults to `document`). Returns `RadioGroupController[]` for newly bound roots. To initialize the scope element itself, use `createRadioGroup`.
+
+```typescript
+import { create } from "@data-slot/radio-group";
+
+const controllers = create();
+```
+
+### `createRadioGroup(root, options?)`
+
+Create a `RadioGroupController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
+
+```typescript
+import { createRadioGroup } from "@data-slot/radio-group";
+
+const controller = createRadioGroup(element, {});
+```
+
 ## Slots
 
 | Slot | Description |

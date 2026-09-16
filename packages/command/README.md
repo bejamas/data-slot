@@ -100,9 +100,9 @@ Options can be passed via JavaScript or data attributes on the root element. Jav
 | Option | Data Attribute | Type | Default | Description |
 |--------|----------------|------|---------|-------------|
 | `label` | `data-label` | `string` | `"Command Menu"` | Accessible label announced for the search input |
-| `defaultValue` | `data-default-value` | `string` | `null` | Initial active item value |
+| `defaultValue` | `data-default-value` | `string` | First enabled visible item, or `null` | Initial active item value; a nonempty `defaultSearch` selects the first enabled result instead |
 | `defaultSearch` | `data-default-search` | `string` | `""` | Initial search text |
-| `shouldFilter` | `data-should-filter` | `boolean` | `true` | Disable built-in filtering and sorting |
+| `shouldFilter` | `data-should-filter` | `boolean` | `true` | Enable built-in filtering and sorting; set `false` to manage results yourself |
 | `loop` | `data-loop` | `boolean` | `false` | Wrap arrow-key navigation |
 | `disablePointerSelection` | `data-disable-pointer-selection` | `boolean` | `false` | Disable hover-driven selection |
 | `vimBindings` | `data-vim-bindings` | `boolean` | `true` | Enable `Ctrl+J/K/N/P` shortcuts |

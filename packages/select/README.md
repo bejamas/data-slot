@@ -68,6 +68,28 @@ controller.destroy();
 
 `createSelect(root)` is idempotent per root. Calling it again for the same element returns the existing controller; destroy it first if you need to rebind with different options.
 
+## API
+
+### `create(scope?)`
+
+Find and bind uninitialized `[data-slot="select"]` descendants of `scope` (defaults to `document`). Returns `SelectController[]` for newly bound roots. To initialize the scope element itself, use `createSelect`.
+
+```typescript
+import { create } from "@data-slot/select";
+
+const controllers = create();
+```
+
+### `createSelect(root, options?)`
+
+Create a `SelectController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
+
+```typescript
+import { createSelect } from "@data-slot/select";
+
+const controller = createSelect(element, {});
+```
+
 ## Slots
 
 | Slot | Description |
@@ -84,6 +106,8 @@ controller.destroy();
 | `select-separator` | Visual divider between items/groups |
 | `select-positioner` | Optional authored positioning wrapper (reused instead of generated wrapper) |
 | `select-portal` | Optional authored portal wrapper that can contain `select-positioner` |
+
+Item labels resolve from authored `data-label`, then `select-item-text`, then the item's text content. `data-label` is an input attribute, not generated state.
 
 ### Composed Portal Markup (Optional)
 
@@ -132,6 +156,7 @@ Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, 
 | Option | Data Attribute | Type | Default | Description |
 |--------|---------------|------|---------|-------------|
 | `defaultValue` | `data-default-value` | `string` | `null` | Initial selected value |
+| `defaultOpen` | `data-default-open` | `boolean` | `false` | Initial popup open state |
 | `placeholder` | `data-placeholder` | `string` | `""` | Text when no value selected |
 | `disabled` | `data-disabled` | `boolean` | `false` | Disable interaction |
 | `required` | `data-required` | `boolean` | `false` | Form validation required |
@@ -139,6 +164,7 @@ Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, 
 | `position` | `data-position` | `"item-aligned" \| "popper"` | `"item-aligned"` | Positioning mode (see below) |
 | `avoidCollisions` | `data-avoid-collisions` | `boolean` | `true` | Adjust to stay in viewport |
 | `collisionPadding` | `data-collision-padding` | `number` | `8` | Viewport edge padding (px) |
+| `lockScroll` | `data-lock-scroll` | `boolean` | `true` | Lock page scroll while the popup is open |
 | `highlightItemOnHover` | `data-highlight-item-on-hover` | `boolean` | `true` | Highlight and focus items on pointer hover |
 
 ### Positioning Modes
@@ -202,6 +228,8 @@ root.addEventListener('select:open-change', (e) => {
 
 ### Inbound Events (component listens)
 
+`select:set` accepts `{ value?: string | null, open?: boolean }`. Use `value: null` to clear the selection. When both fields are supplied, the value is applied before the open state. Programmatic selection works while disabled, but opening is blocked.
+
 ```javascript
 // Set value
 root.dispatchEvent(new CustomEvent('select:set', {
@@ -227,7 +255,6 @@ The component sets these attributes to reflect state:
 | `data-selected` | item | (presence) | Selected item |
 | `data-highlighted` | item | (presence) | Focused/highlighted item |
 | `data-placeholder` | trigger | (presence) | When showing placeholder |
-| `data-label` | item | `string` | Display text for trigger (optional, falls back to textContent) |
 
 ## Keyboard Navigation
 

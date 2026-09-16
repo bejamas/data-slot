@@ -60,7 +60,7 @@ const tabs = createTabs(element, {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `defaultValue` | `string` | First trigger's value | Initial selected tab |
+| `defaultValue` | `string` | First enabled trigger's value | Initial selected tab |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Tab orientation for keyboard nav |
 | `activationMode` | `"auto" \| "manual"` | `"auto"` | How tabs are activated with keyboard |
 | `onValueChange` | `(value: string) => void` | `undefined` | Callback when selected tab changes |
@@ -71,7 +71,7 @@ Options can also be set via data attributes on the root element. JS options take
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `data-default-value` | string | first tab | Initial selected tab |
+| `data-default-value` | string | first enabled tab | Initial selected tab |
 | `data-orientation` | string | `"horizontal"` | Tab orientation: horizontal, vertical |
 | `data-activation-mode` | string | `"auto"` | Activation mode: auto, manual |
 
@@ -88,6 +88,7 @@ Options can also be set via data attributes on the root element. JS options take
 |-----------------|-------------|
 | `select(value)` | Select a tab by value |
 | `value` | Currently selected value (readonly `string`) |
+| `updateIndicator()` | Recalculate indicator position after layout changes |
 | `destroy()` | Cleanup all event listeners |
 
 ## Markup Structure
@@ -209,6 +210,8 @@ The indicator receives CSS variables for positioning:
 
 ## Keyboard Navigation
 
+The tables below describe `activationMode: "auto"` (the default). In `"manual"` mode, arrow keys, `Home`, and `End` only move focus; `Enter` or `Space` selects the focused tab. Disabled triggers are skipped.
+
 ### Horizontal Orientation
 
 | Key | Action |
@@ -238,7 +241,7 @@ The component automatically handles:
 - `aria-selected` on triggers
 - `aria-controls` linking triggers to panels
 - `aria-labelledby` linking panels to triggers
-- `tabindex` management (only selected tab is in tab order)
+- `tabindex` management (only the selected enabled tab is in the tab order)
 
 ## Events
 

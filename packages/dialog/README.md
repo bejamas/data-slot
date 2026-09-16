@@ -13,6 +13,7 @@ npm install @data-slot/dialog
 ```html
 <div data-slot="dialog">
   <button data-slot="dialog-trigger">Open Dialog</button>
+  <div data-slot="dialog-overlay" hidden></div>
   <div data-slot="dialog-content" hidden>
     <h2 data-slot="dialog-title">Dialog Title</h2>
     <p data-slot="dialog-description">Dialog description text.</p>
@@ -107,6 +108,7 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
 ```html
 <div data-slot="dialog">
   <button data-slot="dialog-trigger">Open</button>
+  <div data-slot="dialog-overlay" hidden></div>
   <div data-slot="dialog-content" role="dialog">
     <h2 data-slot="dialog-title">Title</h2>
     <p data-slot="dialog-description">Description</p>
@@ -118,10 +120,12 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
 ### Required Slots
 
 - `dialog-content` - The dialog panel (required)
+- `dialog-overlay` - The backdrop (required)
 
 ### Optional Slots
 
 - `dialog-trigger` - Button to open the dialog
+- `dialog-portal` - Optional wrapper portaled to `document.body` while open
 - `dialog-title` - Title for `aria-labelledby`
 - `dialog-description` - Description for `aria-describedby`
 - `dialog-close` - Button to close the dialog

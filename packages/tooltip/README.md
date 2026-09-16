@@ -351,7 +351,8 @@ If the trigger has `disabled` attribute or `aria-disabled="true"`:
 | Pointer enter content | Keep open (hoverable content) |
 | Pointer leave content | Hide immediately (unless entering trigger) |
 | Touch hover | Ignored (focus-only on touch devices) |
-| Focus | Show after delay |
+| Click trigger | Cancel a pending delayed open, or dismiss an already-open tooltip |
+| Focus | Show after delay (immediately during the warm-up window) |
 | Blur | Hide immediately |
 | `Escape` | Hide immediately (listener only active when open) |
 

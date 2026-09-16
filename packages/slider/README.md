@@ -70,11 +70,61 @@ console.log(slider.value); // 75
 slider.destroy();
 ```
 
+## API
+
+### `create(scope?)`
+
+Find and bind uninitialized `[data-slot="slider"]` descendants of `scope` (defaults to `document`). Returns `SliderController[]` for newly bound roots. To initialize the scope element itself, use `createSlider`.
+
+```typescript
+import { create } from "@data-slot/slider";
+
+const controllers = create();
+```
+
+### `createSlider(root, options?)`
+
+Create a `SliderController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
+
+```typescript
+import { createSlider } from "@data-slot/slider";
+
+const controller = createSlider(element, {});
+```
+
+### Options
+
+JavaScript options take precedence over root data attributes.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `defaultValue` | `number \| [number, number]` | `min` (single), `[min, min]` (range) | Initial value; clamped to the bounds and snapped to `step`. Two thumbs enable range mode. |
+| `min` | `number` | `0` | Minimum value |
+| `max` | `number` | `100` | Maximum value |
+| `step` | `number` | `1` | Step increment; non-positive values fall back to `1` |
+| `largeStep` | `number` | `step * 10` | Increment for PageUp/PageDown and Shift+Arrow |
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Slider orientation |
+| `thumbAlignment` | `"center" \| "edge" \| "edge-client-only"` | `"center"` | Thumb placement at the track edges |
+| `disabled` | `boolean` | `false` | Disable user interaction and inbound set events |
+| `onValueChange` | `(value: number \| [number, number]) => void` | `undefined` | Called for value changes, including programmatic updates; silent on initialization and unchanged values |
+| `onValueCommit` | `(value: number \| [number, number]) => void` | `undefined` | Called on pointer release/cancel, blur after a keyboard value change, or a changed `slider:set` update |
+
+### Controller
+
+| Method/Property | Description |
+| --- | --- |
+| `setValue(value: number \| [number, number])` | Update the value, including when disabled. Emits change when the value changes, but does not emit commit. |
+| `value` | Current value (readonly `number \| [number, number]`) |
+| `min` | Resolved minimum (readonly `number`) |
+| `max` | Resolved maximum (readonly `number`) |
+| `disabled` | Whether interaction is disabled (readonly `boolean`) |
+| `destroy()` | Remove listeners and release the root binding |
+
 ## Data Attributes
 
 | Attribute | Description | Default |
 |-----------|-------------|---------|
-| `data-default-value` | Initial value (`50` or `25,75` for range) | `min` |
+| `data-default-value` | Initial value (`50` or `25,75` for range) | `min` (single), `[min, min]` (range) |
 | `data-min` | Minimum value | `0` |
 | `data-max` | Maximum value | `100` |
 | `data-step` | Step increment | `1` |
@@ -117,7 +167,7 @@ createSlider(element, {
 | Event | Detail | Description |
 |-------|--------|-------------|
 | `slider:change` | `{ value: number \| [number, number] }` | Fires during value changes |
-| `slider:commit` | `{ value: number \| [number, number] }` | Fires when interaction ends |
+| `slider:commit` | `{ value: number \| [number, number] }` | Fires on pointer release/cancel, blur after a keyboard value change, or a changed `slider:set` update |
 
 ### Inbound Events (on root)
 
@@ -166,8 +216,8 @@ Use `{ value: ... }` instead.
 
 | Key | Action |
 |-----|--------|
-| `ArrowRight` / `ArrowUp` | Increase by step |
-| `ArrowLeft` / `ArrowDown` | Decrease by step |
+| `ArrowRight` / `ArrowLeft` | Increase / decrease by step in horizontal sliders |
+| `ArrowUp` / `ArrowDown` | Increase / decrease by step in vertical sliders |
 | `PageUp` | Increase by largeStep |
 | `PageDown` | Decrease by largeStep |
 | `Home` | Set to min |

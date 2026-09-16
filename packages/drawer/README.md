@@ -84,7 +84,7 @@ drawer.setSnapPoint("320px");
 | `closeOnEscape` | `data-close-on-escape` | `boolean` | `true` | Close when `Escape` is pressed. |
 | `swipeDirection` | `data-swipe-direction` | `"down" \| "up" \| "left" \| "right"` | `"down"` | Direction used to dismiss the drawer. |
 | `snapPoint` / `defaultSnapPoint` | `data-snap-point` / `data-default-snap-point` | `DrawerSnapPoint \| null` | `null` | Initial single open position. `snapPoint` takes precedence over the default. `null` uses the full CSS size. |
-| `triggerId` / `defaultTriggerId` | `data-default-trigger-id` | `string \| null` | — | Initial detached trigger identifier. |
+| `triggerId` / `defaultTriggerId` | `data-trigger-id` / `data-default-trigger-id` | `string \| null` | — | Initial detached trigger identifier. |
 | `initialFocus` | popup `data-initial-focus` | `boolean \| string \| HTMLElement` | popup | Choose focus when the drawer opens. |
 | `finalFocus` | popup `data-final-focus` | `boolean \| string \| HTMLElement` | trigger or previous focus | Choose focus when the drawer closes. |
 | `keepMounted` | portal `data-keep-mounted` | `boolean` | `false` | Keep portal content mounted while closed. |
@@ -152,7 +152,7 @@ Detached triggers can live outside the root when the root has an ID:
 
 `data-payload` accepts JSON or a plain string. The parsed value is forwarded in change event details.
 
-Use native `<button>` elements for triggers and close controls.
+Use native `<button>` elements for triggers and close controls. Native `disabled`, `data-disabled`, and `aria-disabled="true"` block their activation.
 
 ### Composition slots
 

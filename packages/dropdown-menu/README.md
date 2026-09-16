@@ -78,6 +78,28 @@ controller.destroy();
 
 `createDropdownMenu(root)` is idempotent per root. Calling it again for the same element returns the existing controller.
 
+## API
+
+### `create(scope?)`
+
+Find and bind uninitialized `[data-slot="dropdown-menu"]` descendants of `scope` (defaults to `document`). Returns `DropdownMenuController[]` for newly bound roots. To initialize the scope element itself, use `createDropdownMenu`.
+
+```typescript
+import { create } from "@data-slot/dropdown-menu";
+
+const controllers = create();
+```
+
+### `createDropdownMenu(root, options?)`
+
+Create a `DropdownMenuController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
+
+```typescript
+import { createDropdownMenu } from "@data-slot/dropdown-menu";
+
+const controller = createDropdownMenu(element, {});
+```
+
 ## Controller
 
 ```ts
@@ -93,6 +115,20 @@ interface DropdownMenuController {
   destroy(): void;
 }
 ```
+
+`DropdownMenuSetDetail` is a partial update:
+
+```ts
+interface DropdownMenuSetDetail {
+  open?: boolean;
+  value?: string | null;
+  values?: string[];
+  highlightedValue?: string | null;
+  source?: "programmatic" | "restore";
+}
+```
+
+Use `value: null` to clear radio selection, `values: []` to clear checkbox selection, and `highlightedValue: null` to clear the highlight. `source` defaults to `"programmatic"`.
 
 `set()` applies fields in this order: `value`, `values`, `open`, `highlightedValue`.
 
@@ -140,7 +176,7 @@ interface DropdownMenuController {
 
 | Attribute | Target | Description |
 |-----------|--------|-------------|
-| `data-state="open|closed"` | root, content | Current open state |
+| `data-state="open\|closed"` | root, content | Current open state |
 | `data-open` / `data-closed` | root, content | Presence aliases for state styling |
 | `data-value="..."` | root | Current committed radio value only |
 | `data-side` | content, positioner | Computed side after collision handling |
@@ -262,28 +298,26 @@ If closing the menu also clears an existing highlight, `dropdown-menu:highlight-
 
 ## Options
 
-```ts
-interface DropdownMenuOptions {
-  defaultOpen?: boolean;
-  defaultValue?: string | null;
-  defaultValues?: string[];
-  onOpenChange?: (open: boolean) => void;
-  onSelect?: (value: string) => void;
-  onValueChange?: (value: string | null) => void;
-  onValuesChange?: (values: string[]) => void;
-  closeOnClickOutside?: boolean;
-  closeOnEscape?: boolean;
-  closeOnSelect?: boolean;
-  highlightItemOnHover?: boolean;
-  side?: "top" | "right" | "bottom" | "left";
-  align?: "start" | "center" | "end";
-  sideOffset?: number;
-  alignOffset?: number;
-  avoidCollisions?: boolean;
-  collisionPadding?: number;
-  lockScroll?: boolean;
-}
-```
+| Option | Data Attribute | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `defaultOpen` | `data-default-open` | `boolean` | `false` | Initial open state |
+| `defaultValue` | `data-default-value` | `string \| null` | Item defaults, then `null` | Initial radio value; explicit null clears item defaults |
+| `defaultValues` | `data-default-values` | `string[]` | Item defaults, then `[]` | Initial checkbox values; encode the attribute as a JSON array |
+| `closeOnClickOutside` | `data-close-on-click-outside` | `boolean` | `true` | Close on outside interaction |
+| `closeOnEscape` | `data-close-on-escape` | `boolean` | `true` | Close on Escape |
+| `closeOnSelect` | `data-close-on-select` | `boolean` | `true` | Close after accepted user activation |
+| `highlightItemOnHover` | `data-highlight-item-on-hover` | `boolean` | `true` | Highlight and focus items on hover |
+| `side` | `data-side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred popup side |
+| `align` | `data-align` | `"start" \| "center" \| "end"` | `"start"` | Preferred popup alignment |
+| `sideOffset` | `data-side-offset` | `number` | `4` | Distance from trigger (px) |
+| `alignOffset` | `data-align-offset` | `number` | `0` | Alignment offset (px) |
+| `avoidCollisions` | `data-avoid-collisions` | `boolean` | `true` | Flip and shift within the viewport |
+| `collisionPadding` | `data-collision-padding` | `number` | `8` | Viewport edge padding (px) |
+| `lockScroll` | `data-lock-scroll` | `boolean` | `true` | Lock page scroll while open; uses fixed positioning when enabled and absolute positioning when disabled |
+| `onOpenChange` | — | `(open: boolean) => void` | `undefined` | Called when open state changes |
+| `onSelect` | — | `(value: string) => void` | `undefined` | Called after accepted user activation |
+| `onValueChange` | — | `(value: string \| null) => void` | `undefined` | Called when committed radio selection changes |
+| `onValuesChange` | — | `(values: string[]) => void` | `undefined` | Called when committed checkbox selection changes |
 
 Notes:
 

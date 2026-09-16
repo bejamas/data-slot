@@ -63,6 +63,28 @@ console.log(controller.value); // 'banana'
 controller.destroy();
 ```
 
+## API
+
+### `create(scope?)`
+
+Find and bind uninitialized `[data-slot="combobox"]` descendants of `scope` (defaults to `document`). Returns `ComboboxController[]` for newly bound roots. To initialize the scope element itself, use `createCombobox`.
+
+```typescript
+import { create } from "@data-slot/combobox";
+
+const controllers = create();
+```
+
+### `createCombobox(root, options?)`
+
+Create a `ComboboxController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
+
+```typescript
+import { createCombobox } from "@data-slot/combobox";
+
+const controller = createCombobox(element, {});
+```
+
 ## Slots
 
 | Slot | Description |
@@ -164,13 +186,14 @@ Options can be passed via JavaScript or data attributes (JS takes precedence).
 | Option | Data Attribute | Type | Default | Description |
 |--------|---------------|------|---------|-------------|
 | `defaultValue` | `data-default-value` | `string` | `null` | Initial selected value |
+| `defaultOpen` | `data-default-open` | `boolean` | `false` | Initial popup open state |
 | `placeholder` | `data-placeholder` | `string` | `""` | Input placeholder text |
 | `disabled` | `data-disabled` | `boolean` | `false` | Disable interaction |
 | `required` | `data-required` | `boolean` | `false` | Form validation required |
 | `name` | `data-name` | `string` | - | Form field name (creates hidden input) |
 | `openOnFocus` | `data-open-on-focus` | `boolean` | `true` | Open popup when input is focused |
 | `autoHighlight` | `data-auto-highlight` | `boolean` | `false` | Auto-highlight first visible item after non-whitespace query input |
-| `filter` | - | `function` | substring | Custom filter function |
+| `filter` | - | `(inputValue: string, itemValue: string, itemLabel: string) => boolean` | case-insensitive label substring match | Return `true` to show an item |
 | `itemToStringValue` | - | `(item: HTMLElement \| null, value: string \| null) => string` | item label | Custom text resolver for committed selected-value text (input in inline mode, `combobox-value` in popup-input mode) |
 | `side` | `data-side` | `"top" \| "bottom"` | `"bottom"` | Popup placement |
 | `align` | `data-align` | `"start" \| "center" \| "end"` | `"start"` | Popup alignment |
@@ -247,6 +270,17 @@ root.addEventListener('combobox:input-change', (e) => {
 ```
 
 ### Inbound Events (component listens)
+
+`combobox:set` accepts a partial update with these fields, applied in table order:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `value` | `string \| null` | Select a value, or clear with `null` |
+| `open` | `boolean` | Open or close the popup; opening is blocked when disabled |
+| `inputValue` | `string` | Replace the input text without filtering or firing the input-change callback |
+| `itemToStringValue` | `ComboboxItemToStringValue \| null` | Replace or clear the selected-value formatter and resync the displayed value |
+
+Programmatic selection works while disabled. In inline-input mode, updating the formatter resynchronizes the input, so it can overwrite `inputValue` supplied in the same event.
 
 ```javascript
 // Set value
