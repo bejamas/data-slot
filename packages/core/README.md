@@ -121,6 +121,29 @@ Compose multiple event handlers into one. Stops if `event.defaultPrevented`.
 const handler = composeHandlers(onClickProp, internalHandler);
 ```
 
+### Modal and Dismissal Utilities
+
+#### `createModalStackItem(options)`
+
+Register a surface with the document's modal stack. The controller provides
+`open()`, `close()`, `destroy()`, and a readonly `isTopmost` property. Use
+`isTopmost` for interaction ownership rather than reading the styling attributes.
+
+Set `isolateOutside: true` to keep background content inert and hidden from
+assistive technology while that item is open. Isolation follows the topmost
+stack item, including a dialog opened above a drawer, and permits its owned
+portals. Closing or destroying items restores the previous isolation and authored
+attributes. Items that do not request isolation retain their existing behavior
+when no isolating item is open.
+
+#### `createDismissLayer(options)`
+
+Coordinate outside presses, Escape, and focus moving into an outside iframe.
+`onDismiss(details)` receives the triggering `originalEvent` and its `reason`:
+`"outside-press"`, `"escape-key"`, or `"focus-out"`. Touch dismissal reports the
+activation click; iframe dismissal reports the window blur event. Callbacks that
+do not need these details can continue to take no arguments.
+
 ## Usage in Components
 
 This package is used internally by all `@data-slot/*` component packages. You typically don't need to import it directly unless building custom components.

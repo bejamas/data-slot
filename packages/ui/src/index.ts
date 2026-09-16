@@ -37,6 +37,17 @@ export type { TooltipOptions, TooltipController } from "@data-slot/tooltip";
 export { createDialog } from "@data-slot/dialog";
 export type { DialogOptions, DialogController } from "@data-slot/dialog";
 
+export { createDrawer } from "@data-slot/drawer";
+export type {
+  DrawerOptions,
+  DrawerController,
+  DrawerSnapPoint,
+  DrawerSwipeDirection,
+  DrawerChangeReason,
+  DrawerChangeDetails,
+  DrawerSnapChangeDetails,
+} from "@data-slot/drawer";
+
 export { createAlertDialog } from "@data-slot/alert-dialog";
 export type {
   AlertDialogOptions,

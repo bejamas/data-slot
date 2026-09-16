@@ -32,6 +32,12 @@
       "require": "./dist/dialog.cjs",
       "default": "./dist/dialog.js"
     },
+    "./drawer": {
+      "types": "./dist/drawer.d.ts",
+      "import": "./dist/drawer.js",
+      "require": "./dist/drawer.cjs",
+      "default": "./dist/drawer.js"
+    },
     "./alert-dialog": {
       "types": "./dist/alert-dialog.d.ts",
       "import": "./dist/alert-dialog.js",
@@ -133,6 +139,7 @@
     "@data-slot/core": "workspace:*",
     "@data-slot/tabs": "workspace:*",
     "@data-slot/dialog": "workspace:*",
+    "@data-slot/drawer": "workspace:*",
     "@data-slot/alert-dialog": "workspace:*",
     "@data-slot/accordion": "workspace:*",
     "@data-slot/popover": "workspace:*",

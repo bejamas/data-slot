@@ -55,6 +55,7 @@ export type {
   ModalStackItemOptions,
   ModalStackItemController,
   DismissLayerOptions,
+  DismissLayerDetails,
   PortalLifecycleOptions,
   PortalLifecycleController,
   TerminalLifecycleController,
