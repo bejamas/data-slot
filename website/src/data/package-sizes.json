@@ -7,14 +7,14 @@
   },
   {
     "name": "@data-slot/core",
-    "size": 8194,
-    "sizeFormatted": "8.0 KB",
+    "size": 8470,
+    "sizeFormatted": "8.3 KB",
     "description": "Shared utilities"
   },
   {
     "name": "@data-slot/drawer",
-    "size": 6812,
-    "sizeFormatted": "6.7 KB",
+    "size": 6470,
+    "sizeFormatted": "6.3 KB",
     "description": "Swipeable drawers, nested dialogs"
   },
   {
