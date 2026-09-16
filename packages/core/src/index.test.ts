@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from 'bun:test'
 import {
   getPart,
   getParts,
+  getOwnedElements,
   getRoots,
   getRootBinding,
   hasRootBinding,
@@ -31,6 +32,8 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createPositionSync,
+  createTerminalLifecycle,
+  registerModalTerminalResources,
 } from './index'
 import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
@@ -150,6 +153,42 @@ describe('core/focusability', () => {
   })
 })
 
+describe('core/modal terminal resources', () => {
+  it('disposes modal resources in a stable terminal order', () => {
+    const calls: string[] = []
+    const lifecycle = createTerminalLifecycle()
+
+    registerModalTerminalResources(lifecycle, {
+      cleanups: [() => calls.push('listener')],
+      modalStack: { destroy: () => calls.push('modal stack') },
+      presence: [
+        { cleanup: () => calls.push('overlay presence') },
+        { cleanup: () => calls.push('content presence') },
+      ],
+      portal: { cleanup: () => calls.push('portal') },
+      beforeDestroy: () => calls.push('before destroy'),
+      reset: () => calls.push('reset'),
+      releaseScrollLock: () => calls.push('scroll lock'),
+      cleanup: () => calls.push('component cleanup'),
+      unbind: () => calls.push('root unbind'),
+    })
+
+    expect(lifecycle.destroy()).toBe(true)
+    expect(calls).toEqual([
+      'before destroy',
+      'modal stack',
+      'overlay presence',
+      'content presence',
+      'reset',
+      'scroll lock',
+      'component cleanup',
+      'portal',
+      'listener',
+      'root unbind',
+    ])
+  })
+})
+
 describe('core/parts', () => {
   it('getPart finds a single slot', () => {
     document.body.innerHTML = `
@@ -183,6 +222,70 @@ describe('core/parts', () => {
     expect(items).toHaveLength(3)
   })
 
+  it('keeps parts owned by a nested component out of its parent query', () => {
+    document.body.innerHTML = `
+      <div data-slot="accordion" id="outer">
+        <button data-slot="accordion-trigger" id="outer-trigger">Outer</button>
+        <div data-slot="accordion">
+          <button data-slot="accordion-trigger" id="inner-trigger">Inner</button>
+        </div>
+      </div>
+    `
+
+    const outer = document.getElementById('outer')!
+    expect(getPart(outer, 'accordion-trigger')?.id).toBe('outer-trigger')
+    expect(getParts(outer, 'accordion-trigger').map((part) => part.id)).toEqual([
+      'outer-trigger',
+    ])
+  })
+
+  it('keeps nested parts out of a portaled component scope', () => {
+    document.body.innerHTML = `
+      <div data-slot="dropdown-menu" id="outer"></div>
+      <div data-slot="dropdown-menu-content" id="content">
+        <button data-slot="dropdown-menu-item" id="outer-item">Outer</button>
+        <div data-slot="dropdown-menu">
+          <button data-slot="dropdown-menu-item" id="inner-item">Inner</button>
+        </div>
+      </div>
+    `
+
+    const outer = document.getElementById('outer')!
+    const content = document.getElementById('content')!
+    expect(
+      getOwnedElements(outer, content, '[data-slot="dropdown-menu-item"]').map(
+        (part) => part.id
+      )
+    ).toEqual(['outer-item'])
+  })
+
+  for (const scopeType of ['fragment', 'shadow root'] as const) {
+    it(`finds owned parts in a ${scopeType} while excluding nested components`, () => {
+      const root = document.createElement('div')
+      root.setAttribute('data-slot', 'dropdown-menu')
+      const scope = scopeType === 'fragment'
+        ? document.createDocumentFragment()
+        : document.createElement('div').attachShadow({ mode: 'open' })
+      const template = document.createElement('template')
+      template.innerHTML = `
+        <button data-slot="dropdown-menu-item" id="direct-item">Direct</button>
+        <div>
+          <button data-slot="dropdown-menu-item" id="wrapped-item">Wrapped</button>
+          <div data-slot="dropdown-menu">
+            <button data-slot="dropdown-menu-item" id="nested-item">Nested</button>
+          </div>
+        </div>
+      `
+      scope.appendChild(template.content)
+
+      expect(
+        getOwnedElements(root, scope, '[data-slot="dropdown-menu-item"]').map(
+          (part) => part.id
+        )
+      ).toEqual(['direct-item', 'wrapped-item'])
+    })
+  }
+
   it('getRoots finds all component roots by data-slot', () => {
     document.body.innerHTML = `
       <div data-slot="dialog">Dialog 1</div>
@@ -200,7 +303,7 @@ describe('core/parts', () => {
     expect(getRootBinding(root, 'test')).toBeUndefined()
     expect(hasRootBinding(root, 'test')).toBe(false)
     expect(setRootBinding(root, 'test', controller)).toBe(controller)
-    expect(getRootBinding(root, 'test')).toBe(controller)
+    expect(getRootBinding<typeof controller>(root, 'test')).toBe(controller)
     expect(hasRootBinding(root, 'test')).toBe(true)
   })
 
@@ -212,7 +315,7 @@ describe('core/parts', () => {
     setRootBinding(root, 'test', first)
 
     expect(clearRootBinding(root, 'test', second)).toBe(false)
-    expect(getRootBinding(root, 'test')).toBe(first)
+    expect(getRootBinding<typeof first>(root, 'test')).toBe(first)
     expect(clearRootBinding(root, 'test', first)).toBe(true)
     expect(getRootBinding(root, 'test')).toBeUndefined()
     expect(hasRootBinding(root, 'test')).toBe(false)
@@ -248,8 +351,8 @@ describe('core/parts', () => {
 
     try {
       setRootBinding(root, 'test', controller)
-      expect(reuseRootBinding(root, 'test', 'duplicate')).toBe(controller)
-      expect(reuseRootBinding(root, 'test', 'duplicate')).toBe(controller)
+      expect(reuseRootBinding<typeof controller>(root, 'test', 'duplicate')).toBe(controller)
+      expect(reuseRootBinding<typeof controller>(root, 'test', 'duplicate')).toBe(controller)
     } finally {
       console.warn = originalWarn
     }
@@ -866,7 +969,7 @@ describe('core/portal', () => {
     const content = document.getElementById('content')!
 
     // Simulate ownership written by another bundled copy of core
-    ;(content as Element & { [key: symbol]: Element })[Symbol.for('data-slot.portal-owner')] = root
+    Reflect.set(content, Symbol.for('data-slot.portal-owner'), root)
     document.body.appendChild(content)
 
     expect(containsWithPortals(root, content)).toBe(true)
@@ -1099,7 +1202,7 @@ describe('core/popup', () => {
       if (original) {
         Object.defineProperty(window, 'visualViewport', original)
       } else {
-        Reflect.deleteProperty(window as Window & Record<string, unknown>, 'visualViewport')
+        Reflect.deleteProperty(window, 'visualViewport')
       }
     }
   })
@@ -1891,7 +1994,7 @@ describe('core/popup', () => {
     expect(wrapper?.style.isolation).toBe('isolate')
     expect(wrapper?.style.zIndex).toBe('50')
     expect(wrapper?.parentElement).toBe(document.body)
-    expect(lifecycle.container).toBe(wrapper)
+    expect(lifecycle.container).toBe(wrapper!)
 
     lifecycle.restore()
     expect(content.parentElement).toBe(root)
@@ -1953,7 +2056,7 @@ describe('core/popup', () => {
       }) as typeof window.cancelAnimationFrame,
       setTimeout: window.setTimeout.bind(window),
       clearTimeout: window.clearTimeout.bind(window),
-    } as Window
+    } as unknown as Window
 
     const flushOneRaf = () => {
       const pending = [...rafCallbacks.values()]

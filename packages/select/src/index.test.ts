@@ -34,6 +34,45 @@ describe("Select", () => {
     return { root, trigger, content, valueSlot, items, controller };
   };
 
+  it("preserves queued close focus restoration when destroyed before the next frame", async () => {
+    const { trigger, content, controller } = setup();
+    trigger.focus();
+    controller.open();
+    await waitForRaf();
+    await waitForRaf();
+    content.focus();
+    controller.close();
+    await waitForRaf();
+    controller.destroy();
+    controller.destroy();
+    await waitForRaf();
+    await waitForRaf();
+    expect(document.activeElement === trigger).toBe(true);
+  });
+
+  it("does not move outside focus when destroyed without a pending restoration", async () => {
+    const { controller } = setup();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+    controller.destroy();
+    await waitForRaf();
+    expect(document.activeElement === outside).toBe(true);
+  });
+
+  it("preserves Tab focus when destroyed after a close that skips restoration", async () => {
+    const { content, controller } = setup();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    controller.open();
+    content.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    outside.focus();
+    await waitForRaf();
+    controller.destroy();
+    await waitForRaf();
+    expect(document.activeElement === outside).toBe(true);
+  });
+
   const waitForRaf = () =>
     new Promise<void>((resolve) => {
       requestAnimationFrame(() => resolve());
@@ -68,6 +107,100 @@ describe("Select", () => {
     document.body.innerHTML = "";
     resetScrollLock();
     document.documentElement.style.cssText = "";
+  });
+
+  describe("nested ownership", () => {
+    for (const bindInner of [false, true]) {
+      it(`ignores nested item clicks with an ${bindInner ? "initialized" : "uninitialized"} inner select`, () => {
+        document.body.innerHTML = `
+          <div data-slot="select" id="outer">
+            <button data-slot="select-trigger"><span data-slot="select-value"></span></button>
+            <div data-slot="select-content">
+              <div data-slot="select-item" data-value="outer" id="outer-item">Outer</div>
+              <div data-slot="select" id="inner">
+                <button data-slot="select-trigger">Inner</button>
+                <div data-slot="select-content">
+                  <div data-slot="select-item" data-value="inner" id="inner-item">Inner</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        const outerRoot = document.getElementById("outer")!;
+        const innerRoot = document.getElementById("inner")!;
+        const outer = createSelect(outerRoot, { name: "outer", defaultValue: "outer" });
+        const inner = bindInner ? createSelect(innerRoot) : null;
+        try {
+          outer.open();
+          const innerItem = document.getElementById("inner-item")!;
+          if (!bindInner) expect(innerItem.hasAttribute("role")).toBe(false);
+          innerItem.click();
+          expect(outer.value).toBe("outer");
+          expect(outer.isOpen).toBe(true);
+          expect(outerRoot.querySelector<HTMLInputElement>('input[type="hidden"]')?.value).toBe("outer");
+
+          document.getElementById("outer-item")!.click();
+          expect(outer.value).toBe("outer");
+          expect(outer.isOpen).toBe(false);
+        } finally {
+          inner?.destroy();
+          outer.destroy();
+        }
+      });
+    }
+  });
+
+  for (const mutation of ["append", "replace"] as const) {
+    it(`selects an item after ${mutation} while the popup is open`, () => {
+      const { root, content, items, controller } = setup({ name: "fruit" });
+      try {
+        controller.open();
+        const item = document.createElement("div");
+        item.dataset.slot = "select-item";
+        item.dataset.value = "loaded";
+        item.innerHTML = "<span>Loaded</span>";
+        if (mutation === "append") content.appendChild(item);
+        else items[0]!.replaceWith(item);
+
+        item.querySelector("span")!.click();
+        expect(controller.value).toBe("loaded");
+        expect(controller.isOpen).toBe(false);
+        expect(root.querySelector<HTMLInputElement>('input[type="hidden"]')?.value).toBe("loaded");
+      } finally {
+        controller.destroy();
+      }
+    });
+  }
+
+  it("ignores a cached item moved into a nested select while open", () => {
+    const { content, items, controller } = setup();
+    try {
+      controller.open();
+      const nestedRoot = document.createElement("div");
+      nestedRoot.dataset.slot = "select";
+      content.appendChild(nestedRoot);
+      nestedRoot.appendChild(items[0]!);
+      items[0]!.click();
+      expect(controller.value).toBeNull();
+      expect(controller.isOpen).toBe(true);
+    } finally {
+      controller.destroy();
+    }
+  });
+
+  it("allows clicking an item enabled while the popup is open", () => {
+    const { items, controller } = setup();
+    try {
+      controller.open();
+      const item = items[3]!;
+      item.removeAttribute("data-disabled");
+      item.removeAttribute("aria-disabled");
+      item.click();
+      expect(controller.value).toBe("disabled");
+      expect(controller.isOpen).toBe(false);
+    } finally {
+      controller.destroy();
+    }
   });
 
   describe("initialization", () => {
@@ -3816,6 +3949,38 @@ describe("Select", () => {
 
       controller.destroy();
       expect(content.parentElement).toBe(root);
+    });
+
+    it("terminally closes without emitting when destroyed while open", () => {
+      const { root, trigger, content, controller } = setup();
+      const changes: boolean[] = [];
+      root.addEventListener("select:open-change", (event) => {
+        changes.push((event as CustomEvent<{ open: boolean }>).detail.open);
+      });
+
+      controller.open();
+      controller.destroy();
+      controller.destroy();
+
+      expect(controller.isOpen).toBe(false);
+      expect(root.getAttribute("data-state")).toBe("closed");
+      expect(content.getAttribute("data-state")).toBe("closed");
+      expect(content.hidden).toBe(true);
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      expect(changes).toEqual([true]);
+    });
+
+    it("keeps a retained controller inert after destruction", () => {
+      const { root, controller } = setup();
+      controller.destroy();
+
+      controller.open();
+      controller.select("apple");
+      controller.close();
+
+      expect(controller.isOpen).toBe(false);
+      expect(root.getAttribute("data-state")).toBe("closed");
+      expect(document.documentElement.style.overflow).toBe("");
     });
 
     it("uses authored portal and positioner slots when provided", async () => {

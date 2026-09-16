@@ -778,7 +778,7 @@ describe('Tabs', () => {
 
       // In manual mode, ArrowRight just moves focus, doesn't change value
       expect(controller.value).toBe('one')
-      expect(document.activeElement).toBe(triggers[1])
+      expect(document.activeElement).toBe(triggers[1]!)
 
       // Press Enter to activate
       triggers[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
@@ -852,4 +852,43 @@ describe('Tabs', () => {
       rebound.destroy()
     })
   })
+})
+
+
+describe('Tabs nested inbound events', () => {
+  for (const eventName of ['tabs:set', 'tabs:select']) {
+    for (const bubbles of [false, true]) {
+      it(`isolates ${eventName} with bubbles=${bubbles} and preserves change bubbling`, () => {
+        const markup = (id: string, nested = ''): string => `
+          <div data-slot="tabs" id="${id}">
+            <div data-slot="tabs-list">
+              <button data-slot="tabs-trigger" data-value="a">A</button>
+              <button data-slot="tabs-trigger" data-value="b">B</button>
+            </div>
+            <div data-slot="tabs-content" data-value="a">${nested}</div>
+            <div data-slot="tabs-content" data-value="b">B</div>
+          </div>
+        `
+        document.body.innerHTML = markup('outer', markup('inner'))
+        const outerRoot = document.getElementById('outer')!
+        const innerRoot = document.getElementById('inner')!
+        const outer = createTabs(outerRoot)
+        const inner = createTabs(innerRoot)
+        const changes: EventTarget[] = []
+        outerRoot.addEventListener('tabs:change', event => changes.push(event.target!))
+        try {
+          innerRoot.dispatchEvent(new CustomEvent(eventName, { bubbles, detail: { value: 'b' } }))
+          expect(inner.value).toBe('b')
+          expect(outer.value).toBe('a')
+          expect(changes).toEqual([innerRoot])
+          outerRoot.dispatchEvent(new CustomEvent(eventName, { bubbles, detail: { value: 'b' } }))
+          expect(outer.value).toBe('b')
+          expect(changes).toEqual([innerRoot, outerRoot])
+        } finally {
+          inner.destroy()
+          outer.destroy()
+        }
+      })
+    }
+  }
 })

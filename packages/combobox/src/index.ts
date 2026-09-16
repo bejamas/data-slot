@@ -1,5 +1,6 @@
 import {
   getPart,
+  getOwnedElements,
   containsWithPortals,
   reuseRootBinding,
   setRootBinding,
@@ -7,6 +8,7 @@ import {
   setAria,
   ensureId,
   on,
+  onRoot,
   emit,
   computeFloatingPosition,
   computeFloatingTransformOrigin,
@@ -14,6 +16,8 @@ import {
   createPositionSync,
   createPortalLifecycle,
   createPresenceLifecycle,
+  createTerminalLifecycle,
+  registerFloatingTerminalResources,
   createDismissLayer,
   createFormFieldAdapter,
 } from "@data-slot/core";
@@ -68,11 +72,17 @@ export function createCombobox(
 
   const input = getPart<HTMLInputElement>(root, "combobox-input");
   const content = getPart<HTMLElement>(root, "combobox-content");
-  const list = getPart<HTMLElement>(root, "combobox-list") ?? getPart<HTMLElement>(content ?? root, "combobox-list");
+  const list = getPart<HTMLElement>(root, "combobox-list") ??
+    getOwnedElements<HTMLElement>(root, content ?? root, '[data-slot="combobox-list"]')[0] ??
+    null;
   const trigger = getPart<HTMLElement>(root, "combobox-trigger");
   const clearButton = getPart<HTMLElement>(root, "combobox-clear");
   const valueSlot = getPart<HTMLElement>(root, "combobox-value");
-  const emptySlot = getPart<HTMLElement>(list ?? content ?? root, "combobox-empty");
+  const emptySlot = getOwnedElements<HTMLElement>(
+    root,
+    list ?? content ?? root,
+    '[data-slot="combobox-empty"]'
+  )[0] ?? null;
   const authoredPositionerCandidate = getPart<HTMLElement>(root, "combobox-positioner");
   const authoredPositioner =
     authoredPositionerCandidate && content && authoredPositionerCandidate.contains(content)
@@ -122,7 +132,7 @@ export function createCombobox(
     container: authoredPositioner ?? undefined,
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
-  let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
 
   const matchesMediaQuery = (query: string): boolean => {
     if (typeof win.matchMedia !== "function") return false;
@@ -330,7 +340,7 @@ export function createCombobox(
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       portal.restore();
       content.hidden = true;
     },
@@ -353,6 +363,7 @@ export function createCombobox(
   };
 
   const updateOpenState = (open: boolean, skipFocusRestore = false) => {
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
     if (disabled && open) return;
 
@@ -372,8 +383,8 @@ export function createCombobox(
       updatePosition();
       positionSync.update();
 
-      requestAnimationFrame(() => {
-        if (!isOpen) return;
+      terminalLifecycle.trackRaf(() => {
+        if (terminalLifecycle.isDestroyed || !isOpen) return;
         positionSync.update();
       });
     } else {
@@ -681,7 +692,9 @@ export function createCombobox(
   cleanups.push(
     on(content, "click", (e) => {
       const item = (e.target as HTMLElement).closest?.('[data-slot="combobox-item"]') as HTMLElement | null;
-      if (item && !item.hidden) selectItem(item);
+      if (item && !item.hidden && getOwnedElements(root, list ?? content, '[data-slot="combobox-item"]').includes(item)) {
+        selectItem(item);
+      }
     }),
     on(content, "pointermove", (e) => {
       const item = (e.target as HTMLElement).closest?.('[data-slot="combobox-item"]') as HTMLElement | null;
@@ -732,7 +745,7 @@ export function createCombobox(
 
   // Inbound event
   cleanups.push(
-    on(root, "combobox:set", (e) => {
+    onRoot(root, "combobox:set", (e) => {
       const detail = (e as CustomEvent).detail;
       // Value first (syncs input to label), then inputValue can override
       if (detail?.value !== undefined) {
@@ -756,26 +769,33 @@ export function createCombobox(
     get value() { return currentValue; },
     get inputValue() { return input.value; },
     get isOpen() { return isOpen; },
-    select: (value: string) => updateValue(value),
-    clear: () => updateValue(null),
-    open: () => updateOpenState(true),
-    close: () => updateOpenState(false),
+    select: (value: string) => { if (!terminalLifecycle.isDestroyed) updateValue(value); },
+    clear: () => { if (!terminalLifecycle.isDestroyed) updateValue(null); },
+    open: () => { if (!terminalLifecycle.isDestroyed) updateOpenState(true); },
+    close: () => { if (!terminalLifecycle.isDestroyed) updateOpenState(false); },
     setItemToStringValue: (nextItemToStringValue: ComboboxItemToStringValue | null) => {
+      if (terminalLifecycle.isDestroyed) return;
       itemToStringValue = nextItemToStringValue;
       collection.setItemToStringValue(itemToStringValue);
       updateValue(currentValue, true);
     },
     destroy: () => {
-      isDestroyed = true;
-      positionSync.stop();
-      presence.cleanup();
-      portal.cleanup();
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
+      if (!terminalLifecycle.destroy()) return;
+      isOpen = false;
+      setAria(input, "expanded", false);
+      setDataState("closed");
+      content.hidden = true;
       formField?.destroy();
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   if (defaultOpen) updateOpenState(true);

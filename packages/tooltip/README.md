@@ -420,6 +420,15 @@ element.dispatchEvent(
 
 Use `{ open: boolean }` instead.
 
+## Controller destruction
+
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+Cleanup removes only the description reference added by this tooltip; authored
+`aria-describedby` references are preserved.
+
 ## License
 
 MIT

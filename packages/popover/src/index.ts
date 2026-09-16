@@ -17,9 +17,11 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   getAutofocusOrFirstFocusable,
+  createTerminalLifecycle,
+  registerFloatingTerminalResources,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 
 export type PopoverSide = "top" | "right" | "bottom" | "left";
 const SIDES = ["top", "right", "bottom", "left"] as const;
@@ -191,7 +193,7 @@ export function createPopover(
     container: authoredPositioner ?? undefined,
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
-  let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
 
   // Focus management state
   let previousActiveElement: HTMLElement | null = null;
@@ -205,6 +207,7 @@ export function createPopover(
   };
 
   const focusFirst = () => {
+    if (terminalLifecycle.isDestroyed) return;
     // Priority: [autofocus] > first focusable > content itself
     const initialFocus = getAutofocusOrFirstFocusable(content);
     if (initialFocus) return initialFocus.focus();
@@ -298,21 +301,28 @@ export function createPopover(
     }
   };
 
-  const restoreFocus = () => {
-    requestAnimationFrame(() => {
-      if (previousActiveElement && previousActiveElement.isConnected) {
-        focusElement(previousActiveElement);
-      } else {
-        focusElement(trigger);
-      }
-      previousActiveElement = null;
-    });
+  let pendingFocusRestore = false;
+  const restoreFocusNow = () => {
+    pendingFocusRestore = false;
+    if (previousActiveElement && previousActiveElement.isConnected) {
+      focusElement(previousActiveElement);
+    } else {
+      focusElement(trigger);
+    }
+    previousActiveElement = null;
   };
+  const restoreFocus = () => {
+    pendingFocusRestore = true;
+    terminalLifecycle.trackRaf(restoreFocusNow);
+  };
+  terminalLifecycle.onBeforeDestroy(() => {
+    if (pendingFocusRestore) terminalLifecycle.trackFinalRaf(restoreFocusNow);
+  });
 
   const presence = createPresenceLifecycle({
     element: content,
     onExitComplete: () => {
-      if (isDestroyed) return;
+      if (terminalLifecycle.isDestroyed) return;
       portal.restore();
       content.hidden = true;
       cleanupContentFocusable();
@@ -328,6 +338,7 @@ export function createPopover(
   });
 
   const updateState = (open: boolean) => {
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
 
     // Save focus target before opening
@@ -346,7 +357,7 @@ export function createPopover(
       updatePosition();
       positionSync.start();
       positionSync.update();
-      requestAnimationFrame(focusFirst);
+      terminalLifecycle.trackRaf(focusFirst);
     } else {
       setDataState("closed");
       presence.exit();
@@ -370,7 +381,7 @@ export function createPopover(
     updatePosition();
     positionSync.start();
     positionSync.update();
-    requestAnimationFrame(focusFirst);
+    terminalLifecycle.trackRaf(focusFirst);
   }
 
   // Trigger click
@@ -393,7 +404,7 @@ export function createPopover(
 
   // Inbound event
   cleanups.push(
-    on(root, "popover:set", (e) => {
+    onRoot(root, "popover:set", (e) => {
       const detail = (e as CustomEvent).detail;
       // Preferred: { open: boolean }
       // Deprecated: { value: boolean }
@@ -409,23 +420,29 @@ export function createPopover(
   );
 
   const controller: PopoverController = {
-    open: () => updateState(true),
-    close: () => updateState(false),
-    toggle: () => updateState(!isOpen),
+    open: () => { if (!terminalLifecycle.isDestroyed) updateState(true); },
+    close: () => { if (!terminalLifecycle.isDestroyed) updateState(false); },
+    toggle: () => { if (!terminalLifecycle.isDestroyed) updateState(!isOpen); },
     get isOpen() {
       return isOpen;
     },
     destroy: () => {
-      isDestroyed = true;
-      positionSync.stop();
-      presence.cleanup();
-      portal.cleanup();
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
+      if (!terminalLifecycle.destroy()) return;
+      isOpen = false;
+      setAria(trigger, "expanded", false);
+      setDataState("closed");
+      content.hidden = true;
       cleanupContentFocusable();
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
+
+  registerFloatingTerminalResources(terminalLifecycle, {
+    cleanups,
+    positionSync,
+    presence,
+    portal,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;

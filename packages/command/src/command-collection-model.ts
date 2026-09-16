@@ -28,12 +28,6 @@ export const parseCommandKeywords = (value: string | undefined): string[] =>
     ? value.split(/[,\n]/).map((part) => part.trim()).filter(Boolean)
     : [];
 
-export const getOwnedCommandElements = <T extends HTMLElement>(
-  scope: ParentNode,
-  selector: string,
-  root: HTMLElement,
-): T[] => Array.from(scope.querySelectorAll<T>(selector)).filter((el) => el.closest('[data-slot="command"]') === root);
-
 export const getDirectCommandChildren = <T extends HTMLElement>(parent: HTMLElement, slot: string): T[] =>
   Array.from(parent.children).filter(
     (child): child is T => child instanceof HTMLElement && child.getAttribute("data-slot") === slot,

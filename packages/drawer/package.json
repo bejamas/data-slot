@@ -1,6 +1,6 @@
 {
   "name": "@data-slot/drawer",
-  "version": "0.2.166",
+  "version": "0.2.167",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",

@@ -1,4 +1,4 @@
-import { setAria } from "@data-slot/core";
+import { getOwnedElements, setAria } from "@data-slot/core";
 import type { CheckboxDiff, DropdownMenuItemRecord, DropdownMenuItemType } from "./dropdown-menu-types";
 
 const ITEM_SELECTOR =
@@ -104,7 +104,7 @@ export const createDropdownItemCollection = (root: Element, content: HTMLElement
 
   const refresh = (state: DropdownItemState) => {
     const previousItems = items;
-    items = Array.from(content.querySelectorAll<HTMLElement>(ITEM_SELECTOR)).map((el) => ({
+    items = getOwnedElements<HTMLElement>(root, content, ITEM_SELECTOR).map((el) => ({
       el,
       type: getType(el),
       value: el.dataset.value?.trim() || null,

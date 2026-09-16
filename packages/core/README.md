@@ -91,9 +91,23 @@ const cleanup = on(button, "click", () => console.log("clicked"));
 // Later: cleanup() to remove listener
 ```
 
+#### `onRoot(root, type, handler)`
+
+Listen for events dispatched directly on a component root. Events bubbling from
+descendants are ignored by this handler and continue to propagate. Returns a
+cleanup function, like `on`.
+
+Use this for inbound component commands so nested instances cannot change their
+parent's state:
+
+```typescript
+const cleanup = onRoot(root, "tabs:set", handleSet);
+```
+
 #### `emit(element, name, detail?)`
 
-Dispatch a custom event with optional detail.
+Dispatch a bubbling custom event with optional detail. Outbound component events
+can be observed on ancestors; check `event.target` to identify the source root.
 
 ```typescript
 emit(root, "tabs:change", { value: "tab-2" });
@@ -150,6 +164,48 @@ function createCustomComponent(root: Element) {
   return { destroy: cleanup };
 }
 ```
+
+## Terminal lifecycle
+
+`createTerminalLifecycle()` manages work that must stop permanently when a
+controller is destroyed. It returns a `TerminalLifecycleController`:
+
+| Member | Behavior |
+| --- | --- |
+| `isDestroyed` | Becomes `true` after the before-destroy hooks and before resource cleanup. |
+| `trackRaf(callback)` | Schedules an animation frame; returns its handle or `null` once destruction starts. |
+| `trackTimeout(callback, delay)` | Schedules a timeout; returns its handle or `null` once destruction starts. |
+| `cancelRaf(handle)` / `cancelTimeout(handle)` | Cancel tracked work and immediately release its handle. Null, finished, or already-canceled handles are ignored. Use these methods instead of native cancellation for tracked work. |
+| `onBeforeDestroy(callback)` | Registers synchronous preparation after ordinary pending work is canceled, before resource cleanup. |
+| `trackFinalRaf(callback)` | Schedules a final frame only from a before-destroy hook. This frame deliberately survives destruction, for example to finish an already-pending focus restoration. Returns `null` outside that phase. |
+| `onDestroy(callback)` | Registers synchronous resource cleanup, or runs it immediately if already destroyed. |
+| `destroy()` | Cancels pending work and runs hooks once. Returns `true` for the first destruction, `false` for repeated or reentrant calls. |
+
+```typescript
+import { createTerminalLifecycle } from "@data-slot/core";
+
+const lifecycle = createTerminalLifecycle();
+const frame = lifecycle.trackRaf(() => updatePosition());
+lifecycle.cancelRaf(frame);
+lifecycle.onDestroy(() => observer.disconnect());
+lifecycle.destroy();
+```
+
+`registerFloatingTerminalResources(lifecycle, resources)` registers cleanup for
+`positionSync`, `presence`, `portal`, a `cleanups` array, and an `unbind` callback,
+in that order. The resources use the exported `FloatingTerminalResources` type.
+The component remains responsible for its closed state and focus policy.
+
+`registerModalTerminalResources(lifecycle, resources)` optionally registers a
+`beforeDestroy` hook, then disposes `modalStack`, each entry in the `presence`
+array, calls `reset`, `releaseScrollLock`, and `cleanup`, cleans up the nullable
+`portal`, drains listener `cleanups`, and calls `unbind`, in that order.
+`ModalTerminalResources` describes these callbacks and resources. Focus policy
+and interaction events remain the component's responsibility.
+
+`drainCleanups(cleanups)` removes the current callbacks from an array and invokes
+them in order. Repeating the call on the emptied array does nothing. Cleanup
+callbacks should complete synchronously without throwing.
 
 ## License
 
