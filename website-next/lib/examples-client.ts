@@ -106,4 +106,17 @@ class ComponentExample extends HTMLElement {
   };
 }
 
-if (!customElements.get('data-slot-example')) customElements.define('data-slot-example', ComponentExample);
+if (!customElements.get('data-slot-example')) {
+  // :focus-visible also matches mouse-focused text inputs. Track navigation
+  // separately so demo rings reflect keyboard use, including portaled popups.
+  const navigationKeys = new Set(['Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', 'Enter', ' ', 'Escape']);
+  document.addEventListener('pointerdown', () => {
+    document.documentElement.dataset.dsInput = 'pointer';
+  }, { capture: true });
+  document.addEventListener('keydown', event => {
+    if (!event.altKey && !event.ctrlKey && !event.metaKey && navigationKeys.has(event.key)) {
+      document.documentElement.dataset.dsInput = 'keyboard';
+    }
+  }, { capture: true });
+  customElements.define('data-slot-example', ComponentExample);
+}

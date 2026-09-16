@@ -1,11 +1,11 @@
 @import "tw-animate-css";
 @source "./.generated/examples";
 
-/* Legacy demo utilities that are not part of Blume's theme. */
-@theme {
-  --color-bg: #faf9f7;
-  --color-text: #1a1a1a;
-  --color-code-bg: #f0eeeb;
+/* Semantic utilities shared by CSS and Tailwind examples. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-text: var(--text);
+  --color-code-bg: var(--code-bg);
 }
 
 :root {
@@ -19,7 +19,15 @@
   --blume-font-display: 'Geist Mono', monospace;
   --blume-font-mono: 'Geist Mono', monospace;
   --blume-radius: 0;
-  --color-code-bg: #f0eeeb;
+  --bg: var(--blume-background);
+  --text: var(--blume-foreground);
+  --muted: var(--blume-muted-foreground);
+  --border: var(--blume-border);
+  --code-bg: var(--blume-muted);
+  --surface: #fff;
+  --accent: #0066cc;
+  --danger: #c62828;
+  --danger-bg: #fff1f0;
 }
 :root[data-theme='dark'] {
   --blume-background: #191918;
@@ -28,6 +36,10 @@
   --blume-muted-foreground: #a6a39c;
   --blume-border: #3b3a36;
   --blume-code-background: #222220;
+  --surface: #242423;
+  --accent: #75baff;
+  --danger: #ff9494;
+  --danger-bg: #3b2424;
 }
 body { font-size: 14px; }
 [data-blume-doc-grid] { max-width: 1600px; }
@@ -65,25 +77,34 @@ blume-toc a { padding-block: 5px; }
 .ds-style-options button[aria-pressed='true'] { background: var(--blume-background); color: var(--blume-foreground); box-shadow: 0 1px 2px #00000012; }
 .ds-example :is(button,input,textarea,[tabindex]):focus-visible,
 [data-ds-preview] :focus-visible,
-.ds-source summary:focus-visible { outline: 2px solid #0066cc; outline-offset: 3px; }
-.ds-preview-stage { padding: 36px 28px; min-height: 180px; display: flex; flex-direction: column; justify-content: center; background: #faf9f7; color: #1a1a1a; color-scheme: light; font-family: 'Geist Mono', monospace; font-size: 14px; line-height: 1.25rem; }
-.ds-preview-stage button { cursor: pointer; }
-.ds-preview-stage, [data-ds-preview] {
-  /* Demos stay light, including utilities whose names overlap Blume tokens. */
-  --blume-background: #faf9f7;
-  --blume-foreground: #1a1a1a;
-  --blume-muted: #666;
-  --blume-muted-foreground: #666;
-  --blume-border: #ccc;
-  --blume-accent: #0066cc;
-  --color-muted: #666;
-  --color-border: #ccc;
-  --color-accent: #0066cc;
+.ds-source summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* The combobox input and trigger form one field; outline their shared wrapper. */
+.ds-preview-stage :has(> [data-slot='combobox-input']):has(> :focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
+.ds-preview-stage :is([data-slot='combobox-input'], [data-slot='combobox-trigger']):focus-visible {
+  outline: none;
+}
+/* Select moves focus into its portaled list. Keep option rings inside the
+   scroll area instead of drawing an extra outline around the entire popup. */
+[data-ds-preview][data-slot='select-content']:focus-visible { outline: none; }
+[data-ds-preview] [data-slot='select-item']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* Mouse/touch focus still works, but only keyboard navigation shows demo rings.
+   Include portal roots themselves as well as their descendants. */
+:root[data-ds-input='pointer'] :is(.ds-preview-stage, [data-ds-preview]) :focus-visible,
+:root[data-ds-input='pointer'] [data-ds-preview]:focus-visible,
+:root[data-ds-input='pointer'] .ds-preview-stage :has(> [data-slot='combobox-input']) {
+  outline: none;
+}
+.ds-preview-stage { padding: 36px 28px; min-height: 180px; display: flex; flex-direction: column; justify-content: center; background: var(--bg); color: var(--text); font-family: 'Geist Mono', monospace; font-size: 14px; line-height: 1.25rem; }
+.ds-preview-stage button { cursor: pointer; }
 @layer base {
   [data-ds-preview] {
-    color: #1a1a1a;
-    color-scheme: light;
+    color: var(--text);
     font-family: 'Geist Mono', monospace;
     font-size: 14px;
     line-height: 1.25rem;
@@ -114,7 +135,7 @@ blume-toc a { padding-block: 5px; }
 .ds-copy { padding: 5px 8px; font-size: 10px; cursor: pointer; }
 .ds-copy-status { position: absolute; right: 60px; font-size: 10px; background: var(--blume-muted); }
 .ds-source [data-panel][hidden] { display: none; }
-.ds-source .astro-code { margin: 0; padding: 20px; font-size: 11px; line-height: 1.75; max-height: 460px; overflow: auto; border: 0; border-radius: 0; background: #faf9f7 !important; color-scheme: light; }
+.ds-source .astro-code { margin: 0; padding: 20px; font-size: 11px; line-height: 1.75; max-height: 460px; overflow: auto; border: 0; border-radius: 0; background: var(--blume-code-background) !important; }
 .ds-source .astro-code code { font-family: 'Geist Mono', monospace; background: none; padding: 0; }
 @media (min-width: 1024px) {
   [data-blume-doc-grid] { grid-template-columns: 240px minmax(0,1fr); }

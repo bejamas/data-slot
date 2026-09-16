@@ -45,18 +45,46 @@ Use `data-*` and `aria-*` variants to respond to component state.
 </button>
 ```
 
-The examples use standard Tailwind sizing utilities and a shared neutral palette. Define these color tokens to reproduce the CSS previews:
+The examples share a semantic color palette and follow the docs’ light or dark theme. Define the variables used in the copied markup and CSS, then expose them as Tailwind tokens:
 
 ```css
-@theme {
-  --color-bg: #faf9f7;
-  --color-text: #1a1a1a;
-  --color-muted: #666;
-  --color-border: #ccc;
-  --color-accent: #0066cc;
-  --color-code-bg: #f0eeeb;
+:root {
+  color-scheme: light;
+  --bg: #faf9f7;
+  --text: #1a1a1a;
+  --muted: #6c6a66;
+  --border: #d6d3cd;
+  --code-bg: #f0eeeb;
+  --surface: #fff;
+  --accent: #0066cc;
+  --danger: #c62828;
+  --danger-bg: #fff1f0;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #191918;
+  --text: #eae7e1;
+  --muted: #a6a39c;
+  --border: #3b3a36;
+  --code-bg: #242423;
+  --surface: #242423;
+  --accent: #75baff;
+  --danger: #ff9494;
+  --danger-bg: #3b2424;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-code-bg: var(--code-bg);
 }
 ```
+
+CSS examples use the same variables without the `@theme` block. Set `data-theme="dark"` on the document’s `<html>` element, or adapt the selector to your theme switcher. Keeping the variables on the document root also themes popups that are portaled to `document.body`.
 
 ### Animation utilities
 

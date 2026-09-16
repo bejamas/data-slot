@@ -49,7 +49,7 @@ Use H4 for details within a section, and H5 for their children. For example, put
 
 The original example components and website styles are read without changing them. Generated examples get unique ID prefixes, CSS/Tailwind controls, and per-example initialization. Package builds run before the root `dev:docs` and `build:docs` commands so the previews use the current local library.
 
-Tailwind previews use Tailwind v4 and `tw-animate-css`. Demos retain their light theme when the documentation chrome is switched to dark mode.
+Tailwind previews use Tailwind v4 and `tw-animate-css`. Previews, portaled popups, and source panels follow the documentation color scheme. The prepare step maps legacy example colors to the semantic palette in `theme.css`, keeping live markup and copyable source in sync.
 
 ## Deployment
 

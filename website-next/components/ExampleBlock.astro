@@ -36,7 +36,7 @@ const setup = component === 'alert-dialog' ? baseSetup + "\n\ndocument.querySele
       <div class="code-tailwind"><slot name="code-tailwind" /></div>
     </div>
     <div id={`${id}-js`} role="tabpanel" aria-labelledby={`${id}-js-tab`} data-panel="js" tabindex="0" hidden>
-      <Code code={setup} lang="javascript" theme="github-light-high-contrast" />
+      <Code code={setup} lang="javascript" themes={{ light: "github-light-high-contrast", dark: "github-dark-high-contrast" }} defaultColor={false} />
     </div>
   </details>
 </data-slot-example>

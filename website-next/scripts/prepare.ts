@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile, copyFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { components } from '../lib/catalog';
+import { themeExamples } from './theme-examples';
 
 const project = resolve(import.meta.dirname, '..');
 const repo = resolve(project, '..');
@@ -11,14 +12,15 @@ for (const weight of [400, 500, 700]) {
 }
 await copyFile(resolve(repo, 'website/public/favicon.svg'), resolve(project, 'public/favicon.svg'));
 
+// Drawer styles are shared by the live markup and the displayed CSS source.
+await write('.generated/examples/drawer.css', themeExamples(await readFile(resolve(repo, 'website/src/components/examples/drawer.css'), 'utf8')));
+
 for (const component of components) {
   for (const variant of ['basic', 'extra'] as const) {
     const filename = variant === 'extra' && 'second' in component ? component.second : component.demo;
     let source = await readFile(resolve(repo, `website/src/components/examples/${filename}.astro`), 'utf8');
     source = source.replace('"../ExampleBlock.astro"', '"../../components/ExampleBlock.astro"');
-    // Keep sibling stylesheet imports relative to the original example directory.
-    source = source.replace(/((?:from|import)\s+")\.\//g, '$1../../../website/src/components/examples/');
-    source = source.replaceAll('theme="vitesse-light"', 'theme="github-light-high-contrast"');
+    source = source.replaceAll('theme="vitesse-light"', 'themes={{ light: "github-light-high-contrast", dark: "github-dark-high-contrast" }} defaultColor={false}');
     // Initialization has its own tab; embedded snippets must not double-bind it.
     source = source.replace(/<script type="module">[\s\S]*?<\/script>/g, '');
     if (filename === 'Slider') {
@@ -55,7 +57,7 @@ for (const component of components) {
       if (!styles) throw new Error('Missing accordion example stylesheet');
       source = source.replace(/const cssCode = `([\s\S]*?)`;/, (_, markup) => `const cssCode = ${JSON.stringify(markup.trim() + '\n\n' + styles)};`);
     }
-    await write(`.generated/examples/${component.slug}-${variant}.astro`, source);
+    await write(`.generated/examples/${component.slug}-${variant}.astro`, themeExamples(source));
   }
 
   const readme = await readFile(resolve(repo, `packages/${component.slug}/README.md`), 'utf8');
@@ -76,4 +78,4 @@ for (const component of components) {
 console.log(`Prepared ${components.length} component references and ${components.length * 2} examples.`);
 
 const previewStyles = await readFile(resolve(repo, 'website/src/styles/demo.css'), 'utf8');
-await write('.generated/previews.css', previewStyles.replace(/@import[^;]+;\s*/g, '').replace(/@theme\s*\{[^}]+\}/g, ''));
+await write('.generated/previews.css', themeExamples(previewStyles).replace(/@import[^;]+;\s*/g, '').replace(/@theme\s*\{[^}]+\}/g, '').replace(/:root\s*\{[^}]+\}/g, ''));
