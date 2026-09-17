@@ -1039,14 +1039,20 @@ html {
 
 .nav-menu-viewport {
   position: relative;
-  overflow: auto;
+  overflow: hidden;
   width: 100%;
   height: 100%;
 }
 
-/* Content panels live inside the viewport while active. */
+/* Clip motion in the viewport. Panels use the target popup width so shell
+   resizing cannot create scrollbars; only available window space limits them.
+   Subtract the popup's 1px borders from the panel dimensions. */
 .nav-menu-content {
   position: relative;
+  width: calc(var(--popup-width) - 2px);
+  max-width: calc(var(--available-width) - 2px);
+  max-height: calc(var(--available-height) - 2px);
+  overflow: auto;
   opacity: 1;
   transform: translateX(0);
   transition:
@@ -1056,6 +1062,7 @@ html {
   z-index: 10;
 }
 
+.nav-menu-content[data-closed] { overflow: hidden; }
 .nav-menu-content[data-closed]:not([data-ending-style]) {
   opacity: 0;
   pointer-events: none;
@@ -1088,7 +1095,7 @@ html {
   grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
   width: 24rem;
-  max-width: var(--available-width, 100%);
+  max-width: 100%;
   padding: 0.75rem;
 }
 
@@ -1097,7 +1104,7 @@ html {
   grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
   width: 32rem;
-  max-width: var(--available-width, 100%);
+  max-width: 100%;
   padding: 0.75rem;
 }
 
@@ -1107,6 +1114,7 @@ html {
 
 .nav-menu-single {
   width: 9rem;
+  max-width: 100%;
   padding: 0.75rem;
 }
 
@@ -1325,7 +1333,7 @@ html.mode-tailwind .preview-css {
 
 .nav-menu-tw-popup [data-slot="navigation-menu-viewport"] {
   position: relative;
-  overflow: auto;
+  overflow: hidden;
   width: 100%;
   height: 100%;
 }
@@ -1333,6 +1341,10 @@ html.mode-tailwind .preview-css {
 /* Navigation Menu: content direction-aware animations */
 .nav-menu-tw-content {
   position: relative;
+  width: calc(var(--popup-width) - 2px);
+  max-width: calc(var(--available-width) - 2px);
+  max-height: calc(var(--available-height) - 2px);
+  overflow: auto;
   transform: translateX(0);
   transition:
     transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
@@ -1341,6 +1353,7 @@ html.mode-tailwind .preview-css {
   z-index: 10;
 }
 
+.nav-menu-tw-content[data-closed] { overflow: hidden; }
 .nav-menu-tw-content[data-closed]:not([data-ending-style]) {
   opacity: 0;
   pointer-events: none;

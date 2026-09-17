@@ -92,14 +92,21 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
     pointer-events: none;
   }
 
-  .nav-menu-viewport { position: relative; overflow: auto; width: 100%; height: 100%; }
+  .nav-menu-viewport { position: relative; overflow: hidden; width: 100%; height: 100%; }
+  /* Use the target popup width inside its 1px border, independent of the shell
+     animation. Only scroll panels when the window constrains their size. */
   .nav-menu-content {
     position: relative;
+    width: calc(var(--popup-width) - 2px);
+    max-width: calc(var(--available-width) - 2px);
+    max-height: calc(var(--available-height) - 2px);
+    overflow: auto;
     transform: translateX(0);
     transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
                 opacity 0.16s ease;
     will-change: transform, opacity;
   }
+  .nav-menu-content[data-closed] { overflow: hidden; }
   .nav-menu-content[data-closed]:not([data-ending-style]) {
     opacity: 0;
     pointer-events: none;
@@ -118,7 +125,7 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
   .nav-menu-content[data-ending-style][data-activation-direction="left"] {
     transform: translateX(24px);
   }
-  .nav-menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; width: 24rem; max-width: var(--available-width, 100%); padding: 0.75rem; }
+  .nav-menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; width: 24rem; max-width: 100%; padding: 0.75rem; }
   @media (width < 640px) { .nav-menu-grid { grid-template-columns: 1fr;
     width: 24rem;
   } }
@@ -144,7 +151,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         class="nav-menu-tw-content z-10"
         hidden
       >
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-96 max-w-(--available-width) p-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-96 max-w-full p-3">
           <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
             <div class="mb-1 font-medium">Analytics</div>
             <div class="text-sm text-muted">Real-time metrics</div>
@@ -180,7 +187,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         hidden
         style="width: var(--popup-width); height: var(--popup-height); max-height: var(--available-height); transform-origin: var(--transform-origin);"
       >
-        <div data-slot="navigation-menu-viewport" class="relative h-full w-full overflow-auto" hidden></div>
+        <div data-slot="navigation-menu-viewport" class="relative h-full w-full overflow-hidden" hidden></div>
       </div>
     </div>
   </div>
@@ -219,12 +226,19 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
 .nav-menu-tw-popup[data-closed]:not([data-ending-style]) {
   pointer-events: none;
 }
+.nav-menu-tw-content[data-closed] { overflow: hidden; }
 .nav-menu-tw-content[data-closed]:not([data-ending-style]) {
   opacity: 0;
   pointer-events: none;
 }
+/* Use the target popup width inside its 1px border, independent of the shell
+   animation. Only scroll panels when the window constrains their size. */
 .nav-menu-tw-content {
   position: relative;
+  width: calc(var(--popup-width) - 2px);
+  max-width: calc(var(--available-width) - 2px);
+  max-height: calc(var(--available-height) - 2px);
+  overflow: auto;
   transform: translateX(0);
   transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
               opacity 0.16s ease;
@@ -370,7 +384,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           class="nav-menu-tw-content z-10"
           hidden
         >
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-96 max-w-(--available-width) p-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-96 max-w-full p-3">
             <a href="#" class="block p-3 no-underline transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Analytics</div>
               <div class="text-sm text-muted">Real-time metrics</div>
@@ -402,7 +416,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           class="nav-menu-tw-content z-10"
           hidden
         >
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-96 max-w-(--available-width) p-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-96 max-w-full p-3">
             <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Startups</div>
               <div class="text-sm text-muted">Move fast</div>
@@ -442,7 +456,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           class="nav-menu-tw-content z-10"
           hidden
         >
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 w-lg max-w-(--available-width)">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 w-lg max-w-full">
             <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Documentation</div>
               <div class="text-sm text-muted">Get started</div>
@@ -482,7 +496,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           class="nav-menu-tw-content z-10"
           hidden
         >
-          <div class="w-36 p-3">
+          <div class="w-36 max-w-full p-3">
             <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">About Us</div>
               <div class="text-sm text-muted">Our story</div>
@@ -504,7 +518,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           hidden
           style="width: var(--popup-width); height: var(--popup-height); max-height: var(--available-height); transform-origin: var(--transform-origin);"
         >
-          <div data-slot="navigation-menu-viewport" class="relative h-full w-full overflow-auto" hidden></div>
+          <div data-slot="navigation-menu-viewport" class="relative h-full w-full overflow-hidden" hidden></div>
         </div>
       </div>
     </div>
