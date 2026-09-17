@@ -28,6 +28,9 @@
   --accent: #0066cc;
   --danger: #c62828;
   --danger-bg: #fff1f0;
+  --reference-name: #075fa8;
+  --reference-type: #7542ad;
+  --reference-default: #23744d;
 }
 :root[data-theme='dark'] {
   --blume-background: #191918;
@@ -40,6 +43,9 @@
   --accent: #75baff;
   --danger: #ff9494;
   --danger-bg: #3b2424;
+  --reference-name: #8bc4ff;
+  --reference-type: #c9a4f5;
+  --reference-default: #8bd5aa;
 }
 body { font-size: 14px; }
 [data-blume-doc-grid] { max-width: 1600px; }
@@ -57,6 +63,18 @@ body { font-size: 14px; }
 .prose th { font-weight: 500; white-space: nowrap; }
 .prose td { min-width: 110px; }
 .prose :not(pre)>code { font-size: .88em; }
+/* A shared syntax palette for API columns, including plain-text types/defaults. */
+.prose td[data-reference='name'] { --reference-color: var(--reference-name); }
+.prose td[data-reference='type'] { --reference-color: var(--reference-type); }
+.prose td[data-reference='default'] { --reference-color: var(--reference-default); }
+.prose td[data-reference] { color: var(--reference-color); }
+.prose td[data-reference='name'] code { white-space: nowrap; }
+.prose td[data-reference] code {
+  color: var(--reference-color);
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
 [data-blume-nav-drawer] { padding-top: 32px; }
 [data-blume-nav-drawer] a { font-size: 12px; border-radius: 0; padding-block: 6px; }
 [data-blume-nav-drawer] a[aria-current='page'] { background: var(--blume-muted); box-shadow: inset 2px 0 var(--blume-foreground); }
