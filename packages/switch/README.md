@@ -56,7 +56,12 @@ const controller = createSwitch(element, {
 
 ### Slots
 
-The authored API is just a root and an optional thumb:
+#### Runtime Slots
+
+- `switch` - Root control that toggles the checked state and receives switch semantics, keyboard handling, and form integration.
+- `switch-thumb` - Optional visual thumb inside the root; receives checked and disabled state for styling.
+
+#### Markup
 
 ```html
 <span data-slot="switch">
@@ -65,19 +70,6 @@ The authored API is just a root and an optional thumb:
 ```
 
 Use a neutral root element (`span` or `div`) when you want Base UI-style label wrapping and shadcn-like composition. The controller injects a visually hidden checkbox next to the root for form submission, label support, and native validation.
-
-### Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultChecked` | `boolean` | `false` | Initial checked state |
-| `disabled` | `boolean` | `false` | Disable user interaction and form submission |
-| `readOnly` | `boolean` | `false` | Prevent user interaction while keeping the field enabled |
-| `required` | `boolean` | `false` | Require the switch to be checked for native form validation |
-| `name` | `string` | - | Form field name |
-| `value` | `string` | native checkbox `"on"` | Submitted value when checked |
-| `uncheckedValue` | `string` | - | Submitted value when unchecked |
-| `onCheckedChange` | `(checked: boolean) => void` | `undefined` | Callback when checked state changes |
 
 ### Data Attributes
 
@@ -92,6 +84,19 @@ JS options take precedence over data attributes on the root element.
 | `data-name` | `string` | - | Form field name |
 | `data-value` | `string` | native checkbox `"on"` | Submitted value when checked |
 | `data-unchecked-value` / `data-uncheckedValue` | `string` | - | Submitted value when unchecked |
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultChecked` | `boolean` | `false` | Initial checked state |
+| `disabled` | `boolean` | `false` | Disable user interaction and form submission |
+| `readOnly` | `boolean` | `false` | Prevent user interaction while keeping the field enabled |
+| `required` | `boolean` | `false` | Require the switch to be checked for native form validation |
+| `name` | `string` | - | Form field name |
+| `value` | `string` | native checkbox `"on"` | Submitted value when checked |
+| `uncheckedValue` | `string` | - | Submitted value when unchecked |
+| `onCheckedChange` | `(checked: boolean) => void` | `undefined` | Callback when checked state changes |
 
 ### Controller
 

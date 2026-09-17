@@ -71,6 +71,20 @@ const accordion = createAccordion(element, {
 
 ### Slots
 
+#### Runtime Slots
+
+- `accordion` - Root element that manages expanded items and keyboard navigation.
+- `accordion-item` - Container for one section. Set a unique `data-value` to identify it; at least one item is required.
+- `accordion-trigger` - Button inside an item that toggles its content and receives `aria-expanded`.
+- `accordion-content` - Panel inside an item, linked to its trigger and shown when the item is expanded.
+
+#### Style-only Slots
+
+- `accordion-trigger-icon` - Optional icon inside the trigger, useful for rotating with the open state.
+- `accordion-content-inner` - Optional wrapper for content padding inside the animated panel.
+
+#### Markup
+
 ```html
 <div data-slot="accordion">
   <div data-slot="accordion-item" data-value="unique-id">
@@ -83,32 +97,6 @@ const accordion = createAccordion(element, {
     </div>
   </div>
 </div>
-```
-
-`data-slot="accordion-trigger-icon"` and `data-slot="accordion-content-inner"` are optional styling hooks.
-
-### Options
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `multiple` | `boolean` | `false` | Allow multiple items open at once |
-| `defaultValue` | `string \| string[]` | `undefined` | Initially expanded item(s) |
-| `disabled` | `boolean` | `false` | Disable all user interaction for the accordion |
-| `orientation` | `"horizontal" \| "vertical"` | `"vertical"` | Controls roving-focus arrow keys |
-| `loopFocus` | `boolean` | `true` | Wrap roving focus at the ends |
-| `hiddenUntilFound` | `boolean` | `false` | Use `hidden="until-found"` on closed panels |
-| `onValueChange` | `(value: string[]) => void` | `undefined` | Callback when expanded items change |
-| `collapsible` | `boolean` | `true` | Deprecated single-mode alias for “can close the last open item” |
-
-#### Deprecated Option
-
-The following option is deprecated and will be removed in the next major release:
-
-```typescript
-createAccordion(element, {
-  // Deprecated: use the default Base UI-style collapsible behavior instead.
-  collapsible: false,
-});
 ```
 
 ### Data Attributes
@@ -148,6 +136,30 @@ For multiple default items in HTML, encode the value as JSON:
 >
   ...
 </div>
+```
+
+### Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `multiple` | `boolean` | `false` | Allow multiple items open at once |
+| `defaultValue` | `string \| string[]` | `undefined` | Initially expanded item(s) |
+| `disabled` | `boolean` | `false` | Disable all user interaction for the accordion |
+| `orientation` | `"horizontal" \| "vertical"` | `"vertical"` | Controls roving-focus arrow keys |
+| `loopFocus` | `boolean` | `true` | Wrap roving focus at the ends |
+| `hiddenUntilFound` | `boolean` | `false` | Use `hidden="until-found"` on closed panels |
+| `onValueChange` | `(value: string[]) => void` | `undefined` | Callback when expanded items change |
+| `collapsible` | `boolean` | `true` | Deprecated single-mode alias for “can close the last open item” |
+
+#### Deprecated Option
+
+The following option is deprecated and will be removed in the next major release:
+
+```typescript
+createAccordion(element, {
+  // Deprecated: use the default Base UI-style collapsible behavior instead.
+  collapsible: false,
+});
 ```
 
 ### Controller

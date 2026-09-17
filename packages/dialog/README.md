@@ -60,6 +60,19 @@ const dialog = createDialog(element, {
 
 ### Slots
 
+#### Runtime Slots
+
+- `dialog` - Root element that manages the open state and receives dialog events.
+- `dialog-trigger` - Optional button that toggles the dialog.
+- `dialog-portal` - Optional wrapper moved to `document.body` while the dialog is open.
+- `dialog-overlay` - Required backdrop; clicking it dismisses the dialog when outside-click dismissal is enabled.
+- `dialog-content` - Required modal panel with dialog semantics and focus management.
+- `dialog-title` - Optional title used for the panel's `aria-labelledby`.
+- `dialog-description` - Optional description used for the panel's `aria-describedby`.
+- `dialog-close` - Optional button that closes the dialog; multiple close buttons are supported.
+
+#### Markup
+
 ```html
 <div data-slot="dialog">
   <button data-slot="dialog-trigger">Open</button>
@@ -71,30 +84,6 @@ const dialog = createDialog(element, {
   </div>
 </div>
 ```
-
-#### Required Slots
-
-- `dialog-content` - The dialog panel (required)
-- `dialog-overlay` - The backdrop (required)
-
-#### Optional Slots
-
-- `dialog-trigger` - Button to open the dialog
-- `dialog-portal` - Optional wrapper portaled to `document.body` while open
-- `dialog-title` - Title for `aria-labelledby`
-- `dialog-description` - Description for `aria-describedby`
-- `dialog-close` - Button to close the dialog
-
-### Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultOpen` | `boolean` | `false` | Initial open state |
-| `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside content |
-| `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
-| `lockScroll` | `boolean` | `true` | Lock body scroll when open |
-| `alertDialog` | `boolean` | `false` | Use alertdialog role for confirmations |
-| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
 
 ### Data Attributes
 
@@ -121,6 +110,17 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
   ...
 </div>
 ```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultOpen` | `boolean` | `false` | Initial open state |
+| `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside content |
+| `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
+| `lockScroll` | `boolean` | `true` | Lock body scroll when open |
+| `alertDialog` | `boolean` | `false` | Use alertdialog role for confirmations |
+| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
 
 ### Controller
 

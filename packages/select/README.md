@@ -94,20 +94,23 @@ const controller = createSelect(element, {});
 
 ### Slots
 
-| Slot | Description |
-|------|-------------|
-| `select` | Root container |
-| `select-trigger` | Button that opens the popup |
-| `select-value` | Displays selected value (inside trigger) |
-| `select-content` | Popup container for options |
-| `select-viewport` | Optional scroll container inside `select-content`; used for item-aligned scrolling when present |
-| `select-item` | Individual selectable option |
-| `select-item-text` | Optional text anchor inside `select-item`; preferred for exact item-aligned parity with Base/shadcn styles |
-| `select-group` | Groups related items |
-| `select-label` | Group label (inside a `select-group`) |
-| `select-separator` | Visual divider between items/groups |
-| `select-positioner` | Optional authored positioning wrapper (reused instead of generated wrapper) |
-| `select-portal` | Optional authored portal wrapper that can contain `select-positioner` |
+#### Runtime Slots
+
+- `select` - Root container.
+- `select-trigger` - Required button that opens the popup and anchors its position.
+- `select-value` - Optional text target inside the trigger; displays the selected label or placeholder.
+- `select-content` - Required popup container for options.
+- `select-viewport` - Optional scroll container inside `select-content`; used for item-aligned scrolling when present.
+- `select-item` - Individual selectable option.
+- `select-item-text` - Optional text anchor inside `select-item`; preferred for exact item-aligned parity with Base/shadcn styles.
+- `select-group` - Groups related items.
+- `select-label` - Group label (inside a `select-group`).
+- `select-positioner` - Optional authored positioning wrapper (reused instead of generated wrapper).
+- `select-portal` - Optional authored portal wrapper that can contain `select-positioner`.
+
+#### Style-only Slots
+
+- `select-separator` - Visual divider between items/groups.
 
 Item labels resolve from authored `data-label`, then `select-item-text`, then the item's text content. `data-label` is an input attribute, not generated state.
 
@@ -144,6 +147,20 @@ Use a standard HTML `<label for="...">` element to label the select. The `for` a
   </div>
 </div>
 ```
+
+### Data Attributes
+
+The component sets these attributes to reflect state:
+
+| Attribute | Element | Values | Description |
+|-----------|---------|--------|-------------|
+| `data-state` | root, trigger, content | `"open" \| "closed"` | Open state |
+| `data-position` | content, viewport | `"item-aligned" \| "popper"` | Resolved positioning mode authored by the controller |
+| `data-align-trigger` | content | `"true" \| "false"` | Whether the current mode aligns the selected item to the trigger |
+| `data-value` | root | `string` | Current selected value |
+| `data-selected` | item | (presence) | Selected item |
+| `data-highlighted` | item | (presence) | Focused/highlighted item |
+| `data-placeholder` | trigger | (presence) | When showing placeholder |
 
 ### Options
 
@@ -200,20 +217,6 @@ Consumers can style against these attributes directly and do not need to author 
 |----------|------|-------------|
 | `onValueChange` | `(value: string \| null) => void` | Called when selection changes |
 | `onOpenChange` | `(open: boolean) => void` | Called when popup opens/closes |
-
-### Data Attributes
-
-The component sets these attributes to reflect state:
-
-| Attribute | Element | Values | Description |
-|-----------|---------|--------|-------------|
-| `data-state` | root, trigger, content | `"open" \| "closed"` | Open state |
-| `data-position` | content, viewport | `"item-aligned" \| "popper"` | Resolved positioning mode authored by the controller |
-| `data-align-trigger` | content | `"true" \| "false"` | Whether the current mode aligns the selected item to the trigger |
-| `data-value` | root | `string` | Current selected value |
-| `data-selected` | item | (presence) | Selected item |
-| `data-highlighted` | item | (presence) | Focused/highlighted item |
-| `data-placeholder` | trigger | (presence) | When showing placeholder |
 
 ### Controller
 

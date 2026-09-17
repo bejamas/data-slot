@@ -78,18 +78,28 @@ drawer.setSnapPoint("320px");
 
 ### Slots
 
-#### Core Structure
+#### Runtime Slots
 
-- `drawer` — root and event target
-- `drawer-trigger` — opens or toggles the drawer
-- `drawer-portal` — optional portal container
-- `drawer-backdrop` — optional modal backdrop
-- `drawer-viewport` — fixed interaction and measurement viewport
-- `drawer-popup` — required dialog surface
-- `drawer-content` — optional inner content or scroll container
-- `drawer-title` — supplies `aria-labelledby`
-- `drawer-description` — supplies `aria-describedby`
-- `drawer-close` — closes the drawer
+- `drawer` - Root element that manages the open state and receives drawer events.
+- `drawer-trigger` - Optional button that opens or toggles the drawer; can target a root from outside it with `data-drawer-target`.
+- `drawer-portal` - Optional wrapper moved to the portal destination while the drawer is open.
+- `drawer-backdrop` - Optional backdrop that receives open and swipe state for styling.
+- `drawer-viewport` - Optional interaction and measurement wrapper around the popup, typically styled as a fixed viewport.
+- `drawer-popup` - Required dialog surface that receives focus management, swipe gestures, and snap-point positioning.
+- `drawer-title` - Optional title used for the popup's `aria-labelledby`.
+- `drawer-description` - Optional description used for the popup's `aria-describedby`.
+- `drawer-close` - Optional button that closes the drawer.
+- `drawer-provider` - Optional ancestor wrapper that coordinates the page indentation state for related drawers.
+- `drawer-indent` - Optional page surface inside a provider; receives active state and drawer size/swipe variables for a receding-page effect.
+- `drawer-indent-background` - Optional background behind that page surface; receives the same provider state and variables.
+- `drawer-virtual-keyboard-provider` - Optional wrapper that enables the drawer viewport to adapt to the on-screen keyboard.
+
+#### Style-only Slots
+
+- `drawer-content` - Optional inner wrapper for content layout or scrolling inside the popup.
+- `drawer-handle` - Optional visual drag handle. Swipe behavior belongs to the popup and does not require this slot.
+
+#### Detached Triggers
 
 Detached triggers can live outside the root when the root has an ID:
 
@@ -142,6 +152,24 @@ Wrap the viewport inside `drawer-virtual-keyboard-provider` when form controls i
 </div>
 ```
 
+### Data Attributes
+
+Root attributes and their JavaScript equivalents are listed in [Options](#options).
+
+Popup-specific attributes:
+
+| Attribute | Type | Default | Description |
+| --- | --- | --- | --- |
+| `data-initial-focus` | boolean or selector | popup | Use `true` for the first focusable element, a selector for an explicit target, or `false` to skip automatic focus. |
+| `data-final-focus` | boolean or selector | `true` | Choose the focus target after close, or set `false` to skip focus restoration. |
+
+Portal-specific attributes:
+
+| Attribute | Type | Default | Description |
+| --- | --- | --- | --- |
+| `data-container` | selector | `body` | Element that receives the portal. |
+| `data-keep-mounted` | boolean | `false` | Keep portal content mounted while closed. |
+
 ### Options
 
 | Option | Data attribute | Type | Default | Description |
@@ -162,24 +190,6 @@ Wrap the viewport inside `drawer-virtual-keyboard-provider` when form controls i
 | `onOpenChangeComplete` | — | `(open) => void` | — | Called when the opening or closing transition completes. |
 
 A snap point is a viewport fraction (`0` to `1`), a pixel number greater than `1`, or a string in `px` or `rem`. It is capped at the popup's CSS size. Only one open position is supported; arrays and sequential snap points are not supported. A swipe returns to that position or dismisses the drawer. Use `setSnapPoint()` or `drawer:set` to replace it at runtime; the value persists across close/open cycles. Options and data attributes are read at initialization.
-
-### Data Attributes
-
-Root attributes and their JavaScript equivalents are listed in [Options](#options).
-
-Popup-specific attributes:
-
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `data-initial-focus` | boolean or selector | popup | Use `true` for the first focusable element, a selector for an explicit target, or `false` to skip automatic focus. |
-| `data-final-focus` | boolean or selector | `true` | Choose the focus target after close, or set `false` to skip focus restoration. |
-
-Portal-specific attributes:
-
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `data-container` | selector | `body` | Element that receives the portal. |
-| `data-keep-mounted` | boolean | `false` | Keep portal content mounted while closed. |
 
 ### Controller
 

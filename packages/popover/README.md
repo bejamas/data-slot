@@ -64,6 +64,17 @@ const popover = createPopover(element, {
 
 ### Slots
 
+#### Runtime Slots
+
+- `popover` - Root element that manages the open state.
+- `popover-trigger` - Required button that toggles the popover and anchors its position.
+- `popover-content` - Required floating panel containing the popover's content.
+- `popover-close` - Optional button inside the content that closes the popover.
+- `popover-positioner` - Optional authored positioning wrapper around the content, reused instead of a generated wrapper.
+- `popover-portal` - Optional authored portal wrapper that can contain the positioner and content.
+
+#### Markup
+
 ```html
 <div data-slot="popover">
   <button data-slot="popover-trigger">Trigger</button>
@@ -73,17 +84,6 @@ const popover = createPopover(element, {
   </div>
 </div>
 ```
-
-#### Required Slots
-
-- `popover-trigger` - Button to toggle popover
-- `popover-content` - The popover panel
-
-#### Optional Slots
-
-- `popover-close` - Button to close the popover
-- `popover-positioner` - Optional authored positioning wrapper (when provided, reused instead of generated wrapper)
-- `popover-portal` - Optional authored portal wrapper that can contain `popover-positioner`
 
 #### Composed Portal Markup (Optional)
 
@@ -97,23 +97,6 @@ const popover = createPopover(element, {
   </div>
 </div>
 ```
-
-### Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultOpen` | `boolean` | `false` | Initial open state |
-| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred side relative to trigger |
-| `align` | `"start" \| "center" \| "end"` | `"center"` | Preferred alignment on the side axis |
-| `sideOffset` | `number` | `4` | Distance from trigger in pixels |
-| `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
-| `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
-| `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
-| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
-| `position` | `"top" \| "bottom" \| "left" \| "right"` | - | Deprecated alias for `side` |
-| `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside |
-| `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
-| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
 
 ### Data Attributes
 
@@ -155,6 +138,23 @@ Placement can be set on root, content, or authored positioner (content takes pre
   ...
 </div>
 ```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultOpen` | `boolean` | `false` | Initial open state |
+| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred side relative to trigger |
+| `align` | `"start" \| "center" \| "end"` | `"center"` | Preferred alignment on the side axis |
+| `sideOffset` | `number` | `4` | Distance from trigger in pixels |
+| `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
+| `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
+| `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
+| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
+| `position` | `"top" \| "bottom" \| "left" \| "right"` | - | Deprecated alias for `side` |
+| `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside |
+| `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
+| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
 
 ### Controller
 

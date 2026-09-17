@@ -104,20 +104,23 @@ const controller = createDropdownMenu(element, {});
 
 ### Slots
 
-| Slot | Description |
-|------|-------------|
-| `dropdown-menu` | Root container |
-| `dropdown-menu-trigger` | Button that opens the menu |
-| `dropdown-menu-content` | Menu panel |
-| `dropdown-menu-item` | Action item with no owned selection state |
-| `dropdown-menu-radio-item` | Single-select menu item |
-| `dropdown-menu-checkbox-item` | Multi-select menu item |
-| `dropdown-menu-group` | Groups related items |
-| `dropdown-menu-label` | Non-interactive label |
-| `dropdown-menu-separator` | Visual divider |
-| `dropdown-menu-shortcut` | Keyboard shortcut hint |
-| `dropdown-menu-positioner` | Optional authored positioning wrapper |
-| `dropdown-menu-portal` | Optional authored portal wrapper that contains `dropdown-menu-positioner` |
+#### Runtime Slots
+
+- `dropdown-menu` - Root container.
+- `dropdown-menu-trigger` - Required button that toggles the menu and anchors its position.
+- `dropdown-menu-content` - Required menu panel containing action and selection items.
+- `dropdown-menu-item` - Action item with no owned selection state.
+- `dropdown-menu-radio-item` - Single-select menu item.
+- `dropdown-menu-checkbox-item` - Multi-select menu item.
+- `dropdown-menu-positioner` - Optional authored positioning wrapper.
+- `dropdown-menu-portal` - Optional authored portal wrapper that contains `dropdown-menu-positioner`.
+
+#### Style-only Slots
+
+- `dropdown-menu-group` - Groups related items.
+- `dropdown-menu-label` - Non-interactive label.
+- `dropdown-menu-separator` - Visual divider.
+- `dropdown-menu-shortcut` - Optional keyboard shortcut hint; displaying it does not register a keyboard shortcut.
 
 #### Composed Portal Markup
 
@@ -131,35 +134,6 @@ const controller = createDropdownMenu(element, {});
   </div>
 </div>
 ```
-
-### Options
-
-| Option | Data Attribute | Type | Default | Description |
-| --- | --- | --- | --- | --- |
-| `defaultOpen` | `data-default-open` | `boolean` | `false` | Initial open state |
-| `defaultValue` | `data-default-value` | `string \| null` | Item defaults, then `null` | Initial radio value; explicit null clears item defaults |
-| `defaultValues` | `data-default-values` | `string[]` | Item defaults, then `[]` | Initial checkbox values; encode the attribute as a JSON array |
-| `closeOnClickOutside` | `data-close-on-click-outside` | `boolean` | `true` | Close on outside interaction |
-| `closeOnEscape` | `data-close-on-escape` | `boolean` | `true` | Close on Escape |
-| `closeOnSelect` | `data-close-on-select` | `boolean` | `true` | Close after accepted user activation |
-| `highlightItemOnHover` | `data-highlight-item-on-hover` | `boolean` | `true` | Highlight and focus items on hover |
-| `side` | `data-side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred popup side |
-| `align` | `data-align` | `"start" \| "center" \| "end"` | `"start"` | Preferred popup alignment |
-| `sideOffset` | `data-side-offset` | `number` | `4` | Distance from trigger (px) |
-| `alignOffset` | `data-align-offset` | `number` | `0` | Alignment offset (px) |
-| `avoidCollisions` | `data-avoid-collisions` | `boolean` | `true` | Flip and shift within the viewport |
-| `collisionPadding` | `data-collision-padding` | `number` | `8` | Viewport edge padding (px) |
-| `lockScroll` | `data-lock-scroll` | `boolean` | `true` | Lock page scroll while open; uses fixed positioning when enabled and absolute positioning when disabled |
-| `onOpenChange` | — | `(open: boolean) => void` | `undefined` | Called when open state changes |
-| `onSelect` | — | `(value: string) => void` | `undefined` | Called after accepted user activation |
-| `onValueChange` | — | `(value: string \| null) => void` | `undefined` | Called when committed radio selection changes |
-| `onValuesChange` | — | `(values: string[]) => void` | `undefined` | Called when committed checkbox selection changes |
-
-Notes:
-
-- `closeOnSelect` defaults to `true`. Multi-select menus usually want `false`.
-- `onSelect` tracks accepted user activation. It does not fire for programmatic state changes.
-- `onValueChange` and `onValuesChange` follow the same silence rules as their DOM events.
 
 ### Data Attributes
 
@@ -204,6 +178,35 @@ Default precedence is:
 4. Empty state
 
 For radio items, root defaults win over item defaults. For checkbox items, root `data-default-values` wins over item `data-default-checked`.
+
+### Options
+
+| Option | Data Attribute | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `defaultOpen` | `data-default-open` | `boolean` | `false` | Initial open state |
+| `defaultValue` | `data-default-value` | `string \| null` | Item defaults, then `null` | Initial radio value; explicit null clears item defaults |
+| `defaultValues` | `data-default-values` | `string[]` | Item defaults, then `[]` | Initial checkbox values; encode the attribute as a JSON array |
+| `closeOnClickOutside` | `data-close-on-click-outside` | `boolean` | `true` | Close on outside interaction |
+| `closeOnEscape` | `data-close-on-escape` | `boolean` | `true` | Close on Escape |
+| `closeOnSelect` | `data-close-on-select` | `boolean` | `true` | Close after accepted user activation |
+| `highlightItemOnHover` | `data-highlight-item-on-hover` | `boolean` | `true` | Highlight and focus items on hover |
+| `side` | `data-side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred popup side |
+| `align` | `data-align` | `"start" \| "center" \| "end"` | `"start"` | Preferred popup alignment |
+| `sideOffset` | `data-side-offset` | `number` | `4` | Distance from trigger (px) |
+| `alignOffset` | `data-align-offset` | `number` | `0` | Alignment offset (px) |
+| `avoidCollisions` | `data-avoid-collisions` | `boolean` | `true` | Flip and shift within the viewport |
+| `collisionPadding` | `data-collision-padding` | `number` | `8` | Viewport edge padding (px) |
+| `lockScroll` | `data-lock-scroll` | `boolean` | `true` | Lock page scroll while open; uses fixed positioning when enabled and absolute positioning when disabled |
+| `onOpenChange` | — | `(open: boolean) => void` | `undefined` | Called when open state changes |
+| `onSelect` | — | `(value: string) => void` | `undefined` | Called after accepted user activation |
+| `onValueChange` | — | `(value: string \| null) => void` | `undefined` | Called when committed radio selection changes |
+| `onValuesChange` | — | `(values: string[]) => void` | `undefined` | Called when committed checkbox selection changes |
+
+Notes:
+
+- `closeOnSelect` defaults to `true`. Multi-select menus usually want `false`.
+- `onSelect` tracks accepted user activation. It does not fire for programmatic state changes.
+- `onValueChange` and `onValuesChange` follow the same silence rules as their DOM events.
 
 ### Controller
 

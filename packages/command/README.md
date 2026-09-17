@@ -69,18 +69,21 @@ const command = createCommand(element, {
 
 ### Slots
 
-| Slot | Description |
-|------|-------------|
-| `command` | Root container |
-| `command-input` | Search input |
-| `command-input-wrapper` | Optional wrapper around the input for styling |
-| `command-list` | Listbox container for items and groups |
-| `command-empty` | Empty state shown when there are no ranked matches |
-| `command-group` | Group of related items |
-| `command-group-heading` | Optional label for a group |
-| `command-item` | Selectable command item |
-| `command-shortcut` | Optional shortcut hint inside an item |
-| `command-separator` | Visual divider between sections |
+#### Runtime Slots
+
+- `command` - Root container.
+- `command-input` - Required search input that filters and ranks the commands.
+- `command-list` - Required listbox container for items and groups.
+- `command-empty` - Empty state shown when there are no ranked matches.
+- `command-group` - Group of related items.
+- `command-group-heading` - Optional label for a group.
+- `command-item` - Selectable command item.
+- `command-shortcut` - Optional shortcut hint inside an item; excluded when the runtime infers the item value from text. Displaying it does not register a keyboard shortcut.
+- `command-separator` - Divider between sections; hidden during search unless `data-always-render` is enabled.
+
+#### Style-only Slots
+
+- `command-input-wrapper` - Optional wrapper around the input for styling.
 
 #### Dialog Composition
 
@@ -114,6 +117,19 @@ Use `@data-slot/dialog` when you want modal presentation:
 </script>
 ```
 
+### Data Attributes
+
+| Attribute | Applies To | Description |
+|-----------|------------|-------------|
+| `data-value` | `command-item`, `command-group` | Explicit value. If omitted on an item, value is inferred from `data-label` or text content |
+| `data-label` | `command-item` | Alternate text source for value inference |
+| `data-keywords` | `command-item` | Comma-separated aliases used during filtering |
+| `data-disabled` / `disabled` | `command-item` | Prevents navigation and selection |
+| `data-force-mount` | `command-item`, `command-group` | Keeps the node rendered during filtering |
+| `data-always-render` | `command-separator` | Keeps the separator visible while searching |
+
+`command-shortcut` text is ignored when inferring an item value, so shadcn-style shortcut hints do not affect search matches.
+
 ### Options
 
 Options can be passed via JavaScript or data attributes on the root element. JavaScript options take precedence.
@@ -131,19 +147,6 @@ Options can be passed via JavaScript or data attributes on the root element. Jav
 | `onValueChange` | - | `(value: string \| null) => void` | - | Called when the active item changes |
 | `onSearchChange` | - | `(search: string) => void` | - | Called when the search query changes |
 | `onSelect` | - | `(value: string) => void` | - | Called on click or Enter selection |
-
-### Data Attributes
-
-| Attribute | Applies To | Description |
-|-----------|------------|-------------|
-| `data-value` | `command-item`, `command-group` | Explicit value. If omitted on an item, value is inferred from `data-label` or text content |
-| `data-label` | `command-item` | Alternate text source for value inference |
-| `data-keywords` | `command-item` | Comma-separated aliases used during filtering |
-| `data-disabled` / `disabled` | `command-item` | Prevents navigation and selection |
-| `data-force-mount` | `command-item`, `command-group` | Keeps the node rendered during filtering |
-| `data-always-render` | `command-separator` | Keeps the separator visible while searching |
-
-`command-shortcut` text is ignored when inferring an item value, so shadcn-style shortcut hints do not affect search matches.
 
 ### Controller
 

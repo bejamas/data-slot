@@ -78,6 +78,27 @@ const menu = createNavigationMenu(element, {
 
 ### Slots
 
+#### Runtime Slots
+
+- `navigation-menu` - Root navigation element that manages the active panel and open state.
+- `navigation-menu-list` - Required top-level list containing navigation items; used to discover top-level hover and focus targets.
+- `navigation-menu-item` - Container for a navigation entry; at least one item is required. Use `data-value` to identify an entry with a content panel.
+- `navigation-menu-trigger` - Button inside an item that opens its associated content panel.
+- `navigation-menu-content` - Content panel inside an item, displayed when that item is active.
+- `navigation-menu-indicator` - Optional animated highlight that follows top-level hover/focus targets and stays anchored to the active trigger while a panel is open.
+- `navigation-menu-portal` - Portal wrapper moved to `document.body` while the menu is open.
+- `navigation-menu-positioner` - Popup positioning wrapper that receives resolved side/alignment attributes and sizing variables.
+- `navigation-menu-popup` - Animated popup shell around the viewport.
+- `navigation-menu-viewport` - Optional clipping viewport that holds the active content panel.
+- `navigation-menu-viewport-positioner` - Deprecated alias for `navigation-menu-positioner`.
+
+#### Generated Slots
+
+- `navigation-menu-bridge` - Runtime-created hover safety shield that keeps the menu open while crossing the gap to its content.
+- `navigation-menu-safe-triangle` - Runtime-created debug polygon that visualizes the hover safety corridor when debugging is enabled.
+
+#### Markup
+
 ```html
 <nav data-slot="navigation-menu">
   <ul data-slot="navigation-menu-list">
@@ -103,33 +124,6 @@ const menu = createNavigationMenu(element, {
 If you only author `navigation-menu-viewport`, the runtime synthesizes the missing
 `navigation-menu-portal`, `navigation-menu-positioner`, and `navigation-menu-popup`
 wrappers while the menu is open.
-
-#### Slot Reference
-
-- `navigation-menu-indicator` - Animated highlight that follows top-level hover/focus targets; when a submenu is open, it stays anchored to the active trigger
-- `navigation-menu-portal` - Portal wrapper that is moved to `document.body` while the menu is open
-- `navigation-menu-positioner` - Canonical popup positioning surface; receives resolved side/alignment output and sizing vars
-- `navigation-menu-popup` - Canonical animated popup shell that wraps the viewport
-- `navigation-menu-viewport` - Clipping viewport that holds the active content panel
-- `navigation-menu-viewport-positioner` - Deprecated alias for `navigation-menu-positioner`
-- `navigation-menu-bridge` - Hover safety shield (gap bridge + triangle corridor)
-- `navigation-menu-safe-triangle` - Debug-only hover safety polygon (rendered when enabled)
-
-### Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `delayOpen` | `number` | `0` | Delay before opening on hover (ms) |
-| `delayClose` | `number` | `0` | Delay before closing on mouse leave (ms) |
-| `openOnFocus` | `boolean` | `false` | Whether focusing a trigger opens its content |
-| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Viewport side relative to trigger |
-| `align` | `"start" \| "center" \| "end"` | `"start"` | Viewport alignment on cross-axis |
-| `sideOffset` | `number` | `0` | Distance from trigger to viewport (px) |
-| `alignOffset` | `number` | `0` | Cross-axis alignment offset (px) |
-| `positionMethod` | `"absolute" \| "fixed"` | `"absolute"` | Positioning strategy for the shared popup positioner |
-| `safeTriangle` | `boolean` | `false` | Enable hover safe-triangle switching guard |
-| `onValueChange` | `(value: string \| null) => void` | `undefined` | Callback when active item changes |
-| `debugSafeTriangle` | `boolean` | `false` | Show red hover safe-triangle debug overlay |
 
 ### Data Attributes
 
@@ -193,6 +187,22 @@ Can be set on:
 
 `data-activation-direction` is only emitted while switching between open top-level panels.
 A full close is intentionally non-directional.
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `delayOpen` | `number` | `0` | Delay before opening on hover (ms) |
+| `delayClose` | `number` | `0` | Delay before closing on mouse leave (ms) |
+| `openOnFocus` | `boolean` | `false` | Whether focusing a trigger opens its content |
+| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Viewport side relative to trigger |
+| `align` | `"start" \| "center" \| "end"` | `"start"` | Viewport alignment on cross-axis |
+| `sideOffset` | `number` | `0` | Distance from trigger to viewport (px) |
+| `alignOffset` | `number` | `0` | Cross-axis alignment offset (px) |
+| `positionMethod` | `"absolute" \| "fixed"` | `"absolute"` | Positioning strategy for the shared popup positioner |
+| `safeTriangle` | `boolean` | `false` | Enable hover safe-triangle switching guard |
+| `onValueChange` | `(value: string \| null) => void` | `undefined` | Callback when active item changes |
+| `debugSafeTriangle` | `boolean` | `false` | Show red hover safe-triangle debug overlay |
 
 ### Controller
 

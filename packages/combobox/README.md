@@ -89,23 +89,23 @@ const controller = createCombobox(element, {});
 
 ### Slots
 
-| Slot | Description |
-|------|-------------|
-| `combobox` | Root container |
-| `combobox-input` | Text input for filtering |
-| `combobox-trigger` | Optional button that toggles the popup |
-| `combobox-clear` | Optional button that clears the current value and focuses input |
-| `combobox-value` | Optional selected-value text target (typically inside `combobox-trigger`) |
-| `combobox-content` | Popup container |
-| `combobox-list` | Scrollable list wrapper |
-| `combobox-item` | Individual selectable option |
-| `combobox-item-indicator` | Optional selected-state indicator inside `combobox-item`; hidden automatically for unselected items |
-| `combobox-group` | Groups related items |
-| `combobox-label` | Group label (inside a `combobox-group`) |
-| `combobox-separator` | Visual divider between items/groups |
-| `combobox-empty` | Message shown when no items match filter |
-| `combobox-positioner` | Optional authored positioning wrapper (reused instead of generated wrapper) |
-| `combobox-portal` | Optional authored portal wrapper that can contain `combobox-positioner` |
+#### Runtime Slots
+
+- `combobox` - Root container.
+- `combobox-input` - Required text input for filtering and keyboard navigation.
+- `combobox-trigger` - Optional button that toggles the popup.
+- `combobox-clear` - Optional button that clears the current value and focuses input.
+- `combobox-value` - Optional selected-value text target (typically inside `combobox-trigger`).
+- `combobox-content` - Required popup container for the search results.
+- `combobox-list` - Optional scrollable listbox wrapper; the content acts as the listbox when omitted.
+- `combobox-item` - Individual selectable option.
+- `combobox-item-indicator` - Optional selected-state indicator inside `combobox-item`; hidden automatically for unselected items.
+- `combobox-group` - Groups related items.
+- `combobox-label` - Group label (inside a `combobox-group`).
+- `combobox-separator` - Divider between items or groups; its visibility is updated as results are filtered.
+- `combobox-empty` - Message shown when no items match filter.
+- `combobox-positioner` - Optional authored positioning wrapper (reused instead of generated wrapper).
+- `combobox-portal` - Optional authored portal wrapper that can contain `combobox-positioner`.
 
 #### Composed Portal Markup (Optional)
 

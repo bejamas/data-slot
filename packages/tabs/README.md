@@ -60,6 +60,16 @@ const tabs = createTabs(element, {
 
 ### Slots
 
+#### Runtime Slots
+
+- `tabs` - Root element that manages the selected tab and activation mode.
+- `tabs-list` - Required tab-list container that receives tablist semantics and orientation.
+- `tabs-trigger` - Tab button identified by `data-value`; receives selected state and keyboard navigation. At least one trigger is required.
+- `tabs-content` - Panel matched to its trigger by `data-value`; receives tabpanel semantics and is shown when selected.
+- `tabs-indicator` - Optional animated highlight whose position and size follow the selected trigger.
+
+#### Markup
+
 ```html
 <div data-slot="tabs" data-default-value="initial-tab">
   <div data-slot="tabs-list">
@@ -70,19 +80,6 @@ const tabs = createTabs(element, {
   <div data-slot="tabs-content" data-value="unique-id">Panel content</div>
 </div>
 ```
-
-#### Optional Slots
-
-- `tabs-indicator` - Animated highlight that follows the selected tab
-
-### Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultValue` | `string` | First enabled trigger's value | Initial selected tab |
-| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Tab orientation for keyboard nav |
-| `activationMode` | `"auto" \| "manual"` | `"auto"` | How tabs are activated with keyboard |
-| `onValueChange` | `(value: string) => void` | `undefined` | Callback when selected tab changes |
 
 ### Data Attributes
 
@@ -100,6 +97,15 @@ Options can also be set via data attributes on the root element. JS options take
   ...
 </div>
 ```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultValue` | `string` | First enabled trigger's value | Initial selected tab |
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Tab orientation for keyboard nav |
+| `activationMode` | `"auto" \| "manual"` | `"auto"` | How tabs are activated with keyboard |
+| `onValueChange` | `(value: string) => void` | `undefined` | Callback when selected tab changes |
 
 ### Controller
 

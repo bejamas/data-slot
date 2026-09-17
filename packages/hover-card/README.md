@@ -58,22 +58,22 @@ const hoverCard = createHoverCard(element, {
 
 ### Slots
 
+#### Runtime Slots
+
+- `hover-card` - Root element that manages the open state and hover delays.
+- `hover-card-trigger` - Required element that opens the card on hover or focus.
+- `hover-card-content` - Required floating panel that displays the preview content.
+- `hover-card-positioner` - Optional authored positioning wrapper around the content, reused instead of a generated wrapper.
+- `hover-card-portal` - Optional authored portal wrapper that can contain the positioner and content.
+
+#### Markup
+
 ```html
 <div data-slot="hover-card">
   <button data-slot="hover-card-trigger">Trigger</button>
   <div data-slot="hover-card-content">Content</div>
 </div>
 ```
-
-#### Required Slots
-
-- `hover-card-trigger`
-- `hover-card-content`
-
-#### Optional Slots
-
-- `hover-card-positioner` - Optional authored positioning wrapper
-- `hover-card-portal` - Optional authored portal wrapper that can contain `hover-card-positioner`
 
 #### Composed Portal Markup (Optional)
 
@@ -87,31 +87,6 @@ const hoverCard = createHoverCard(element, {
   </div>
 </div>
 ```
-
-### Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultOpen` | `boolean` | `false` | Initial open state (uncontrolled only) |
-| `open` | `boolean` | - | Controlled open state |
-| `delay` | `number` | `700` | Delay before opening on hover/keyboard focus (ms) |
-| `skipDelayDuration` | `number` | `300` | Duration to skip delay after closing (ms). Set `0` to disable warm-up. |
-| `closeDelay` | `number` | `300` | Delay before closing after leave/blur (ms) |
-| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred side relative to trigger |
-| `align` | `"start" \| "center" \| "end"` | `"center"` | Preferred alignment on the side axis |
-| `sideOffset` | `number` | `4` | Distance from trigger in pixels |
-| `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
-| `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
-| `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
-| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
-| `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside |
-| `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
-| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
-
-#### Controlled Mode
-
-When `open` is provided, hover/focus/outside interactions emit `onOpenChange` but do not mutate internal state.
-Use controller `setOpen(open)` or the `hover-card:set` event to apply state.
 
 ### Data Attributes
 
@@ -141,6 +116,31 @@ Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align
 | `data-close-on-escape` | boolean | `true` | Escape close |
 
 Boolean attributes: present/`"true"` = true, `"false"` = false, absent = default.
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultOpen` | `boolean` | `false` | Initial open state (uncontrolled only) |
+| `open` | `boolean` | - | Controlled open state |
+| `delay` | `number` | `700` | Delay before opening on hover/keyboard focus (ms) |
+| `skipDelayDuration` | `number` | `300` | Duration to skip delay after closing (ms). Set `0` to disable warm-up. |
+| `closeDelay` | `number` | `300` | Delay before closing after leave/blur (ms) |
+| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred side relative to trigger |
+| `align` | `"start" \| "center" \| "end"` | `"center"` | Preferred alignment on the side axis |
+| `sideOffset` | `number` | `4` | Distance from trigger in pixels |
+| `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
+| `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
+| `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
+| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
+| `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside |
+| `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
+| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
+
+#### Controlled Mode
+
+When `open` is provided, hover/focus/outside interactions emit `onOpenChange` but do not mutate internal state.
+Use controller `setOpen(open)` or the `hover-card:set` event to apply state.
 
 ### Controller
 

@@ -57,6 +57,17 @@ const tooltip = createTooltip(element, {
 
 ### Slots
 
+#### Runtime Slots
+
+- `tooltip` - Root element that manages the open state and hover delays.
+- `tooltip-trigger` - Required element that opens the tooltip on hover or focus and is linked to its description.
+- `tooltip-content` - Required floating panel with tooltip semantics.
+- `tooltip-arrow` - Optional arrow inside the content, positioned against the trigger by the runtime.
+- `tooltip-positioner` - Optional authored positioning wrapper around the content, reused instead of a generated wrapper.
+- `tooltip-portal` - Optional authored portal wrapper that can contain the positioner and content.
+
+#### Markup
+
 ```html
 <div data-slot="tooltip">
   <button data-slot="tooltip-trigger">Trigger</button>
@@ -66,17 +77,6 @@ const tooltip = createTooltip(element, {
   </div>
 </div>
 ```
-
-#### Required Slots
-
-- `tooltip-trigger`
-- `tooltip-content`
-
-#### Optional Slots
-
-- `tooltip-positioner` - Optional authored positioning wrapper
-- `tooltip-portal` - Optional authored portal wrapper that can contain `tooltip-positioner`
-- `tooltip-arrow` - Optional arrow element positioned against the trigger
 
 #### Composed Portal Markup (Optional)
 
@@ -93,23 +93,6 @@ const tooltip = createTooltip(element, {
   </div>
 </div>
 ```
-
-### Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `delay` | `number` | `300` | Delay before showing tooltip (ms) |
-| `skipDelayDuration` | `number` | `300` | Duration to skip delay after closing (ms). Set to `0` to disable warm-up. |
-| `side` | `"top" \| "right" \| "bottom" \| "left" \| "inline-start" \| "inline-end"` | `"top"` | Preferred side relative to trigger |
-| `align` | `"start" \| "center" \| "end"` | `"center"` | Preferred alignment |
-| `sideOffset` | `number` | `4` | Distance from trigger in pixels |
-| `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
-| `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
-| `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
-| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
-| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when visibility changes |
-
-**Note:** `side` and `align` are preferred placement inputs resolved at bind time. With collision handling enabled, computed `data-side` can differ at runtime.
 
 ### Data Attributes
 
@@ -186,6 +169,23 @@ The component sets these attributes automatically:
 | Arrow | `data-uncentered` | Present when the arrow cannot stay perfectly centered |
 | Arrow | `aria-hidden` | `"true"` |
 | Trigger | `aria-describedby` | Content ID when open, removed when closed |
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `delay` | `number` | `300` | Delay before showing tooltip (ms) |
+| `skipDelayDuration` | `number` | `300` | Duration to skip delay after closing (ms). Set to `0` to disable warm-up. |
+| `side` | `"top" \| "right" \| "bottom" \| "left" \| "inline-start" \| "inline-end"` | `"top"` | Preferred side relative to trigger |
+| `align` | `"start" \| "center" \| "end"` | `"center"` | Preferred alignment |
+| `sideOffset` | `number` | `4` | Distance from trigger in pixels |
+| `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
+| `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
+| `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
+| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
+| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when visibility changes |
+
+**Note:** `side` and `align` are preferred placement inputs resolved at bind time. With collision handling enabled, computed `data-side` can differ at runtime.
 
 ### Controller
 

@@ -88,22 +88,12 @@ const alertDialog = createAlertDialog(element, {
 
 #### Style-only Slots
 
-- `alert-dialog-header`
-- `alert-dialog-footer`
-- `alert-dialog-media`
-- `alert-dialog-action`
+- `alert-dialog-header` - Optional layout wrapper for the title, description, and media.
+- `alert-dialog-footer` - Optional layout wrapper for the action and cancel buttons.
+- `alert-dialog-media` - Optional icon or illustration area in the header.
+- `alert-dialog-action` - Confirmation action button; wire your own handler and close the dialog explicitly.
 
 `alert-dialog-action` is intentionally just a styled action slot. It does not close automatically.
-
-### Options
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `defaultOpen` | `boolean` | `false` | Initial open state |
-| `onOpenChange` | `(open: boolean) => void` | `undefined` | Called when open state changes |
-| `closeOnClickOutside` | `boolean` | `false` | Close when clicking the overlay |
-| `closeOnEscape` | `boolean` | `true` | Close when pressing `Escape` |
-| `lockScroll` | `boolean` | `true` | Lock page scroll while open |
 
 ### Data Attributes
 
@@ -121,6 +111,16 @@ Set these on the `alert-dialog` root. JavaScript options take precedence. Empty 
 - `data-state="open" | "closed"` on root, portal, overlay, and content
 - `data-open` / `data-closed` on root, portal, overlay, and content
 - `data-stack-index` on overlay and content when multiple modal layers are open
+
+### Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `defaultOpen` | `boolean` | `false` | Initial open state |
+| `onOpenChange` | `(open: boolean) => void` | `undefined` | Called when open state changes |
+| `closeOnClickOutside` | `boolean` | `false` | Close when clicking the overlay |
+| `closeOnEscape` | `boolean` | `true` | Close when pressing `Escape` |
+| `lockScroll` | `boolean` | `true` | Lock page scroll while open |
 
 ### Controller
 

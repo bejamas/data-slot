@@ -83,11 +83,11 @@ const controller = createRadioGroup(element, {});
 
 ### Slots
 
-| Slot | Description |
-|------|-------------|
-| `radio-group` | Root container |
-| `radio-group-item` | Individual radio control |
-| `radio-group-indicator` | Optional visual indicator inside an item |
+#### Runtime Slots
+
+- `radio-group` - Root element that manages the selected value, radio-group semantics, and keyboard navigation.
+- `radio-group-item` - Individual radio control identified by `data-value`; receives checked state and participates in roving focus.
+- `radio-group-indicator` - Optional visual indicator inside an item; receives checked and disabled state for styling.
 
 ### Options
 

@@ -55,22 +55,20 @@ const collapsible = createCollapsible(element, {
 
 ### Slots
 
+#### Runtime Slots
+
+- `collapsible` - Root element that manages the open state.
+- `collapsible-trigger` - Required button that toggles the content and receives `aria-expanded`.
+- `collapsible-content` - Required panel that is shown or hidden with the open state.
+
+#### Markup
+
 ```html
 <div data-slot="collapsible">
   <button data-slot="collapsible-trigger">Toggle</button>
   <div data-slot="collapsible-content">Content</div>
 </div>
 ```
-
-Both `collapsible-trigger` and `collapsible-content` are required.
-
-### Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultOpen` | `boolean` | `false` | Initial open state |
-| `hiddenUntilFound` | `boolean` | `false` | Use `hidden="until-found"` when closed |
-| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes (not called on init) |
 
 ### Data Attributes
 
@@ -89,6 +87,14 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
   ...
 </div>
 ```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultOpen` | `boolean` | `false` | Initial open state |
+| `hiddenUntilFound` | `boolean` | `false` | Use `hidden="until-found"` when closed |
+| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes (not called on init) |
 
 ### Controller
 

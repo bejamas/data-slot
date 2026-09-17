@@ -94,6 +94,29 @@ import { createSlider } from "@data-slot/slider";
 const controller = createSlider(element, {});
 ```
 
+### Slots
+
+#### Runtime Slots
+
+- `slider` - Root element that manages the value, bounds, orientation, and disabled state.
+- `slider-control` - Optional interaction wrapper around the track and thumbs. When omitted, the track's parent is used, typically the root.
+- `slider-track` - Required track used to measure pointer position and lay out the range and thumbs.
+- `slider-range` - Optional filled portion of the track; its position and size follow the selected value or range.
+- `slider-thumb` - Required draggable control with slider semantics and keyboard support. Use one for a single value or two for a range; two thumbs enable range mode.
+
+### Data Attributes
+
+| Attribute | Description | Default |
+|-----------|-------------|---------|
+| `data-default-value` | Initial value (`50` or `25,75` for range) | `min` (single), `[min, min]` (range) |
+| `data-min` | Minimum value | `0` |
+| `data-max` | Maximum value | `100` |
+| `data-step` | Step increment | `1` |
+| `data-large-step` | Large step for PageUp/PageDown | `step * 10` |
+| `data-orientation` | `horizontal` or `vertical` | `horizontal` |
+| `data-thumb-alignment` | `center`, `edge`, or `edge-client-only` | `center` |
+| `data-disabled` | Disable the slider | - |
+
 ### Options
 
 JavaScript options take precedence over root data attributes.
@@ -110,19 +133,6 @@ JavaScript options take precedence over root data attributes.
 | `disabled` | `boolean` | `false` | Disable user interaction and inbound set events |
 | `onValueChange` | `(value: number \| [number, number]) => void` | `undefined` | Called for value changes, including programmatic updates; silent on initialization and unchanged values |
 | `onValueCommit` | `(value: number \| [number, number]) => void` | `undefined` | Called on pointer release/cancel, blur after a keyboard value change, or a changed `slider:set` update |
-
-### Data Attributes
-
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `data-default-value` | Initial value (`50` or `25,75` for range) | `min` (single), `[min, min]` (range) |
-| `data-min` | Minimum value | `0` |
-| `data-max` | Maximum value | `100` |
-| `data-step` | Step increment | `1` |
-| `data-large-step` | Large step for PageUp/PageDown | `step * 10` |
-| `data-orientation` | `horizontal` or `vertical` | `horizontal` |
-| `data-thumb-alignment` | `center`, `edge`, or `edge-client-only` | `center` |
-| `data-disabled` | Disable the slider | - |
 
 ### Controller
 

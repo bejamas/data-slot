@@ -78,16 +78,12 @@ import { createToggleGroup } from "@data-slot/toggle-group";
 const controller = createToggleGroup(element, {});
 ```
 
-### Options
+### Slots
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultValue` | `string \| string[]` | `[]` | Initial selected value(s). For multiple values, use array or space-separated string. |
-| `multiple` | `boolean` | `false` | Allow multiple selections. |
-| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Orientation for keyboard navigation. |
-| `loop` | `boolean` | `true` | Wrap keyboard focus at ends. |
-| `disabled` | `boolean` | `false` | Disable the entire group. |
-| `onValueChange` | `(value: string[]) => void` | - | Callback when selection changes. |
+#### Runtime Slots
+
+- `toggle-group` - Root element that manages single or multiple selection and keyboard navigation between items.
+- `toggle-group-item` - Toggle button inside the group, identified by a unique `data-value`; receives `aria-pressed` and `data-state` as its selection changes.
 
 ### Data Attributes
 
@@ -117,6 +113,17 @@ const controller = createToggleGroup(element, {});
 | `aria-pressed` | `"true"` \| `"false"` | Whether item is pressed. |
 | `data-state` | `"on"` \| `"off"` | Visual state for styling. |
 | `data-value` (on root) | Space-separated values | Current selection. |
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultValue` | `string \| string[]` | `[]` | Initial selected value(s). For multiple values, use array or space-separated string. |
+| `multiple` | `boolean` | `false` | Allow multiple selections. |
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Orientation for keyboard navigation. |
+| `loop` | `boolean` | `true` | Wrap keyboard focus at ends. |
+| `disabled` | `boolean` | `false` | Disable the entire group. |
+| `onValueChange` | `(value: string[]) => void` | - | Callback when selection changes. |
 
 ### Controller
 

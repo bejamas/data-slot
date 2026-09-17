@@ -51,19 +51,17 @@ const toggle = createToggle(element, {
 
 ### Slots
 
+#### Runtime Slots
+
+- `toggle` - The button itself. Toggles its pressed state and exposes `aria-pressed` and `data-state` for accessibility and styling; no child slots are needed.
+
+#### Markup
+
 ```html
 <button data-slot="toggle">Label</button>
 ```
 
 The toggle is a simple single-element component. Always use a native `<button>` element—keyboard support (Enter/Space) and focus handling are only guaranteed with `<button>`. Non-button elements (e.g., `<div>`, `<span>`) are not recommended and would require manual keyboard handling.
-
-### Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultPressed` | `boolean` | `false` | Initial pressed state |
-| `disabled` | `boolean` | `false` | Disabled state |
-| `onPressedChange` | `(pressed: boolean) => void` | `undefined` | Callback when state changes |
 
 ### Data Attributes
 
@@ -78,6 +76,14 @@ Options can also be set via data attributes on the root element. JS options take
 <!-- Initially pressed toggle -->
 <button data-slot="toggle" data-default-pressed>Bold</button>
 ```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultPressed` | `boolean` | `false` | Initial pressed state |
+| `disabled` | `boolean` | `false` | Disabled state |
+| `onPressedChange` | `(pressed: boolean) => void` | `undefined` | Callback when state changes |
 
 ### Controller
 
