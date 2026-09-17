@@ -1,0 +1,57 @@
+---
+title: Collapsible
+description: A disclosure that shows and hides a single section of content.
+---
+
+<PackageInfo name="collapsible" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/collapsible
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/collapsible
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/collapsible
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+Both parts are required: a `collapsible-trigger` to toggle, and a `collapsible-content` to reveal.
+
+```html
+<div data-slot="collapsible">
+  <button data-slot="collapsible-trigger">Toggle</button>
+  <div data-slot="collapsible-content">Content</div>
+</div>
+```
+
+## Examples
+
+### Show and hide a section
+
+<Example name="collapsible" />
+
+### Open by default
+
+Start expanded with `data-default-open`.
+
+<Example name="collapsible" variant="extra" />
+
+## API reference
+
+<include>../_generated/collapsible-api.md</include>

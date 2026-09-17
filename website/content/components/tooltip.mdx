@@ -1,0 +1,60 @@
+---
+title: Tooltip
+description: A short, non-interactive description revealed on hover or keyboard focus.
+---
+
+<PackageInfo name="tooltip" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/tooltip
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/tooltip
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/tooltip
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+A trigger and its content. `tooltip-arrow` is optional and gets positioned against the trigger for you.
+
+```html
+<div data-slot="tooltip">
+  <button data-slot="tooltip-trigger">Trigger</button>
+  <div data-slot="tooltip-content">
+    Content
+    <div data-slot="tooltip-arrow"></div>
+  </div>
+</div>
+```
+
+## Examples
+
+### Describe a control
+
+<Example name="tooltip" />
+
+### Position below the trigger
+
+`data-side="bottom"` puts the tooltip below the trigger.
+
+<Example name="tooltip" variant="extra" />
+
+## API reference
+
+<include>../_generated/tooltip-api.md</include>

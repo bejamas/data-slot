@@ -229,9 +229,9 @@ bun run preview:website
 
 Each package has its own directory in `packages/` with its own `package.json`, source code, and tests.
 
-### New Blume documentation preview
+### Documentation website
 
-The component-based Blume documentation lives in [`website-next`](website-next/README.md) and is the target of `build:website` and the Cloudflare deployment commands. The original site is retained in `website`; run it with `bun run --cwd website dev` or build it with `bun run build:website:legacy`.
+The Blume documentation lives in [`website`](website/README.md) and is the target of `build:website` and the Cloudflare deployment commands. Run it directly with `bun run --cwd website dev` after installing its dependencies and building the packages, or use the root commands below.
 
 ```bash
 bun run install:docs
@@ -254,7 +254,7 @@ For Cloudflare Workers Builds, connect `bejamas/data-slot`, leave the root direc
 - Deploy command: `bunx wrangler deploy`
 - Non-production branch deploy command: `bunx wrangler versions upload`
 
-The build command installs the Blume site's locked dependencies, builds the library packages, and outputs the site to `website-next/dist`, which Wrangler serves as static assets. PR builds upload preview versions; merging this migration into `main` switches the production site to Blume. The original `website` source remains available for comparison and is still used to generate component examples.
+The build command installs the website's locked dependencies, builds the library packages, and outputs the site to `website/dist`, which Wrangler serves as static assets. PR builds upload preview versions; builds on `main` deploy to production.
 
 Set the build variable `BUN_VERSION` to `1.3.14`. Node.js is pinned to `24.18.0` in `.node-version` for Blume's Astro 7 runtime. If `NODE_VERSION` is set in the Cloudflare build settings, keep it aligned with that file. No application secrets or runtime variables are required.
 

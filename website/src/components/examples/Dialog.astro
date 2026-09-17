@@ -49,7 +49,6 @@ const cssCode = `<div data-slot="dialog">
     transition:
       opacity 0.2s ease,
       transform 0.2s ease;
-    border-radius: 0.5rem;
   }
   .dialog-panel[data-open] {
     opacity: 1;
@@ -97,7 +96,7 @@ const tailwindCode = `<div data-slot="dialog" class="group/dialog">
   <div
     data-slot="dialog-content"
     class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-           bg-white p-8 max-w-md w-11/12 border border-border rounded-lg z-50
+           bg-white p-8 max-w-md w-11/12 border border-border z-50
            opacity-0 scale-95 transition-all duration-200
            data-open:opacity-100
            data-open:scale-100
@@ -148,7 +147,7 @@ const tailwindCode = `<div data-slot="dialog" class="group/dialog">
     ></div>
     <div
       data-slot="dialog-content"
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-8 max-w-md w-11/12 border border-border rounded-lg z-50 opacity-0 scale-95 transition-all duration-200 data-open:opacity-100 data-open:scale-100 data-starting-style:opacity-0 data-starting-style:scale-95 data-ending-style:opacity-0 data-ending-style:scale-95"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-8 max-w-md w-11/12 border border-border z-50 opacity-0 scale-95 transition-all duration-200 data-open:opacity-100 data-open:scale-100 data-starting-style:opacity-0 data-starting-style:scale-95 data-ending-style:opacity-0 data-ending-style:scale-95"
       hidden
     >
       <h2 data-slot="dialog-title" class="text-sm font-bold mb-2 mt-0">Confirm Action</h2>

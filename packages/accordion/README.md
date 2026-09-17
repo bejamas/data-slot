@@ -264,7 +264,7 @@ The content element exposes size variables for height or width transitions:
 #### Tailwind Example
 
 ```html
-<div data-slot="accordion" class="overflow-hidden rounded-2xl border">
+<div data-slot="accordion" class="overflow-hidden border">
   <div
     data-slot="accordion-item"
     data-value="one"

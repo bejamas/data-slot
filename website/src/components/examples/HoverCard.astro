@@ -31,7 +31,6 @@ const cssCode = `<div data-slot="hover-card" data-delay="180" data-close-delay="
     width: 18rem;
     background: #fff;
     border: 1px solid #ccc;
-    border-radius: 0.75rem;
     padding: 0.75rem;
     z-index: 50;
     transform-origin: var(--transform-origin, center);
@@ -140,7 +139,7 @@ const tailwindCode = `<div data-slot="hover-card" data-delay="180" data-close-de
     data-side="bottom"
     data-align="start"
     class="fixed w-72 max-w-(--available-width) bg-white border border-border
-           rounded-xl p-3 z-50 shadow-lg"
+           p-3 z-50 shadow-lg"
     hidden
   >
     <div class="flex items-center gap-2.5">
@@ -217,7 +216,7 @@ const tailwindCode = `<div data-slot="hover-card" data-delay="180" data-close-de
       data-slot="hover-card-content"
       data-side="bottom"
       data-align="start"
-      class="fixed w-72 max-w-(--available-width) bg-white border border-border rounded-xl p-3 z-50 shadow-lg"
+      class="fixed w-72 max-w-(--available-width) bg-white border border-border p-3 z-50 shadow-lg"
       hidden
     >
       <div class="flex items-center gap-2.5">

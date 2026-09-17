@@ -41,6 +41,6 @@ tmp
 # Blume generated documentation runtime
 .blume
 .blume-verify
-website-next/.generated/
-website-next/content/_generated/
-website-next/public/fonts/
+website/.generated/
+website/content/_generated/
+website/public/fonts/

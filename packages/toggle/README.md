@@ -180,7 +180,7 @@ The component sets these attributes for styling:
 ```html
 <button
   data-slot="toggle"
-  class="px-4 py-2 rounded bg-gray-200 data-[state=on]:bg-blue-500 data-[state=on]:text-white aria-disabled:opacity-50"
+  class="px-4 py-2 bg-gray-200 data-[state=on]:bg-blue-500 data-[state=on]:text-white aria-disabled:opacity-50"
 >
   Bold
 </button>

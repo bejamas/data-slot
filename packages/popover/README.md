@@ -300,7 +300,7 @@ With Tailwind:
     data-slot="popover-content"
     data-side="bottom"
     data-align="start"
-    class="absolute bg-white shadow-lg rounded-lg p-4"
+    class="absolute bg-white shadow-lg p-4"
   >
     Content
   </div>

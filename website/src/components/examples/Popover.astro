@@ -34,7 +34,6 @@ const cssCode = `<div data-slot="popover" class="popover-root">
     --popover-slide-x: 0px;
     --popover-slide-y: -4px;
     max-width: var(--available-width);
-    border-radius: 0.5rem;
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
   .popover-content[data-side="top"] {
@@ -109,7 +108,7 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
     data-side="bottom"
     data-align="center"
     class="fixed bg-white border border-border
-           p-4 w-80 max-w-(--available-width) z-50 rounded-lg shadow-lg"
+           p-4 w-80 max-w-(--available-width) z-50 shadow-lg"
     hidden
   >
     <div class="font-bold mb-2 mt-0">Popover Panel</div>
@@ -203,7 +202,7 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
       data-slot="popover-content"
       data-side="bottom"
       data-align="center"
-      class="fixed bg-white border border-border p-4 w-80 max-w-(--available-width) z-50 rounded-lg shadow-lg"
+      class="fixed bg-white border border-border p-4 w-80 max-w-(--available-width) z-50 shadow-lg"
       hidden
     >
       <div class="font-bold mb-2 mt-0">Popover Panel</div>

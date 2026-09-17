@@ -286,7 +286,6 @@ The example below matches the Base/shadcn composition style: real `tooltip-arrow
   align-items: center;
   gap: 0.375rem;
   padding: 0.375rem 0.75rem;
-  border-radius: 1rem;
   font-size: 0.75rem;
   white-space: nowrap;
   background: #111827;
@@ -327,7 +326,6 @@ The example below matches the Base/shadcn composition style: real `tooltip-arrow
   width: 0.625rem;
   height: 0.625rem;
   background: inherit;
-  border-radius: 2px;
   transform: rotate(45deg);
 }
 
@@ -364,7 +362,7 @@ Use content and arrow data attributes for open-state styling:
     data-slot="tooltip-content"
     data-side="top"
     class="px-2 py-1
-           bg-gray-900 text-white text-sm rounded 
+           bg-gray-900 text-white text-sm
            opacity-0 pointer-events-none transition-opacity duration-150
            data-[open]:opacity-100 data-[open]:pointer-events-auto
            data-[instant]:transition-none"

@@ -110,7 +110,6 @@
   max-width: 32rem;
   height: 80dvh;
   border: 1px solid #ccc;
-  border-radius: 1rem 1rem 0 0;
   transform: translateY(calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px)));
 }
 

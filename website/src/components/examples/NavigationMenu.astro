@@ -71,7 +71,6 @@ const cssCode = `<!-- Add data-position-method="fixed" for sticky headers -->
     height: var(--popup-height); max-height: var(--available-height);
     transform-origin: var(--transform-origin);
     background: #faf9f7;
-    border-radius: 8px;
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     overflow: hidden;
     transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1),
@@ -146,7 +145,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
         hidden
       >
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-96 max-w-(--available-width) p-3">
-          <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+          <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
             <div class="mb-1 font-medium">Analytics</div>
             <div class="text-sm text-muted">Real-time metrics</div>
           </a>
@@ -167,7 +166,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
     <!-- More submenu items... -->
     <div
       data-slot="navigation-menu-indicator"
-      class="absolute bg-code-bg z-0 rounded-md transition-all duration-150
+      class="absolute bg-code-bg z-0 transition-all duration-150
              pointer-events-none opacity-0 data-[state=visible]:opacity-100"
       style="left: var(--indicator-left, 0); top: var(--indicator-top, 0);
              width: var(--indicator-width, 0); height: var(--indicator-height, 0);"
@@ -177,7 +176,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
     <div data-slot="navigation-menu-positioner" class="nav-menu-tw-positioner z-50">
       <div
         data-slot="navigation-menu-popup"
-        class="nav-menu-tw-popup relative overflow-hidden rounded-lg border border-border bg-bg shadow-lg"
+        class="nav-menu-tw-popup relative overflow-hidden border border-border bg-bg shadow-lg"
         hidden
         style="width: var(--popup-width); height: var(--popup-height); max-height: var(--available-height); transform-origin: var(--transform-origin);"
       >
@@ -372,19 +371,19 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           hidden
         >
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-96 max-w-(--available-width) p-3">
-            <a href="#" class="block p-3 no-underline rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 no-underline transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Analytics</div>
               <div class="text-sm text-muted">Real-time metrics</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Automation</div>
               <div class="text-sm text-muted">Workflow tools</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Security</div>
               <div class="text-sm text-muted">Enterprise-grade</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Integrations</div>
               <div class="text-sm text-muted">Connect everything</div>
             </a>
@@ -404,19 +403,19 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           hidden
         >
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-96 max-w-(--available-width) p-3">
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Startups</div>
               <div class="text-sm text-muted">Move fast</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Enterprise</div>
               <div class="text-sm text-muted">Scale securely</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Agencies</div>
               <div class="text-sm text-muted">Client projects</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">E-commerce</div>
               <div class="text-sm text-muted">Sell online</div>
             </a>
@@ -444,27 +443,27 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           hidden
         >
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 w-lg max-w-(--available-width)">
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Documentation</div>
               <div class="text-sm text-muted">Get started</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Blog</div>
               <div class="text-sm text-muted">Latest updates</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Contact</div>
               <div class="text-sm text-muted">Get in touch</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Support</div>
               <div class="text-sm text-muted">Get help</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Training</div>
               <div class="text-sm text-muted">Learn new skills</div>
             </a>
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">Events</div>
               <div class="text-sm text-muted">Upcoming webinars</div>
             </a>
@@ -484,7 +483,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
           hidden
         >
           <div class="w-36 p-3">
-            <a href="#" class="block p-3 rounded transition-colors hover:bg-code-bg text-inherit">
+            <a href="#" class="block p-3 transition-colors hover:bg-code-bg text-inherit">
               <div class="mb-1 font-medium">About Us</div>
               <div class="text-sm text-muted">Our story</div>
             </a>
@@ -493,7 +492,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
       </li>
       <div
         data-slot="navigation-menu-indicator"
-        class="absolute bg-code-bg z-0 rounded-md transition-all data-instant:transition-opacity duration-150 pointer-events-none opacity-0 data-[state=visible]:opacity-100"
+        class="absolute bg-code-bg z-0 transition-all data-instant:transition-opacity duration-150 pointer-events-none opacity-0 data-[state=visible]:opacity-100"
         style="left: var(--indicator-left, 0); top: var(--indicator-top, 0); width: var(--indicator-width, 0); height: var(--indicator-height, 0);"
       ></div>
     </ul>
@@ -501,7 +500,7 @@ const tailwindCode = `<!-- Add data-position-method="fixed" for sticky headers -
       <div data-slot="navigation-menu-positioner" class="nav-menu-tw-positioner isolate z-50">
         <div
           data-slot="navigation-menu-popup"
-          class="nav-menu-tw-popup relative overflow-hidden rounded-lg border border-border bg-bg shadow-lg"
+          class="nav-menu-tw-popup relative overflow-hidden border border-border bg-bg shadow-lg"
           hidden
           style="width: var(--popup-width); height: var(--popup-height); max-height: var(--available-height); transform-origin: var(--transform-origin);"
         >

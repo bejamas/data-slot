@@ -53,7 +53,6 @@ const cssCode = `<div data-slot="dropdown-menu" data-align="center" class="dropd
     min-width: 12rem;
     padding: 0.25rem;
     z-index: 50;
-    border-radius: 0.5rem;
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     width: 14rem;
   }
@@ -74,7 +73,6 @@ const cssCode = `<div data-slot="dropdown-menu" data-align="center" class="dropd
     cursor: pointer;
     font-size: 0.875rem;
     text-align: left;
-    border-radius: 0.25rem;
     line-height: 1.25rem;
   }
   .dropdown-item[data-highlighted] {
@@ -112,7 +110,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
   <div
     data-slot="dropdown-menu-content"
     class="absolute top-full left-0 bg-white border border-border
-           w-56 p-1 z-50 rounded-lg shadow-lg"
+           w-56 p-1 z-50 shadow-lg"
     hidden
   >
     <div data-slot="dropdown-menu-group">
@@ -125,7 +123,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
       <button
         data-slot="dropdown-menu-item"
         data-value="cut"
-        class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded
+        class="flex items-center w-full px-2 py-1.5 text-sm text-left
                data-highlighted:bg-gray-100"
       >
         Cut
@@ -134,7 +132,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
       <button
         data-slot="dropdown-menu-item"
         data-value="copy"
-        class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded
+        class="flex items-center w-full px-2 py-1.5 text-sm text-left
                data-highlighted:bg-gray-100"
       >
         Copy
@@ -143,7 +141,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
       <button
         data-slot="dropdown-menu-item"
         data-value="paste"
-        class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded
+        class="flex items-center w-full px-2 py-1.5 text-sm text-left
                data-highlighted:bg-gray-100"
       >
         Paste
@@ -155,7 +153,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
       data-slot="dropdown-menu-item"
       data-value="delete"
       data-variant="destructive"
-      class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded
+      class="flex items-center w-full px-2 py-1.5 text-sm text-left
              text-red-600 data-highlighted:bg-red-50"
     >
       Delete
@@ -163,7 +161,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
     <button
       data-slot="dropdown-menu-item"
       data-disabled
-      class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded
+      class="flex items-center w-full px-2 py-1.5 text-sm text-left
              text-gray-300 cursor-not-allowed"
     >
       Archive (coming soon)
@@ -211,7 +209,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
     </button>
     <div
       data-slot="dropdown-menu-content"
-      class="absolute top-full left-0 bg-white border border-border w-56 p-1 z-50 rounded-lg shadow-lg"
+      class="absolute top-full left-0 bg-white border border-border w-56 p-1 z-50 shadow-lg"
       hidden
     >
       <div data-slot="dropdown-menu-group">
@@ -219,7 +217,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
         <button
           data-slot="dropdown-menu-item"
           data-value="cut"
-          class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded data-highlighted:bg-gray-100"
+          class="flex items-center w-full px-2 py-1.5 text-sm text-left data-highlighted:bg-gray-100"
         >
           Cut
           <span data-slot="dropdown-menu-shortcut" class="ml-auto text-xs text-gray-600">⌘X</span>
@@ -227,7 +225,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
         <button
           data-slot="dropdown-menu-item"
           data-value="copy"
-          class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded data-highlighted:bg-gray-100"
+          class="flex items-center w-full px-2 py-1.5 text-sm text-left data-highlighted:bg-gray-100"
         >
           Copy
           <span data-slot="dropdown-menu-shortcut" class="ml-auto text-xs text-gray-600">⌘C</span>
@@ -235,7 +233,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
         <button
           data-slot="dropdown-menu-item"
           data-value="paste"
-          class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded data-highlighted:bg-gray-100"
+          class="flex items-center w-full px-2 py-1.5 text-sm text-left data-highlighted:bg-gray-100"
         >
           Paste
           <span data-slot="dropdown-menu-shortcut" class="ml-auto text-xs text-gray-600">⌘V</span>
@@ -246,14 +244,14 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
         data-slot="dropdown-menu-item"
         data-value="delete"
         data-variant="destructive"
-        class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded text-red-600 data-highlighted:bg-red-50"
+        class="flex items-center w-full px-2 py-1.5 text-sm text-left text-red-600 data-highlighted:bg-red-50"
       >
         Delete
       </button>
       <button
         data-slot="dropdown-menu-item"
         data-disabled
-        class="flex items-center w-full px-2 py-1.5 text-sm text-left rounded text-gray-300 cursor-not-allowed"
+        class="flex items-center w-full px-2 py-1.5 text-sm text-left text-gray-300 cursor-not-allowed"
       >
         Archive (coming soon)
       </button>
@@ -280,7 +278,6 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
     min-width: 12rem;
     padding: 0.25rem;
     z-index: 50;
-    border-radius: 0.5rem;
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     width: 14rem;
   }
@@ -301,7 +298,6 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
     cursor: pointer;
     font-size: 0.875rem;
     text-align: left;
-    border-radius: 0.25rem;
     line-height: 1.25rem;
   }
   .dropdown-item[data-highlighted] {

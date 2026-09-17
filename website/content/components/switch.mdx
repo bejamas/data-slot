@@ -1,0 +1,56 @@
+---
+title: Switch
+description: A two-state control for turning a setting on or off.
+---
+
+<PackageInfo name="switch" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/switch
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/switch
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/switch
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+Just a root and an optional thumb. The controller injects a visually hidden checkbox next to the root, so the switch works inside a `<label>` and submits with a form like a native one.
+
+```html
+<span data-slot="switch">
+  <span data-slot="switch-thumb"></span>
+</span>
+```
+
+## Examples
+
+### Toggle a setting
+
+<Example name="switch" />
+
+### Disabled state
+
+`data-disabled` blocks interaction while screen readers still report the on/off state.
+
+<Example name="switch" variant="extra" />
+
+## API reference
+
+<include>../_generated/switch-api.md</include>

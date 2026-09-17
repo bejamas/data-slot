@@ -75,7 +75,6 @@ const cssCode = `<div data-slot="alert-dialog" class="alert-dialog-root">
     max-width: 28rem;
     width: 91.666667%;
     border: 1px solid #ccc;
-    border-radius: 0.5rem;
     z-index: 101;
     opacity: 0;
     transition:
@@ -173,7 +172,7 @@ const tailwindCode = `<div data-slot="alert-dialog">
     <div
       data-slot="alert-dialog-content"
       class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-             bg-white p-8 max-w-md w-11/12 border border-border rounded-lg z-50
+             bg-white p-8 max-w-md w-11/12 border border-border z-50
              opacity-0 scale-95 transition-all duration-200
              data-open:opacity-100
              data-open:scale-100
@@ -271,7 +270,7 @@ const tailwindCode = `<div data-slot="alert-dialog">
       ></div>
       <div
         data-slot="alert-dialog-content"
-        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-8 max-w-md w-11/12 border border-border rounded-lg z-50 opacity-0 scale-95 transition-all duration-200 data-open:opacity-100 data-open:scale-100 data-starting-style:opacity-0 data-starting-style:scale-95 data-ending-style:opacity-0 data-ending-style:scale-95"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-8 max-w-md w-11/12 border border-border z-50 opacity-0 scale-95 transition-all duration-200 data-open:opacity-100 data-open:scale-100 data-starting-style:opacity-0 data-starting-style:scale-95 data-ending-style:opacity-0 data-ending-style:scale-95"
         hidden
       >
         <div
@@ -313,11 +312,6 @@ const tailwindCode = `<div data-slot="alert-dialog">
       </div>
     </div>
   </div>
-
-  <p slot="note" class="mt-4 text-sm text-muted">
-    <code class="bg-code-bg px-1.5 py-0.5">alert-dialog-action</code> is just a styled slot. This
-    demo closes after confirm with custom JavaScript.
-  </p>
 
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
   <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />

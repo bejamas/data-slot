@@ -19,7 +19,7 @@ const tailwind = {
   trigger: "cursor-pointer border-0 bg-[#1a1a1a] px-4 py-2 text-[#faf9f7]",
   backdrop: "fixed inset-0 z-[110] bg-black/45 opacity-[calc(1-var(--drawer-swipe-progress,0))] transition-opacity duration-300 ease-[ease] motion-reduce:transition-none data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[swiping]:transition-none hidden:hidden",
   viewport: "pointer-events-none fixed inset-0 z-[111] flex h-dvh w-full items-end justify-center overflow-hidden hidden:hidden",
-  popup: "pointer-events-auto flex h-[80dvh] w-full max-w-lg flex-col rounded-t-2xl border border-[#ccc] bg-[#faf9f7] text-[#1a1a1a] shadow-[0_0_50px_rgb(0_0_0/20%)] transition-transform duration-300 ease-[ease] motion-reduce:transition-none [transform:translateY(calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-movement-y,0px)))] data-[starting-style]:[transform:translateY(100%)] data-[ending-style]:[transform:translateY(100%)] data-[swiping]:transition-none hidden:hidden",
+  popup: "pointer-events-auto flex h-[80dvh] w-full max-w-lg flex-col border border-[#ccc] bg-[#faf9f7] text-[#1a1a1a] shadow-[0_0_50px_rgb(0_0_0/20%)] transition-transform duration-300 ease-[ease] motion-reduce:transition-none [transform:translateY(calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-movement-y,0px)))] data-[starting-style]:[transform:translateY(100%)] data-[ending-style]:[transform:translateY(100%)] data-[swiping]:transition-none hidden:hidden",
   handle: "mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-[#ccc]",
   content: "grid min-h-0 max-h-[calc(100%_-_var(--drawer-snap-point-offset,0px)_-_1rem)] content-start gap-4 overflow-y-auto overscroll-contain p-6",
   title: "m-0 text-lg leading-7 font-bold",

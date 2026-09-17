@@ -480,8 +480,10 @@ export function createNavigationMenuPopupStack(
     const restorePositioner = restore(stack.positioner, {
       "--positioner-width": "max-content",
       "--positioner-height": "max-content",
-      "--available-width": "max-content",
-      "--available-height": "max-content",
+      // These variables constrain max-width/max-height in authored styles.
+      // max-content would cap fixed-size panels at their text's intrinsic size.
+      "--available-width": "none",
+      "--available-height": "none",
     });
     const measured = cssDimensions(stack.popup);
     restorePositioner();

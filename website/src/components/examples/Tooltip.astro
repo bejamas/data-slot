@@ -23,7 +23,6 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
     padding: 0.5rem 1rem;
     background: #fff;
     border: 1px dashed #ccc;
-    border-radius: 999px;
     cursor: help;
     color: #1a1a1a;
     text-underline-offset: 2px;
@@ -36,7 +35,6 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
     background: #1a1a1a;
     color: #faf9f7;
     padding: 0.375rem 0.75rem;
-    border-radius: 1rem;
     font-size: 0.75rem;
     white-space: nowrap;
     z-index: 50;
@@ -76,7 +74,6 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
     width: 0.625rem;
     height: 0.625rem;
     background: inherit;
-    border-radius: 2px;
     transform: rotate(45deg);
   }
   .tooltip-arrow[data-side="top"] { bottom: -0.25rem; }
@@ -122,7 +119,7 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
 const tailwindCode = `<div data-slot="tooltip" class="inline-block">
   <button
     data-slot="tooltip-trigger"
-    class="rounded-full border border-dashed border-border bg-white px-4 py-2
+    class="border border-dashed border-border bg-white px-4 py-2
            text-text cursor-help underline decoration-dotted underline-offset-2"
   >
     Hover me
@@ -131,7 +128,7 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
     data-slot="tooltip-content"
     data-side="top"
     class="absolute
-           inline-flex items-center gap-1.5 rounded-2xl bg-text px-3 py-1.5
+           inline-flex items-center gap-1.5 bg-text px-3 py-1.5
            text-xs whitespace-nowrap text-bg z-50
            opacity-0 pointer-events-none transition-opacity duration-150
            data-open:opacity-100 data-open:pointer-events-auto
@@ -141,7 +138,7 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
     Tooltip content
     <div
       data-slot="tooltip-arrow"
-      class="absolute size-2.5 rounded-xs bg-text rotate-45
+      class="absolute size-2.5 bg-text rotate-45
              data-[side=top]:-bottom-1
              data-[side=bottom]:-top-1
              data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5
@@ -207,65 +204,65 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
       <div data-slot="tooltip" class="inline-block">
         <button
           data-slot="tooltip-trigger"
-          class="rounded-full border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
+          class="border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
         >
           Top
         </button>
         <div
           data-slot="tooltip-content"
           data-side="top"
-          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: top (default)
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-xs bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="inline-block">
         <button
           data-slot="tooltip-trigger"
-          class="rounded-full border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
+          class="border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
         >
           Bottom
         </button>
         <div
           data-slot="tooltip-content"
           data-side="bottom"
-          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: bottom
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-xs bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="inline-block">
         <button
           data-slot="tooltip-trigger"
-          class="rounded-full border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
+          class="border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
         >
           Left
         </button>
         <div
           data-slot="tooltip-content"
           data-side="left"
-          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: left
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-xs bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="inline-block">
         <button
           data-slot="tooltip-trigger"
-          class="rounded-full border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
+          class="border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
         >
           Right
         </button>
         <div
           data-slot="tooltip-content"
           data-side="right"
-          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: right
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-xs bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
     </div>
@@ -273,33 +270,33 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
       <div data-slot="tooltip" class="inline-block">
         <button
           data-slot="tooltip-trigger"
-          class="rounded-full border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
+          class="border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
         >
           Inline start
         </button>
         <div
           data-slot="tooltip-content"
           data-side="inline-start"
-          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: inline-start
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-xs bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="inline-block">
         <button
           data-slot="tooltip-trigger"
-          class="rounded-full border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
+          class="border border-dashed border-border bg-white px-4 py-2 text-text cursor-help underline decoration-dotted underline-offset-2"
         >
           Inline end
         </button>
         <div
           data-slot="tooltip-content"
           data-side="inline-end"
-          class="absolute inline-flex items-center gap-1.5 rounded-2xl bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: inline-end
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 rounded-xs bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
     </div>

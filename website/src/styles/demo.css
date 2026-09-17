@@ -90,7 +90,6 @@ html {
   gap: 0.25rem;
   padding: 0.25rem;
   background: var(--code-bg);
-  border-radius: 6px;
   margin-bottom: 1rem;
   overflow: auto;
 }
@@ -102,7 +101,6 @@ html {
   border: none;
   background: none;
   margin-bottom: 0;
-  border-radius: 4px;
   transition: color 0.2s;
 }
 
@@ -117,7 +115,6 @@ html {
   left: 0;
   height: calc(100% - 0.5rem);
   background: #fff;
-  border-radius: 4px;
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   transform: translateX(var(--active-tab-left, 0));
   width: var(--active-tab-width, 0);
@@ -232,7 +229,6 @@ html {
   transition:
     opacity 0.2s ease-out,
     transform 0.2s ease-out;
-  border-radius: 0.5rem;
 }
 
 .dialog-panel[data-open] {
@@ -319,7 +315,6 @@ html {
   max-width: 28rem;
   width: 91.666667%;
   border: 1px solid #ccc;
-  border-radius: 0.5rem;
   z-index: 101;
   opacity: 0;
   transition:
@@ -484,7 +479,6 @@ html {
   text-decoration: underline;
   text-decoration-style: dotted;
   text-underline-offset: 2px;
-  border-radius: 999px;
   color: #1a1a1a;
 }
 
@@ -511,7 +505,6 @@ html {
   align-items: center;
   gap: 0.375rem;
   line-height: 1rem;
-  border-radius: 1rem;
 }
 
 /* Open state */
@@ -613,7 +606,6 @@ html {
   position: absolute;
   width: 0.625rem;
   height: 0.625rem;
-  border-radius: 2px;
   background: inherit;
   transform: rotate(45deg);
 }
@@ -678,7 +670,6 @@ html {
   --popover-slide-x: 0px;
   --popover-slide-y: -4px;
   max-width: var(--available-width);
-  border-radius: 0.5rem;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
@@ -793,7 +784,6 @@ html {
   width: 18rem;
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
   padding: 0.75rem;
   z-index: 50;
   transform-origin: var(--transform-origin, center);
@@ -942,7 +932,6 @@ html {
   width: var(--indicator-width, 0);
   height: var(--indicator-height, 0);
   background: var(--code-bg);
-  border-radius: 6px;
   transition: all 0.15s ease;
   pointer-events: none;
   z-index: 0;
@@ -1020,7 +1009,6 @@ html {
   max-height: var(--available-height);
   transform-origin: var(--transform-origin);
   background: var(--bg);
-  border-radius: 8px;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   overflow: hidden;
   transition:
@@ -1127,7 +1115,6 @@ html {
   padding: 0.75rem;
   text-decoration: none;
   color: inherit;
-  border-radius: 4px;
   transition: background 0.15s;
 }
 
