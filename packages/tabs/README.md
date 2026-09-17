@@ -32,7 +32,9 @@ npm install @data-slot/tabs
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all tabs instances in a scope (defaults to `document`).
 
@@ -42,7 +44,7 @@ import { create } from "@data-slot/tabs";
 const controllers = create(); // Returns TabsController[]
 ```
 
-### `createTabs(root, options?)`
+#### `createTabs(root, options?)`
 
 Create a controller for a specific element.
 
@@ -56,41 +58,17 @@ const tabs = createTabs(element, {
 });
 ```
 
-### Options
+### Slots
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultValue` | `string` | First trigger's value | Initial selected tab |
-| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Tab orientation for keyboard nav |
-| `activationMode` | `"auto" \| "manual"` | `"auto"` | How tabs are activated with keyboard |
-| `onValueChange` | `(value: string) => void` | `undefined` | Callback when selected tab changes |
+#### Runtime Slots
 
-### Data Attributes
+- `tabs` - Root element that manages the selected tab and activation mode.
+- `tabs-list` - Required tab-list container that receives tablist semantics and orientation.
+- `tabs-trigger` - Tab button identified by `data-value`; receives selected state and keyboard navigation. At least one trigger is required.
+- `tabs-content` - Panel matched to its trigger by `data-value`; receives tabpanel semantics and is shown when selected.
+- `tabs-indicator` - Optional animated highlight whose position and size follow the selected trigger.
 
-Options can also be set via data attributes on the root element. JS options take precedence.
-
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `data-default-value` | string | first tab | Initial selected tab |
-| `data-orientation` | string | `"horizontal"` | Tab orientation: horizontal, vertical |
-| `data-activation-mode` | string | `"auto"` | Activation mode: auto, manual |
-
-```html
-<!-- Vertical tabs with manual activation -->
-<div data-slot="tabs" data-orientation="vertical" data-activation-mode="manual">
-  ...
-</div>
-```
-
-### Controller
-
-| Method/Property | Description |
-|-----------------|-------------|
-| `select(value)` | Select a tab by value |
-| `value` | Currently selected value (readonly `string`) |
-| `destroy()` | Cleanup all event listeners |
-
-## Markup Structure
+#### Markup
 
 ```html
 <div data-slot="tabs" data-default-value="initial-tab">
@@ -103,13 +81,89 @@ Options can also be set via data attributes on the root element. JS options take
 </div>
 ```
 
-### Optional Slots
+### Data Attributes
 
-- `tabs-indicator` - Animated highlight that follows the selected tab
+Options can also be set via data attributes on the root element. JS options take precedence.
 
-## Styling
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-default-value` | string | first enabled tab | Initial selected tab |
+| `data-orientation` | string | `"horizontal"` | Tab orientation: horizontal, vertical |
+| `data-activation-mode` | string | `"auto"` | Activation mode: auto, manual |
 
-### Basic Styling
+```html
+<!-- Vertical tabs with manual activation -->
+<div data-slot="tabs" data-orientation="vertical" data-activation-mode="manual">
+  ...
+</div>
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultValue` | `string` | First enabled trigger's value | Initial selected tab |
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Tab orientation for keyboard nav |
+| `activationMode` | `"auto" \| "manual"` | `"auto"` | How tabs are activated with keyboard |
+| `onValueChange` | `(value: string) => void` | `undefined` | Callback when selected tab changes |
+
+### Controller
+
+| Method/Property | Description |
+|-----------------|-------------|
+| `select(value)` | Select a tab by value |
+| `value` | Currently selected value (readonly `string`) |
+| `updateIndicator()` | Recalculate indicator position after layout changes |
+| `destroy()` | Cleanup all event listeners |
+
+### Events
+
+#### Outbound Events
+
+Listen for changes via custom events:
+
+```javascript
+element.addEventListener("tabs:change", (e) => {
+  console.log("Selected tab:", e.detail.value);
+});
+```
+
+#### Inbound Events
+
+Control the tabs via events:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `tabs:set` | `{ value: string }` | Select a tab programmatically |
+
+```javascript
+// Select a tab
+element.dispatchEvent(
+  new CustomEvent("tabs:set", { detail: { value: "two" } })
+);
+```
+
+#### Deprecated Events
+
+The following event is deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: tabs:select event
+element.dispatchEvent(
+  new CustomEvent("tabs:select", { detail: { value: "two" } })
+);
+
+// Deprecated: string detail
+element.dispatchEvent(
+  new CustomEvent("tabs:select", { detail: "two" })
+);
+```
+
+Use `tabs:set` with `{ value: string }` instead.
+
+### Styling
+
+#### Basic Styling
 
 ```css
 /* Hidden panels */
@@ -133,7 +187,7 @@ Options can also be set via data attributes on the root element. JS options take
 }
 ```
 
-### Panel Activation Direction
+#### Panel Activation Direction
 
 Panels receive `data-activation-direction` after tab changes (not on initial mount):
 
@@ -152,7 +206,7 @@ Use it for directional content animations:
 }
 ```
 
-### Animated Indicator
+#### Animated Indicator
 
 The indicator receives CSS variables for positioning:
 
@@ -174,7 +228,7 @@ The indicator receives CSS variables for positioning:
 }
 ```
 
-### CSS Variables
+#### CSS Variables
 
 | Variable | Description |
 |----------|-------------|
@@ -183,7 +237,7 @@ The indicator receives CSS variables for positioning:
 | `--active-tab-top` | Top offset of active trigger |
 | `--active-tab-height` | Height of active trigger |
 
-### Tailwind Example
+#### Tailwind Example
 
 ```html
 <div data-slot="tabs">
@@ -207,9 +261,11 @@ The indicator receives CSS variables for positioning:
 </div>
 ```
 
-## Keyboard Navigation
+### Keyboard Navigation
 
-### Horizontal Orientation
+The tables below describe `activationMode: "auto"` (the default). In `"manual"` mode, arrow keys, `Home`, and `End` only move focus; `Enter` or `Space` selects the focused tab. Disabled triggers are skipped.
+
+#### Horizontal Orientation
 
 | Key | Action |
 |-----|--------|
@@ -218,7 +274,7 @@ The indicator receives CSS variables for positioning:
 | `Home` | Select first tab |
 | `End` | Select last tab |
 
-### Vertical Orientation
+#### Vertical Orientation
 
 | Key | Action |
 |-----|--------|
@@ -227,7 +283,7 @@ The indicator receives CSS variables for positioning:
 | `Home` | Select first tab |
 | `End` | Select last tab |
 
-## Accessibility
+### Accessibility
 
 The component automatically handles:
 
@@ -238,52 +294,7 @@ The component automatically handles:
 - `aria-selected` on triggers
 - `aria-controls` linking triggers to panels
 - `aria-labelledby` linking panels to triggers
-- `tabindex` management (only selected tab is in tab order)
-
-## Events
-
-### Outbound Events
-
-Listen for changes via custom events:
-
-```javascript
-element.addEventListener("tabs:change", (e) => {
-  console.log("Selected tab:", e.detail.value);
-});
-```
-
-### Inbound Events
-
-Control the tabs via events:
-
-| Event | Detail | Description |
-|-------|--------|-------------|
-| `tabs:set` | `{ value: string }` | Select a tab programmatically |
-
-```javascript
-// Select a tab
-element.dispatchEvent(
-  new CustomEvent("tabs:set", { detail: { value: "two" } })
-);
-```
-
-### Deprecated Events
-
-The following event is deprecated and will be removed in v1.0:
-
-```javascript
-// Deprecated: tabs:select event
-element.dispatchEvent(
-  new CustomEvent("tabs:select", { detail: { value: "two" } })
-);
-
-// Deprecated: string detail
-element.dispatchEvent(
-  new CustomEvent("tabs:select", { detail: "two" })
-);
-```
-
-Use `tabs:set` with `{ value: string }` instead.
+- `tabindex` management (only the selected enabled tab is in the tab order)
 
 ## License
 

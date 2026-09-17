@@ -1,0 +1,60 @@
+---
+title: Popover
+description: A floating panel anchored to a trigger for contextual content and controls.
+---
+
+<PackageInfo name="popover" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/popover
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/popover
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/popover
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+A trigger and its content. `popover-close` is optional — Escape and a click outside already close the panel.
+
+```html
+<div data-slot="popover">
+  <button data-slot="popover-trigger">Trigger</button>
+  <div data-slot="popover-content">
+    Content
+    <button data-slot="popover-close">Close</button>
+  </div>
+</div>
+```
+
+## Examples
+
+### Anchored panel
+
+<Example name="popover" />
+
+### Position above the trigger
+
+`data-side="top"` opens the panel above the trigger when there is room.
+
+<Example name="popover" variant="extra" />
+
+## API reference
+
+<include>../_generated/popover-api.md</include>

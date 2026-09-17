@@ -1,0 +1,75 @@
+---
+title: Combobox
+description: An input with a filterable list of suggestions and keyboard selection.
+---
+
+<PackageInfo name="combobox" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/combobox
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/combobox
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/combobox
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+The input and content are required; the rest is optional. `combobox-trigger` toggles the popup, `combobox-empty` appears when nothing matches, and `combobox-item-indicator` is hidden automatically on unselected items.
+
+```html
+<div data-slot="combobox" data-placeholder="Search fruits...">
+  <input data-slot="combobox-input" />
+  <button data-slot="combobox-trigger">▼</button>
+  <div data-slot="combobox-content" hidden>
+    <div data-slot="combobox-list">
+      <div data-slot="combobox-empty">No results found</div>
+      <div data-slot="combobox-group">
+        <div data-slot="combobox-label">Fruits</div>
+        <div data-slot="combobox-item" data-value="apple">
+          Apple
+          <span data-slot="combobox-item-indicator">✓</span>
+        </div>
+        <div data-slot="combobox-item" data-value="banana">
+          Banana
+          <span data-slot="combobox-item-indicator">✓</span>
+        </div>
+      </div>
+      <div data-slot="combobox-separator"></div>
+      <div data-slot="combobox-item" data-value="other">Other</div>
+    </div>
+  </div>
+</div>
+```
+
+## Examples
+
+### Filter as you type
+
+<Example name="combobox" />
+
+### Choose an initial value
+
+`data-default-value="banana"` preselects the matching option on load.
+
+<Example name="combobox" variant="extra" />
+
+## API reference
+
+<include>../_generated/combobox-api.md</include>

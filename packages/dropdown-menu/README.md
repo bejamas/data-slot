@@ -78,50 +78,51 @@ controller.destroy();
 
 `createDropdownMenu(root)` is idempotent per root. Calling it again for the same element returns the existing controller.
 
-## Controller
+## API
 
-```ts
-interface DropdownMenuController {
-  open(): void;
-  close(): void;
-  toggle(): void;
-  set(detail: DropdownMenuSetDetail): void;
-  readonly isOpen: boolean;
-  readonly value: string | null;
-  readonly values: string[];
-  readonly highlightedValue: string | null;
-  destroy(): void;
-}
+### Initialization
+
+#### `create(scope?)`
+
+Find and bind uninitialized `[data-slot="dropdown-menu"]` descendants of `scope` (defaults to `document`). Returns `DropdownMenuController[]` for newly bound roots. To initialize the scope element itself, use `createDropdownMenu`.
+
+```typescript
+import { create } from "@data-slot/dropdown-menu";
+
+const controllers = create();
 ```
 
-`set()` applies fields in this order: `value`, `values`, `open`, `highlightedValue`.
+#### `createDropdownMenu(root, options?)`
 
-- `set({ value })` commits radio selection.
-- `set({ values })` commits checkbox selection.
-- `set({ open })` opens or closes the menu.
-- `set({ highlightedValue })` updates highlight only while the menu is open.
-- Programmatic `set()` never emits `dropdown-menu:select`.
-- No-op updates are silent.
-- Unknown `value` / `values` targets are ignored, not thrown.
+Create a `DropdownMenuController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
 
-## Slots
+```typescript
+import { createDropdownMenu } from "@data-slot/dropdown-menu";
 
-| Slot | Description |
-|------|-------------|
-| `dropdown-menu` | Root container |
-| `dropdown-menu-trigger` | Button that opens the menu |
-| `dropdown-menu-content` | Menu panel |
-| `dropdown-menu-item` | Action item with no owned selection state |
-| `dropdown-menu-radio-item` | Single-select menu item |
-| `dropdown-menu-checkbox-item` | Multi-select menu item |
-| `dropdown-menu-group` | Groups related items |
-| `dropdown-menu-label` | Non-interactive label |
-| `dropdown-menu-separator` | Visual divider |
-| `dropdown-menu-shortcut` | Keyboard shortcut hint |
-| `dropdown-menu-positioner` | Optional authored positioning wrapper |
-| `dropdown-menu-portal` | Optional authored portal wrapper that contains `dropdown-menu-positioner` |
+const controller = createDropdownMenu(element, {});
+```
 
-### Composed Portal Markup
+### Slots
+
+#### Runtime Slots
+
+- `dropdown-menu` - Root container.
+- `dropdown-menu-trigger` - Required button that toggles the menu and anchors its position.
+- `dropdown-menu-content` - Required menu panel containing action and selection items.
+- `dropdown-menu-item` - Action item with no owned selection state.
+- `dropdown-menu-radio-item` - Single-select menu item.
+- `dropdown-menu-checkbox-item` - Multi-select menu item.
+- `dropdown-menu-positioner` - Optional authored positioning wrapper.
+- `dropdown-menu-portal` - Optional authored portal wrapper that contains `dropdown-menu-positioner`.
+
+#### Style-only Slots
+
+- `dropdown-menu-group` - Groups related items.
+- `dropdown-menu-label` - Non-interactive label.
+- `dropdown-menu-separator` - Visual divider.
+- `dropdown-menu-shortcut` - Optional keyboard shortcut hint; displaying it does not register a keyboard shortcut.
+
+#### Composed Portal Markup
 
 ```html
 <div data-slot="dropdown-menu">
@@ -134,19 +135,19 @@ interface DropdownMenuController {
 </div>
 ```
 
-## State and Data Attributes
+### Data Attributes
 
-### Root and Content
+#### Root and Content
 
 | Attribute | Target | Description |
 |-----------|--------|-------------|
-| `data-state="open|closed"` | root, content | Current open state |
+| `data-state="open\|closed"` | root, content | Current open state |
 | `data-open` / `data-closed` | root, content | Presence aliases for state styling |
 | `data-value="..."` | root | Current committed radio value only |
 | `data-side` | content, positioner | Computed side after collision handling |
 | `data-align` | content, positioner | Computed alignment after collision handling |
 
-### Items
+#### Items
 
 | Attribute | Target | Description |
 |-----------|--------|-------------|
@@ -156,7 +157,7 @@ interface DropdownMenuController {
 | `data-variant` | item | Styling hook such as `destructive` |
 | `data-inset` | item | Styling hook for left padding |
 
-### Defaults and Options
+#### Defaults and Options
 
 | Attribute | Target | Description |
 |-----------|--------|-------------|
@@ -178,22 +179,95 @@ Default precedence is:
 
 For radio items, root defaults win over item defaults. For checkbox items, root `data-default-values` wins over item `data-default-checked`.
 
-## Keyboard Navigation
+### Options
 
-| Key | Action |
-|-----|--------|
-| `Enter` / `Space` | Open menu from trigger, or activate highlighted item |
-| `ArrowDown` | Open menu from trigger, or move to next enabled item |
-| `ArrowUp` | Move to previous enabled item |
-| `Home` | Move to first enabled item |
-| `End` | Move to last enabled item |
-| `Escape` | Close menu |
-| `Tab` | Close menu and continue tab order |
-| `A-Z` | Typeahead by item text |
+| Option | Data Attribute | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `defaultOpen` | `data-default-open` | `boolean` | `false` | Initial open state |
+| `defaultValue` | `data-default-value` | `string \| null` | Item defaults, then `null` | Initial radio value; explicit null clears item defaults |
+| `defaultValues` | `data-default-values` | `string[]` | Item defaults, then `[]` | Initial checkbox values; encode the attribute as a JSON array |
+| `closeOnClickOutside` | `data-close-on-click-outside` | `boolean` | `true` | Close on outside interaction |
+| `closeOnEscape` | `data-close-on-escape` | `boolean` | `true` | Close on Escape |
+| `closeOnSelect` | `data-close-on-select` | `boolean` | `true` | Close after accepted user activation |
+| `highlightItemOnHover` | `data-highlight-item-on-hover` | `boolean` | `true` | Highlight and focus items on hover |
+| `side` | `data-side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred popup side |
+| `align` | `data-align` | `"start" \| "center" \| "end"` | `"start"` | Preferred popup alignment |
+| `sideOffset` | `data-side-offset` | `number` | `4` | Distance from trigger (px) |
+| `alignOffset` | `data-align-offset` | `number` | `0` | Alignment offset (px) |
+| `avoidCollisions` | `data-avoid-collisions` | `boolean` | `true` | Flip and shift within the viewport |
+| `collisionPadding` | `data-collision-padding` | `number` | `8` | Viewport edge padding (px) |
+| `lockScroll` | `data-lock-scroll` | `boolean` | `true` | Lock page scroll while open; uses fixed positioning when enabled and absolute positioning when disabled |
+| `onOpenChange` | — | `(open: boolean) => void` | `undefined` | Called when open state changes |
+| `onSelect` | — | `(value: string) => void` | `undefined` | Called after accepted user activation |
+| `onValueChange` | — | `(value: string \| null) => void` | `undefined` | Called when committed radio selection changes |
+| `onValuesChange` | — | `(values: string[]) => void` | `undefined` | Called when committed checkbox selection changes |
 
-## Events
+Notes:
 
-### Outbound Events
+- `closeOnSelect` defaults to `true`. Multi-select menus usually want `false`.
+- `onSelect` tracks accepted user activation. It does not fire for programmatic state changes.
+- `onValueChange` and `onValuesChange` follow the same silence rules as their DOM events.
+
+### Controller
+
+```ts
+interface DropdownMenuController {
+  open(): void;
+  close(): void;
+  toggle(): void;
+  set(detail: DropdownMenuSetDetail): void;
+  readonly isOpen: boolean;
+  readonly value: string | null;
+  readonly values: string[];
+  readonly highlightedValue: string | null;
+  destroy(): void;
+}
+```
+
+`DropdownMenuSetDetail` is a partial update:
+
+```ts
+interface DropdownMenuSetDetail {
+  open?: boolean;
+  value?: string | null;
+  values?: string[];
+  highlightedValue?: string | null;
+  source?: "programmatic" | "restore";
+}
+```
+
+Use `value: null` to clear radio selection, `values: []` to clear checkbox selection, and `highlightedValue: null` to clear the highlight. `source` defaults to `"programmatic"`.
+
+`set()` applies fields in this order: `value`, `values`, `open`, `highlightedValue`.
+
+- `set({ value })` commits radio selection.
+- `set({ values })` commits checkbox selection.
+- `set({ open })` opens or closes the menu.
+- `set({ highlightedValue })` updates highlight only while the menu is open.
+- Programmatic `set()` never emits `dropdown-menu:select`.
+- No-op updates are silent.
+- Unknown `value` / `values` targets are ignored, not thrown.
+
+#### Downstream Wrapper Contract
+
+This package does not ship Astro components, but downstream wrappers should mirror this authoring model:
+
+- `DropdownMenuItem` renders `data-slot="dropdown-menu-item"`.
+- `DropdownMenuRadioItem` renders `data-slot="dropdown-menu-radio-item"` and requires `value`.
+- `DropdownMenuCheckboxItem` renders `data-slot="dropdown-menu-checkbox-item"` and requires `value`.
+- Radio and checkbox wrappers may expose `defaultChecked`, but root defaults still take precedence over item defaults.
+
+#### Controller Destruction
+
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+Focus restoration already queued by a close survives destruction.
+
+### Events
+
+#### Outbound Events
 
 | Event | Detail | Notes |
 |-------|--------|-------|
@@ -218,7 +292,7 @@ For radio items, root defaults win over item defaults. For checkbox items, root 
 
 For `dropdown-menu:values-change`, `changedValue`, `checked`, and `item` are `null` when one programmatic update changes more than one checkbox at once.
 
-### Inbound Event
+#### Inbound Events
 
 | Event | Detail | Description |
 |-------|--------|-------------|
@@ -238,7 +312,7 @@ root.dispatchEvent(
 );
 ```
 
-### Event Order
+#### Event Order
 
 User radio selection:
 
@@ -260,75 +334,9 @@ Programmatic selection:
 
 If closing the menu also clears an existing highlight, `dropdown-menu:highlight-change` is emitted before the close-side `dropdown-menu:open-change`.
 
-## Options
+### Styling
 
-```ts
-interface DropdownMenuOptions {
-  defaultOpen?: boolean;
-  defaultValue?: string | null;
-  defaultValues?: string[];
-  onOpenChange?: (open: boolean) => void;
-  onSelect?: (value: string) => void;
-  onValueChange?: (value: string | null) => void;
-  onValuesChange?: (values: string[]) => void;
-  closeOnClickOutside?: boolean;
-  closeOnEscape?: boolean;
-  closeOnSelect?: boolean;
-  highlightItemOnHover?: boolean;
-  side?: "top" | "right" | "bottom" | "left";
-  align?: "start" | "center" | "end";
-  sideOffset?: number;
-  alignOffset?: number;
-  avoidCollisions?: boolean;
-  collisionPadding?: number;
-  lockScroll?: boolean;
-}
-```
-
-Notes:
-
-- `closeOnSelect` defaults to `true`. Multi-select menus usually want `false`.
-- `onSelect` tracks accepted user activation. It does not fire for programmatic state changes.
-- `onValueChange` and `onValuesChange` follow the same silence rules as their DOM events.
-
-## Downstream Wrapper Contract
-
-This package does not ship Astro components, but downstream wrappers should mirror this authoring model:
-
-- `DropdownMenuItem` renders `data-slot="dropdown-menu-item"`.
-- `DropdownMenuRadioItem` renders `data-slot="dropdown-menu-radio-item"` and requires `value`.
-- `DropdownMenuCheckboxItem` renders `data-slot="dropdown-menu-checkbox-item"` and requires `value`.
-- Radio and checkbox wrappers may expose `defaultChecked`, but root defaults still take precedence over item defaults.
-
-## Deprecated APIs
-
-The following compatibility APIs are deprecated and will be removed in the next major release:
-
-```js
-// Deprecated open-state alias
-root.addEventListener("dropdown-menu:change", (event) => {
-  console.log(event.detail.open);
-});
-
-// Deprecated programmatic shape
-root.dispatchEvent(
-  new CustomEvent("dropdown-menu:set", { detail: { value: true } })
-);
-```
-
-Use `dropdown-menu:open-change` and `dropdown-menu:set { open: boolean }` instead.
-
-## Migration Notes
-
-If you currently use dropdown-menu as a picker:
-
-- Replace picker-style `dropdown-menu-item` usage with `dropdown-menu-radio-item` or `dropdown-menu-checkbox-item`.
-- Stop manually writing `data-selected` or `data-checked`.
-- Listen to `dropdown-menu:value-change` or `dropdown-menu:values-change` for committed state.
-- Push external restore/randomize/popstate/storage changes back in through `controller.set(...)` or `dropdown-menu:set`.
-- Switch open-state listeners from `dropdown-menu:change` to `dropdown-menu:open-change`.
-
-## Positioning
+#### Positioning
 
 Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align-offset`, `data-avoid-collisions`, `data-collision-padding`) resolve in this order:
 
@@ -352,13 +360,46 @@ createDropdownMenu(root, {
 
 When `avoidCollisions` is enabled, the menu may flip sides or shift within the viewport. The positioned element also receives `--transform-origin` for animation origins.
 
-## Controller destruction
+### Keyboard Navigation
 
-`destroy()` permanently disposes the controller and hides any open surface without
-emitting an additional change event. Repeated destruction is safe; methods on the
-old controller become no-ops. Create a new controller on the same root to rebind it.
+| Key | Action |
+|-----|--------|
+| `Enter` / `Space` | Open menu from trigger, or activate highlighted item |
+| `ArrowDown` | Open menu from trigger, or move to next enabled item |
+| `ArrowUp` | Move to previous enabled item |
+| `Home` | Move to first enabled item |
+| `End` | Move to last enabled item |
+| `Escape` | Close menu |
+| `Tab` | Close menu and continue tab order |
+| `A-Z` | Typeahead by item text |
 
-Focus restoration already queued by a close survives destruction.
+### Migration Notes
+
+If you currently use dropdown-menu as a picker:
+
+- Replace picker-style `dropdown-menu-item` usage with `dropdown-menu-radio-item` or `dropdown-menu-checkbox-item`.
+- Stop manually writing `data-selected` or `data-checked`.
+- Listen to `dropdown-menu:value-change` or `dropdown-menu:values-change` for committed state.
+- Push external restore/randomize/popstate/storage changes back in through `controller.set(...)` or `dropdown-menu:set`.
+- Switch open-state listeners from `dropdown-menu:change` to `dropdown-menu:open-change`.
+
+#### Deprecated APIs
+
+The following compatibility APIs are deprecated and will be removed in the next major release:
+
+```js
+// Deprecated open-state alias
+root.addEventListener("dropdown-menu:change", (event) => {
+  console.log(event.detail.open);
+});
+
+// Deprecated programmatic shape
+root.dispatchEvent(
+  new CustomEvent("dropdown-menu:set", { detail: { value: true } })
+);
+```
+
+Use `dropdown-menu:open-change` and `dropdown-menu:set { open: boolean }` instead.
 
 ## License
 

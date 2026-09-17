@@ -1,0 +1,79 @@
+---
+title: Select
+description: A button that opens a list of options with keyboard navigation and typeahead.
+---
+
+<PackageInfo name="select" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/select
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/select
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/select
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+The trigger and content are required. Wrapping each option’s label in `select-item-text` gives the trigger, typeahead, and item-aligned scrolling an exact text target.
+
+```html
+<div data-slot="select" data-placeholder="Choose a fruit...">
+  <button data-slot="select-trigger">
+    <span data-slot="select-value"></span>
+    <!-- Add your own chevron icon -->
+  </button>
+  <div data-slot="select-content" hidden>
+    <div data-slot="select-viewport">
+      <div data-slot="select-group">
+        <div data-slot="select-label">Fruits</div>
+        <div data-slot="select-item" data-value="apple">
+          <span data-slot="select-item-text">Apple</span>
+        </div>
+        <div data-slot="select-item" data-value="banana">
+          <span data-slot="select-item-text">Banana</span>
+        </div>
+        <div data-slot="select-item" data-value="orange">
+          <span data-slot="select-item-text">Orange</span>
+        </div>
+      </div>
+      <div data-slot="select-separator"></div>
+      <div data-slot="select-item" data-value="other">
+        <span data-slot="select-item-text">Other</span>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+## Examples
+
+### Choose from a list
+
+<Example name="select" />
+
+### Choose an initial value
+
+`data-default-value="banana"` preselects an option on load.
+
+<Example name="select" variant="extra" />
+
+## API reference
+
+<include>../_generated/select-api.md</include>

@@ -28,7 +28,9 @@ npm install @data-slot/popover
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all popover instances in a scope (defaults to `document`).
 
@@ -38,7 +40,7 @@ import { create } from "@data-slot/popover";
 const controllers = create(); // Returns PopoverController[]
 ```
 
-### `createPopover(root, options?)`
+#### `createPopover(root, options?)`
 
 Create a controller for a specific element.
 
@@ -60,34 +62,18 @@ const popover = createPopover(element, {
 });
 ```
 
-### Options
+### Slots
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultOpen` | `boolean` | `false` | Initial open state |
-| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred side relative to trigger |
-| `align` | `"start" \| "center" \| "end"` | `"center"` | Preferred alignment on the side axis |
-| `sideOffset` | `number` | `4` | Distance from trigger in pixels |
-| `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
-| `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
-| `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
-| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
-| `position` | `"top" \| "bottom" \| "left" \| "right"` | - | Deprecated alias for `side` |
-| `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside |
-| `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
-| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
+#### Runtime Slots
 
-### Controller
+- `popover` - Root element that manages the open state.
+- `popover-trigger` - Required button that toggles the popover and anchors its position.
+- `popover-content` - Required floating panel containing the popover's content.
+- `popover-close` - Optional button inside the content that closes the popover.
+- `popover-positioner` - Optional authored positioning wrapper around the content, reused instead of a generated wrapper.
+- `popover-portal` - Optional authored portal wrapper that can contain the positioner and content.
 
-| Method/Property | Description |
-|-----------------|-------------|
-| `open()` | Open the popover |
-| `close()` | Close the popover |
-| `toggle()` | Toggle the popover |
-| `isOpen` | Current open state (readonly `boolean`) |
-| `destroy()` | Cleanup all event listeners |
-
-## Markup Structure
+#### Markup
 
 ```html
 <div data-slot="popover">
@@ -99,18 +85,7 @@ const popover = createPopover(element, {
 </div>
 ```
 
-### Required Slots
-
-- `popover-trigger` - Button to toggle popover
-- `popover-content` - The popover panel
-
-### Optional Slots
-
-- `popover-close` - Button to close the popover
-- `popover-positioner` - Optional authored positioning wrapper (when provided, reused instead of generated wrapper)
-- `popover-portal` - Optional authored portal wrapper that can contain `popover-positioner`
-
-### Composed Portal Markup (Optional)
+#### Composed Portal Markup (Optional)
 
 ```html
 <div data-slot="popover">
@@ -164,7 +139,91 @@ Placement can be set on root, content, or authored positioner (content takes pre
 </div>
 ```
 
-## Styling
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultOpen` | `boolean` | `false` | Initial open state |
+| `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Preferred side relative to trigger |
+| `align` | `"start" \| "center" \| "end"` | `"center"` | Preferred alignment on the side axis |
+| `sideOffset` | `number` | `4` | Distance from trigger in pixels |
+| `alignOffset` | `number` | `0` | Offset from alignment edge in pixels |
+| `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
+| `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
+| `portal` | `boolean` | `true` | Portal content to `document.body` while open |
+| `position` | `"top" \| "bottom" \| "left" \| "right"` | - | Deprecated alias for `side` |
+| `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside |
+| `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
+| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
+
+### Controller
+
+| Method/Property | Description |
+|-----------------|-------------|
+| `open()` | Open the popover |
+| `close()` | Close the popover |
+| `toggle()` | Toggle the popover |
+| `isOpen` | Current open state (readonly `boolean`) |
+| `destroy()` | Cleanup all event listeners |
+
+#### Controller Destruction
+
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+Focus restoration already queued by a close survives destruction.
+
+### Events
+
+#### Outbound Events
+
+Listen for changes via custom events:
+
+```javascript
+element.addEventListener("popover:change", (e) => {
+  console.log("Popover open:", e.detail.open);
+});
+```
+
+#### Inbound Events
+
+Control the popover via events:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `popover:set` | `{ open: boolean }` | Set open state programmatically |
+
+```javascript
+// Open the popover
+element.dispatchEvent(
+  new CustomEvent("popover:set", { detail: { open: true } })
+);
+
+// Close the popover
+element.dispatchEvent(
+  new CustomEvent("popover:set", { detail: { open: false } })
+);
+```
+
+##### Deprecated Shapes
+
+The following shapes are deprecated and will be removed in the next major release:
+
+- `popover:set` detail `{ value: boolean }` (use `{ open: boolean }`)
+- `position` option (use `side`)
+- `data-position` attribute (use `data-side`)
+
+```javascript
+// Deprecated: { value: boolean }
+element.dispatchEvent(
+  new CustomEvent("popover:set", { detail: { value: true } })
+);
+```
+
+Use the replacements listed above.
+
+### Styling
 
 Popover position is computed in JavaScript and applied as `position: absolute` + inline `transform: translate3d(...)`.
 By default, content is portaled to `document.body` while open (document coordinates). If you provide authored `popover-positioner` / `popover-portal` slots, those are reused. Otherwise a transient `popover-positioner` wrapper is generated.
@@ -241,7 +300,7 @@ With Tailwind:
     data-slot="popover-content"
     data-side="bottom"
     data-align="start"
-    class="absolute bg-white shadow-lg rounded-lg p-4"
+    class="absolute bg-white shadow-lg p-4"
   >
     Content
   </div>
@@ -250,7 +309,14 @@ With Tailwind:
 
 Use Tailwind for layout/colors and keep the state selectors from the CSS snippet above for fade/zoom animation.
 
-## Accessibility
+### Keyboard Navigation
+
+| Key | Action |
+|-----|--------|
+| `Enter` / `Space` | Toggle popover (on trigger) |
+| `Escape` | Close popover and return focus to trigger |
+
+### Accessibility
 
 The component automatically handles:
 
@@ -258,70 +324,6 @@ The component automatically handles:
 - `aria-controls` linking trigger to content
 - `aria-expanded` state on trigger
 - Unique ID generation for content
-
-## Keyboard Navigation
-
-| Key | Action |
-|-----|--------|
-| `Enter` / `Space` | Toggle popover (on trigger) |
-| `Escape` | Close popover and return focus to trigger |
-
-## Events
-
-### Outbound Events
-
-Listen for changes via custom events:
-
-```javascript
-element.addEventListener("popover:change", (e) => {
-  console.log("Popover open:", e.detail.open);
-});
-```
-
-### Inbound Events
-
-Control the popover via events:
-
-| Event | Detail | Description |
-|-------|--------|-------------|
-| `popover:set` | `{ open: boolean }` | Set open state programmatically |
-
-```javascript
-// Open the popover
-element.dispatchEvent(
-  new CustomEvent("popover:set", { detail: { open: true } })
-);
-
-// Close the popover
-element.dispatchEvent(
-  new CustomEvent("popover:set", { detail: { open: false } })
-);
-```
-
-#### Deprecated Shapes
-
-The following shapes are deprecated and will be removed in the next major release:
-
-- `popover:set` detail `{ value: boolean }` (use `{ open: boolean }`)
-- `position` option (use `side`)
-- `data-position` attribute (use `data-side`)
-
-```javascript
-// Deprecated: { value: boolean }
-element.dispatchEvent(
-  new CustomEvent("popover:set", { detail: { value: true } })
-);
-```
-
-Use the replacements listed above.
-
-## Controller destruction
-
-`destroy()` permanently disposes the controller and hides any open surface without
-emitting an additional change event. Repeated destruction is safe; methods on the
-old controller become no-ops. Create a new controller on the same root to rebind it.
-
-Focus restoration already queued by a close survives destruction.
 
 ## License
 

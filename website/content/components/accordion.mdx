@@ -1,0 +1,64 @@
+---
+title: Accordion
+description: A set of collapsible sections that reveal one panel or several at a time.
+---
+
+<PackageInfo name="accordion" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/accordion
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/accordion
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/accordion
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+One `accordion-item` per section, each with its own `data-value` — items without one are skipped. Inside an item, the trigger and content are wired together for you. `accordion-trigger-icon` and `accordion-content-inner` are optional styling hooks.
+
+```html
+<div data-slot="accordion">
+  <div data-slot="accordion-item" data-value="unique-id">
+    <button data-slot="accordion-trigger">
+      <span>Trigger</span>
+      <span data-slot="accordion-trigger-icon">+</span>
+    </button>
+    <div data-slot="accordion-content">
+      <div data-slot="accordion-content-inner">Content</div>
+    </div>
+  </div>
+</div>
+```
+
+## Examples
+
+### Single panel
+
+<Example name="accordion" />
+
+### Multiple panels
+
+Add `data-multiple` to let several sections stay open at once.
+
+<Example name="accordion" variant="extra" />
+
+## API reference
+
+<include>../_generated/accordion-api.md</include>

@@ -229,6 +229,17 @@ bun run preview:website
 
 Each package has its own directory in `packages/` with its own `package.json`, source code, and tests.
 
+### Documentation website
+
+The Blume documentation lives in [`website`](website/README.md) and is the target of `build:website` and the Cloudflare deployment commands. Run it directly with `bun run --cwd website dev` after installing its dependencies and building the packages, or use the root commands below.
+
+```bash
+bun run install:docs
+bun run dev:docs       # http://localhost:4322
+bun run build:docs
+```
+
+
 ### Cloudflare Workers deployment
 
 The documentation website is served from the `data-slot` Worker in the Bejamas OSS Cloudflare account (`705e6a1ce1620c4ac2ce279a064dec41`) at `https://data-slot.com`. The Worker custom domain is managed in `wrangler.jsonc`. A local deployment can be created with:
@@ -243,7 +254,9 @@ For Cloudflare Workers Builds, connect `bejamas/data-slot`, leave the root direc
 - Deploy command: `bunx wrangler deploy`
 - Non-production branch deploy command: `bunx wrangler versions upload`
 
-Set the build variable `BUN_VERSION` to `1.3.14`. No application secrets or runtime variables are required.
+The build command installs the website's locked dependencies, builds the library packages, and outputs the site to `website/dist`, which Wrangler serves as static assets. PR builds upload preview versions; builds on `main` deploy to production.
+
+Set the build variable `BUN_VERSION` to `1.3.14`. Node.js is pinned to `24.18.0` in `.node-version` for Blume's Astro 7 runtime. If `NODE_VERSION` is set in the Cloudflare build settings, keep it aligned with that file. No application secrets or runtime variables are required.
 
 ## License
 

@@ -1,0 +1,34 @@
+---
+import RootLayout from 'blume/components/layout/RootLayout.astro';
+---
+<RootLayout {...Astro.props}><slot /></RootLayout>
+
+<script>
+  // Match column labels: reference tables have different column orders.
+  function colorReferenceTables() {
+    const roles: Record<string, string> = {
+      option: 'name',
+      attribute: 'name',
+      'data attribute': 'name',
+      type: 'type',
+      default: 'default',
+    };
+
+    document.querySelectorAll<HTMLTableElement>('.prose table').forEach(table => {
+      const headers = Array.from(table.tHead?.rows[0]?.cells ?? []);
+      headers.forEach((header, index) => {
+        const role = roles[header.textContent?.trim().toLowerCase() ?? ''];
+        if (!role) return;
+        Array.from(table.tBodies).forEach(body => {
+          Array.from(body.rows).forEach(row => {
+            const cell = row.cells[index];
+            if (cell) cell.dataset.reference = role;
+          });
+        });
+      });
+    });
+  }
+
+  colorReferenceTables();
+  document.addEventListener('astro:page-load', colorReferenceTables);
+</script>

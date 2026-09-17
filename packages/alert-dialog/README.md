@@ -50,7 +50,9 @@ npm install @data-slot/alert-dialog
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discovers and binds all alert dialogs in a scope.
 
@@ -60,7 +62,7 @@ import { create } from "@data-slot/alert-dialog";
 const controllers = create();
 ```
 
-### `createAlertDialog(root, options?)`
+#### `createAlertDialog(root, options?)`
 
 ```ts
 import { createAlertDialog } from "@data-slot/alert-dialog";
@@ -71,29 +73,9 @@ const alertDialog = createAlertDialog(element, {
 });
 ```
 
-#### Options
+### Slots
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `defaultOpen` | `boolean` | `false` | Initial open state |
-| `onOpenChange` | `(open: boolean) => void` | `undefined` | Called when open state changes |
-| `closeOnClickOutside` | `boolean` | `false` | Close when clicking the overlay |
-| `closeOnEscape` | `boolean` | `true` | Close when pressing `Escape` |
-| `lockScroll` | `boolean` | `true` | Lock page scroll while open |
-
-#### Controller
-
-| Method | Description |
-| --- | --- |
-| `open()` | Open the alert dialog |
-| `close()` | Close the alert dialog |
-| `toggle()` | Toggle the alert dialog |
-| `destroy()` | Remove listeners and cleanup |
-| `isOpen` | Current open state |
-
-## Slots
-
-### Runtime slots
+#### Runtime Slots
 
 - `alert-dialog` - Root element
 - `alert-dialog-trigger` - Element that toggles the alert dialog
@@ -104,37 +86,53 @@ const alertDialog = createAlertDialog(element, {
 - `alert-dialog-description` - Description used for `aria-describedby`
 - `alert-dialog-cancel` - Close button
 
-### Style-only slots
+#### Style-only Slots
 
-- `alert-dialog-header`
-- `alert-dialog-footer`
-- `alert-dialog-media`
-- `alert-dialog-action`
+- `alert-dialog-header` - Optional layout wrapper for the title, description, and media.
+- `alert-dialog-footer` - Optional layout wrapper for the action and cancel buttons.
+- `alert-dialog-media` - Optional icon or illustration area in the header.
+- `alert-dialog-action` - Confirmation action button; wire your own handler and close the dialog explicitly.
 
 `alert-dialog-action` is intentionally just a styled action slot. It does not close automatically.
 
-## State and events
+### Data Attributes
+
+Set these on the `alert-dialog` root. JavaScript options take precedence. Empty attributes or `"true"` enable a boolean; `"false"` disables it.
+
+| Attribute | Type | Default | Description |
+| --- | --- | --- | --- |
+| `data-default-open` | `boolean` | `false` | Initial open state |
+| `data-close-on-click-outside` | `boolean` | `false` | Close when clicking the overlay |
+| `data-close-on-escape` | `boolean` | `true` | Close on Escape |
+| `data-lock-scroll` | `boolean` | `true` | Lock page scroll while open |
+
+#### State Attributes
 
 - `data-state="open" | "closed"` on root, portal, overlay, and content
 - `data-open` / `data-closed` on root, portal, overlay, and content
 - `data-stack-index` on overlay and content when multiple modal layers are open
 
-Events:
+### Options
 
-| Event | Detail | Description |
-| --- | --- | --- |
-| `alert-dialog:change` | `{ open: boolean }` | Fired when open state changes |
-| `alert-dialog:set` | `{ open: boolean }` | Programmatically set open state |
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `defaultOpen` | `boolean` | `false` | Initial open state |
+| `onOpenChange` | `(open: boolean) => void` | `undefined` | Called when open state changes |
+| `closeOnClickOutside` | `boolean` | `false` | Close when clicking the overlay |
+| `closeOnEscape` | `boolean` | `true` | Close when pressing `Escape` |
+| `lockScroll` | `boolean` | `true` | Lock page scroll while open |
 
-## Accessibility
+### Controller
 
-- `role="alertdialog"` on content
-- `aria-modal="true"` on content
-- `aria-labelledby` / `aria-describedby` wiring from title and description
-- Focus is trapped while open
-- Focus returns to the trigger or previously focused element when closed
+| Method | Description |
+| --- | --- |
+| `open()` | Open the alert dialog |
+| `close()` | Close the alert dialog |
+| `toggle()` | Toggle the alert dialog |
+| `destroy()` | Remove listeners and cleanup |
+| `isOpen` | Current open state |
 
-## Controller destruction
+#### Controller Destruction
 
 `destroy()` permanently disposes the controller and hides any open surface without
 emitting an additional change event. Repeated destruction is safe; methods on the
@@ -142,3 +140,18 @@ old controller become no-ops. Create a new controller on the same root to rebind
 
 Destruction restores prior focus, falling back to a surviving trigger if the prior
 target was removed. Destroying an unopened modal does not move focus.
+
+### Events
+
+| Event | Detail | Description |
+| --- | --- | --- |
+| `alert-dialog:change` | `{ open: boolean }` | Fired when open state changes |
+| `alert-dialog:set` | `{ open: boolean }` | Programmatically set open state |
+
+### Accessibility
+
+- `role="alertdialog"` on content
+- `aria-modal="true"` on content
+- `aria-labelledby` / `aria-describedby` wiring from title and description
+- Focus is trapped while open
+- Focus returns to the trigger or previously focused element when closed

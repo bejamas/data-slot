@@ -1,0 +1,57 @@
+---
+title: Hover Card
+description: A preview of linked content shown on hover or keyboard focus.
+---
+
+<PackageInfo name="hover-card" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/hover-card
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/hover-card
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/hover-card
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+A trigger and its content. The card opens on hover and on keyboard focus after a short delay, so keep the trigger focusable.
+
+```html
+<div data-slot="hover-card">
+  <button data-slot="hover-card-trigger">Trigger</button>
+  <div data-slot="hover-card-content">Content</div>
+</div>
+```
+
+## Examples
+
+### Preview on hover
+
+<Example name="hover-card" />
+
+### Position above the trigger
+
+`data-side="top"` is a preference, not a rule — the card flips to stay in the viewport.
+
+<Example name="hover-card" variant="extra" />
+
+## API reference
+
+<include>../_generated/hover-card-api.md</include>

@@ -25,14 +25,16 @@ const cssCode = `<div data-slot="popover" class="popover-root">
   }
   .popover-content {
     position: fixed;
-    background: #faf9f7;
+    background: #fff;
     border: 1px solid #ccc;
     padding: 1rem;
-    width: min(20rem, calc(100vw - 2rem));
+    width: 20rem;
     z-index: 50;
     transform-origin: var(--transform-origin, center);
     --popover-slide-x: 0px;
     --popover-slide-y: -4px;
+    max-width: var(--available-width);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
   .popover-content[data-side="top"] {
     --popover-slide-y: 4px;
@@ -80,19 +82,23 @@ const cssCode = `<div data-slot="popover" class="popover-root">
     }
   }
   .popover-title { font-weight: 700; margin-bottom: 0.5rem; }
-  .popover-text { color: #666; font-size: 0.9rem; margin-bottom: 0.75rem; }
+  .popover-text { color: #666; font-size: 0.875rem; margin-bottom: 0.75rem;
+    line-height: 1.25rem;
+  }
   .popover-close-btn {
-    padding: 0.3rem 0.6rem;
+    padding: 0.25rem 0.625rem;
     background: none;
     border: 1px solid #ccc;
     cursor: pointer;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
   }
 </style>`;
 
 const tailwindCode = `<div data-slot="popover" class="relative inline-block">
   <button
     data-slot="popover-trigger"
-    class="px-4 py-2 bg-gray-900 text-white border-none cursor-pointer
+    class="px-4 py-2 bg-text text-bg border-none cursor-pointer
            hover:opacity-90 transition-opacity"
   >
     Open Popover
@@ -101,18 +107,18 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
     data-slot="popover-content"
     data-side="bottom"
     data-align="center"
-    class="fixed bg-white border border-gray-300
-           p-4 w-80 max-w-[calc(100vw-2rem)] z-50 rounded-lg shadow-lg"
+    class="fixed bg-white border border-border
+           p-4 w-80 max-w-(--available-width) z-50 shadow-lg"
     hidden
   >
     <div class="font-bold mb-2 mt-0">Popover Panel</div>
-    <p class="text-gray-500 text-sm mb-3">
+    <p class="text-muted text-sm mb-3">
       Unlike tooltips, popovers stay open until dismissed.
       Click outside or press Escape to close.
     </p>
     <button
       data-slot="popover-close"
-      class="px-2.5 py-1 bg-transparent border border-gray-300
+      class="px-2.5 py-1 bg-transparent border border-border
              cursor-pointer hover:bg-code-bg transition-colors"
     >
       Got it
@@ -188,7 +194,7 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
   <div slot="preview-tailwind" data-slot="popover" class="relative inline-block" id="popover-tw">
     <button
       data-slot="popover-trigger"
-      class="px-4 py-2 bg-gray-900 text-white border-none cursor-pointer hover:opacity-90 transition-opacity"
+      class="px-4 py-2 bg-text text-bg border-none cursor-pointer hover:opacity-90 transition-opacity"
     >
       Open Popover
     </button>
@@ -196,17 +202,17 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
       data-slot="popover-content"
       data-side="bottom"
       data-align="center"
-      class="fixed bg-white border border-gray-300 p-4 w-80 max-w-[calc(100vw-2rem)] z-50 rounded-lg shadow-lg"
+      class="fixed bg-white border border-border p-4 w-80 max-w-(--available-width) z-50 shadow-lg"
       hidden
     >
       <div class="font-bold mb-2 mt-0">Popover Panel</div>
-      <p class="text-gray-500 text-sm mb-3">
+      <p class="text-muted text-sm mb-3">
         Unlike tooltips, popovers stay open until dismissed.
         Click outside or press Escape to close.
       </p>
       <button
         data-slot="popover-close"
-        class="px-2.5 py-1 bg-transparent border border-gray-300 cursor-pointer hover:bg-code-bg transition-colors"
+        class="px-2.5 py-1 bg-transparent border border-border cursor-pointer hover:bg-code-bg transition-colors"
       >
         Got it
       </button>

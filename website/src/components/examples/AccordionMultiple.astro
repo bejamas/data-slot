@@ -36,7 +36,7 @@ const tailwindCode = `<div data-slot="accordion">
   <div
     data-slot="accordion-item"
     data-value="item1"
-    class="group border-b border-dashed border-gray-300 last:border-b-0"
+    class="group border-b border-dashed border-border last:border-b-0"
   >
     <button
       data-slot="accordion-trigger"
@@ -45,18 +45,18 @@ const tailwindCode = `<div data-slot="accordion">
       <span>First item</span>
       <span
         data-slot="accordion-trigger-icon"
-        class="ml-auto shrink-0 text-gray-500 transition-transform group-data-[state=open]:rotate-45"
+        class="ml-auto shrink-0 text-muted transition-transform group-data-[state=open]:rotate-45"
       >
         +
       </span>
     </button>
     <div
       data-slot="accordion-content"
-      class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
+      class="overflow-hidden h-(--accordion-panel-height) transition-all duration-300 ease-out data-starting-style:h-0"
     >
       <div
         data-slot="accordion-content-inner"
-        class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+        class="pb-4 pt-0 text-muted"
       >
         With <code>multiple: true</code>, multiple items can be open simultaneously.
       </div>
@@ -65,7 +65,7 @@ const tailwindCode = `<div data-slot="accordion">
   <div
     data-slot="accordion-item"
     data-value="item2"
-    class="group border-b border-dashed border-gray-300 last:border-b-0"
+    class="group border-b border-dashed border-border last:border-b-0"
   >
     <button
       data-slot="accordion-trigger"
@@ -74,18 +74,18 @@ const tailwindCode = `<div data-slot="accordion">
       <span>Second item</span>
       <span
         data-slot="accordion-trigger-icon"
-        class="ml-auto shrink-0 text-gray-500 transition-transform group-data-[state=open]:rotate-45"
+        class="ml-auto shrink-0 text-muted transition-transform group-data-[state=open]:rotate-45"
       >
         +
       </span>
     </button>
     <div
       data-slot="accordion-content"
-      class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
+      class="overflow-hidden h-(--accordion-panel-height) transition-all duration-300 ease-out data-starting-style:h-0"
     >
       <div
         data-slot="accordion-content-inner"
-        class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+        class="pb-4 pt-0 text-muted"
       >
         Try clicking both items — they stay open independently.
       </div>
@@ -125,7 +125,7 @@ const tailwindCode = `<div data-slot="accordion">
     </div>
   </div>
   <div slot="preview-tailwind" data-slot="accordion" id="accordion-multiple-tw">
-    <div data-slot="accordion-item" data-value="item1" class="group border-b border-dashed border-gray-300 last:border-b-0">
+    <div data-slot="accordion-item" data-value="item1" class="group border-b border-dashed border-border last:border-b-0">
       <button
         data-slot="accordion-trigger"
         class="flex w-full items-center gap-4 bg-transparent py-3 text-left"
@@ -133,24 +133,24 @@ const tailwindCode = `<div data-slot="accordion">
         <span>First item</span>
         <span
           data-slot="accordion-trigger-icon"
-          class="ml-auto shrink-0 text-gray-500 transition-transform group-data-[state=open]:rotate-45"
+          class="ml-auto shrink-0 text-muted transition-transform group-data-[state=open]:rotate-45"
         >
           +
         </span>
       </button>
       <div
         data-slot="accordion-content"
-        class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
+        class="overflow-hidden h-(--accordion-panel-height) transition-all duration-300 ease-out data-starting-style:h-0"
       >
         <div
           data-slot="accordion-content-inner"
-          class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+          class="pb-4 pt-0 text-muted"
         >
           With <code>multiple: true</code>, multiple items can be open simultaneously.
         </div>
       </div>
     </div>
-    <div data-slot="accordion-item" data-value="item2" class="group border-b border-dashed border-gray-300 last:border-b-0">
+    <div data-slot="accordion-item" data-value="item2" class="group border-b border-dashed border-border last:border-b-0">
       <button
         data-slot="accordion-trigger"
         class="flex w-full items-center gap-4 bg-transparent py-3 text-left"
@@ -158,18 +158,18 @@ const tailwindCode = `<div data-slot="accordion">
         <span>Second item</span>
         <span
           data-slot="accordion-trigger-icon"
-          class="ml-auto shrink-0 text-gray-500 transition-transform group-data-[state=open]:rotate-45"
+          class="ml-auto shrink-0 text-muted transition-transform group-data-[state=open]:rotate-45"
         >
           +
         </span>
       </button>
       <div
         data-slot="accordion-content"
-        class="overflow-hidden text-sm text-gray-500 data-open:animate-accordion-down data-closed:animate-accordion-up"
+        class="overflow-hidden h-(--accordion-panel-height) transition-all duration-300 ease-out data-starting-style:h-0"
       >
         <div
           data-slot="accordion-content-inner"
-          class="h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0"
+          class="pb-4 pt-0 text-muted"
         >
           Try clicking both items — they stay open independently.
         </div>
