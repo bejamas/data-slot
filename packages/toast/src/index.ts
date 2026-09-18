@@ -1,195 +1,26 @@
 import {
-  getPart,
-  getRoots,
-  getDataBool,
-  getDataEnum,
-  getDataNumber,
-  createPortalLifecycle,
-  createPresenceLifecycle,
-  focusElement,
-  getFocusable,
-  isFocusable,
-  on,
-  emit,
+  getPart, getRoots, getDataBool, getDataEnum, getDataNumber,
+  createPortalLifecycle, createTerminalLifecycle, focusElement, on, emit,
 } from "@data-slot/core";
-import type { PresenceLifecycleController } from "@data-slot/core";
+import { POSITIONS } from "./types";
+import type {
+  ToastController, ToastOptions, ToastShowOptions, ToastUpdateOptions,
+  ToastActionEvent, ToastPromiseOptions, ToastPromiseHandle, ResolvedToast,
+} from "./types";
+import {
+  normalizeLimit, normalizeDuration, isToastType,
+  parseShowDetail, parseUpdateDetail, parseDismissDetail,
+  resolvePromiseStateObject, resolvePromiseStateValue, resolvePromiseShowOptions, resolveErrorTitle,
+} from "./toast-options";
+import { createToastEntry, type ToastEntry } from "./toast-entry";
+import { createToastLayout, getToastFocusableNodes } from "./toast-layout";
+import { createToastGestures } from "./toast-gestures";
 
-const POSITIONS = [
-  "top-left",
-  "top-center",
-  "top-right",
-  "bottom-left",
-  "bottom-center",
-  "bottom-right",
-] as const;
-
-const TOAST_TYPES = [
-  "default",
-  "success",
-  "error",
-  "warning",
-  "info",
-  "loading",
-] as const;
-
-const DEFAULT_LIMIT = 3;
-const DEFAULT_DURATION = 5000;
-const DEFAULT_POSITION: ToastPosition = "bottom-right";
-const DEFAULT_GAP = 8;
-const DEFAULT_COLLAPSED_PEEK = 14;
-const DEFAULT_SWIPE_THRESHOLD = 40;
-const SWIPE_RESISTANCE = 0.2;
-const SWIPE_AXIS_LOCK_THRESHOLD = 12;
-const PREV_TAB_INDEX_ATTR = "data-toast-prev-tabindex";
-const NO_TAB_INDEX = "__none__";
-const RUNTIME_MEASUREMENT_ATTRS = [
-  "data-mounted",
-  "data-expanded",
-  "data-front",
-  "data-visible",
-  "data-removed",
-  "data-swiping",
-  "data-swipe-out",
-  "aria-hidden",
-  "inert",
-] as const;
-const RUNTIME_MEASUREMENT_STYLE_PROPS = [
-  "--toast-index",
-  "--toast-count",
-  "--toast-height",
-  "--toast-initial-height",
-  "--toast-offset",
-  "--toast-expanded-offset-y",
-  "--toast-collapsed-offset-y",
-  "--toast-offset-y",
-  "--toast-lift",
-  "--toast-stack-direction",
-  "--toast-swipe-movement-x",
-  "--toast-swipe-movement-y",
-  "--toast-swipe-end-x",
-  "--toast-swipe-end-y",
-] as const;
-
-export type ToastPosition = (typeof POSITIONS)[number];
-type ToastType = (typeof TOAST_TYPES)[number];
-
-export interface ToastActionEvent {
-  readonly defaultPrevented: boolean;
-  preventDefault(): void;
-}
-
-export interface ToastAction {
-  label: string;
-  onClick?: (() => void) | ((event: ToastActionEvent) => void);
-  value?: string;
-}
-
-export interface ToastShowOptions {
-  id?: string;
-  title: string;
-  description?: string;
-  type?: ToastType;
-  duration?: number;
-  action?: ToastAction;
-  dismissible?: boolean;
-  closeButtonAriaLabel?: string;
-  testId?: string;
-}
-
-export interface ToastUpdateOptions {
-  title?: string;
-  description?: string;
-  type?: ToastType;
-  duration?: number;
-  action?: ToastAction;
-  dismissible?: boolean;
-  closeButtonAriaLabel?: string;
-  testId?: string;
-}
-
-export interface ToastPromiseState
-  extends Omit<
-    ToastUpdateOptions,
-    "title"
-  > {
-  title?: string;
-  message?: string;
-}
-
-export type ToastPromiseStateValue<T> =
-  | string
-  | ToastPromiseState
-  | ((value: T) => string | ToastPromiseState);
-
-export type ToastPromiseErrorValue =
-  | string
-  | ToastPromiseState
-  | ((error: unknown) => string | ToastPromiseState);
-
-export interface ToastPromiseOptions<T> {
-  loading: string | ToastPromiseState;
-  success?: ToastPromiseStateValue<T>;
-  error?: ToastPromiseErrorValue;
-  description?: string;
-}
-
-export interface ToastPromiseHandle<T> {
-  id: string;
-  unwrap(): Promise<T>;
-}
-
-export interface ToastOptions {
-  limit?: number;
-  duration?: number;
-  position?: ToastPosition;
-  pauseOnHover?: boolean;
-  pauseOnFocus?: boolean;
-  portal?: boolean;
-  onShow?: (id: string) => void;
-  onDismiss?: (id: string) => void;
-  onAction?: (id: string, value: string | undefined) => void;
-}
-
-export interface ToastController {
-  show(options: ToastShowOptions): string;
-  update(id: string, patch: ToastUpdateOptions): void;
-  promise<T>(
-    input: Promise<T> | (() => Promise<T>),
-    options: ToastPromiseOptions<T>,
-  ): ToastPromiseHandle<T>;
-  dismiss(id: string): void;
-  dismissAll(): void;
-  readonly count: number;
-  destroy(): void;
-}
-
-interface ToastEntry {
-  id: string;
-  element: HTMLElement;
-  presence: PresenceLifecycleController;
-  timerId: ReturnType<typeof setTimeout> | null;
-  remainingMs: number;
-  startedAt: number;
-  duration: number;
-  action?: ToastAction;
-  toast: ResolvedToast;
-  exiting: boolean;
-  measuredHeight: number;
-  mountRafId: number | null;
-  mountRafId2: number | null;
-}
-
-interface ResolvedToast {
-  id: string;
-  title: string;
-  description?: string;
-  type: ToastType;
-  duration: number;
-  action?: ToastAction;
-  dismissible: boolean;
-  closeButtonAriaLabel?: string;
-  testId?: string;
-}
+export type {
+  ToastAction, ToastActionEvent, ToastController, ToastOptions, ToastPosition,
+  ToastPromiseErrorValue, ToastPromiseHandle, ToastPromiseOptions, ToastPromiseState,
+  ToastPromiseStateValue, ToastShowOptions, ToastUpdateOptions,
+} from "./types";
 
 interface ToastChangeDetail {
   id: string;
@@ -200,341 +31,6 @@ interface ToastActionDetail {
   id: string;
   value: string | undefined;
 }
-
-interface SwipeState {
-  id: string;
-  pointerId: number;
-  startX: number;
-  currentX: number;
-  startY: number;
-  currentY: number;
-  axis: "x" | "y" | null;
-}
-
-const isFiniteNumber = (value: unknown): value is number =>
-  typeof value === "number" && Number.isFinite(value);
-
-const isToastType = (value: unknown): value is ToastType =>
-  typeof value === "string" && TOAST_TYPES.includes(value as ToastType);
-
-const normalizeLimit = (value: number | undefined): number => {
-  if (!isFiniteNumber(value)) return DEFAULT_LIMIT;
-  return Math.max(1, Math.trunc(value));
-};
-
-const normalizeDuration = (value: number | undefined, fallback: number): number => {
-  if (!isFiniteNumber(value)) return fallback;
-  if (value <= 0) return 0;
-  return Math.max(1, Math.trunc(value));
-};
-
-const getStackDirection = (position: ToastPosition): number =>
-  position.startsWith("top") ? 1 : -1;
-
-const getInlineSwipeDirection = (position: ToastPosition): number => {
-  if (position.endsWith("left")) return -1;
-  if (position.endsWith("right")) return 1;
-  return 0;
-};
-
-const adjustSwipeDelta = (delta: number, outwardDirection: number): number => {
-  if (outwardDirection === 0) return 0;
-  return delta * outwardDirection < 0 ? delta * SWIPE_RESISTANCE : delta;
-};
-
-const resolveSwipeAxis = (
-  deltaX: number,
-  deltaY: number,
-  inlineDirection: number,
-): "x" | "y" | null => {
-  if (inlineDirection === 0) {
-    return Math.abs(deltaY) >= SWIPE_AXIS_LOCK_THRESHOLD ? "y" : null;
-  }
-
-  const absX = Math.abs(deltaX);
-  const absY = Math.abs(deltaY);
-  if (Math.max(absX, absY) < SWIPE_AXIS_LOCK_THRESHOLD) {
-    return null;
-  }
-
-  return absX > absY ? "x" : "y";
-};
-
-const getCssGap = (viewport: HTMLElement): number => {
-  const raw = getComputedStyle(viewport).getPropertyValue("--toast-gap").trim();
-  if (!raw) return DEFAULT_GAP;
-  const parsed = Number.parseFloat(raw);
-  return Number.isFinite(parsed) ? parsed : DEFAULT_GAP;
-};
-
-const getCssCollapsedPeek = (viewport: HTMLElement): number => {
-  const raw = getComputedStyle(viewport).getPropertyValue("--toast-collapsed-peek").trim();
-  if (!raw) return DEFAULT_COLLAPSED_PEEK;
-  const parsed = Number.parseFloat(raw);
-  if (!Number.isFinite(parsed)) return DEFAULT_COLLAPSED_PEEK;
-  return Math.max(0, parsed);
-};
-
-const getToastHeight = (
-  item: HTMLElement,
-  viewport: HTMLElement,
-  fallbackWidth: number,
-): number => {
-  const rectHeight = item.getBoundingClientRect().height;
-  const renderedHeight = rectHeight > 0 ? rectHeight : item.offsetHeight;
-  const intrinsicHeight = item.scrollHeight;
-  const styles = getComputedStyle(item);
-  const borderTop = Number.parseFloat(styles.borderTopWidth);
-  const borderBottom = Number.parseFloat(styles.borderBottomWidth);
-  const borderHeight =
-    (Number.isFinite(borderTop) ? borderTop : 0) +
-    (Number.isFinite(borderBottom) ? borderBottom : 0);
-  const intrinsicBorderBoxHeight =
-    intrinsicHeight > 0 ? intrinsicHeight + borderHeight : 0;
-  const measurementWidth =
-    item.getBoundingClientRect().width || item.offsetWidth || fallbackWidth;
-
-  if (measurementWidth > 0) {
-    const clone = item.cloneNode(true) as HTMLElement;
-    for (const attr of RUNTIME_MEASUREMENT_ATTRS) {
-      clone.removeAttribute(attr);
-    }
-    for (const prop of RUNTIME_MEASUREMENT_STYLE_PROPS) {
-      clone.style.removeProperty(prop);
-    }
-
-    clone.setAttribute("aria-hidden", "true");
-    clone.style.position = "absolute";
-    clone.style.inset = "0 auto auto 0";
-    clone.style.width = `${measurementWidth}px`;
-    clone.style.height = "auto";
-    clone.style.maxHeight = "none";
-    clone.style.pointerEvents = "none";
-    clone.style.visibility = "hidden";
-    clone.style.opacity = "1";
-    clone.style.transform = "none";
-    clone.style.transition = "none";
-    clone.style.animation = "none";
-    clone.style.zIndex = "-1";
-
-    viewport.append(clone);
-    const cloneRectHeight = clone.getBoundingClientRect().height;
-    const cloneHeight = cloneRectHeight > 0 ? cloneRectHeight : clone.offsetHeight;
-    clone.remove();
-
-    if (cloneHeight > 0) {
-      return cloneHeight;
-    }
-  }
-
-  if (intrinsicBorderBoxHeight > 0) {
-    return intrinsicBorderBoxHeight;
-  }
-  return renderedHeight;
-};
-
-const isTemplateElement = (el: Element | null): el is HTMLTemplateElement =>
-  el instanceof HTMLTemplateElement;
-
-const ensureTemplateHasItem = (template: HTMLTemplateElement): boolean =>
-  !!template.content.querySelector('[data-slot="toast-item"]');
-
-const createFallbackTemplate = (doc: Document): HTMLTemplateElement => {
-  const template = doc.createElement("template");
-  template.innerHTML = `
-    <li data-slot="toast-item" role="status" aria-atomic="true">
-      <span data-slot="toast-title"></span>
-      <span data-slot="toast-description"></span>
-      <button data-slot="toast-action" type="button"></button>
-      <button data-slot="toast-close" type="button" aria-label="Close">&times;</button>
-    </li>
-  `;
-  return template;
-};
-
-const setOpenState = (el: HTMLElement, state: "open" | "closed") => {
-  el.setAttribute("data-state", state);
-  if (state === "open") {
-    el.setAttribute("data-open", "");
-    el.removeAttribute("data-closed");
-  } else {
-    el.setAttribute("data-closed", "");
-    el.removeAttribute("data-open");
-  }
-};
-
-const setBooleanDataAttribute = (
-  element: HTMLElement,
-  name: string,
-  value: boolean,
-) => {
-  element.setAttribute(name, value ? "true" : "false");
-};
-
-const setItemA11y = (item: HTMLElement, type: ToastShowOptions["type"]) => {
-  if (type === "error" || type === "warning") {
-    item.setAttribute("role", "alert");
-    item.setAttribute("aria-live", "assertive");
-  } else {
-    item.setAttribute("role", "status");
-    item.setAttribute("aria-live", "polite");
-  }
-  item.setAttribute("aria-atomic", "true");
-};
-
-const parseShowDetail = (detail: unknown): ToastShowOptions | null => {
-  if (!detail || typeof detail !== "object") return null;
-
-  const record = detail as Record<string, unknown>;
-  if (typeof record["title"] !== "string" || record["title"].trim() === "") {
-    return null;
-  }
-
-  const action = parseActionDetail(record["action"]);
-
-  return {
-    id: typeof record["id"] === "string" ? record["id"] : undefined,
-    title: record["title"],
-    description: typeof record["description"] === "string" ? record["description"] : undefined,
-    type: isToastType(record["type"]) ? record["type"] : undefined,
-    duration: isFiniteNumber(record["duration"]) ? record["duration"] : undefined,
-    action,
-    dismissible: typeof record["dismissible"] === "boolean" ? record["dismissible"] : undefined,
-    closeButtonAriaLabel:
-      typeof record["closeButtonAriaLabel"] === "string" ? record["closeButtonAriaLabel"] : undefined,
-    testId: typeof record["testId"] === "string" ? record["testId"] : undefined,
-  };
-};
-
-const parseDismissDetail = (detail: unknown): string | null => {
-  if (typeof detail === "string" && detail.trim() !== "") {
-    return detail;
-  }
-  if (detail && typeof detail === "object") {
-    const id = (detail as { id?: unknown }).id;
-    if (typeof id === "string" && id.trim() !== "") {
-      return id;
-    }
-  }
-  return null;
-};
-
-const parseActionDetail = (detail: unknown): ToastAction | undefined => {
-  if (!detail || typeof detail !== "object") return undefined;
-
-  const actionRecord = detail as Record<string, unknown>;
-  if (typeof actionRecord["label"] !== "string" || actionRecord["label"].trim() === "") {
-    return undefined;
-  }
-
-  return {
-    label: actionRecord["label"],
-    onClick:
-      typeof actionRecord["onClick"] === "function"
-        ? (actionRecord["onClick"] as ToastAction["onClick"])
-        : undefined,
-    value: typeof actionRecord["value"] === "string" ? actionRecord["value"] : undefined,
-  };
-};
-
-const parseUpdateDetail = (
-  detail: unknown,
-): { id: string; patch: ToastUpdateOptions } | null => {
-  if (!detail || typeof detail !== "object") return null;
-
-  const record = detail as Record<string, unknown>;
-  const id = typeof record["id"] === "string" && record["id"].trim() !== "" ? record["id"] : null;
-  if (!id) return null;
-
-  const hasOwn = <K extends keyof ToastUpdateOptions>(key: K): boolean =>
-    Object.prototype.hasOwnProperty.call(record, key);
-  const patch: ToastUpdateOptions = {};
-  let hasPatch = false;
-  const setPatch = <K extends keyof ToastUpdateOptions>(key: K, value: ToastUpdateOptions[K]) => {
-    patch[key] = value;
-    hasPatch = true;
-  };
-
-  if (hasOwn("title")) {
-    if (typeof record["title"] !== "string" || record["title"].trim() === "") {
-      return null;
-    }
-    setPatch("title", record["title"]);
-  }
-
-  if (hasOwn("description")) {
-    const description = record["description"];
-    if (description === null || typeof description === "undefined") {
-      setPatch("description", undefined);
-    } else if (typeof description === "string") {
-      setPatch("description", description);
-    }
-  }
-
-  if (hasOwn("type") && isToastType(record["type"])) {
-    setPatch("type", record["type"]);
-  }
-
-  if (hasOwn("duration") && isFiniteNumber(record["duration"])) {
-    setPatch("duration", record["duration"]);
-  }
-
-  if (hasOwn("action")) {
-    if (record["action"] === null || typeof record["action"] === "undefined") {
-      setPatch("action", undefined);
-    } else {
-      const action = parseActionDetail(record["action"]);
-      if (action) {
-        setPatch("action", action);
-      }
-    }
-  }
-
-  if (hasOwn("dismissible") && typeof record["dismissible"] === "boolean") {
-    setPatch("dismissible", record["dismissible"]);
-  }
-
-  if (hasOwn("closeButtonAriaLabel")) {
-    const closeButtonAriaLabel = record["closeButtonAriaLabel"];
-    if (closeButtonAriaLabel === null || typeof closeButtonAriaLabel === "undefined") {
-      setPatch("closeButtonAriaLabel", undefined);
-    } else if (typeof closeButtonAriaLabel === "string") {
-      setPatch("closeButtonAriaLabel", closeButtonAriaLabel);
-    }
-  }
-
-  if (hasOwn("testId")) {
-    const testId = record["testId"];
-    if (testId === null || typeof testId === "undefined") {
-      setPatch("testId", undefined);
-    } else if (typeof testId === "string") {
-      setPatch("testId", testId);
-    }
-  }
-
-  if (!hasPatch) return null;
-  return { id, patch };
-};
-
-const resolvePromiseStateObject = (
-  value: string | ToastPromiseState | undefined,
-): ToastPromiseState => {
-  if (typeof value === "string") {
-    return { title: value };
-  }
-  return value ?? {};
-};
-
-const resolvePromiseStateValue = <T,>(
-  value: ToastPromiseStateValue<T> | ToastPromiseErrorValue | undefined,
-  payload: T | unknown,
-): ToastPromiseState => {
-  if (typeof value === "function") {
-    const result = (value as (input: T | unknown) => string | ToastPromiseState)(payload);
-    return resolvePromiseStateObject(result);
-  }
-  return resolvePromiseStateObject(value as string | ToastPromiseState | undefined);
-};
 
 /**
  * Create a toast controller for a root element.
@@ -554,18 +50,17 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   }
   const doc = root.ownerDocument ?? document;
 
-  const authoredTemplate = getPart(root, "toast-template");
-  const fallbackTemplate = createFallbackTemplate(root.ownerDocument ?? document);
+  const template = getPart(root, "toast-template");
 
   const resolvedLimit = normalizeLimit(options.limit ?? getDataNumber(root, "limit"));
   const defaultDuration = normalizeDuration(
     options.duration ?? getDataNumber(root, "duration"),
-    DEFAULT_DURATION,
+    5000,
   );
   const position =
     options.position ??
     getDataEnum(root, "position", POSITIONS) ??
-    DEFAULT_POSITION;
+    "bottom-right";
   const pauseOnHover = options.pauseOnHover ?? getDataBool(root, "pauseOnHover") ?? true;
   const pauseOnFocus = options.pauseOnFocus ?? getDataBool(root, "pauseOnFocus") ?? true;
   const portalOption = options.portal ?? getDataBool(root, "portal") ?? false;
@@ -573,8 +68,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const onDismiss = options.onDismiss;
   const onAction = options.onAction;
 
-  const stackDirection = getStackDirection(position);
-  const inlineSwipeDirection = getInlineSwipeDirection(position);
+  const stackDirection = position.startsWith("top") ? 1 : -1;
 
   root.setAttribute("data-position", position);
   viewport.setAttribute("data-position", position);
@@ -595,104 +89,32 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     portal.mount();
   }
 
+  // Map insertion order is the stack order; exiting entries remain until disposal.
   const entries = new Map<string, ToastEntry>();
-  const activeOrder: string[] = [];
-  const closeButtonLabelDefaults = new WeakMap<HTMLElement, string | null>();
+  const lifecycle = createTerminalLifecycle();
   const cleanups: Array<() => void> = [];
   let idCounter = 0;
-  let destroyed = false;
   let pauseHover = false;
   let pauseFocus = false;
   let pauseWindow = false;
   let pauseDocument = doc.visibilityState === "hidden";
   let collapseDeferred = false;
   let timersPaused = false;
-  let swipeState: SwipeState | null = null;
   let previousFocusedElement: HTMLElement | null = null;
 
-  const resizeObserver =
-    typeof ResizeObserver !== "undefined"
-      ? new ResizeObserver(() => {
-          reindex();
-        })
-      : null;
+  const activeEntries = () => [...entries.values()].filter((entry) => entry.active);
+  const isCurrentEntry = (entry: ToastEntry) => entries.get(entry.id) === entry;
 
-  const removeFromActiveOrder = (id: string) => {
-    const idx = activeOrder.indexOf(id);
-    if (idx !== -1) {
-      activeOrder.splice(idx, 1);
-    }
-  };
-
-  const clearTimer = (entry: ToastEntry) => {
-    if (entry.timerId) {
-      clearTimeout(entry.timerId);
-      entry.timerId = null;
-    }
-  };
-
-  const clearMountTracking = (entry: ToastEntry) => {
-    const win = doc.defaultView ?? window;
-    if (entry.mountRafId !== null) {
-      win.cancelAnimationFrame(entry.mountRafId);
-      entry.mountRafId = null;
-    }
-    if (entry.mountRafId2 !== null) {
-      win.cancelAnimationFrame(entry.mountRafId2);
-      entry.mountRafId2 = null;
-    }
-  };
-
-  const getFocusableNodes = (item: HTMLElement): HTMLElement[] => {
-    const nodes = getFocusable(item);
-    // Core discovery returns descendants; an authored toast root can also receive focus.
-    if (isFocusable(item)) {
-      nodes.unshift(item);
-    }
-    return nodes.filter((node) => node.getAttribute("aria-hidden") !== "true");
-  };
-
-  const getManagedFocusableNodes = (item: HTMLElement): HTMLElement[] => {
-    const nodes = [...item.querySelectorAll<HTMLElement>(`[${PREV_TAB_INDEX_ATTR}]`)];
-    if (item.hasAttribute(PREV_TAB_INDEX_ATTR)) {
-      nodes.unshift(item);
-    }
-
-    return nodes;
-  };
-
-  const setItemVisibilityInteractivity = (item: HTMLElement, isVisible: boolean) => {
-    if (isVisible) {
-      item.removeAttribute("aria-hidden");
-      item.removeAttribute("inert");
-
-      for (const node of getManagedFocusableNodes(item)) {
-        const previousTabIndex = node.getAttribute(PREV_TAB_INDEX_ATTR);
-        node.removeAttribute(PREV_TAB_INDEX_ATTR);
-        if (!previousTabIndex || previousTabIndex === NO_TAB_INDEX) {
-          node.removeAttribute("tabindex");
-        } else {
-          node.setAttribute("tabindex", previousTabIndex);
-        }
-      }
-      return;
-    }
-
-    for (const node of getFocusableNodes(item)) {
-      if (!node.hasAttribute(PREV_TAB_INDEX_ATTR)) {
-        const existingTabIndex = node.getAttribute("tabindex");
-        node.setAttribute(
-          PREV_TAB_INDEX_ATTR,
-          existingTabIndex === null ? NO_TAB_INDEX : existingTabIndex,
-        );
-      }
-      node.setAttribute("tabindex", "-1");
-    }
-
-    item.setAttribute("aria-hidden", "true");
-    item.setAttribute("inert", "");
-  };
-
+  const layout = createToastLayout({
+    viewport,
+    limit: resolvedLimit,
+    stackDirection,
+    getItems: () => activeEntries().reverse().map((entry) => entry.element),
+    onLayout: () => {
+      if (pauseOnFocus) pauseFocus = hasVisibleFocusWithinViewport();
+      syncPauseState();
+    },
+  });
   const isVisibleFocusTarget = (target: EventTarget | null): boolean => {
     if (!(target instanceof Node) || !viewport.contains(target)) return false;
     if (!(target instanceof Element)) return true;
@@ -729,14 +151,10 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   };
 
   const focusNextVisibleToast = () => {
-    for (let i = activeOrder.length - 1; i >= 0; i -= 1) {
-      const id = activeOrder[i];
-      if (!id) continue;
-      const entry = entries.get(id);
-      if (!entry || entry.exiting) continue;
+    for (const entry of activeEntries().reverse()) {
       if (entry.element.getAttribute("data-visible") !== "true") continue;
 
-      const target = getFocusableNodes(entry.element)[0];
+      const target = getToastFocusableNodes(entry.element)[0];
       if (target) {
         focusElement(target);
         return true;
@@ -763,296 +181,41 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     active.blur();
   };
 
-  const setEntriesExpandedState = (expanded: boolean) => {
-    for (const entry of entries.values()) {
-      setBooleanDataAttribute(entry.element, "data-expanded", expanded);
-    }
+  const syncPauseState = () => {
+    clearDeferredCollapseIfSettled();
+    layout.setExpanded(isViewportExpanded());
+    const paused = isTimerPauseActive();
+    if (paused === timersPaused) return;
+    timersPaused = paused;
+    for (const entry of activeEntries()) entry.setPaused(paused);
   };
 
-  const setViewportExpandedState = (expanded: boolean) => {
-    if (expanded) {
-      viewport.setAttribute("data-expanded", "");
-    } else {
-      viewport.removeAttribute("data-expanded");
-    }
-
-    const targetStackSize = expanded
-      ? viewport.style.getPropertyValue("--toast-expanded-stack-size")
-      : viewport.style.getPropertyValue("--toast-collapsed-stack-size");
-    viewport.style.setProperty(
-      "--toast-stack-size",
-      targetStackSize.trim() !== "" ? targetStackSize : "0px",
-    );
-    setEntriesExpandedState(expanded);
-  };
-
-  const reindex = () => {
-    const newestFirst: ToastEntry[] = [];
-
-    for (let i = activeOrder.length - 1; i >= 0; i -= 1) {
-      const id = activeOrder[i];
-      if (!id) continue;
-      const entry = entries.get(id);
-      if (!entry || entry.exiting) continue;
-      newestFirst.push(entry);
-    }
-
-    const gap = getCssGap(viewport);
-    const collapsedPeek = getCssCollapsedPeek(viewport);
-    const count = newestFirst.length;
-    let expandedOffset = 0;
-    let visibleExpandedOffset = 0;
-    let visibleCount = 0;
-    let frontHeight = 0;
-
-    for (let index = 0; index < newestFirst.length; index += 1) {
-      const entry = newestFirst[index];
-      if (!entry) continue;
-      const isVisible = index < resolvedLimit;
-      const wasVisible = entry.element.getAttribute("data-visible") !== "false";
-
-      const height = getToastHeight(
-        entry.element,
-        viewport,
-        viewport.getBoundingClientRect().width || viewport.clientWidth,
-      );
-      entry.measuredHeight = height;
-      if (index === 0) {
-        frontHeight = height;
-      }
-      const collapsedOffset = index * collapsedPeek;
-
-      entry.element.style.setProperty("--toast-index", String(index));
-      entry.element.style.setProperty("--toast-count", String(count));
-      entry.element.style.setProperty("--toast-height", `${height}px`);
-      entry.element.style.setProperty("--toast-initial-height", `${height}px`);
-      entry.element.style.setProperty("--toast-offset", `${expandedOffset}px`);
-      entry.element.style.setProperty("--toast-expanded-offset-y", `${expandedOffset}px`);
-      entry.element.style.setProperty("--toast-collapsed-offset-y", `${collapsedOffset}px`);
-      entry.element.style.setProperty("--toast-offset-y", `${expandedOffset}px`);
-      entry.element.style.setProperty("--toast-lift", String(stackDirection));
-      entry.element.style.setProperty("--toast-stack-direction", String(stackDirection));
-      setBooleanDataAttribute(entry.element, "data-front", index === 0);
-      setBooleanDataAttribute(entry.element, "data-visible", isVisible);
-      setBooleanDataAttribute(entry.element, "data-removed", false);
-      entry.element.style.zIndex = String(count - index + 1);
-      entry.element.style.pointerEvents = isVisible ? "" : "none";
-      if (!isVisible && wasVisible) {
-        const active = doc.activeElement;
-        if (active instanceof HTMLElement && entry.element.contains(active)) {
-          active.blur();
-        }
-      }
-      setItemVisibilityInteractivity(entry.element, isVisible);
-
-      expandedOffset += height + gap;
-      if (isVisible) {
-        visibleCount += 1;
-        visibleExpandedOffset += height + gap;
-      }
-    }
-
-    const expandedStackSize =
-      visibleCount > 0 ? Math.max(0, visibleExpandedOffset - gap) : 0;
-    const collapsedStackSize =
-      visibleCount > 0 ? Math.max(0, frontHeight + collapsedPeek * (visibleCount - 1)) : 0;
-    viewport.style.setProperty("--toast-count", String(count));
-    viewport.style.setProperty("--toast-frontmost-height", `${frontHeight}px`);
-    viewport.style.setProperty("--toast-expanded-stack-size", `${expandedStackSize}px`);
-    viewport.style.setProperty("--toast-collapsed-stack-size", `${collapsedStackSize}px`);
-    viewport.style.setProperty("--toast-lift", String(stackDirection));
-    viewport.style.setProperty("--toast-stack-direction", String(stackDirection));
-
-    if (pauseOnFocus) {
-      const nextPauseFocus = hasVisibleFocusWithinViewport();
-      if (pauseFocus !== nextPauseFocus) {
-        pauseFocus = nextPauseFocus;
-      }
-    }
-    syncPauseState();
-  };
-
-  const pauseAllTimers = () => {
-    const now = Date.now();
-    for (const id of [...activeOrder]) {
-      const entry = entries.get(id);
-      if (!entry || entry.exiting || entry.duration <= 0 || !entry.timerId) continue;
-      const elapsed = now - entry.startedAt;
-      entry.remainingMs = Math.max(0, entry.remainingMs - elapsed);
-      clearTimer(entry);
-    }
-  };
-
-  const dismissInternal = (id: string, manageFocus: boolean) => {
-    const entry = entries.get(id);
-    if (!entry || entry.exiting) return;
-
-    entry.exiting = true;
-    clearTimer(entry);
-    removeFromActiveOrder(id);
-    setBooleanDataAttribute(entry.element, "data-removed", true);
-    entry.element.style.zIndex = "0";
-    entry.element.style.pointerEvents = "none";
-    setOpenState(entry.element, "closed");
-    reindex();
-    if (manageFocus) {
-      handleDismissFocus(entry.element);
-    }
-
+  const notifyDismiss = (id: string) => {
     emit<ToastChangeDetail>(root, "toast:change", { id, action: "dismiss" });
     onDismiss?.(id);
+  };
 
-    entry.presence.exit();
+  const removeEntry = (entry: ToastEntry) => {
+    if (!isCurrentEntry(entry)) return;
+    gestures.cancel(entry);
+    layout.unobserve(entry.element);
+    entry.destroy();
+    entries.delete(entry.id);
+    layout.update();
+  };
+
+  const dismissEntry = (entry: ToastEntry, manageFocus = true) => {
+    if (!isCurrentEntry(entry) || !entry.active) return;
+    gestures.cancel(entry);
+    entry.dismiss();
+    layout.update();
+    if (manageFocus) handleDismissFocus(entry.element);
+    notifyDismiss(entry.id);
   };
 
   const dismiss = (id: string) => {
-    dismissInternal(id, true);
-  };
-
-  const resumeAllTimers = () => {
-    for (const id of [...activeOrder]) {
-      const entry = entries.get(id);
-      if (!entry || entry.exiting || entry.duration <= 0 || entry.timerId) continue;
-
-      if (entry.remainingMs <= 0) {
-        dismiss(entry.id);
-        continue;
-      }
-
-      entry.startedAt = Date.now();
-      entry.timerId = setTimeout(() => {
-        dismiss(entry.id);
-      }, entry.remainingMs);
-    }
-  };
-
-  const syncPauseState = () => {
-    clearDeferredCollapseIfSettled();
-    setViewportExpandedState(isViewportExpanded());
-    const paused = isTimerPauseActive();
-
-    if (paused === timersPaused) return;
-    timersPaused = paused;
-
-    if (timersPaused) {
-      pauseAllTimers();
-    } else {
-      resumeAllTimers();
-    }
-  };
-
-  const observeItem = (element: HTMLElement) => {
-    resizeObserver?.observe(element);
-  };
-
-  const unobserveItem = (element: HTMLElement) => {
-    resizeObserver?.unobserve(element);
-  };
-
-  const forceRemoveEntry = (id: string, notifyDismiss = false) => {
     const entry = entries.get(id);
-    if (!entry) return;
-    const shouldNotifyDismiss = notifyDismiss && !entry.exiting;
-
-    clearTimer(entry);
-    clearMountTracking(entry);
-    removeFromActiveOrder(id);
-    unobserveItem(entry.element);
-    entry.presence.cleanup();
-    entry.element.remove();
-    entries.delete(id);
-    reindex();
-
-    if (shouldNotifyDismiss) {
-      emit<ToastChangeDetail>(root, "toast:change", { id, action: "dismiss" });
-      onDismiss?.(id);
-    }
-  };
-
-  const resolveTemplateFragment = (): { fragment: DocumentFragment; item: HTMLElement } => {
-    const sourceTemplate =
-      isTemplateElement(authoredTemplate) && ensureTemplateHasItem(authoredTemplate)
-        ? authoredTemplate
-        : fallbackTemplate;
-
-    let fragment = sourceTemplate.content.cloneNode(true) as DocumentFragment;
-    let item = fragment.querySelector<HTMLElement>('[data-slot="toast-item"]');
-
-    if (!item) {
-      fragment = fallbackTemplate.content.cloneNode(true) as DocumentFragment;
-      item = fragment.querySelector<HTMLElement>('[data-slot="toast-item"]');
-    }
-
-    if (!item) {
-      throw new Error("Toast template must include a toast-item slot");
-    }
-
-    return { fragment, item };
-  };
-
-  const applyToastContentToItem = (item: HTMLElement, toast: ResolvedToast) => {
-    const titleSlot = item.querySelector<HTMLElement>('[data-slot="toast-title"]');
-    const descriptionSlot = item.querySelector<HTMLElement>('[data-slot="toast-description"]');
-    const actionSlot = item.querySelector<HTMLElement>('[data-slot="toast-action"]');
-    const closeSlot = item.querySelector<HTMLElement>('[data-slot="toast-close"]');
-
-    if (titleSlot) {
-      titleSlot.textContent = toast.title;
-      titleSlot.hidden = false;
-    }
-
-    if (descriptionSlot) {
-      if (toast.description && toast.description.trim() !== "") {
-        descriptionSlot.textContent = toast.description;
-        descriptionSlot.hidden = false;
-      } else {
-        descriptionSlot.textContent = "";
-        descriptionSlot.hidden = true;
-      }
-    }
-
-    if (actionSlot) {
-      if (toast.action?.label && toast.action.label.trim() !== "") {
-        actionSlot.textContent = toast.action.label;
-        actionSlot.hidden = false;
-      } else {
-        actionSlot.textContent = "";
-        actionSlot.hidden = true;
-      }
-    }
-
-    item.setAttribute("data-type", toast.type);
-    if (toast.dismissible) {
-      item.removeAttribute("data-dismissible");
-    } else {
-      item.setAttribute("data-dismissible", "false");
-    }
-    if (toast.testId && toast.testId.trim() !== "") {
-      item.setAttribute("data-testid", toast.testId);
-    } else {
-      item.removeAttribute("data-testid");
-    }
-
-    if (closeSlot) {
-      if (!closeButtonLabelDefaults.has(closeSlot)) {
-        closeButtonLabelDefaults.set(closeSlot, closeSlot.getAttribute("aria-label"));
-      }
-      if (toast.closeButtonAriaLabel && toast.closeButtonAriaLabel.trim() !== "") {
-        closeSlot.setAttribute("aria-label", toast.closeButtonAriaLabel);
-      } else {
-        const defaultCloseLabel = closeButtonLabelDefaults.get(closeSlot);
-        if (defaultCloseLabel && defaultCloseLabel.trim() !== "") {
-          closeSlot.setAttribute("aria-label", defaultCloseLabel);
-        } else {
-          closeSlot.setAttribute("aria-label", "Close");
-        }
-      }
-      if (!closeSlot.getAttribute("aria-label")) {
-        closeSlot.setAttribute("aria-label", "Close");
-      }
-    }
-
-    setItemA11y(item, toast.type);
+    if (entry) dismissEntry(entry);
   };
 
   const createId = () => {
@@ -1064,113 +227,16 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     return candidate;
   };
 
-  const startTimer = (entry: ToastEntry) => {
-    if (entry.duration <= 0) return;
-    entry.remainingMs = entry.duration;
-    if (timersPaused) return;
-
-    entry.startedAt = Date.now();
-    entry.timerId = setTimeout(() => {
-      dismiss(entry.id);
-    }, entry.remainingMs);
-  };
-
-  const scheduleMounted = (entry: ToastEntry) => {
-    const win = doc.defaultView ?? window;
-    clearMountTracking(entry);
-    entry.mountRafId = win.requestAnimationFrame(() => {
-      entry.mountRafId = null;
-      entry.mountRafId2 = win.requestAnimationFrame(() => {
-        entry.mountRafId2 = null;
-        if (destroyed || !entries.has(entry.id) || entry.exiting) return;
-        setBooleanDataAttribute(entry.element, "data-mounted", true);
-      });
-    });
-  };
-
-  const finishExit = (id: string) => {
-    const entry = entries.get(id);
-    if (!entry) return;
-
-    clearTimer(entry);
-    clearMountTracking(entry);
-    unobserveItem(entry.element);
-    entry.presence.cleanup();
-    entry.element.remove();
-    entries.delete(id);
-    reindex();
-  };
-
-  const mountToast = (toast: ResolvedToast) => {
-    const { fragment, item } = resolveTemplateFragment();
-
-    item.setAttribute("data-id", toast.id);
-    applyToastContentToItem(item, toast);
-    setBooleanDataAttribute(item, "data-mounted", false);
-    setBooleanDataAttribute(item, "data-removed", false);
-    setBooleanDataAttribute(item, "data-front", false);
-    setBooleanDataAttribute(item, "data-visible", false);
-    setBooleanDataAttribute(item, "data-expanded", isViewportExpanded());
-    setBooleanDataAttribute(item, "data-swiping", false);
-    setBooleanDataAttribute(item, "data-swipe-out", false);
-    item.style.setProperty("--toast-enter-direction", String(stackDirection));
-    item.style.setProperty("--toast-exit-direction", String(stackDirection));
-    item.style.setProperty("--toast-swipe-movement-x", "0px");
-    item.style.setProperty("--toast-swipe-movement-y", "0px");
-    item.style.setProperty("--toast-swipe-end-x", "0px");
-    item.style.setProperty("--toast-swipe-end-y", "0px");
-    item.style.setProperty("--toast-lift", String(stackDirection));
-    setOpenState(item, "open");
-
-    const entry: ToastEntry = {
-      id: toast.id,
-      element: item,
-      presence: createPresenceLifecycle({
-        element: item,
-        onExitComplete: () => {
-          if (destroyed) return;
-          finishExit(toast.id);
-        },
-      }),
-      timerId: null,
-      remainingMs: toast.duration,
-      startedAt: 0,
-      duration: toast.duration,
-      action: toast.action,
-      toast,
-      exiting: false,
-      measuredHeight: 0,
-      mountRafId: null,
-      mountRafId2: null,
-    };
-
-    entries.set(toast.id, entry);
-    activeOrder.push(toast.id);
-    viewport.appendChild(fragment);
-
-    observeItem(item);
-    reindex();
-    scheduleMounted(entry);
-    startTimer(entry);
-
-    emit<ToastChangeDetail>(root, "toast:change", { id: toast.id, action: "show" });
-    onShow?.(toast.id);
-  };
-
-  const show = (showOptions: ToastShowOptions): string => {
+  const showEntry = (showOptions: ToastShowOptions): ToastEntry => {
     if (typeof showOptions.title !== "string" || showOptions.title.trim() === "") {
       throw new Error("Toast show requires a non-empty title");
     }
-
-    const requestedId =
-      typeof showOptions.id === "string" && showOptions.id.trim() !== ""
-        ? showOptions.id
-        : undefined;
-    const id = requestedId ?? createId();
-
-    if (entries.has(id)) {
-      forceRemoveEntry(id, true);
-    }
+    const id = typeof showOptions.id === "string" && showOptions.id.trim() !== ""
+      ? showOptions.id : createId();
+    const previous = entries.get(id);
+    const notifyReplacement = previous?.active;
+    if (previous) removeEntry(previous);
+    if (notifyReplacement) notifyDismiss(id);
 
     const toast: ResolvedToast = {
       id,
@@ -1183,119 +249,47 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       closeButtonAriaLabel: showOptions.closeButtonAriaLabel,
       testId: showOptions.testId,
     };
+    const entry = createToastEntry(toast, {
+      viewport, template, stackDirection,
+      expanded: isViewportExpanded(),
+      paused: timersPaused,
+      onTimeout: dismissEntry,
+      onExitComplete: removeEntry,
+    });
+    if (lifecycle.isDestroyed) {
+      entry.destroy();
+      return entry;
+    }
+    // A dismissal callback may have reused the same ID while replacement was pending.
+    const reentrantEntry = entries.get(id);
+    if (reentrantEntry) removeEntry(reentrantEntry);
+    entries.set(id, entry);
+    entry.mount();
+    layout.observe(entry.element);
+    layout.update();
 
-    mountToast(toast);
-    return id;
+    if (isCurrentEntry(entry) && entry.active) {
+      emit<ToastChangeDetail>(root, "toast:change", { id, action: "show" });
+      onShow?.(id);
+    }
+    return entry;
   };
 
-  const resolveUpdatedToast = (
-    current: ResolvedToast,
-    patch: ToastUpdateOptions,
-  ): { next: ResolvedToast; durationChanged: boolean } => {
-    const hasOwn = <K extends keyof ToastUpdateOptions>(key: K): boolean =>
-      Object.prototype.hasOwnProperty.call(patch, key);
-
-    const nextTitle = hasOwn("title") ? patch.title : current.title;
-    if (!nextTitle || nextTitle.trim() === "") {
-      throw new Error("Toast update requires title to remain non-empty");
-    }
-
-    const durationChanged = hasOwn("duration");
-    const nextDuration = durationChanged
-      ? normalizeDuration(patch.duration, current.duration)
-      : current.duration;
-
-    const next: ResolvedToast = {
-      id: current.id,
-      title: nextTitle,
-      description: hasOwn("description") ? patch.description : current.description,
-      type: hasOwn("type") && isToastType(patch.type) ? patch.type : current.type,
-      duration: nextDuration,
-      action: hasOwn("action") ? patch.action : current.action,
-      dismissible: hasOwn("dismissible") ? (patch.dismissible ?? true) : current.dismissible,
-      closeButtonAriaLabel: hasOwn("closeButtonAriaLabel")
-        ? patch.closeButtonAriaLabel
-        : current.closeButtonAriaLabel,
-      testId: hasOwn("testId") ? patch.testId : current.testId,
-    };
-
-    return { next, durationChanged };
+  const show = (options: ToastShowOptions): string => {
+    if (lifecycle.isDestroyed) return options.id ?? createId();
+    return showEntry(options).id;
   };
 
-  const updateInternal = (id: string, patch: ToastUpdateOptions): boolean => {
-    if (!id || id.trim() === "") return false;
-
-    const entry = entries.get(id);
-    if (!entry || entry.exiting) return false;
-
-    const { next, durationChanged } = resolveUpdatedToast(entry.toast, patch);
-    entry.toast = next;
-    entry.action = next.action;
-
-    applyToastContentToItem(entry.element, next);
-    entry.measuredHeight = 0;
-
-    if (!next.dismissible && swipeState?.id === id) {
-      swipeState = null;
-      clearSwipeStyles(entry);
-    }
-
-    if (durationChanged) {
-      clearTimer(entry);
-      entry.duration = next.duration;
-      entry.remainingMs = next.duration;
-      if (next.duration > 0 && !timersPaused) {
-        entry.startedAt = Date.now();
-        entry.timerId = setTimeout(() => {
-          dismiss(entry.id);
-        }, entry.remainingMs);
-      }
-    }
-
-    reindex();
-    return true;
+  const updateEntry = (entry: ToastEntry, patch: ToastUpdateOptions) => {
+    if (!isCurrentEntry(entry) || !entry.active) return;
+    entry.update(patch);
+    if (!entry.toast.dismissible) gestures.cancel(entry);
+    layout.update();
   };
 
   const update = (id: string, patch: ToastUpdateOptions) => {
-    updateInternal(id, patch);
-  };
-
-  const resolvePromiseTitle = (
-    state: ToastPromiseState,
-    fallbackTitle: string,
-  ): string => {
-    if (typeof state.title === "string" && state.title.trim() !== "") {
-      return state.title;
-    }
-    if (typeof state.message === "string" && state.message.trim() !== "") {
-      return state.message;
-    }
-    return fallbackTitle;
-  };
-
-  const resolvePromiseShowOptions = (
-    state: ToastPromiseState,
-    fallback: {
-      title: string;
-      type: ToastType;
-      duration: number;
-      description?: string;
-    },
-  ): ToastShowOptions => ({
-    title: resolvePromiseTitle(state, fallback.title),
-    description: state.description ?? fallback.description,
-    type: isToastType(state.type) ? state.type : fallback.type,
-    duration: normalizeDuration(state.duration, fallback.duration),
-    action: state.action,
-    dismissible: state.dismissible,
-    closeButtonAriaLabel: state.closeButtonAriaLabel,
-    testId: state.testId,
-  });
-
-  const resolveErrorTitle = (error: unknown): string => {
-    if (typeof error === "string" && error.trim() !== "") return error;
-    if (error instanceof Error && error.message.trim() !== "") return error.message;
-    return "Error";
+    const entry = entries.get(id);
+    if (entry) updateEntry(entry, patch);
   };
 
   const promise = <T,>(
@@ -1309,11 +303,12 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       duration: 0,
       description: promiseOptions.description,
     });
-    const id = show(loadingOptions);
+    const entry = lifecycle.isDestroyed ? undefined : showEntry(loadingOptions);
+    const id = entry?.id ?? createId();
 
     const task: Promise<T> = Promise.resolve().then(() =>
       typeof input === "function"
-        ? (input as () => Promise<T>)()
+        ? input()
         : input,
     );
 
@@ -1326,7 +321,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
           duration: defaultDuration,
           description: promiseOptions.description,
         });
-        updateInternal(id, successOptions);
+        if (entry) updateEntry(entry, successOptions);
         return value;
       })
       .catch((error: unknown) => {
@@ -1337,7 +332,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
           duration: defaultDuration,
           description: promiseOptions.description,
         });
-        updateInternal(id, errorOptions);
+        if (entry) updateEntry(entry, errorOptions);
         throw error;
       });
 
@@ -1353,8 +348,8 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const dismissAll = () => {
     const shouldManageFocus =
       doc.activeElement instanceof HTMLElement && viewport.contains(doc.activeElement);
-    for (const id of [...activeOrder]) {
-      dismissInternal(id, false);
+    for (const entry of activeEntries()) {
+      dismissEntry(entry, false);
     }
     if (shouldManageFocus) {
       handleDismissFocus();
@@ -1377,165 +372,30 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     const entry = entries.get(id);
     if (!entry || entry.exiting) return;
 
-    const value = entry.action?.value;
+    const value = entry.toast.action?.value;
     const actionEvent = createActionEvent();
-    (entry.action?.onClick as ((event: ToastActionEvent) => void) | undefined)?.(actionEvent);
+    (entry.toast.action?.onClick as ((event: ToastActionEvent) => void) | undefined)?.(actionEvent);
     emit<ToastActionDetail>(root, "toast:action", { id, value });
     onAction?.(id, value);
     if (!actionEvent.defaultPrevented) {
-      dismiss(id);
+      dismissEntry(entry);
     }
   };
 
-  const getItemIdFromEventTarget = (target: EventTarget | null): string | null => {
-    if (!(target instanceof Element)) return null;
+  const getEntryFromEventTarget = (target: EventTarget | null): ToastEntry | undefined => {
+    if (!(target instanceof Element)) return undefined;
     const item = target.closest<HTMLElement>('[data-slot="toast-item"]');
-    if (!item || !viewport.contains(item)) return null;
-    const id = item.getAttribute("data-id");
-    return id && id.trim() !== "" ? id : null;
+    if (!item || !viewport.contains(item)) return undefined;
+    const entry = entries.get(item.getAttribute("data-id") ?? "");
+    return entry?.element === item ? entry : undefined;
   };
 
-  const clearSwipeStyles = (entry: ToastEntry) => {
-    setBooleanDataAttribute(entry.element, "data-swiping", false);
-    setBooleanDataAttribute(entry.element, "data-swipe-out", false);
-    entry.element.style.removeProperty("--toast-swipe-movement-x");
-    entry.element.style.removeProperty("--toast-swipe-movement-y");
-    entry.element.style.removeProperty("--toast-swipe-end-x");
-    entry.element.style.removeProperty("--toast-swipe-end-y");
-  };
-
-  const startSwipeOut = (entry: ToastEntry, endX: number, endY: number) => {
-    setBooleanDataAttribute(entry.element, "data-swiping", false);
-    setBooleanDataAttribute(entry.element, "data-swipe-out", true);
-    entry.element.style.setProperty("--toast-swipe-end-x", `${endX}px`);
-    entry.element.style.setProperty("--toast-swipe-end-y", `${endY}px`);
-  };
-
-  const beginSwipe = (event: PointerEvent) => {
-    if (event.button !== 0) return;
-    const target = event.target as Element | null;
-    if (!target) return;
-
-    if (target.closest('[data-slot="toast-action"]') || target.closest('[data-slot="toast-close"]')) {
-      return;
-    }
-
-    const id = getItemIdFromEventTarget(target);
-    if (!id) return;
-
-    const entry = entries.get(id);
-    if (!entry || entry.exiting || !entry.toast.dismissible) return;
-
-    swipeState = {
-      id,
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      currentX: event.clientX,
-      startY: event.clientY,
-      currentY: event.clientY,
-      axis: null,
-    };
-
-    setBooleanDataAttribute(entry.element, "data-swiping", true);
-    entry.element.style.setProperty("--toast-swipe-movement-x", "0px");
-    entry.element.style.setProperty("--toast-swipe-movement-y", "0px");
-    if ("setPointerCapture" in entry.element) {
-      try {
-        entry.element.setPointerCapture(event.pointerId);
-      } catch {
-        // Ignore if pointer capture is unsupported for this event target.
-      }
-    }
-  };
-
-  const updateSwipe = (event: PointerEvent) => {
-    if (!swipeState || event.pointerId !== swipeState.pointerId) return;
-    const entry = entries.get(swipeState.id);
-    if (!entry || entry.exiting) {
-      swipeState = null;
-      return;
-    }
-
-    if (event.cancelable) {
-      event.preventDefault();
-    }
-
-    swipeState.currentX = event.clientX;
-    swipeState.currentY = event.clientY;
-    const rawDeltaX = swipeState.currentX - swipeState.startX;
-    const rawDeltaY = swipeState.currentY - swipeState.startY;
-    const axis =
-      swipeState.axis ?? resolveSwipeAxis(rawDeltaX, rawDeltaY, inlineSwipeDirection);
-    swipeState.axis = axis;
-
-    const adjustedDeltaX =
-      axis === "x" ? adjustSwipeDelta(rawDeltaX, inlineSwipeDirection) : 0;
-    const adjustedDeltaY =
-      axis === "y" ? adjustSwipeDelta(rawDeltaY, -stackDirection) : 0;
-    entry.element.style.setProperty("--toast-swipe-movement-x", `${adjustedDeltaX}px`);
-    entry.element.style.setProperty("--toast-swipe-movement-y", `${adjustedDeltaY}px`);
-    setBooleanDataAttribute(entry.element, "data-swiping", true);
-  };
-
-  const endSwipe = (event: PointerEvent | null, cancelled = false) => {
-    if (!swipeState) return;
-    if (event && event.pointerId !== swipeState.pointerId) return;
-
-    const current = swipeState;
-    swipeState = null;
-    const entry = entries.get(current.id);
-    if (!entry || entry.exiting) return;
-
-    if (event && "releasePointerCapture" in entry.element) {
-      try {
-        entry.element.releasePointerCapture(current.pointerId);
-      } catch {
-        // Ignore if pointer capture was not active.
-      }
-    }
-
-    const rawDeltaX = current.currentX - current.startX;
-    const rawDeltaY = current.currentY - current.startY;
-    const axis =
-      current.axis ?? resolveSwipeAxis(rawDeltaX, rawDeltaY, inlineSwipeDirection);
-    const horizontalProgress =
-      inlineSwipeDirection === 0
-        ? Number.NEGATIVE_INFINITY
-        : (rawDeltaX * inlineSwipeDirection) / DEFAULT_SWIPE_THRESHOLD;
-    const verticalProgress =
-      (rawDeltaY * -stackDirection) / DEFAULT_SWIPE_THRESHOLD;
-    const dismissAxis =
-      !cancelled && axis === "x" && horizontalProgress >= 1
-        ? "x"
-        : !cancelled && axis === "y" && verticalProgress >= 1
-          ? "y"
-          : null;
-
-    if (dismissAxis) {
-      const endX =
-        dismissAxis === "x"
-          ? inlineSwipeDirection *
-            Math.max(
-              Math.abs(rawDeltaX),
-              entry.element.offsetWidth + DEFAULT_GAP * 2,
-            )
-          : 0;
-      const endY =
-        dismissAxis === "y"
-          ? -stackDirection *
-            Math.max(
-              Math.abs(rawDeltaY),
-              entry.element.offsetHeight + DEFAULT_GAP * 2,
-            )
-          : 0;
-
-      startSwipeOut(entry, endX, endY);
-      dismiss(entry.id);
-      return;
-    }
-
-    clearSwipeStyles(entry);
-  };
+  const gestures = createToastGestures({
+    viewport,
+    position,
+    getEntry: getEntryFromEventTarget,
+    dismiss: (entry) => dismissEntry(entry),
+  });
 
   cleanups.push(
     on(viewport, "click", (e) => {
@@ -1544,31 +404,16 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
       const closeTrigger = target.closest('[data-slot="toast-close"]');
       if (closeTrigger) {
-        const id = getItemIdFromEventTarget(closeTrigger);
-        if (id) dismiss(id);
+        const entry = getEntryFromEventTarget(closeTrigger);
+        if (entry) dismissEntry(entry);
         return;
       }
 
       const actionTrigger = target.closest('[data-slot="toast-action"]');
       if (actionTrigger) {
-        const id = getItemIdFromEventTarget(actionTrigger);
-        if (id) handleActionClick(id);
+        const entry = getEntryFromEventTarget(actionTrigger);
+        if (entry) handleActionClick(entry.id);
       }
-    }),
-  );
-
-  cleanups.push(
-    on(viewport, "pointerdown", (e) => {
-      beginSwipe(e as PointerEvent);
-    }),
-    on(doc, "pointermove", (e) => {
-      updateSwipe(e as PointerEvent);
-    }),
-    on(doc, "pointerup", (e) => {
-      endSwipe(e as PointerEvent);
-    }),
-    on(doc, "pointercancel", (e) => {
-      endSwipe(e as PointerEvent, true);
     }),
   );
 
@@ -1660,44 +505,22 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }),
   );
 
-  reindex();
+  lifecycle.onDestroy(() => {
+    cleanups.forEach((cleanup) => cleanup());
+    gestures.destroy();
+    layout.destroy();
+    for (const entry of entries.values()) entry.destroy();
+    entries.clear();
+    previousFocusedElement = null;
+    portal.cleanup();
+    bound.delete(root);
+  });
 
+  layout.update();
   return {
-    show,
-    update,
-    promise,
-    dismiss,
-    dismissAll,
-    get count() {
-      return activeOrder.length;
-    },
-    destroy: () => {
-      destroyed = true;
-      pauseHover = false;
-      pauseFocus = false;
-      pauseWindow = false;
-      pauseDocument = false;
-      collapseDeferred = false;
-      timersPaused = false;
-      previousFocusedElement = null;
-      viewport.removeAttribute("data-expanded");
-
-      cleanups.forEach((cleanup) => cleanup());
-      cleanups.length = 0;
-
-      resizeObserver?.disconnect();
-
-      for (const entry of entries.values()) {
-        clearTimer(entry);
-        clearMountTracking(entry);
-        entry.presence.cleanup();
-        entry.element.remove();
-      }
-      entries.clear();
-      activeOrder.length = 0;
-      portal.cleanup();
-      bound.delete(root);
-    },
+    show, update, promise, dismiss, dismissAll,
+    get count() { return activeEntries().length; },
+    destroy: () => { lifecycle.destroy(); },
   };
 }
 
