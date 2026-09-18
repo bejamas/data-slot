@@ -80,6 +80,7 @@ All packages are independently installable. Each package includes its own README
 | `@data-slot/collapsible`     | 1.6 KB | Simple show/hide toggle     | [README](packages/collapsible/README.md)     |
 | `@data-slot/accordion`       | 1.4 KB | Collapsible sections        | [README](packages/accordion/README.md)       |
 | `@data-slot/toast`           | 2.9 KB | Imperative notifications   | [README](packages/toast/README.md)           |
+| `@data-slot/carousel`        | 1.8 KB | Scroll-snap carousel       | [README](packages/carousel/README.md)        |
 
 ## API
 

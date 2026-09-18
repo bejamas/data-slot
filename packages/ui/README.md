@@ -35,6 +35,7 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 | `@data-slot/accordion` | 1.4 KB | Collapsible content sections |
 | `@data-slot/toggle` | 740 B | Pressed-state toggle button |
 | `@data-slot/toast` | 2.9 KB | Imperative notifications |
+| `@data-slot/carousel` | 1.8 KB | Scroll-snap carousels |
 
 ## Usage
 
@@ -67,6 +68,7 @@ Available subpaths:
 - `@data-slot/ui/combobox`
 - `@data-slot/ui/command`
 - `@data-slot/ui/toast`
+- `@data-slot/ui/carousel`
 
 ### Direct Package Imports
 
@@ -181,6 +183,7 @@ With Tailwind:
 | `createCombobox` | @data-slot/combobox |
 | `createCommand` | @data-slot/command |
 | `createToast` | @data-slot/toast |
+| `createCarousel` | @data-slot/carousel |
 
 ### Types
 
@@ -201,6 +204,7 @@ With Tailwind:
 | `ComboboxOptions`, `ComboboxController` | @data-slot/combobox |
 | `CommandOptions`, `CommandController`, `CommandFilter` | @data-slot/command |
 | `ToastPosition`, `ToastAction`, `ToastShowOptions`, `ToastOptions`, `ToastController` | @data-slot/toast |
+| `CarouselOptions`, `CarouselController` | @data-slot/carousel |
 
 ### Core Utilities
 

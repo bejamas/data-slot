@@ -90,3 +90,9 @@ export type {
 
 export { createToast } from "@data-slot/toast";
 export type { ToastPosition, ToastAction, ToastShowOptions, ToastOptions, ToastController } from "@data-slot/toast";
+
+export { createCarousel } from "@data-slot/carousel";
+export type {
+  CarouselOptions,
+  CarouselController,
+} from "@data-slot/carousel";

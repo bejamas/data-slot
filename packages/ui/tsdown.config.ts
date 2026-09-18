@@ -23,6 +23,7 @@ export default defineConfig({
     "src/combobox.ts",
     "src/command.ts",
     "src/toast.ts",
+    "src/carousel.ts",
   ],
   format: ["esm", "cjs"],
   dts: true,
