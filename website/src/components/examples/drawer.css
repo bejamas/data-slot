@@ -37,7 +37,7 @@
   background: #faf9f7;
   color: #1a1a1a;
   box-shadow: 0 0 50px rgb(0 0 0 / 20%);
-  transform: translateX(calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-x, 0px)));
+  transform: translateX(calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-amount-x, 0px)));
   transition: transform 0.3s ease;
 }
 
@@ -110,7 +110,7 @@
   max-width: 32rem;
   height: 80dvh;
   border: 1px solid #ccc;
-  transform: translateY(calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px)));
+  transform: translateY(calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-amount-y, 0px)));
 }
 
 .drawer-sheet-popup[data-starting-style],

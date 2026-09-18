@@ -81,7 +81,7 @@ it('keeps swipe rendering local and reuses measured dimensions', () => {
     expect(outerPopup.hasAttribute('data-nested-swiping')).toBe(true);
     expect(document.querySelector<HTMLElement>('[data-slot="drawer-indent"]')!.style.getPropertyValue('--drawer-swipe-progress')).toBe('0.5');
     inner.refresh(600);
-    expect(outerPopup.style.getPropertyValue('--drawer-frontmost-height')).toBe('600px');
+    expect(outerPopup.style.getPropertyValue('--drawer-front-height')).toBe('600px');
     expect(document.querySelector<HTMLElement>('[data-slot="drawer-indent"]')!.style.getPropertyValue('--drawer-height')).toBe('600px');
     expect(innerPopup.style.getPropertyValue('--drawer-swipe-progress')).toBe('0.5');
   } finally {

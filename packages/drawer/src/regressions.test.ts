@@ -146,14 +146,14 @@ it('preserves active swipe visuals through resize and resets every part on cance
     expect(part.style.getPropertyValue('--drawer-swipe-progress')).toBe('0.25');
   }
   for (const part of [popup, backdrop, viewport]) expect(part.hasAttribute('data-swiping')).toBe(true);
-  expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('200px');
+  expect(popup.style.getPropertyValue('--drawer-swipe-amount-y')).toBe('200px');
   document.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 }));
   expect(drawer.isOpen).toBe(true);
   for (const part of [popup, backdrop, viewport, indent]) {
     expect(part.style.getPropertyValue('--drawer-swipe-progress')).toBe('0');
   }
   for (const part of [popup, backdrop, viewport]) expect(part.hasAttribute('data-swiping')).toBe(false);
-  expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('0px');
+  expect(popup.style.getPropertyValue('--drawer-swipe-amount-y')).toBe('0px');
 });
 
 for (const previous of ['escape', 'right-click'] as const) {
