@@ -2,6 +2,7 @@
 export const components = [
   { slug: 'accordion', demo: 'AccordionSingle', second: 'AccordionMultiple' },
   { slug: 'alert-dialog', demo: 'AlertDialog', attrs: 'data-close-on-escape="false"' },
+  { slug: 'carousel', demo: 'Carousel', attrs: 'data-drag' },
   { slug: 'collapsible', demo: 'Collapsible', attrs: 'data-default-open' },
   { slug: 'combobox', demo: 'Combobox', attrs: 'data-default-value="banana"' },
   { slug: 'command', demo: 'Command', attrs: 'data-loop' },

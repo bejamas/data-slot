@@ -1,0 +1,66 @@
+---
+title: Carousel
+description: A scroll-snapping slideshow with keyboard, button, and optional drag navigation.
+---
+
+<PackageInfo name="carousel" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/carousel
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/carousel
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/carousel
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+The content element is a native scroll container and every direct `carousel-item` child is a slide. Style the content with `scroll-snap-type` and size each slide to fill it; the component reads the resulting layout rather than imposing one. The previous and next controls are optional.
+
+```html
+<div data-slot="carousel" data-default-index="0">
+  <div data-slot="carousel-content">
+    <div data-slot="carousel-item">Slide 1</div>
+    <div data-slot="carousel-item">Slide 2</div>
+    <div data-slot="carousel-item">Slide 3</div>
+  </div>
+  <button data-slot="carousel-previous">Previous</button>
+  <button data-slot="carousel-next">Next</button>
+</div>
+```
+
+The active slide is the one the scroll position rests on. Navigation scrolls smoothly, or instantly when the visitor prefers reduced motion, and the index follows once scrolling settles. Inactive slides are `inert` and `aria-hidden`, so the layout should show one slide at a time.
+
+## Examples
+
+### Navigate with buttons and keys
+
+Arrow keys move between slides while focus is inside the carousel, and `Home` and `End` jump to the first and last slide. `data-loop` lets the controls wrap around. The dots below the slides are demo markup: each one dispatches `carousel:set` with its index, and they follow `carousel:change` to highlight the active slide.
+
+<Example name="carousel" />
+
+### Drag to navigate
+
+Add `data-drag` to let people drag or swipe the slides. Native scroll snapping pauses while a drag is in progress and the carousel settles on the nearest slide when the pointer lifts. Presses on links, buttons, and form controls inside a slide never start a drag.
+
+<Example name="carousel" variant="extra" />
+
+## API reference
+
+<include>../_generated/carousel-api.md</include>

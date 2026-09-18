@@ -4,6 +4,7 @@ import { bindToastExample } from '../src/components/examples/toast-example';
 const loaders = {
   accordion: () => import('../../packages/accordion/dist/index.js'),
   'alert-dialog': () => import('../../packages/alert-dialog/dist/index.js'),
+  carousel: () => import('../../packages/carousel/dist/index.js'),
   collapsible: () => import('../../packages/collapsible/dist/index.js'),
   combobox: () => import('../../packages/combobox/dist/index.js'),
   command: () => import('../../packages/command/dist/index.js'),
@@ -40,6 +41,18 @@ const demos: Partial<Record<Slug, Demo>> = {
       root.querySelectorAll('[data-demo-alert-confirm]').forEach(button => {
         button.addEventListener('click', () => root.dispatchEvent(new CustomEvent('alert-dialog:set', { detail: { open: false } })), { signal });
       });
+    },
+  },
+  carousel: {
+    // Dots are demo markup: drive them through the carousel's own events.
+    bind(root, _controller, signal) {
+      const dots = Array.from(root.querySelectorAll<HTMLElement>('[data-slot="carousel-dot"]'));
+      const sync = (index: number) => dots.forEach((dot, i) => { dot.dataset.state = i === index ? 'active' : 'inactive'; });
+      dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => root.dispatchEvent(new CustomEvent('carousel:set', { detail: { index } })), { signal });
+      });
+      root.addEventListener('carousel:change', event => sync((event as CustomEvent<{ index: number }>).detail.index), { signal });
+      sync(Number(root.dataset.index));
     },
   },
   toast: { bind: bindToastExample },
