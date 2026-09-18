@@ -59,7 +59,6 @@ export interface ToastEntry {
 interface ToastEntryOptions {
   viewport: HTMLElement;
   template: Element | null;
-  stackDirection: number;
   expanded: boolean;
   paused: boolean;
   onTimeout(entry: ToastEntry): void;
@@ -68,7 +67,7 @@ interface ToastEntryOptions {
 
 /** Owns one toast's content, countdown, presence, and terminal cleanup. */
 export function createToastEntry(initial: ResolvedToast, options: ToastEntryOptions): ToastEntry {
-  const { viewport, stackDirection } = options;
+  const { viewport } = options;
   const source = isTemplateElement(options.template) && ensureTemplateHasItem(options.template)
     ? options.template : createFallbackTemplate(viewport.ownerDocument);
   const fragment = source.content.cloneNode(true) as DocumentFragment;
@@ -230,10 +229,7 @@ export function createToastEntry(initial: ResolvedToast, options: ToastEntryOpti
     item.setAttribute(`data-${name}`, "false");
   }
   item.setAttribute("data-expanded", String(options.expanded));
-  for (const name of ["enter-direction", "exit-direction", "lift"]) {
-    item.style.setProperty(`--toast-${name}`, String(stackDirection));
-  }
-  for (const name of ["movement-x", "movement-y", "end-x", "end-y"]) {
+  for (const name of ["amount-x", "amount-y", "end-x", "end-y"]) {
     item.style.setProperty(`--toast-swipe-${name}`, "0px");
   }
   setOpenState(item, "open");

@@ -40,7 +40,7 @@
 .toast-demo-viewport [data-slot="toast-item"][data-expanded="false"][data-front="false"] {
   transform: translateY(calc(-1 * var(--toast-collapsed-offset-y, 0px)))
     scale(calc(1 - var(--toast-index, 0) * 0.05));
-  height: var(--toast-frontmost-height);
+  height: var(--toast-front-height);
 }
 
 .toast-demo-viewport [data-slot="toast-item"][data-expanded="true"] {
@@ -75,8 +75,8 @@
 .toast-demo-viewport [data-slot="toast-item"][data-swiping="true"] {
   transition: none;
   transform: translate(
-    var(--toast-swipe-movement-x, 0px),
-    calc(-1 * var(--toast-offset, 0px) + var(--toast-swipe-movement-y, 0px))
+    var(--toast-swipe-amount-x, 0px),
+    calc(-1 * var(--toast-offset, 0px) + var(--toast-swipe-amount-y, 0px))
   );
 }
 

@@ -818,24 +818,29 @@ describe("Toast", () => {
     controller.destroy();
   });
 
-  it("keeps stable enter/exit directions when hidden overflow toast becomes visible", async () => {
-    const { root, controller } = setup({ limit: 1, duration: 0, position: "bottom-right" });
+  it("writes the stack direction once on the viewport for items to inherit", async () => {
+    const { root, viewport, controller } = setup({ limit: 1, duration: 0, position: "bottom-right" });
+    expect(viewport.style.getPropertyValue("--toast-lift")).toBe("-1");
 
     const first = controller.show({ title: "First" });
     const second = controller.show({ title: "Second" });
 
     const secondItem = root.querySelector(`[data-slot="toast-item"][data-id="${second}"]`) as HTMLElement;
-    expect(secondItem.style.getPropertyValue("--toast-enter-direction")).toBe("-1");
-    expect(secondItem.style.getPropertyValue("--toast-exit-direction")).toBe("-1");
+    expect(secondItem.style.getPropertyValue("--toast-lift")).toBe("");
 
     controller.dismiss(second);
     await waitForClose();
 
     const promoted = root.querySelector(`[data-slot="toast-item"][data-id="${first}"]`) as HTMLElement;
-    expect(promoted.style.getPropertyValue("--toast-enter-direction")).toBe("-1");
-    expect(promoted.style.getPropertyValue("--toast-exit-direction")).toBe("-1");
     expect(promoted.getAttribute("data-visible")).toBe("true");
+    expect(viewport.style.getPropertyValue("--toast-lift")).toBe("-1");
 
+    controller.destroy();
+  });
+
+  it("writes the stack direction as 1 for top positions", () => {
+    const { viewport, controller } = setup({ position: "top-center" });
+    expect(viewport.style.getPropertyValue("--toast-lift")).toBe("1");
     controller.destroy();
   });
 
@@ -1198,8 +1203,8 @@ describe("Toast", () => {
       }),
     );
 
-    expect(item.style.getPropertyValue("--toast-swipe-movement-x")).toBe("70px");
-    expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("0px");
+    expect(item.style.getPropertyValue("--toast-swipe-amount-x")).toBe("70px");
+    expect(item.style.getPropertyValue("--toast-swipe-amount-y")).toBe("0px");
 
     document.dispatchEvent(
       new PointerEvent("pointermove", {
@@ -1210,8 +1215,8 @@ describe("Toast", () => {
       }),
     );
 
-    expect(item.style.getPropertyValue("--toast-swipe-movement-x")).toBe("70px");
-    expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("0px");
+    expect(item.style.getPropertyValue("--toast-swipe-amount-x")).toBe("70px");
+    expect(item.style.getPropertyValue("--toast-swipe-amount-y")).toBe("0px");
 
     document.dispatchEvent(
       new PointerEvent("pointercancel", { bubbles: true, pointerId: 21 }),
@@ -1344,8 +1349,8 @@ describe("Toast", () => {
       }),
     );
 
-    expect(item.style.getPropertyValue("--toast-swipe-movement-x")).toBe("0px");
-    expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("80px");
+    expect(item.style.getPropertyValue("--toast-swipe-amount-x")).toBe("0px");
+    expect(item.style.getPropertyValue("--toast-swipe-amount-y")).toBe("80px");
 
     document.dispatchEvent(
       new PointerEvent("pointermove", {
@@ -1356,8 +1361,8 @@ describe("Toast", () => {
       }),
     );
 
-    expect(item.style.getPropertyValue("--toast-swipe-movement-x")).toBe("0px");
-    expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("80px");
+    expect(item.style.getPropertyValue("--toast-swipe-amount-x")).toBe("0px");
+    expect(item.style.getPropertyValue("--toast-swipe-amount-y")).toBe("80px");
 
     document.dispatchEvent(
       new PointerEvent("pointercancel", { bubbles: true, pointerId: 22 }),
@@ -1389,7 +1394,7 @@ describe("Toast", () => {
 
     expect(controller.count).toBe(1);
     expect(item.getAttribute("data-swiping")).toBe("false");
-    expect(item.style.getPropertyValue("--toast-swipe-movement-y")).toBe("");
+    expect(item.style.getPropertyValue("--toast-swipe-amount-y")).toBe("");
 
     controller.destroy();
   });
@@ -1797,12 +1802,10 @@ describe("Toast", () => {
         (resizeCb as ResizeObserverCallback)([], {} as ResizeObserver);
       }
 
-      expect(first.style.getPropertyValue("--toast-expanded-offset-y")).toBe("88px");
+      expect(first.style.getPropertyValue("--toast-offset")).toBe("88px");
       expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("14px");
-      expect(first.style.getPropertyValue("--toast-offset-y")).toBe("88px");
-      expect(second.style.getPropertyValue("--toast-expanded-offset-y")).toBe("0px");
+      expect(second.style.getPropertyValue("--toast-offset")).toBe("0px");
       expect(second.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("0px");
-      expect(second.style.getPropertyValue("--toast-offset-y")).toBe("0px");
       expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
         "148px",
       );
@@ -1845,9 +1848,9 @@ describe("Toast", () => {
 
     expect(first.style.height).toBe("60px");
     expect(second.style.height).toBe("");
-    expect(first.style.getPropertyValue("--toast-height")).toBe("140px");
-    expect(second.style.getPropertyValue("--toast-height")).toBe("60px");
-    expect(first.style.getPropertyValue("--toast-expanded-offset-y")).toBe("68px");
+    expect(first.style.getPropertyValue("--toast-initial-height")).toBe("140px");
+    expect(second.style.getPropertyValue("--toast-initial-height")).toBe("60px");
+    expect(first.style.getPropertyValue("--toast-offset")).toBe("68px");
     expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("14px");
     expect(viewport.style.getPropertyValue("--toast-expanded-stack-size")).toBe("208px");
     expect(viewport.style.getPropertyValue("--toast-collapsed-stack-size")).toBe("74px");
@@ -1868,12 +1871,12 @@ describe("Toast", () => {
       ({ x: 0, y: 0, top: 0, left: 0, width: 200, height: reported, right: 200, bottom: reported, toJSON: () => ({}) }) as DOMRect;
 
     controller.update(firstId, { title: "Older!" });
-    expect(first.style.getPropertyValue("--toast-height")).toBe("100px");
+    expect(first.style.getPropertyValue("--toast-initial-height")).toBe("100px");
 
     // e.g. author CSS applies display: none to overflow items
     reported = 0;
     controller.update(firstId, { title: "Older!!" });
-    expect(first.style.getPropertyValue("--toast-height")).toBe("100px");
+    expect(first.style.getPropertyValue("--toast-initial-height")).toBe("100px");
 
     controller.destroy();
   });
@@ -1955,9 +1958,9 @@ describe("Toast", () => {
       const c0 = Number.parseFloat(third.style.getPropertyValue("--toast-collapsed-offset-y"));
       const c1 = Number.parseFloat(second.style.getPropertyValue("--toast-collapsed-offset-y"));
       const c2 = Number.parseFloat(first.style.getPropertyValue("--toast-collapsed-offset-y"));
-      const h0 = Number.parseFloat(third.style.getPropertyValue("--toast-height"));
-      const h1 = Number.parseFloat(second.style.getPropertyValue("--toast-height"));
-      const h2 = Number.parseFloat(first.style.getPropertyValue("--toast-height"));
+      const h0 = Number.parseFloat(third.style.getPropertyValue("--toast-initial-height"));
+      const h1 = Number.parseFloat(second.style.getPropertyValue("--toast-initial-height"));
+      const h2 = Number.parseFloat(first.style.getPropertyValue("--toast-initial-height"));
 
       expect(c0).toBe(0);
       expect(c1).toBe(14);

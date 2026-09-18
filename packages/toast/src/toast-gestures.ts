@@ -61,8 +61,8 @@ export function createToastGestures({ viewport, position, getEntry, dismiss }: T
   const clearSwipeStyles = (entry: ToastEntry) => {
     entry.element.setAttribute("data-swiping", "false");
     entry.element.setAttribute("data-swipe-out", "false");
-    entry.element.style.removeProperty("--toast-swipe-movement-x");
-    entry.element.style.removeProperty("--toast-swipe-movement-y");
+    entry.element.style.removeProperty("--toast-swipe-amount-x");
+    entry.element.style.removeProperty("--toast-swipe-amount-y");
     entry.element.style.removeProperty("--toast-swipe-end-x");
     entry.element.style.removeProperty("--toast-swipe-end-y");
   };
@@ -98,8 +98,8 @@ export function createToastGestures({ viewport, position, getEntry, dismiss }: T
     };
 
     entry.element.setAttribute("data-swiping", "true");
-    entry.element.style.setProperty("--toast-swipe-movement-x", "0px");
-    entry.element.style.setProperty("--toast-swipe-movement-y", "0px");
+    entry.element.style.setProperty("--toast-swipe-amount-x", "0px");
+    entry.element.style.setProperty("--toast-swipe-amount-y", "0px");
     if ("setPointerCapture" in entry.element) {
       try {
         entry.element.setPointerCapture(event.pointerId);
@@ -133,8 +133,8 @@ export function createToastGestures({ viewport, position, getEntry, dismiss }: T
       axis === "x" ? adjustSwipeDelta(rawDeltaX, inlineSwipeDirection) : 0;
     const adjustedDeltaY =
       axis === "y" ? adjustSwipeDelta(rawDeltaY, -stackDirection) : 0;
-    entry.element.style.setProperty("--toast-swipe-movement-x", `${adjustedDeltaX}px`);
-    entry.element.style.setProperty("--toast-swipe-movement-y", `${adjustedDeltaY}px`);
+    entry.element.style.setProperty("--toast-swipe-amount-x", `${adjustedDeltaX}px`);
+    entry.element.style.setProperty("--toast-swipe-amount-y", `${adjustedDeltaY}px`);
     entry.element.setAttribute("data-swiping", "true");
   };
 

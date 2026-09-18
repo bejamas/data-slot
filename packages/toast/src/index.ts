@@ -232,7 +232,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       testId: showOptions.testId,
     };
     const entry = createToastEntry(toast, {
-      viewport, template, stackDirection,
+      viewport, template,
       expanded: interaction.expanded,
       paused: interaction.paused,
       onTimeout: dismissEntry,

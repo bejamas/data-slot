@@ -182,22 +182,18 @@ Runtime attributes:
 The controller computes and writes stack tokens for animation styling. Item heights are measured by briefly setting `height: auto` inline on the item, so do not pin the item height with `!important`.
 
 - `--toast-index` (0 = newest)
-- `--toast-count`
-- `--toast-height`
-- `--toast-initial-height`
-- `--toast-offset`
-- `--toast-expanded-offset-y`
-- `--toast-collapsed-offset-y`
-- `--toast-offset-y` (backward-compatible alias of `--toast-expanded-offset-y`)
-- `--toast-lift` (`1` for top stacks, `-1` for bottom stacks)
-- `--toast-frontmost-height` (on viewport)
+- `--toast-initial-height` (item's measured natural height)
+- `--toast-offset` (expanded stack offset)
+- `--toast-collapsed-offset-y` (collapsed stack offset)
+- `--toast-count` (on viewport, inherited by items)
+- `--toast-lift` (on viewport, inherited by items; `1` for top stacks, `-1` for bottom stacks)
+- `--toast-front-height` (on viewport)
 - `--toast-expanded-stack-size` (on viewport)
 - `--toast-collapsed-stack-size` (on viewport)
 - `--toast-stack-size` (on viewport, active size; collapsed by default, expanded while `data-expanded`)
 - `--toast-collapsed-peek` (on viewport; collapsed stack step)
-- `--toast-stack-direction` (`1` for top stacks, `-1` for bottom stacks)
-- `--toast-swipe-movement-x` (item-level; live horizontal swipe offset for left/right stacks)
-- `--toast-swipe-movement-y` (item-level; live vertical swipe offset)
+- `--toast-swipe-amount-x` (item-level; live horizontal swipe offset for left/right stacks)
+- `--toast-swipe-amount-y` (item-level; live vertical swipe offset)
 - `--toast-swipe-end-x` / `--toast-swipe-end-y` (item-level; resolved swipe-out exit target)
 
 These are updated on show, dismiss, exit complete, and item resize.
@@ -276,7 +272,7 @@ root.dispatchEvent(new CustomEvent("toast:clear"));
       0
     )
     scale(calc(1 - var(--toast-index, 0) * 0.05));
-  height: var(--toast-frontmost-height);
+  height: var(--toast-front-height);
 }
 
 [data-slot="toast-item"][data-mounted="true"][data-expanded="true"] {
@@ -365,18 +361,18 @@ root.dispatchEvent(new CustomEvent("toast:clear"));
 
 [data-slot="toast-item"][data-swiping="true"][data-front="true"] {
   transform: translate3d(
-    var(--toast-swipe-movement-x, 0px),
-    var(--toast-swipe-movement-y, 0px),
+    var(--toast-swipe-amount-x, 0px),
+    var(--toast-swipe-amount-y, 0px),
     0
   );
 }
 
 [data-slot="toast-item"][data-swiping="true"][data-expanded="false"][data-front="false"] {
   transform: translate3d(
-      var(--toast-swipe-movement-x, 0px),
+      var(--toast-swipe-amount-x, 0px),
       calc(
         var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
-          var(--toast-swipe-movement-y, 0px)
+          var(--toast-swipe-amount-y, 0px)
       ),
       0
     )
@@ -385,12 +381,42 @@ root.dispatchEvent(new CustomEvent("toast:clear"));
 
 [data-slot="toast-item"][data-swiping="true"][data-expanded="true"] {
   transform: translate3d(
-    var(--toast-swipe-movement-x, 0px),
-    calc(var(--toast-offset, 0px) * var(--toast-lift, -1) + var(--toast-swipe-movement-y, 0px)),
+    var(--toast-swipe-amount-x, 0px),
+    calc(var(--toast-offset, 0px) * var(--toast-lift, -1) + var(--toast-swipe-amount-y, 0px)),
     0
   );
 }
 ```
+
+## Migrating from Sonner
+
+The stack model, the `data-*` state attributes, and the layout tokens follow Sonner, so existing Sonner CSS ports with a rename pass. Tokens carry a `--toast-` prefix so they do not clash with page-level custom properties.
+
+| Sonner | `@data-slot/toast` |
+|--------|--------------------|
+| `[data-sonner-toaster]` | `[data-slot="toast-viewport"]` |
+| `[data-sonner-toast]` | `[data-slot="toast-item"]` |
+| `[data-y-position="bottom"][data-x-position="right"]` | `[data-position="bottom-right"]` (on root and viewport) |
+| `[data-title]`, `[data-description]`, `[data-button]`, `[data-close-button]` | `[data-slot="toast-title"]`, `toast-description`, `toast-action`, `toast-close` |
+| `--index` | `--toast-index` |
+| `--toasts-before` | `--toast-index` (same value) |
+| `--offset` | `--toast-offset` |
+| `--initial-height` | `--toast-initial-height` |
+| `--front-toast-height` | `--toast-front-height` |
+| `--swipe-amount-x`, `--swipe-amount-y` | `--toast-swipe-amount-x`, `--toast-swipe-amount-y` |
+| `--lift` | `--toast-lift` (written by the controller, so no position rule is needed) |
+| `--gap` | `--toast-gap` (declare it on the viewport; the controller reads it) |
+| `--z-index` | inline `z-index` on the item |
+| `--width` | set the viewport width in CSS |
+
+Unchanged: `data-mounted`, `data-removed`, `data-front`, `data-visible`, `data-expanded`, `data-swiping`, `data-swipe-out`, `data-type`, and `data-dismissible`.
+
+Differences to account for:
+
+- Sonner derives `--lift-amount` and `--y` in its own stylesheet from the position attributes. If your CSS uses them, declare them yourself, for example `--lift-amount: calc(var(--toast-lift) * var(--toast-gap))`.
+- Sonner sets `--gap`, `--width`, and the viewport offsets from props. Here they are plain CSS on the viewport.
+- After a swipe-out, the exit target lives in `--toast-swipe-end-x` and `--toast-swipe-end-y`. Sonner reuses `--swipe-amount-*` for that.
+- The viewport also receives `--toast-stack-size`, `--toast-expanded-stack-size`, and `--toast-collapsed-stack-size` so it can size itself; Sonner has no equivalent.
 
 ## Accessibility
 

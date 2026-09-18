@@ -98,6 +98,8 @@ export function createToastLayout({ viewport, limit, stackDirection, getItems, o
   const observed = new Set<HTMLElement>();
   const naturalHeights = new WeakMap<HTMLElement, number>();
   let destroyed = false;
+  // Constant for the controller's lifetime; items inherit it.
+  viewport.style.setProperty("--toast-lift", String(stackDirection));
   const setExpanded = (expanded: boolean) => {
     if (expanded) {
       viewport.setAttribute("data-expanded", "");
@@ -140,16 +142,11 @@ export function createToastLayout({ viewport, limit, stackDirection, getItems, o
       }
       const collapsedOffset = index * collapsedPeek;
 
+      // Per-item tokens only; --toast-count and --toast-lift are inherited from the viewport.
       item.style.setProperty("--toast-index", String(index));
-      item.style.setProperty("--toast-count", String(count));
-      item.style.setProperty("--toast-height", `${height}px`);
       item.style.setProperty("--toast-initial-height", `${height}px`);
       item.style.setProperty("--toast-offset", `${expandedOffset}px`);
-      item.style.setProperty("--toast-expanded-offset-y", `${expandedOffset}px`);
       item.style.setProperty("--toast-collapsed-offset-y", `${collapsedOffset}px`);
-      item.style.setProperty("--toast-offset-y", `${expandedOffset}px`);
-      item.style.setProperty("--toast-lift", String(stackDirection));
-      item.style.setProperty("--toast-stack-direction", String(stackDirection));
       item.setAttribute("data-front", String(index === 0));
       item.setAttribute("data-visible", String(isVisible));
       item.setAttribute("data-removed", "false");
@@ -175,11 +172,9 @@ export function createToastLayout({ viewport, limit, stackDirection, getItems, o
     const collapsedStackSize =
       visibleCount > 0 ? Math.max(0, frontHeight + collapsedPeek * (visibleCount - 1)) : 0;
     viewport.style.setProperty("--toast-count", String(count));
-    viewport.style.setProperty("--toast-frontmost-height", `${frontHeight}px`);
+    viewport.style.setProperty("--toast-front-height", `${frontHeight}px`);
     viewport.style.setProperty("--toast-expanded-stack-size", `${expandedStackSize}px`);
     viewport.style.setProperty("--toast-collapsed-stack-size", `${collapsedStackSize}px`);
-    viewport.style.setProperty("--toast-lift", String(stackDirection));
-    viewport.style.setProperty("--toast-stack-direction", String(stackDirection));
 
     onLayout();
   };
