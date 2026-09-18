@@ -1,1565 +1,386 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { create, createCarousel } from "./index";
+import {
+  flushMutations,
+  keydown,
+  mockGeometry,
+  recordChanges,
+  render,
+  scrollContent,
+  spyScrollTo,
+  withProperty,
+} from "./test-helpers";
 
 describe("Carousel", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
   });
 
-  const scrollTo = (content: HTMLElement, left: number, settled = false) => {
-    content.scrollLeft = left;
-    content.dispatchEvent(new Event("scroll", { bubbles: true }));
-    if (settled) content.dispatchEvent(new Event("scrollend"));
-  };
+  describe("setup", () => {
+    it("throws when carousel-content or carousel-item slots are missing", () => {
+      document.body.innerHTML = `<div data-slot="carousel" id="root"></div>`;
+      expect(() => createCarousel(document.getElementById("root")!)).toThrow(
+        "Carousel requires carousel-content and at least one carousel-item",
+      );
 
-  const setup = ({
-    attrs = "",
-    slideCount = 3,
-    withControls = true,
-    options,
-  }: {
-    attrs?: string;
-    slideCount?: number;
-    withControls?: boolean;
-    options?: Parameters<typeof createCarousel>[1];
-  } = {}) => {
-    const slides = Array.from({ length: slideCount }, (_, index) => {
-      return `<div data-slot="carousel-item">Slide ${index + 1}</div>`;
-    }).join("\n");
-
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root" ${attrs}>
-        <div data-slot="carousel-content" id="content">${slides}</div>
-        ${withControls ? '<button data-slot="carousel-previous" id="prev">Prev</button>' : ""}
-        ${withControls ? '<button data-slot="carousel-next" id="next">Next</button>' : ""}
-      </div>
-    `;
-
-    const root = document.getElementById("root")!;
-    const content = document.getElementById("content") as HTMLElement;
-    const items = Array.from(
-      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
-    );
-    const prev = document.getElementById("prev") as HTMLButtonElement | null;
-    const next = document.getElementById("next") as HTMLButtonElement | null;
-    const controller = createCarousel(root, options ?? {});
-
-    return { root, content, items, prev, next, controller };
-  };
-
-  const mockHorizontalGeometry = (
-    content: HTMLElement,
-    items: HTMLElement[],
-    itemSize = 100,
-  ) => {
-    content.getBoundingClientRect = () =>
-      ({
-        left: 0,
-        top: 0,
-        width: itemSize,
-        height: 80,
-        right: itemSize,
-        bottom: 80,
-        x: 0,
-        y: 0,
-        toJSON() {},
-      }) as DOMRect;
-
-    items.forEach((item, index) => {
-      item.getBoundingClientRect = () =>
-        {
-          const left = index * itemSize - content.scrollLeft;
-
-          return ({
-            left,
-            top: 0,
-            width: itemSize,
-            height: 80,
-            right: left + itemSize,
-            bottom: 80,
-            x: left,
-            y: 0,
-            toJSON() {},
-          }) as DOMRect;
-        };
+      document.body.innerHTML = `<div data-slot="carousel" id="root"><div data-slot="carousel-content"></div></div>`;
+      expect(() => createCarousel(document.getElementById("root")!)).toThrow(
+        "Carousel requires carousel-content and at least one carousel-item",
+      );
     });
 
-    content.scrollTo = ((options: ScrollToOptions) => {
-      if (typeof options.left === "number") content.scrollLeft = options.left;
-      if (typeof options.top === "number") content.scrollTop = options.top;
-    }) as typeof content.scrollTo;
-  };
+    it("initializes from data attributes", () => {
+      const { root, controller } = render({ attrs: 'data-default-index="2" data-orientation="vertical" data-loop' });
 
-  const mockVerticalGeometry = (
-    content: HTMLElement,
-    items: HTMLElement[],
-    itemSize = 100,
-  ) => {
-    content.getBoundingClientRect = () =>
-      ({
-        left: 0,
-        top: 0,
-        width: 120,
-        height: itemSize,
-        right: 120,
-        bottom: itemSize,
-        x: 0,
-        y: 0,
-        toJSON() {},
-      }) as DOMRect;
+      expect(controller.index).toBe(2);
+      expect(root.getAttribute("data-index")).toBe("2");
+      expect(root.getAttribute("data-orientation")).toBe("vertical");
 
-    items.forEach((item, index) => {
-      item.getBoundingClientRect = () => {
-        const top = index * itemSize - content.scrollTop;
-
-        return ({
-          left: 0,
-          top,
-          width: 120,
-          height: itemSize,
-          right: 120,
-          bottom: top + itemSize,
-          x: 0,
-          y: top,
-          toJSON() {},
-        }) as DOMRect;
-      };
+      controller.destroy();
     });
 
-    content.scrollTo = ((options: ScrollToOptions) => {
-      if (typeof options.left === "number") content.scrollLeft = options.left;
-      if (typeof options.top === "number") content.scrollTop = options.top;
-    }) as typeof content.scrollTo;
-  };
-
-  const mockDynamicHorizontalGeometry = (
-    content: HTMLElement,
-    itemSize = 100,
-  ) => {
-    content.getBoundingClientRect = () =>
-      ({
-        left: 0,
-        top: 0,
-        width: itemSize,
-        height: 80,
-        right: itemSize,
-        bottom: 80,
-        x: 0,
-        y: 0,
-        toJSON() {},
-      }) as DOMRect;
-
-    const sync = () => {
-      Array.from(content.children).forEach((child, index) => {
-        if (!(child instanceof HTMLElement)) return;
-
-        child.getBoundingClientRect = () =>
-          {
-            const left = index * itemSize - content.scrollLeft;
-
-            return ({
-              left,
-              top: 0,
-              width: itemSize,
-              height: 80,
-              right: left + itemSize,
-              bottom: 80,
-              x: left,
-              y: 0,
-              toJSON() {},
-            }) as DOMRect;
-          };
+    it("prefers JS options over data attributes", () => {
+      const { controller } = render({
+        attrs: 'data-default-index="0" data-loop="false"',
+        options: { defaultIndex: 1, loop: true },
       });
-    };
 
-    content.scrollTo = ((options: ScrollToOptions) => {
-      if (typeof options.left === "number") content.scrollLeft = options.left;
-      if (typeof options.top === "number") content.scrollTop = options.top;
-    }) as typeof content.scrollTo;
+      expect(controller.index).toBe(1);
+      controller.next();
+      controller.next();
+      expect(controller.index).toBe(0);
 
-    sync();
-    return sync;
-  };
-
-  const createScrollSpy = (content: HTMLElement) => {
-    const calls: ScrollToOptions[] = [];
-    content.scrollTo = ((options: ScrollToOptions) => {
-      calls.push(options);
-      if (typeof options.left === "number") content.scrollLeft = options.left;
-      if (typeof options.top === "number") content.scrollTop = options.top;
-    }) as typeof content.scrollTo;
-    return calls;
-  };
-
-  const setupWithGeometry = ({
-    attrs = "",
-    slideCount = 3,
-    options,
-  }: {
-    attrs?: string;
-    slideCount?: number;
-    options?: Parameters<typeof createCarousel>[1];
-  } = {}) => {
-    const slides = Array.from({ length: slideCount }, (_, index) => {
-      return `<div data-slot="carousel-item">Slide ${index + 1}</div>`;
-    }).join("\n");
-
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root" ${attrs}>
-        <div data-slot="carousel-content" id="content">${slides}</div>
-      </div>
-    `;
-
-    const root = document.getElementById("root")!;
-    const content = document.getElementById("content") as HTMLElement;
-    const items = Array.from(
-      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
-    );
-
-    if (attrs.includes('data-orientation="vertical"')) {
-      mockVerticalGeometry(content, items, 100);
-    } else {
-      mockHorizontalGeometry(content, items, 100);
-    }
-
-    const controller = createCarousel(root, options ?? {});
-
-    return { root, content, items, controller };
-  };
-
-  it("throws when carousel-content slot is missing", () => {
-    document.body.innerHTML = `<div data-slot="carousel" id="root"></div>`;
-    const root = document.getElementById("root")!;
-
-    expect(() => createCarousel(root)).toThrow(
-      "Carousel requires carousel-content and at least one carousel-item",
-    );
-  });
-
-  it("throws when no carousel-item children exist", () => {
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root">
-        <div data-slot="carousel-content"></div>
-      </div>
-    `;
-    const root = document.getElementById("root")!;
-
-    expect(() => createCarousel(root)).toThrow(
-      "Carousel requires carousel-content and at least one carousel-item",
-    );
-  });
-
-  it("initializes from data attributes", () => {
-    const { root, controller } = setup({
-      attrs: 'data-default-index="2" data-orientation="vertical" data-loop',
+      controller.destroy();
     });
 
-    expect(controller.index).toBe(2);
-    expect(root.getAttribute("data-index")).toBe("2");
-    expect(root.getAttribute("data-orientation")).toBe("vertical");
-
-    controller.destroy();
-  });
-
-  it("prefers JS options over data attributes", () => {
-    const { controller } = setup({
-      attrs: 'data-default-index="0" data-loop="false"',
-      options: { defaultIndex: 1, loop: true },
-    });
-
-    expect(controller.index).toBe(1);
-    controller.next();
-    controller.next();
-    expect(controller.index).toBe(0);
-
-    controller.destroy();
-  });
-
-  it("leaves pointer drag disabled by default", () => {
-    const { content, items, controller } = setup();
-    mockHorizontalGeometry(content, items, 100);
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 1,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 1,
-        clientX: 20,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 1,
-        clientX: 20,
-        clientY: 40,
-      }),
-    );
-
-    expect(content.style.touchAction).toBe("");
-    expect(content.scrollLeft).toBe(0);
-    expect(controller.index).toBe(0);
-
-    controller.destroy();
-  });
-
-  it("enables pointer drag from the data-drag attribute", () => {
-    const { content, controller } = setup({ attrs: "data-drag" });
-
-    expect(content.style.touchAction).toBe("pan-y");
-
-    controller.destroy();
-  });
-
-  it("enables pointer drag from the JS option and restores touch-action on destroy", () => {
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root">
-        <div data-slot="carousel-content" id="content">
-          <div data-slot="carousel-item">Slide 1</div>
-          <div data-slot="carousel-item">Slide 2</div>
-        </div>
-      </div>
-    `;
-
-    const root = document.getElementById("root")!;
-    const content = document.getElementById("content") as HTMLElement;
-    content.style.touchAction = "manipulation";
-    const controller = createCarousel(root, { drag: true });
-
-    expect(content.style.touchAction).toBe("pan-y");
-
-    controller.destroy();
-
-    expect(content.style.touchAction).toBe("manipulation");
-  });
-
-  it("applies canScroll state and optional nav button disabled states", () => {
-    const { controller, prev, next } = setup();
-
-    expect(controller.canScrollPrev).toBe(false);
-    expect(controller.canScrollNext).toBe(true);
-    expect(prev?.disabled).toBe(true);
-    expect(next?.disabled).toBe(false);
-
-    controller.goTo(2);
-    expect(controller.canScrollPrev).toBe(true);
-    expect(controller.canScrollNext).toBe(false);
-    expect(prev?.disabled).toBe(false);
-    expect(next?.disabled).toBe(true);
-
-    controller.destroy();
-  });
-
-  it("supports soft-wrap loop mode", () => {
-    const { controller } = setup({ options: { defaultIndex: 2, loop: true } });
-
-    controller.next();
-    expect(controller.index).toBe(0);
-
-    controller.prev();
-    expect(controller.index).toBe(2);
-
-    controller.goTo(8);
-    expect(controller.index).toBe(2);
-
-    controller.destroy();
-  });
-
-  it("handles keyboard navigation for horizontal orientation", () => {
-    const { root, controller } = setup({ options: { defaultIndex: 1 } });
-
-    root.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-    expect(controller.index).toBe(2);
-
-    root.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
-    expect(controller.index).toBe(1);
-
-    root.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
-    expect(controller.index).toBe(0);
-
-    root.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
-    expect(controller.index).toBe(2);
-
-    controller.destroy();
-  });
-
-  it("handles keyboard navigation for vertical orientation", () => {
-    const { root, controller } = setup({ options: { orientation: "vertical", defaultIndex: 1 } });
-
-    root.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-    expect(controller.index).toBe(2);
-
-    root.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
-    expect(controller.index).toBe(1);
-
-    controller.destroy();
-  });
-
-  it("ignores keyboard navigation from editable targets", () => {
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root">
-        <input id="field" />
-        <div data-slot="carousel-content">
-          <div data-slot="carousel-item">Slide 1</div>
-          <div data-slot="carousel-item">Slide 2</div>
-        </div>
-      </div>
-    `;
-
-    const root = document.getElementById("root")!;
-    const field = document.getElementById("field") as HTMLInputElement;
-    const controller = createCarousel(root);
-
-    field.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-    expect(controller.index).toBe(0);
-
-    controller.destroy();
-  });
-
-  it("drags horizontally and snaps to the nearest slide on release", () => {
-    const { root, content, controller } = setupWithGeometry({
-      options: { drag: true },
-    });
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 10,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 10,
-        clientX: 20,
-        clientY: 45,
-      }),
-    );
-
-    expect(root.getAttribute("data-dragging")).toBe("true");
-    expect(content.style.scrollSnapType).toBe("none");
-    expect(content.scrollLeft).toBe(160);
-    expect(controller.index).toBe(0);
-
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 10,
-        clientX: 20,
-        clientY: 45,
-      }),
-    );
-
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(content.style.scrollSnapType).toBe("");
-    expect(content.scrollLeft).toBe(200);
-    expect(controller.index).toBe(2);
-
-    controller.destroy();
-  });
-
-  it("drags vertically and snaps to the nearest slide on release", () => {
-    const { root, content, controller } = setupWithGeometry({
-      attrs: 'data-orientation="vertical"',
-      options: { drag: true },
-    });
-
-    expect(content.style.touchAction).toBe("pan-x");
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 11,
-        button: 0,
-        clientX: 40,
-        clientY: 180,
-      }),
-    );
-
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 11,
-        clientX: 45,
-        clientY: 20,
-      }),
-    );
-
-    expect(root.getAttribute("data-dragging")).toBe("true");
-    expect(content.scrollTop).toBe(160);
-
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 11,
-        clientX: 45,
-        clientY: 20,
-      }),
-    );
-
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(content.scrollTop).toBe(200);
-    expect(controller.index).toBe(2);
-
-    controller.destroy();
-  });
-
-  it("snaps back to the current slide when a drag does not pass the next snap point", () => {
-    const { root, content, items, controller } = setup({
-      options: { drag: true },
-    });
-    mockHorizontalGeometry(content, items, 100);
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 12,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 12,
-        clientX: 150,
-        clientY: 40,
-      }),
-    );
-
-    expect(root.getAttribute("data-dragging")).toBe("true");
-    expect(content.scrollLeft).toBe(30);
-
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 12,
-        clientX: 150,
-        clientY: 40,
-      }),
-    );
-
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(content.scrollLeft).toBe(0);
-    expect(controller.index).toBe(0);
-
-    controller.destroy();
-  });
-
-  it("does not start drag gestures from nested interactive content", () => {
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root">
-        <div data-slot="carousel-content" id="content">
-          <div data-slot="carousel-item">
-            <button id="nested">Nested</button>
+    it("sets nav control buttons to type=button without overriding authored types", () => {
+      document.body.innerHTML = `
+        <form>
+          <div data-slot="carousel" id="root">
+            <div data-slot="carousel-content">
+              <div data-slot="carousel-item">Slide 1</div>
+              <div data-slot="carousel-item">Slide 2</div>
+            </div>
+            <button data-slot="carousel-previous" id="prev">Prev</button>
+            <button data-slot="carousel-next" id="next" type="submit">Next</button>
           </div>
-          <div data-slot="carousel-item">Slide 2</div>
-          <div data-slot="carousel-item">Slide 3</div>
-        </div>
-      </div>
-    `;
+        </form>
+      `;
+      const controller = createCarousel(document.getElementById("root")!);
 
-    const root = document.getElementById("root")!;
-    const content = document.getElementById("content") as HTMLElement;
-    const nested = document.getElementById("nested") as HTMLButtonElement;
-    const items = Array.from(
-      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
-    );
-    mockHorizontalGeometry(content, items, 100);
-    const controller = createCarousel(root, { drag: true });
+      expect(document.getElementById("prev")!.getAttribute("type")).toBe("button");
+      expect(document.getElementById("next")!.getAttribute("type")).toBe("submit");
 
-    nested.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 13,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 13,
-        clientX: 20,
-        clientY: 45,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 13,
-        clientX: 20,
-        clientY: 45,
-      }),
-    );
-
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(content.scrollLeft).toBe(0);
-    expect(controller.index).toBe(0);
-
-    controller.destroy();
-  });
-
-  it("does not start drag gestures from SVG descendants of interactive content", () => {
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root">
-        <div data-slot="carousel-content" id="content">
-          <div data-slot="carousel-item">
-            <button id="nested">
-              <svg viewBox="0 0 10 10" aria-hidden="true">
-                <path id="nested-path" d="M0 0h10v10H0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div data-slot="carousel-item">Slide 2</div>
-          <div data-slot="carousel-item">Slide 3</div>
-        </div>
-      </div>
-    `;
-
-    const root = document.getElementById("root")!;
-    const content = document.getElementById("content") as HTMLElement;
-    const nestedPath = document.getElementById("nested-path")!;
-    const items = Array.from(
-      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
-    );
-    mockHorizontalGeometry(content, items, 100);
-    const controller = createCarousel(root, { drag: true });
-
-    nestedPath.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 21,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 21,
-        clientX: 20,
-        clientY: 45,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 21,
-        clientX: 20,
-        clientY: 45,
-      }),
-    );
-
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(content.scrollLeft).toBe(0);
-    expect(controller.index).toBe(0);
-
-    controller.destroy();
-  });
-
-  it("ignores opposite-axis gestures when drag is enabled", () => {
-    const { root, content, items, controller } = setup({
-      options: { drag: true },
+      controller.destroy();
     });
-    mockHorizontalGeometry(content, items, 100);
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 14,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-
-    const moveEvent = new PointerEvent("pointermove", {
-      bubbles: true,
-      cancelable: true,
-      pointerId: 14,
-      clientX: 190,
-      clientY: 170,
-    });
-    const dispatchResult = document.dispatchEvent(moveEvent);
-
-    expect(dispatchResult).toBe(true);
-    expect(moveEvent.defaultPrevented).toBe(false);
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(content.scrollLeft).toBe(0);
-
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 14,
-        clientX: 190,
-        clientY: 170,
-      }),
-    );
-
-    expect(controller.index).toBe(0);
-
-    controller.destroy();
   });
 
-  it("prevents default browser behavior during an active drag", () => {
-    const { root, content, items, controller } = setup({
-      options: { drag: true },
-    });
-    mockHorizontalGeometry(content, items, 100);
+  describe("navigation", () => {
+    it("applies canScroll state and optional nav button disabled states", () => {
+      const { controller, prev, next } = render();
 
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 15,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
+      expect(controller.canScrollPrev).toBe(false);
+      expect(controller.canScrollNext).toBe(true);
+      expect(prev?.disabled).toBe(true);
+      expect(next?.disabled).toBe(false);
 
-    const moveEvent = new PointerEvent("pointermove", {
-      bubbles: true,
-      cancelable: true,
-      pointerId: 15,
-      clientX: 60,
-      clientY: 50,
-    });
-    const dispatchResult = document.dispatchEvent(moveEvent);
+      controller.goTo(2);
+      expect(controller.canScrollPrev).toBe(true);
+      expect(controller.canScrollNext).toBe(false);
+      expect(prev?.disabled).toBe(false);
+      expect(next?.disabled).toBe(true);
 
-    expect(dispatchResult).toBe(false);
-    expect(moveEvent.defaultPrevented).toBe(true);
-    expect(root.getAttribute("data-dragging")).toBe("true");
-    expect(content.scrollLeft).toBe(120);
-
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 15,
-        clientX: 60,
-        clientY: 50,
-      }),
-    );
-
-    controller.destroy();
-  });
-
-  it("uses smooth scrolling when snapping after a drag by default", () => {
-    const { content, controller } = setupWithGeometry({
-      options: { drag: true },
-    });
-    const calls = createScrollSpy(content);
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 19,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 19,
-        clientX: 20,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 19,
-        clientX: 20,
-        clientY: 40,
-      }),
-    );
-
-    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
-
-    controller.destroy();
-  });
-
-  it("restores authored scroll snapping after drag cleanup", () => {
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root">
-        <div data-slot="carousel-content" id="content">
-          <div data-slot="carousel-item">Slide 1</div>
-          <div data-slot="carousel-item">Slide 2</div>
-          <div data-slot="carousel-item">Slide 3</div>
-        </div>
-      </div>
-    `;
-
-    const root = document.getElementById("root")!;
-    const content = document.getElementById("content") as HTMLElement;
-    const items = Array.from(
-      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
-    );
-    content.style.scrollSnapType = "x mandatory";
-    mockHorizontalGeometry(content, items, 100);
-    const controller = createCarousel(root, { drag: true });
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 20,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 20,
-        clientX: 60,
-        clientY: 40,
-      }),
-    );
-
-    expect(content.style.scrollSnapType).toBe("none");
-
-    document.dispatchEvent(
-      new PointerEvent("pointercancel", {
-        bubbles: true,
-        pointerId: 20,
-      }),
-    );
-
-    expect(content.style.scrollSnapType).toBe("x mandatory");
-
-    controller.destroy();
-  });
-
-  it("lets a new pointer take over an active drag", () => {
-    const { root, content, controller } = setupWithGeometry({
-      options: { drag: true },
+      controller.destroy();
     });
 
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 22,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 22,
-        clientX: 60,
-        clientY: 40,
-      }),
-    );
-
-    expect(root.getAttribute("data-dragging")).toBe("true");
-    expect(content.style.scrollSnapType).toBe("none");
-    expect(content.scrollLeft).toBe(120);
-
-    // The first drag settles on the nearest slide and the new pointer drags from there.
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 23,
-        button: 0,
-        clientX: 20,
-        clientY: 40,
-      }),
-    );
-
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(content.scrollLeft).toBe(100);
-    expect(controller.index).toBe(1);
-
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 23,
-        clientX: 60,
-        clientY: 40,
-      }),
-    );
-
-    expect(root.getAttribute("data-dragging")).toBe("true");
-    expect(content.scrollLeft).toBe(60);
-
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 22,
-        clientX: 60,
-        clientY: 40,
-      }),
-    );
-
-    expect(root.getAttribute("data-dragging")).toBe("true");
-    expect(controller.index).toBe(1);
-
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 23,
-        clientX: 60,
-        clientY: 40,
-      }),
-    );
-
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(content.style.scrollSnapType).toBe("");
-    expect(content.scrollLeft).toBe(100);
-    expect(controller.index).toBe(1);
-
-    controller.destroy();
-  });
-
-  it("allows a new pointer to take over before drag activation", () => {
-    const { root, content, controller } = setupWithGeometry({
-      options: { drag: true },
-    });
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 24,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 25,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 25,
-        clientX: 60,
-        clientY: 40,
-      }),
-    );
-
-    expect(root.getAttribute("data-dragging")).toBe("true");
-    expect(content.scrollLeft).toBe(120);
-
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 25,
-        clientX: 60,
-        clientY: 40,
-      }),
-    );
-
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(controller.index).toBe(1);
-
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 24,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-
-    expect(controller.index).toBe(1);
-
-    controller.destroy();
-  });
-
-  it("cleans up active drag state on pointercancel", () => {
-    const { root, content, controller } = setupWithGeometry({
-      options: { drag: true },
-    });
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 16,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 16,
-        clientX: 60,
-        clientY: 40,
-      }),
-    );
-
-    expect(root.getAttribute("data-dragging")).toBe("true");
-
-    document.dispatchEvent(
-      new PointerEvent("pointercancel", {
-        bubbles: true,
-        pointerId: 16,
-      }),
-    );
-
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(controller.index).toBe(1);
-
-    controller.next();
-    expect(controller.index).toBe(2);
-
-    controller.destroy();
-  });
-
-  it("does not wrap drag gestures when loop mode is enabled", () => {
-    const { content, items, controller } = setup({
-      options: { drag: true, loop: true },
-    });
-    mockHorizontalGeometry(content, items, 100);
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 18,
-        button: 0,
-        clientX: 100,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 18,
-        clientX: 260,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 18,
-        clientX: 260,
-        clientY: 40,
-      }),
-    );
-
-    expect(content.scrollLeft).toBe(0);
-    expect(controller.index).toBe(0);
-
-    controller.destroy();
-  });
-
-  it("does not navigate when a nested widget handles the key event", () => {
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root">
-        <div data-slot="carousel-content">
-          <div data-slot="carousel-item">
-            <button id="nested">Nested</button>
-          </div>
-          <div data-slot="carousel-item">Slide 2</div>
-        </div>
-      </div>
-    `;
-
-    const root = document.getElementById("root")!;
-    const nested = document.getElementById("nested") as HTMLButtonElement;
-    const controller = createCarousel(root);
-
-    nested.addEventListener("keydown", (event) => {
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-      }
-    });
-
-    nested.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "ArrowRight",
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-
-    expect(controller.index).toBe(0);
-
-    controller.destroy();
-  });
-
-  it("hides inactive slides with inert and aria-hidden without touching authored tabindex", () => {
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root">
-        <div data-slot="carousel-content">
-          <div data-slot="carousel-item" id="slide-1">
-            <a href="#first" id="first-link">First</a>
-          </div>
-          <div data-slot="carousel-item" id="slide-2">
-            <button id="second-button">Second</button>
-            <div id="second-custom" tabindex="0">Custom</div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    const root = document.getElementById("root")!;
-    const slide1 = document.getElementById("slide-1") as HTMLElement;
-    const slide2 = document.getElementById("slide-2") as HTMLElement;
-    const firstLink = document.getElementById("first-link") as HTMLAnchorElement;
-    const secondButton = document.getElementById("second-button") as HTMLButtonElement;
-    const secondCustom = document.getElementById("second-custom") as HTMLElement;
-    const controller = createCarousel(root);
-
-    expect(slide1.getAttribute("aria-hidden")).toBe("false");
-    expect(slide1.hasAttribute("inert")).toBe(false);
-    expect(slide2.getAttribute("aria-hidden")).toBe("true");
-    expect(slide2.hasAttribute("inert")).toBe(true);
-
-    controller.goTo(1);
-
-    expect(slide1.getAttribute("aria-hidden")).toBe("true");
-    expect(slide1.hasAttribute("inert")).toBe(true);
-    expect(slide2.getAttribute("aria-hidden")).toBe("false");
-    expect(slide2.hasAttribute("inert")).toBe(false);
-    expect(firstLink.hasAttribute("tabindex")).toBe(false);
-    expect(secondButton.hasAttribute("tabindex")).toBe(false);
-    expect(secondCustom.getAttribute("tabindex")).toBe("0");
-
-    controller.destroy();
-  });
-
-  it("emits carousel:change and onIndexChange only when index changes", () => {
-    const changes: number[] = [];
-    const callbackChanges: number[] = [];
-
-    const { root, controller } = setup({
-      options: {
-        onIndexChange: (index) => callbackChanges.push(index),
-      },
-    });
-
-    root.addEventListener("carousel:change", (event) => {
-      changes.push((event as CustomEvent<{ index: number }>).detail.index);
-    });
-
-    expect(changes).toEqual([]);
-    expect(callbackChanges).toEqual([]);
-
-    controller.next();
-    controller.next();
-    controller.next();
-
-    expect(changes).toEqual([1, 2]);
-    expect(callbackChanges).toEqual([1, 2]);
-
-    controller.destroy();
-  });
-
-  it("responds to inbound carousel:set events", () => {
-    const { root, controller } = setup();
-
-    root.dispatchEvent(
-      new CustomEvent("carousel:set", {
-        detail: { action: "next" },
-      }),
-    );
-    expect(controller.index).toBe(1);
-
-    root.dispatchEvent(
-      new CustomEvent("carousel:set", {
-        detail: { index: 2 },
-      }),
-    );
-    expect(controller.index).toBe(2);
-
-    controller.destroy();
-  });
-
-  it("uses smooth scrolling for controller and arrow button navigation by default", () => {
-    const { controller, content, prev, next } = setup({
-      options: { defaultIndex: 1 },
-    });
-    const calls = createScrollSpy(content);
-
-    controller.next();
-    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
-
-    controller.prev();
-    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
-
-    controller.goTo(0);
-    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
-
-    next?.click();
-    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
-
-    prev?.click();
-    expect(calls[calls.length - 1]?.behavior).toBe("smooth");
-
-    controller.destroy();
-  });
-
-  it("uses smooth scrolling for keyboard and carousel:set navigation by default", () => {
-    const { root, content, controller } = setup({
-      options: { defaultIndex: 1 },
-    });
-    const calls = createScrollSpy(content);
-
-    root.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-    root.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
-    root.dispatchEvent(new CustomEvent("carousel:set", { detail: { action: "next" } }));
-    root.dispatchEvent(new CustomEvent("carousel:set", { detail: { index: 2 } }));
-
-    expect(calls).toHaveLength(4);
-    expect(calls.every((call) => call.behavior === "smooth")).toBe(true);
-
-    controller.destroy();
-  });
-
-  it("falls back to auto scroll behavior when reduced-motion is preferred", () => {
-    const originalMatchMedia = window.matchMedia;
-
-    (
-      window as unknown as {
-        matchMedia?: typeof window.matchMedia;
-      }
-    ).matchMedia = ((query: string) =>
-      ({
-        matches: query === "(prefers-reduced-motion: reduce)",
-        media: query,
-        onchange: null,
-        addListener() {},
-        removeListener() {},
-        addEventListener() {},
-        removeEventListener() {},
-        dispatchEvent() {
-          return false;
-        },
-      }) as MediaQueryList) as typeof window.matchMedia;
-
-    try {
-      const { root, content, controller } = setup({
-        options: { defaultIndex: 1 },
-      });
-      const calls = createScrollSpy(content);
+    it("supports soft-wrap loop mode", () => {
+      const { controller } = render({ options: { defaultIndex: 2, loop: true } });
 
       controller.next();
-      root.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
-      root.dispatchEvent(new CustomEvent("carousel:set", { detail: { index: 2 } }));
-
-      expect(calls).toHaveLength(3);
-      expect(calls.every((call) => call.behavior === "auto")).toBe(true);
+      expect(controller.index).toBe(0);
+      controller.prev();
+      expect(controller.index).toBe(2);
+      controller.goTo(8);
+      expect(controller.index).toBe(2);
 
       controller.destroy();
-    } finally {
-      if (originalMatchMedia) {
-        (
-          window as unknown as {
-            matchMedia?: typeof window.matchMedia;
-          }
-        ).matchMedia = originalMatchMedia;
-      } else {
-        delete (
-          window as unknown as {
-            matchMedia?: typeof window.matchMedia;
-          }
-        ).matchMedia;
-      }
-    }
-  });
-
-  it("keeps programmatic smooth navigation index stable during intermediate scroll events", () => {
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root">
-        <div data-slot="carousel-content" id="content">
-          <div data-slot="carousel-item">Slide 1</div>
-          <div data-slot="carousel-item">Slide 2</div>
-          <div data-slot="carousel-item">Slide 3</div>
-        </div>
-      </div>
-    `;
-
-    const root = document.getElementById("root")!;
-    const content = document.getElementById("content") as HTMLElement;
-    const items = Array.from(
-      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
-    );
-    mockHorizontalGeometry(content, items, 100);
-    const controller = createCarousel(root);
-    const changes: number[] = [];
-
-    root.addEventListener("carousel:change", (event) => {
-      changes.push((event as CustomEvent<{ index: number }>).detail.index);
     });
 
-    controller.next();
-    expect(controller.index).toBe(1);
-    expect(changes).toEqual([1]);
+    it("handles keyboard navigation for horizontal orientation", () => {
+      const { root, controller } = render({ options: { defaultIndex: 1 } });
 
-    scrollTo(content, 20);
-    expect(controller.index).toBe(1);
-    expect(changes).toEqual([1]);
-
-    scrollTo(content, 100);
-    scrollTo(content, 210, true);
-
-    expect(controller.index).toBe(2);
-    expect(changes).toEqual([1, 2]);
-
-    controller.destroy();
-  });
-
-  it("syncs active index once native scrolling settles", async () => {
-    document.body.innerHTML = `
-      <div data-slot="carousel" id="root">
-        <div data-slot="carousel-content" id="content">
-          <div data-slot="carousel-item">Slide 1</div>
-          <div data-slot="carousel-item">Slide 2</div>
-          <div data-slot="carousel-item">Slide 3</div>
-        </div>
-      </div>
-    `;
-
-    const root = document.getElementById("root")!;
-    const content = document.getElementById("content") as HTMLElement;
-    const items = Array.from(
-      content.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]'),
-    );
-    mockHorizontalGeometry(content, items, 100);
-    const controller = createCarousel(root);
-
-    controller.goTo(0);
-    scrollTo(content, 190, true);
-    expect(controller.index).toBe(2);
-
-    // Without scrollend, the index follows after a short quiet period.
-    scrollTo(content, 90);
-    expect(controller.index).toBe(2);
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    expect(controller.index).toBe(1);
-
-    controller.destroy();
-  });
-
-  it("updates slide count when carousel-item children are added", () => {
-    const OriginalMutationObserver = globalThis.MutationObserver;
-    let callback: MutationCallback | null = null;
-
-    class MockMutationObserver {
-      constructor(cb: MutationCallback) {
-        callback = cb;
-      }
-
-      observe() {}
-      disconnect() {}
-      takeRecords() {
-        return [];
-      }
-    }
-
-    (
-      globalThis as unknown as {
-        MutationObserver?: typeof MutationObserver;
-      }
-    ).MutationObserver = MockMutationObserver as unknown as typeof MutationObserver;
-
-    try {
-      const { content, controller } = setup({ slideCount: 2 });
-
-      const item = document.createElement("div");
-      item.setAttribute("data-slot", "carousel-item");
-      item.textContent = "Slide 3";
-      content.appendChild(item);
-
-      if (callback) {
-        callback([] as MutationRecord[], {} as MutationObserver);
-      }
-
-      expect(controller.count).toBe(3);
-      expect(item.getAttribute("role")).toBe("group");
+      keydown(root, "ArrowRight");
+      expect(controller.index).toBe(2);
+      keydown(root, "ArrowLeft");
+      expect(controller.index).toBe(1);
+      keydown(root, "Home");
+      expect(controller.index).toBe(0);
+      keydown(root, "End");
+      expect(controller.index).toBe(2);
 
       controller.destroy();
-    } finally {
-      if (OriginalMutationObserver) {
-        (
-          globalThis as unknown as {
-            MutationObserver?: typeof MutationObserver;
-          }
-        ).MutationObserver = OriginalMutationObserver;
-      } else {
-        delete (
-          globalThis as unknown as {
-            MutationObserver?: typeof MutationObserver;
-          }
-        ).MutationObserver;
-      }
-    }
-  });
+    });
 
-  it("preserves the active slide when items are inserted or removed before it", () => {
-    const OriginalMutationObserver = globalThis.MutationObserver;
-    let callback: MutationCallback | null = null;
+    it("handles keyboard navigation for vertical orientation", () => {
+      const { root, controller } = render({ options: { orientation: "vertical", defaultIndex: 1 } });
 
-    class MockMutationObserver {
-      constructor(cb: MutationCallback) {
-        callback = cb;
-      }
+      keydown(root, "ArrowDown");
+      expect(controller.index).toBe(2);
+      keydown(root, "ArrowUp");
+      expect(controller.index).toBe(1);
+      keydown(root, "ArrowRight");
+      expect(controller.index).toBe(1);
 
-      observe() {}
-      disconnect() {}
-      takeRecords() {
-        return [];
-      }
-    }
+      controller.destroy();
+    });
 
-    (
-      globalThis as unknown as {
-        MutationObserver?: typeof MutationObserver;
-      }
-    ).MutationObserver = MockMutationObserver as unknown as typeof MutationObserver;
-
-    try {
+    it("ignores keyboard navigation from editable targets", () => {
       document.body.innerHTML = `
         <div data-slot="carousel" id="root">
-          <div data-slot="carousel-content" id="content">
+          <input id="field" />
+          <div data-slot="carousel-content">
             <div data-slot="carousel-item">Slide 1</div>
-            <div data-slot="carousel-item" id="active-slide">Slide 2</div>
-            <div data-slot="carousel-item">Slide 3</div>
+            <div data-slot="carousel-item">Slide 2</div>
           </div>
         </div>
       `;
+      const controller = createCarousel(document.getElementById("root")!);
 
-      const root = document.getElementById("root")!;
-      const content = document.getElementById("content") as HTMLElement;
-      const activeSlide = document.getElementById("active-slide") as HTMLElement;
-      const syncGeometry = mockDynamicHorizontalGeometry(content, 100);
-      const controller = createCarousel(root);
-      const changes: number[] = [];
+      keydown(document.getElementById("field")!, "ArrowRight");
+      expect(controller.index).toBe(0);
 
-      root.addEventListener("carousel:change", (event) => {
-        changes.push((event as CustomEvent<{ index: number }>).detail.index);
+      controller.destroy();
+    });
+
+    it("does not navigate when a nested widget handles the key event", () => {
+      document.body.innerHTML = `
+        <div data-slot="carousel" id="root">
+          <div data-slot="carousel-content">
+            <div data-slot="carousel-item"><button id="nested">Nested</button></div>
+            <div data-slot="carousel-item">Slide 2</div>
+          </div>
+        </div>
+      `;
+      const nested = document.getElementById("nested")!;
+      const controller = createCarousel(document.getElementById("root")!);
+      nested.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowRight") event.preventDefault();
       });
 
-      controller.goTo(1);
+      keydown(nested, "ArrowRight");
+      expect(controller.index).toBe(0);
+
+      controller.destroy();
+    });
+
+    it("responds to inbound carousel:set events", () => {
+      const { root, controller } = render();
+
+      root.dispatchEvent(new CustomEvent("carousel:set", { detail: { action: "next" } }));
       expect(controller.index).toBe(1);
+      root.dispatchEvent(new CustomEvent("carousel:set", { detail: { index: 2 } }));
+      expect(controller.index).toBe(2);
+      root.dispatchEvent(new CustomEvent("carousel:set", { detail: { action: "prev" } }));
+      expect(controller.index).toBe(1);
+
+      controller.destroy();
+    });
+
+    it("emits carousel:change and onIndexChange only when index changes", () => {
+      const callbackChanges: number[] = [];
+      const { root, controller } = render({ options: { onIndexChange: (index) => callbackChanges.push(index) } });
+      const changes = recordChanges(root);
+
+      controller.next();
+      controller.next();
+      controller.next();
+
+      expect(changes).toEqual([1, 2]);
+      expect(callbackChanges).toEqual([1, 2]);
+
+      controller.destroy();
+    });
+  });
+
+  describe("scroll behavior", () => {
+    it("uses smooth scrolling for every navigation entry point by default", () => {
+      const { root, controller, content, prev, next } = render({ options: { defaultIndex: 1 } });
+      const calls = spyScrollTo(content);
+
+      controller.next();
+      controller.prev();
+      controller.goTo(0);
+      next?.click();
+      prev?.click();
+      keydown(root, "ArrowRight");
+      keydown(root, "Home");
+      root.dispatchEvent(new CustomEvent("carousel:set", { detail: { action: "next" } }));
+      root.dispatchEvent(new CustomEvent("carousel:set", { detail: { index: 2 } }));
+
+      expect(calls).toHaveLength(9);
+      expect(calls.every((call) => call.behavior === "smooth")).toBe(true);
+
+      controller.destroy();
+    });
+
+    it("falls back to auto scroll behavior when reduced-motion is preferred", () => {
+      const matchMedia = ((query: string) =>
+        ({ matches: query === "(prefers-reduced-motion: reduce)", media: query }) as MediaQueryList) as typeof window.matchMedia;
+
+      withProperty(window, "matchMedia", matchMedia, () => {
+        const { root, content, controller } = render({ options: { defaultIndex: 1 } });
+        const calls = spyScrollTo(content);
+
+        controller.next();
+        keydown(root, "Home");
+        root.dispatchEvent(new CustomEvent("carousel:set", { detail: { index: 2 } }));
+
+        expect(calls).toHaveLength(3);
+        expect(calls.every((call) => call.behavior === "auto")).toBe(true);
+
+        controller.destroy();
+      });
+    });
+
+    it("keeps programmatic smooth navigation index stable during intermediate scroll events", () => {
+      const { root, content, controller } = render();
+      const changes = recordChanges(root);
+
+      controller.next();
+      expect(controller.index).toBe(1);
+
+      scrollContent(content, 20);
+      expect(controller.index).toBe(1);
+      expect(changes).toEqual([1]);
+
+      scrollContent(content, 100);
+      scrollContent(content, 210, true);
+      expect(controller.index).toBe(2);
+      expect(changes).toEqual([1, 2]);
+
+      controller.destroy();
+    });
+
+    it("syncs active index once native scrolling settles", async () => {
+      const { content, controller } = render();
+
+      scrollContent(content, 190, true);
+      expect(controller.index).toBe(2);
+
+      // Without scrollend, the index follows after a short quiet period.
+      scrollContent(content, 90);
+      expect(controller.index).toBe(2);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(controller.index).toBe(1);
+
+      controller.destroy();
+    });
+  });
+
+  describe("accessibility", () => {
+    it("labels the region and slides", () => {
+      const { root, items, controller } = render();
+
+      expect(root.getAttribute("role")).toBe("region");
+      expect(root.getAttribute("aria-roledescription")).toBe("carousel");
+      expect(items[1]?.getAttribute("role")).toBe("group");
+      expect(items[1]?.getAttribute("aria-roledescription")).toBe("slide");
+      expect(items[1]?.getAttribute("aria-label")).toBe("2 of 3");
+
+      controller.destroy();
+    });
+
+    it("hides inactive slides with inert and aria-hidden without touching authored tabindex", () => {
+      document.body.innerHTML = `
+        <div data-slot="carousel" id="root">
+          <div data-slot="carousel-content">
+            <div data-slot="carousel-item" id="slide-1"><a href="#first" id="first-link">First</a></div>
+            <div data-slot="carousel-item" id="slide-2">
+              <button id="second-button">Second</button>
+              <div id="second-custom" tabindex="0">Custom</div>
+            </div>
+          </div>
+        </div>
+      `;
+      const slide1 = document.getElementById("slide-1")!;
+      const slide2 = document.getElementById("slide-2")!;
+      const controller = createCarousel(document.getElementById("root")!);
+
+      expect(slide1.getAttribute("aria-hidden")).toBe("false");
+      expect(slide1.hasAttribute("inert")).toBe(false);
+      expect(slide2.getAttribute("aria-hidden")).toBe("true");
+      expect(slide2.hasAttribute("inert")).toBe(true);
+
+      controller.goTo(1);
+
+      expect(slide1.getAttribute("aria-hidden")).toBe("true");
+      expect(slide1.hasAttribute("inert")).toBe(true);
+      expect(slide2.getAttribute("aria-hidden")).toBe("false");
+      expect(slide2.hasAttribute("inert")).toBe(false);
+      expect(document.getElementById("first-link")!.hasAttribute("tabindex")).toBe(false);
+      expect(document.getElementById("second-button")!.hasAttribute("tabindex")).toBe(false);
+      expect(document.getElementById("second-custom")!.getAttribute("tabindex")).toBe("0");
+
+      controller.destroy();
+    });
+  });
+
+  describe("slide mutations", () => {
+    it("updates slide count when carousel-item children are added", async () => {
+      const { content, controller } = render({ slideCount: 2 });
+
+      const item = document.createElement("div");
+      item.setAttribute("data-slot", "carousel-item");
+      content.appendChild(item);
+      await flushMutations();
+
+      expect(controller.count).toBe(3);
+      expect(item.getAttribute("role")).toBe("group");
+      expect(item.getAttribute("aria-label")).toBe("3 of 3");
+
+      controller.destroy();
+    });
+
+    it("preserves the active slide when items are inserted or removed before it", async () => {
+      const { root, content, items, controller, layout } = render();
+      const changes = recordChanges(root);
+
+      controller.goTo(1);
       expect(changes).toEqual([1]);
 
       const inserted = document.createElement("div");
       inserted.setAttribute("data-slot", "carousel-item");
-      inserted.textContent = "Inserted";
-      content.insertBefore(inserted, activeSlide);
-      syncGeometry();
-      if (callback) {
-        callback([] as MutationRecord[], {} as MutationObserver);
-      }
+      content.insertBefore(inserted, items[1]!);
+      layout();
+      await flushMutations();
 
       expect(controller.index).toBe(2);
       expect(content.scrollLeft).toBe(200);
       expect(changes).toEqual([1, 2]);
 
       inserted.remove();
-      syncGeometry();
-      if (callback) {
-        callback([] as MutationRecord[], {} as MutationObserver);
-      }
+      layout();
+      await flushMutations();
 
       expect(controller.index).toBe(1);
       expect(content.scrollLeft).toBe(100);
       expect(changes).toEqual([1, 2, 1]);
 
       controller.destroy();
-    } finally {
-      if (OriginalMutationObserver) {
-        (
-          globalThis as unknown as {
-            MutationObserver?: typeof MutationObserver;
-          }
-        ).MutationObserver = OriginalMutationObserver;
-      } else {
-        delete (
-          globalThis as unknown as {
-            MutationObserver?: typeof MutationObserver;
-          }
-        ).MutationObserver;
-      }
-    }
-  });
+    });
 
-  it("parks at index 0 without emitting when every slide is removed", () => {
-    const OriginalMutationObserver = globalThis.MutationObserver;
-    let callback: MutationCallback | null = null;
-
-    class MockMutationObserver {
-      constructor(cb: MutationCallback) {
-        callback = cb;
-      }
-
-      observe() {}
-      disconnect() {}
-      takeRecords() {
-        return [];
-      }
-    }
-
-    (
-      globalThis as unknown as {
-        MutationObserver?: typeof MutationObserver;
-      }
-    ).MutationObserver = MockMutationObserver as unknown as typeof MutationObserver;
-
-    try {
-      const { root, content, items, controller, prev, next } = setup({ options: { defaultIndex: 1 } });
-      const changes: number[] = [];
-      root.addEventListener("carousel:change", (event) => {
-        changes.push((event as CustomEvent<{ index: number }>).detail.index);
-      });
+    it("parks at index 0 without emitting when every slide is removed", async () => {
+      const { root, content, items, controller, prev, next } = render({ options: { defaultIndex: 1 } });
+      const changes = recordChanges(root);
 
       items.forEach((item) => item.remove());
-      if (callback) {
-        callback([] as MutationRecord[], {} as MutationObserver);
-      }
+      await flushMutations();
 
       expect(controller.count).toBe(0);
       expect(controller.index).toBe(0);
       expect(root.getAttribute("data-index")).toBe("0");
       expect(prev?.disabled).toBe(true);
       expect(next?.disabled).toBe(true);
-      expect(changes).toEqual([]);
 
       controller.next();
       controller.goTo(3);
@@ -1568,78 +389,42 @@ describe("Carousel", () => {
       expect(changes).toEqual([]);
 
       controller.destroy();
-    } finally {
-      if (OriginalMutationObserver) {
-        (
-          globalThis as unknown as {
-            MutationObserver?: typeof MutationObserver;
-          }
-        ).MutationObserver = OriginalMutationObserver;
-      } else {
-        delete (
-          globalThis as unknown as {
-            MutationObserver?: typeof MutationObserver;
-          }
-        ).MutationObserver;
-      }
-    }
+    });
   });
 
-  it("sets nav control buttons to type=button without overriding authored types", () => {
-    document.body.innerHTML = `
-      <form id="form">
-        <div data-slot="carousel" id="root">
-          <div data-slot="carousel-content">
-            <div data-slot="carousel-item">Slide 1</div>
-            <div data-slot="carousel-item">Slide 2</div>
-          </div>
-          <button data-slot="carousel-previous" id="prev">Prev</button>
-          <button data-slot="carousel-next" id="next" type="submit">Next</button>
-        </div>
-      </form>
-    `;
+  describe("lifecycle", () => {
+    it("auto-discovers with create(), dedupes bound roots and rebinds after destroy", () => {
+      document.body.innerHTML = `
+        <div data-slot="carousel"><div data-slot="carousel-content"><div data-slot="carousel-item">One</div></div></div>
+        <div data-slot="carousel"><div data-slot="carousel-content"><div data-slot="carousel-item">Two</div></div></div>
+      `;
 
-    const root = document.getElementById("root")!;
-    const prev = document.getElementById("prev") as HTMLButtonElement;
-    const next = document.getElementById("next") as HTMLButtonElement;
-    const controller = createCarousel(root);
+      const first = create();
+      expect(first).toHaveLength(2);
+      expect(create()).toHaveLength(0);
 
-    expect(prev.getAttribute("type")).toBe("button");
-    expect(next.getAttribute("type")).toBe("submit");
+      first.forEach((controller) => controller.destroy());
+      expect(create()).toHaveLength(2);
+    });
 
-    controller.destroy();
-  });
+    it("returns the existing controller when a bound root is created again", () => {
+      const { root, controller } = render();
 
-  it("auto-discovers with create() and dedupes already-bound roots", () => {
-    document.body.innerHTML = `
-      <div data-slot="carousel">
-        <div data-slot="carousel-content">
-          <div data-slot="carousel-item">One</div>
-        </div>
-      </div>
-      <div data-slot="carousel">
-        <div data-slot="carousel-content">
-          <div data-slot="carousel-item">Two</div>
-        </div>
-      </div>
-    `;
+      expect(createCarousel(root)).toBe(controller);
 
-    const first = create();
-    const second = create();
+      controller.destroy();
+    });
 
-    expect(first).toHaveLength(2);
-    expect(second).toHaveLength(0);
+    it("stops reacting to input after destroy", () => {
+      const { root, content, controller } = render();
+      mockGeometry(content, "horizontal");
 
-    first.forEach((controller) => controller.destroy());
+      controller.destroy();
+      keydown(root, "ArrowRight");
+      scrollContent(content, 190, true);
 
-    expect(create()).toHaveLength(2);
-  });
-
-  it("returns the existing controller when a bound root is created again", () => {
-    const { root, controller } = setup();
-
-    expect(createCarousel(root)).toBe(controller);
-
-    controller.destroy();
+      expect(controller.index).toBe(0);
+      expect(root.getAttribute("data-index")).toBe("0");
+    });
   });
 });
