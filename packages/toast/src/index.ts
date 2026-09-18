@@ -6,12 +6,12 @@ import {
 import { POSITIONS } from "./types";
 import type {
   ToastController, ToastOptions, ToastShowOptions, ToastUpdateOptions,
-  ToastActionEvent, ToastPromiseOptions, ToastPromiseHandle, ResolvedToast,
+  ToastActionEvent, ToastPromiseOptions, ToastPromiseHandle,
 } from "./types";
 import {
-  normalizeLimit, normalizeDuration, isToastType,
+  normalizeLimit, normalizeDuration, isNonEmptyString, createDefaultToast, applyToastPatch,
   parseShowDetail, parseUpdateDetail, parseDismissDetail,
-  resolvePromiseStateObject, resolvePromiseStateValue, resolvePromiseShowOptions, resolveErrorTitle,
+  resolvePromiseStateObject, resolvePromiseStateValue, resolvePromisePatch, resolveErrorTitle,
 } from "./toast-options";
 import { createToastEntry, type ToastEntry } from "./toast-entry";
 import { createToastLayout, getToastFocusableNodes } from "./toast-layout";
@@ -19,7 +19,7 @@ import { createToastGestures } from "./toast-gestures";
 import { createToastInteraction } from "./toast-interaction";
 
 export type {
-  ToastAction, ToastActionEvent, ToastController, ToastOptions, ToastPosition,
+  ToastAction, ToastActionEvent, ToastClearableField, ToastController, ToastOptions, ToastPosition,
   ToastPromiseErrorValue, ToastPromiseHandle, ToastPromiseOptions, ToastPromiseState,
   ToastPromiseStateValue, ToastShowOptions, ToastUpdateOptions,
 } from "./types";
@@ -209,28 +209,15 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     return candidate;
   };
 
-  const showEntry = (showOptions: ToastShowOptions): ToastEntry => {
-    if (typeof showOptions.title !== "string" || showOptions.title.trim() === "") {
-      throw new Error("Toast show requires a non-empty title");
-    }
-    const id = typeof showOptions.id === "string" && showOptions.id.trim() !== ""
-      ? showOptions.id : createId();
+  const showEntry = (requestedId: string | undefined, patch: ToastUpdateOptions): ToastEntry => {
+    const id = isNonEmptyString(requestedId) ? requestedId : createId();
+    // Validates the title before any side effect below.
+    const toast = applyToastPatch(createDefaultToast(id, defaultDuration), patch);
     const previous = entries.get(id);
     const notifyReplacement = previous?.active;
     if (previous) removeEntry(previous);
     if (notifyReplacement) notifyDismiss(id);
 
-    const toast: ResolvedToast = {
-      id,
-      title: showOptions.title,
-      description: showOptions.description,
-      type: isToastType(showOptions.type) ? showOptions.type : "default",
-      duration: normalizeDuration(showOptions.duration, defaultDuration),
-      action: showOptions.action,
-      dismissible: showOptions.dismissible ?? true,
-      closeButtonAriaLabel: showOptions.closeButtonAriaLabel,
-      testId: showOptions.testId,
-    };
     const entry = createToastEntry(toast, {
       viewport, template,
       expanded: interaction.expanded,
@@ -259,7 +246,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
   const show = (options: ToastShowOptions): string => {
     if (lifecycle.isDestroyed) return options.id ?? createId();
-    return showEntry(options).id;
+    return showEntry(options.id, options).id;
   };
 
   const updateEntry = (entry: ToastEntry, patch: ToastUpdateOptions) => {
@@ -279,13 +266,13 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     promiseOptions: ToastPromiseOptions<T>,
   ): ToastPromiseHandle<T> => {
     const loadingState = resolvePromiseStateObject(promiseOptions.loading);
-    const loadingOptions = resolvePromiseShowOptions(loadingState, {
+    const loadingPatch = resolvePromisePatch(loadingState, {
       title: "Loading...",
       type: "loading",
       duration: 0,
       description: promiseOptions.description,
     });
-    const entry = lifecycle.isDestroyed ? undefined : showEntry(loadingOptions);
+    const entry = lifecycle.isDestroyed ? undefined : showEntry(undefined, loadingPatch);
     const id = entry?.id ?? createId();
 
     const task: Promise<T> = Promise.resolve().then(() =>
@@ -297,24 +284,24 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     const tracked = task
       .then((value) => {
         const successState = resolvePromiseStateValue<T>(promiseOptions.success, value);
-        const successOptions = resolvePromiseShowOptions(successState, {
+        const successPatch = resolvePromisePatch(successState, {
           title: "Success",
           type: "success",
           duration: defaultDuration,
           description: promiseOptions.description,
         });
-        if (entry) updateEntry(entry, successOptions);
+        if (entry) updateEntry(entry, successPatch);
         return value;
       })
       .catch((error: unknown) => {
         const errorState = resolvePromiseStateValue<unknown>(promiseOptions.error, error);
-        const errorOptions = resolvePromiseShowOptions(errorState, {
+        const errorPatch = resolvePromisePatch(errorState, {
           title: resolveErrorTitle(error),
           type: "error",
           duration: defaultDuration,
           description: promiseOptions.description,
         });
-        if (entry) updateEntry(entry, errorOptions);
+        if (entry) updateEntry(entry, errorPatch);
         throw error;
       });
 
@@ -356,7 +343,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
     const value = entry.toast.action?.value;
     const actionEvent = createActionEvent();
-    (entry.toast.action?.onClick as ((event: ToastActionEvent) => void) | undefined)?.(actionEvent);
+    entry.toast.action?.onClick?.(actionEvent);
     emit<ToastActionDetail>(root, "toast:action", { id, value });
     onAction?.(id, value);
     if (!actionEvent.defaultPrevented) {
@@ -435,8 +422,8 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   cleanups.push(
     on(root, "toast:show", (e) => {
       const parsed = parseShowDetail((e as CustomEvent).detail);
-      if (!parsed) return;
-      show(parsed);
+      if (!parsed || lifecycle.isDestroyed) return;
+      showEntry(parsed.id, parsed.patch);
     }),
     on(root, "toast:update", (e) => {
       const parsed = parseUpdateDetail((e as CustomEvent).detail);

@@ -26,7 +26,8 @@ export interface ToastActionEvent {
 
 export interface ToastAction {
   label: string;
-  onClick?: (() => void) | ((event: ToastActionEvent) => void);
+  /** Call `event.preventDefault()` to keep the toast open after the action. */
+  onClick?: (event: ToastActionEvent) => void;
   value?: string;
 }
 
@@ -42,23 +43,21 @@ export interface ToastShowOptions {
   testId?: string;
 }
 
-export interface ToastUpdateOptions {
-  title?: string;
-  description?: string;
-  type?: ToastType;
-  duration?: number;
-  action?: ToastAction;
-  dismissible?: boolean;
-  closeButtonAriaLabel?: string;
-  testId?: string;
-}
+/** Fields an update may remove by passing `null`. */
+export type ToastClearableField = "description" | "action" | "closeButtonAriaLabel" | "testId";
 
-export interface ToastPromiseState
-  extends Omit<
-    ToastUpdateOptions,
-    "title"
-  > {
-  title?: string;
+/**
+ * Partial patch for an existing toast. A missing or `undefined` field is left
+ * unchanged; `null` clears a clearable field.
+ */
+export type ToastUpdateOptions = {
+  [K in keyof Omit<ToastShowOptions, "id">]?: K extends ToastClearableField
+    ? ToastShowOptions[K] | null
+    : ToastShowOptions[K];
+};
+
+export interface ToastPromiseState extends ToastUpdateOptions {
+  /** Alias for `title`. */
   message?: string;
 }
 
@@ -120,4 +119,3 @@ export interface ResolvedToast {
   closeButtonAriaLabel?: string;
   testId?: string;
 }
-

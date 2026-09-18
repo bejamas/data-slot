@@ -127,13 +127,14 @@ await handled.unwrap();
 ```
 
 `promise()` keeps a stable toast id across loading/success/error states and returns `{ id, unwrap() }`.
+Each state is applied as a patch: `title`, `type`, and `duration` fall back to state defaults, and any other field a state omits stays as the loading state set it.
 
 ### Controller
 
 | Method / Property | Description |
 |-------------------|-------------|
 | `show(options)` | Create and show a toast, returns its id |
-| `update(id, patch)` | Patch an existing active toast in place (visible or overflow-hidden) |
+| `update(id, patch)` | Patch an existing active toast in place (visible or overflow-hidden). Omitted or `undefined` fields are unchanged; `null` clears `description`, `action`, `closeButtonAriaLabel`, or `testId` |
 | `promise(input, options)` | Drive loading/success/error toast states from a promise, returns `{ id, unwrap() }` |
 | `dismiss(id)` | Dismiss one toast |
 | `dismissAll()` | Dismiss all active toasts |

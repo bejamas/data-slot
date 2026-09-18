@@ -167,7 +167,7 @@ describe("Toast", () => {
   it("show throws when title is empty", () => {
     const { controller } = setup();
 
-    expect(() => controller.show({ title: "" })).toThrow("Toast show requires a non-empty title");
+    expect(() => controller.show({ title: "" })).toThrow("Toast requires a non-empty title");
 
     controller.destroy();
   });
@@ -238,8 +238,44 @@ describe("Toast", () => {
     expect(close.getAttribute("aria-label")).toBe("Custom close label");
 
     controller.update(id, { closeButtonAriaLabel: undefined });
+    expect(close.getAttribute("aria-label")).toBe("Custom close label");
+
+    controller.update(id, { closeButtonAriaLabel: null });
     expect(close.getAttribute("aria-label")).toBe("Dismiss notification");
 
+    controller.destroy();
+  });
+
+  it("update leaves undefined fields unchanged and clears fields set to null", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const id = controller.show({
+      title: "Initial",
+      description: "Keep me",
+      action: { label: "Undo" },
+      testId: "keep",
+    });
+    const item = root.querySelector(`[data-id="${id}"]`) as HTMLElement;
+    const description = item.querySelector('[data-slot="toast-description"]') as HTMLElement;
+    const action = item.querySelector('[data-slot="toast-action"]') as HTMLElement;
+
+    controller.update(id, { title: "Changed", description: undefined, action: undefined, testId: undefined });
+    expect(description.textContent).toBe("Keep me");
+    expect(action.hidden).toBe(false);
+    expect(item.getAttribute("data-testid")).toBe("keep");
+
+    controller.update(id, { description: null, action: null, testId: null });
+    expect(description.hidden).toBe(true);
+    expect(action.hidden).toBe(true);
+    expect(item.hasAttribute("data-testid")).toBe(false);
+
+    controller.destroy();
+  });
+
+  it("update rejects an empty title", () => {
+    const { controller } = setup({ duration: 0 });
+    const id = controller.show({ title: "Initial" });
+    expect(() => controller.update(id, { title: "  " })).toThrow("Toast requires a non-empty title");
     controller.destroy();
   });
 
@@ -1055,6 +1091,28 @@ describe("Toast", () => {
     controller.destroy();
   });
 
+  it("promise() settle states keep fields the loading state set", async () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const handled = controller.promise(Promise.resolve("ok"), {
+      loading: { title: "Working", dismissible: false, testId: "job", closeButtonAriaLabel: "Stop" },
+      success: "Done",
+    });
+    const item = root.querySelector(`[data-id="${handled.id}"]`) as HTMLElement;
+    expect(item.getAttribute("data-dismissible")).toBe("false");
+
+    await handled.unwrap();
+    await waitForClose();
+
+    expect(item.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Done");
+    expect(item.getAttribute("data-type")).toBe("success");
+    expect(item.getAttribute("data-dismissible")).toBe("false");
+    expect(item.getAttribute("data-testid")).toBe("job");
+    expect(item.querySelector('[data-slot="toast-close"]')?.getAttribute("aria-label")).toBe("Stop");
+
+    controller.destroy();
+  });
+
   it("promise() does not reopen a toast that was dismissed before the promise settles", async () => {
     const { root, controller } = setup({ duration: 0 });
     let resolvePromise: ((value: string) => void) | undefined;
@@ -1500,6 +1558,26 @@ describe("Toast", () => {
     root.dispatchEvent(new CustomEvent("toast:clear"));
     await waitForClose();
     expect(controller.count).toBe(0);
+
+    controller.destroy();
+  });
+
+  it("toast:update ignores invalid fields and clears fields set to null", () => {
+    const { root, controller } = setup({ duration: 0 });
+
+    const id = controller.show({ title: "Event target", description: "Old", type: "info" });
+    const item = root.querySelector(`[data-id="${id}"]`) as HTMLElement;
+    const description = item.querySelector('[data-slot="toast-description"]') as HTMLElement;
+
+    root.dispatchEvent(
+      new CustomEvent("toast:update", {
+        detail: { id, title: "", type: "bogus", duration: "soon", description: null },
+      }),
+    );
+
+    expect(item.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Event target");
+    expect(item.getAttribute("data-type")).toBe("info");
+    expect(description.hidden).toBe(true);
 
     controller.destroy();
   });

@@ -1,6 +1,6 @@
 import { createPresenceLifecycle, createTerminalLifecycle } from "@data-slot/core";
 import type { ResolvedToast, ToastType, ToastUpdateOptions } from "./types";
-import { resolveUpdatedToast } from "./toast-options";
+import { applyToastPatch } from "./toast-options";
 
 const isTemplateElement = (el: Element | null): el is HTMLTemplateElement =>
   el instanceof HTMLTemplateElement;
@@ -191,10 +191,9 @@ export function createToastEntry(initial: ResolvedToast, options: ToastEntryOpti
     },
     update(patch) {
       if (!entry.active) return;
-      const { next, durationChanged } = resolveUpdatedToast(toast, patch);
-      toast = next;
+      toast = applyToastPatch(toast, patch);
       applyToastContentToItem(item, toast);
-      if (durationChanged) {
+      if (patch.duration !== undefined) {
         clearTimer();
         remainingMs = toast.duration;
         resumeTimer();
