@@ -16,6 +16,7 @@ export const components = [
   { slug: 'slider', demo: 'Slider', attrs: 'data-disabled' },
   { slug: 'switch', demo: 'Switch', attrs: 'data-disabled' },
   { slug: 'tabs', demo: 'TabsBasic', second: 'TabsIndicator' },
+  { slug: 'toast', demo: 'Toast' },
   { slug: 'toggle', demo: 'Toggle', attrs: 'data-disabled' },
   { slug: 'toggle-group', demo: 'ToggleGroup', attrs: 'data-disabled' },
   { slug: 'tooltip', demo: 'Tooltip', attrs: 'data-side="bottom"' },

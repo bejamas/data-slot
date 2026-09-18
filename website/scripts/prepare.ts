@@ -11,14 +11,17 @@ for (const weight of [400, 500, 700]) {
   await copyFile(resolve(project, `node_modules/@fontsource/geist-mono/files/geist-mono-latin-${weight}-normal.woff2`), resolve(project, `public/fonts/geist-mono-${weight}.woff2`));
 }
 
-// Drawer styles are shared by the live markup and the displayed CSS source.
-await write('.generated/examples/drawer.css', themeExamples(await readFile(resolve(project, 'src/components/examples/drawer.css'), 'utf8')));
+// Share styles between the live markup and the displayed CSS source.
+for (const name of ['drawer', 'toast']) {
+  await write(`.generated/examples/${name}.css`, themeExamples(await readFile(resolve(project, `src/components/examples/${name}.css`), 'utf8')));
+}
 
 for (const component of components) {
   for (const variant of ['basic', 'extra'] as const) {
     const filename = variant === 'extra' && 'second' in component ? component.second : component.demo;
     let source = await readFile(resolve(project, `src/components/examples/${filename}.astro`), 'utf8');
     source = source.replace('"../ExampleBlock.astro"', '"../../components/ExampleBlock.astro"');
+    source = source.replaceAll('"../../../lib/', '"../../lib/');
     source = source.replaceAll('theme="vitesse-light"', 'themes={{ light: "github-light-high-contrast", dark: "github-dark-high-contrast" }} defaultColor={false}');
     // Initialization has its own tab; embedded snippets must not double-bind it.
     source = source.replace(/<script type="module">[\s\S]*?<\/script>/g, '');

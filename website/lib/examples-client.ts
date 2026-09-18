@@ -1,4 +1,5 @@
 import { copyText } from 'blume/components/copy-feedback.ts';
+import { bindToastExample } from './toast-example';
 
 const loaders = {
   accordion: () => import('../../packages/accordion/dist/index.js'),
@@ -17,6 +18,7 @@ const loaders = {
   slider: () => import('../../packages/slider/dist/index.js'),
   switch: () => import('../../packages/switch/dist/index.js'),
   tabs: () => import('../../packages/tabs/dist/index.js'),
+  toast: () => import('../../packages/toast/dist/index.js'),
   toggle: () => import('../../packages/toggle/dist/index.js'),
   'toggle-group': () => import('../../packages/toggle-group/dist/index.js'),
   tooltip: () => import('../../packages/tooltip/dist/index.js'),
@@ -45,7 +47,15 @@ class ComponentExample extends HTMLElement {
       }
     });
     // Scope discovery to this example so page chrome never gets initialized.
-    this.controllers = module.create(this);
+    if ('createToast' in module) {
+      this.controllers = Array.from(this.querySelectorAll<HTMLElement>('[data-slot="toast"]'), root => {
+        const toaster = module.createToast(root);
+        bindToastExample(root, toaster, signal);
+        return toaster;
+      });
+    } else {
+      this.controllers = module.create(this);
+    }
     if (dialog) this.controllers.push(...dialog.create(this));
     if (component === 'alert-dialog') {
       this.querySelectorAll<HTMLElement>('[data-slot="alert-dialog"]').forEach(root => {
