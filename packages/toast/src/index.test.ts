@@ -445,6 +445,77 @@ describe("Toast", () => {
     controller.destroy();
   });
 
+  it.each([
+    ['hidden input', '<input type="hidden" tabindex="0">'],
+    ['CSS-hidden control', '<button style="visibility: hidden">Hidden</button>'],
+    ['display-none ancestor', '<div style="display: none"><button>Hidden</button></div>'],
+    ['disabled fieldset', '<fieldset disabled><button>Disabled</button></fieldset>'],
+  ])("skips a %s when moving focus to the next toast", (_name, markup) => {
+    const { root, controller } = setup(
+      { duration: 0 },
+      `
+        <div data-slot="toast" id="root">
+          <template data-slot="toast-template">
+            <li data-slot="toast-item">
+              ${markup}
+              <span data-slot="toast-title"></span>
+              <button data-slot="toast-close" type="button">Close</button>
+            </li>
+          </template>
+          <ol data-slot="toast-viewport"></ol>
+        </div>
+      `,
+    );
+
+    try {
+      const first = controller.show({ title: "First" });
+      const second = controller.show({ title: "Second" });
+      const firstClose = root.querySelector<HTMLElement>(`[data-id="${first}"] [data-slot="toast-close"]`)!;
+      const secondClose = root.querySelector<HTMLElement>(`[data-id="${second}"] [data-slot="toast-close"]`)!;
+
+      secondClose.focus();
+      controller.dismiss(second);
+
+      expect(document.activeElement === firstClose).toBe(true);
+    } finally {
+      controller.destroy();
+    }
+  });
+
+  it("restores a focusable toast root after overflow and prefers it to descendants", () => {
+    const { root, controller } = setup(
+      { limit: 1, duration: 0 },
+      `
+        <div data-slot="toast" id="root">
+          <template data-slot="toast-template">
+            <li data-slot="toast-item" tabindex="0">
+              <span data-slot="toast-title"></span>
+              <button data-slot="toast-close" type="button">Close</button>
+            </li>
+          </template>
+          <ol data-slot="toast-viewport"></ol>
+        </div>
+      `,
+    );
+
+    try {
+      const first = controller.show({ title: "First" });
+      const second = controller.show({ title: "Second" });
+      const firstItem = root.querySelector<HTMLElement>(`[data-id="${first}"]`)!;
+      const secondClose = root.querySelector<HTMLElement>(`[data-id="${second}"] [data-slot="toast-close"]`)!;
+      expect(firstItem.getAttribute("tabindex")).toBe("-1");
+
+      secondClose.focus();
+      controller.dismiss(second);
+
+      expect(firstItem.getAttribute("tabindex")).toBe("0");
+      expect(firstItem.hasAttribute("data-toast-prev-tabindex")).toBe(false);
+      expect(document.activeElement === firstItem).toBe(true);
+    } finally {
+      controller.destroy();
+    }
+  });
+
   it("does not steal focus when dismissing a different toast", () => {
     const { root, controller } = setup({ duration: 0 });
 

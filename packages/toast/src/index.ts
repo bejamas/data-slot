@@ -7,6 +7,8 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   focusElement,
+  getFocusable,
+  isFocusable,
   on,
   emit,
 } from "@data-slot/core";
@@ -38,18 +40,6 @@ const DEFAULT_COLLAPSED_PEEK = 14;
 const DEFAULT_SWIPE_THRESHOLD = 40;
 const SWIPE_RESISTANCE = 0.2;
 const SWIPE_AXIS_LOCK_THRESHOLD = 12;
-const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "area[href]",
-  "button",
-  "input",
-  "select",
-  "textarea",
-  "iframe",
-  '[tabindex]:not([tabindex^="-"])',
-  '[contenteditable=""]',
-  '[contenteditable="true"]',
-].join(", ");
 const PREV_TAB_INDEX_ATTR = "data-toast-prev-tabindex";
 const NO_TAB_INDEX = "__none__";
 const RUNTIME_MEASUREMENT_ATTRS = [
@@ -653,50 +643,19 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }
   };
 
-  const isFocusableNode = (node: HTMLElement) => {
-    if (node.hidden || node.hasAttribute("hidden")) return false;
-    if (node.closest("[hidden]")) return false;
-    if (node.closest("[inert]")) return false;
-    if ("disabled" in node && (node as HTMLButtonElement).disabled) return false;
-    if (node.getAttribute("aria-hidden") === "true") return false;
-    return true;
-  };
-
   const getFocusableNodes = (item: HTMLElement): HTMLElement[] => {
-    const nodes = [...item.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)].filter(isFocusableNode);
-    if (item.matches(FOCUSABLE_SELECTOR) && isFocusableNode(item)) {
+    const nodes = getFocusable(item);
+    // Core discovery returns descendants; an authored toast root can also receive focus.
+    if (isFocusable(item)) {
       nodes.unshift(item);
     }
-    return nodes;
-  };
-
-  const getPrimaryFocusTarget = (item: HTMLElement): HTMLElement | null => {
-    const focusables = getFocusableNodes(item);
-    if (focusables[0]) return focusables[0];
-    if (item.tabIndex >= 0 && isFocusableNode(item)) return item;
-    return null;
+    return nodes.filter((node) => node.getAttribute("aria-hidden") !== "true");
   };
 
   const getManagedFocusableNodes = (item: HTMLElement): HTMLElement[] => {
-    const nodes: HTMLElement[] = [];
-    const seen = new Set<HTMLElement>();
-
-    const push = (node: HTMLElement) => {
-      if (seen.has(node)) return;
-      seen.add(node);
-      nodes.push(node);
-    };
-
-    for (const node of getFocusableNodes(item)) {
-      push(node);
-    }
-
+    const nodes = [...item.querySelectorAll<HTMLElement>(`[${PREV_TAB_INDEX_ATTR}]`)];
     if (item.hasAttribute(PREV_TAB_INDEX_ATTR)) {
-      push(item);
-    }
-
-    for (const node of item.querySelectorAll<HTMLElement>(`[${PREV_TAB_INDEX_ATTR}]`)) {
-      push(node);
+      nodes.unshift(item);
     }
 
     return nodes;
@@ -708,8 +667,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       item.removeAttribute("inert");
 
       for (const node of getManagedFocusableNodes(item)) {
-        if (!node.hasAttribute(PREV_TAB_INDEX_ATTR)) continue;
-
         const previousTabIndex = node.getAttribute(PREV_TAB_INDEX_ATTR);
         node.removeAttribute(PREV_TAB_INDEX_ATTR);
         if (!previousTabIndex || previousTabIndex === NO_TAB_INDEX) {
@@ -779,7 +736,7 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
       if (!entry || entry.exiting) continue;
       if (entry.element.getAttribute("data-visible") !== "true") continue;
 
-      const target = getPrimaryFocusTarget(entry.element);
+      const target = getFocusableNodes(entry.element)[0];
       if (target) {
         focusElement(target);
         return true;

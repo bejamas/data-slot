@@ -56,7 +56,7 @@ function isDisabledByFieldset(element: HTMLElement): boolean {
   return !(firstLegend?.contains(element))
 }
 
-function isFocusable(element: HTMLElement): boolean {
+export function isFocusable(element: HTMLElement): boolean {
   if (!hasFocusSemantics(element)) return false
   if (element.matches(':disabled') || isDisabledByFieldset(element)) return false
   return isVisible(element) && !isInert(element) && !isHiddenByClosedDetails(element)

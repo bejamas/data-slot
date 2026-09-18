@@ -38,6 +38,9 @@ const dialogs = getRoots(document, "dialog");
 
 ### Focus Utilities
 
+`isFocusable(element)` checks whether an individual element can receive
+programmatic focus, using the same eligibility rules as descendant discovery.
+
 `getFocusable(container)` returns programmatically focusable descendants in DOM
 order, including elements with a negative `tabindex`. `getTabbables(container)`
 returns the subset eligible for Tab navigation, accounting for checked radio
