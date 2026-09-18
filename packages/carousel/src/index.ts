@@ -13,6 +13,7 @@ import {
   setRootBinding,
   clearRootBinding,
   drainCleanups,
+  createSwipeGesture,
 } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
@@ -46,20 +47,10 @@ const SCROLL_SETTLE_MS = 150;
 const DRAG_AXIS_LOCK_THRESHOLD = 12;
 /** Keyboard navigation stays out of fields so arrow keys keep editing text. */
 const EDITABLE_SELECTOR = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
-const DRAG_BLOCKING_CANDIDATES =
-  'a[href],button,input,select,textarea,summary,[contenteditable=""],[contenteditable="true"],[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="radio"],[role="switch"],[role="textbox"]';
+/** A press on nested controls never starts a drag, so they keep their own clicks. */
+const INTERACTIVE_SELECTOR =
+  'a[href], button, input, select, textarea, summary, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], [role="textbox"]';
 type CarouselSetDetail = { index?: number; action?: "next" | "prev" };
-
-interface DragState {
-  pointerId: number;
-  startX: number;
-  currentX: number;
-  startY: number;
-  currentY: number;
-  startPosition: number;
-  axis: "x" | "y" | null;
-  active: boolean;
-}
 
 export interface CarouselOptions {
   /** Initial slide index */
@@ -113,12 +104,6 @@ const setControlDisabled = (el: HTMLElement, disabled: boolean) => {
     (el as HTMLButtonElement).disabled = disabled;
   }
   setAria(el, "disabled", disabled);
-};
-
-const isDragBlockingTarget = (target: EventTarget | null): boolean => {
-  if (!target || typeof (target as Element).closest !== "function") return false;
-
-  return !!(target as Element).closest(DRAG_BLOCKING_CANDIDATES);
 };
 
 /**
@@ -181,7 +166,6 @@ export function createCarousel(
   const nextControls = getParts<HTMLElement>(root, "carousel-next");
 
   const cleanups: Array<() => void> = [];
-  const doc = root.ownerDocument ?? document;
   const win = root.ownerDocument?.defaultView ?? window;
   const reducedMotion = win.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   const navigationBehavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
@@ -189,17 +173,11 @@ export function createCarousel(
   let currentIndex = normalizeIndex(defaultIndex, items.length, loop);
   let snapPoints: number[] = [];
   let settleTimer: number | undefined;
-  let dragState: DragState | null = null;
-  let previousTouchAction: string | null = null;
-  let previousScrollSnapType: string | null = null;
+  /** A drag has locked to the carousel axis and is driving the scroll position. */
+  let dragging = false;
 
   let resizeObserver: ResizeObserver | null = null;
   let mutationObserver: MutationObserver | null = null;
-
-  const getAxisPosition = () => content[axis.scroll];
-  const setAxisPosition = (position: number) => {
-    content[axis.scroll] = position;
-  };
 
   const getSnapPointForItem = (item: HTMLElement): number =>
     item.getBoundingClientRect()[axis.edge] -
@@ -221,35 +199,6 @@ export function createCarousel(
     }
 
     return nearest;
-  };
-
-  const resolveDragAxis = (deltaX: number, deltaY: number): "x" | "y" | null => {
-    const absX = Math.abs(deltaX);
-    const absY = Math.abs(deltaY);
-
-    if (Math.max(absX, absY) < DRAG_AXIS_LOCK_THRESHOLD) {
-      return null;
-    }
-
-    if (absX === absY) {
-      return axis.swipe;
-    }
-
-    return absX > absY ? "x" : "y";
-  };
-
-  const disableDragScrollSnap = () => {
-    if (previousScrollSnapType !== null) return;
-
-    previousScrollSnapType = content.style.scrollSnapType;
-    content.style.scrollSnapType = "none";
-  };
-
-  const restoreDragScrollSnap = () => {
-    if (previousScrollSnapType === null) return;
-
-    content.style.scrollSnapType = previousScrollSnapType;
-    previousScrollSnapType = null;
   };
 
   const canScrollPrev = () => {
@@ -387,12 +336,12 @@ export function createCarousel(
   const syncIndexFromScroll = () => {
     win.clearTimeout(settleTimer);
     settleTimer = undefined;
-    if (dragState?.active) return;
-    applyIndex(getNearestIndex(getAxisPosition()));
+    if (dragging) return;
+    applyIndex(getNearestIndex(content[axis.scroll]));
   };
 
   const onScroll = () => {
-    if (dragState?.active) return;
+    if (dragging) return;
     win.clearTimeout(settleTimer);
     settleTimer = win.setTimeout(syncIndexFromScroll, SCROLL_SETTLE_MS);
   };
@@ -436,92 +385,57 @@ export function createCarousel(
     }
   };
 
-  const stopDragging = (
-    pointerId: number | null,
-    shouldSnap: boolean,
-  ) => {
-    const current = dragState;
-    if (!current) return;
-    if (pointerId !== null && current.pointerId !== pointerId) return;
+  /**
+   * Drag the scroll container along the carousel axis with a pointer or touch,
+   * then settle on the nearest slide. Native scroll snapping is paused while
+   * the drag drives the position. Returns the cleanup.
+   */
+  const bindDrag = (): (() => void) => {
+    const authoredTouchAction = content.style.touchAction;
+    let authoredSnapType = "";
+    /** Scroll position the drag started from; read at axis lock so a previous drag has settled. */
+    let origin = 0;
+    content.style.touchAction = axis.touchAction;
 
-    dragState = null;
-    root.removeAttribute("data-dragging");
-
-    if ("releasePointerCapture" in content) {
-      try {
-        content.releasePointerCapture(current.pointerId);
-      } catch {
-        // Ignore if pointer capture was not active.
-      }
-    }
-
-    if (shouldSnap) setIndex(getNearestIndex(getAxisPosition()));
-    restoreDragScrollSnap();
-  };
-
-  const onPointerDown = (event: PointerEvent) => {
-    if (!drag) return;
-    if (dragState?.pointerId === event.pointerId) return;
-    if (dragState?.active) return;
-    if (event.button !== 0) return;
-    if (isDragBlockingTarget(event.target)) return;
-
-    dragState = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      currentX: event.clientX,
-      startY: event.clientY,
-      currentY: event.clientY,
-      startPosition: getAxisPosition(),
-      axis: null,
-      active: false,
+    const end = () => {
+      if (!dragging) return;
+      dragging = false;
+      root.removeAttribute("data-dragging");
+      content.style.scrollSnapType = authoredSnapType;
     };
+    const settle = () => setIndex(getNearestIndex(content[axis.scroll]));
 
-    if ("setPointerCapture" in content) {
-      try {
-        content.setPointerCapture(event.pointerId);
-      } catch {
-        // Ignore if pointer capture is unsupported for this target.
-      }
-    }
-  };
+    const gesture = createSwipeGesture<HTMLElement>({
+      element: content,
+      axes: [axis.swipe],
+      lockThreshold: DRAG_AXIS_LOCK_THRESHOLD,
+      start: (_event, target) => (target.closest(INTERACTIVE_SELECTOR) ? null : content),
+      lock() {
+        origin = content[axis.scroll];
+        dragging = true;
+        root.setAttribute("data-dragging", "true");
+        authoredSnapType = content.style.scrollSnapType;
+        content.style.scrollSnapType = "none";
+        return true;
+      },
+      move(_content, { deltaX, deltaY }) {
+        content[axis.scroll] = origin - (axis.swipe === "x" ? deltaX : deltaY);
+      },
+      release() {
+        end();
+        settle();
+      },
+      reset(_content, event) {
+        end();
+        // A cancelled gesture settles like a release; destroy() cancels without an event.
+        if (event) settle();
+      },
+    });
 
-  const onPointerMove = (event: PointerEvent) => {
-    if (!dragState || event.pointerId !== dragState.pointerId) return;
-
-    dragState.currentX = event.clientX;
-    dragState.currentY = event.clientY;
-
-    const deltaX = dragState.currentX - dragState.startX;
-    const deltaY = dragState.currentY - dragState.startY;
-    const dragAxis = dragState.axis ?? resolveDragAxis(deltaX, deltaY);
-    dragState.axis = dragAxis;
-
-    if (dragAxis !== axis.swipe) return;
-
-    if (event.cancelable) {
-      event.preventDefault();
-    }
-
-    if (!dragState.active) {
-      dragState.active = true;
-      root.setAttribute("data-dragging", "true");
-      disableDragScrollSnap();
-    }
-
-    setAxisPosition(dragState.startPosition - (axis.swipe === "x" ? deltaX : deltaY));
-  };
-
-  const onPointerUp = (event: PointerEvent) => {
-    stopDragging(event.pointerId, true);
-  };
-
-  const onPointerCancel = (event: PointerEvent) => {
-    stopDragging(event.pointerId, true);
-  };
-
-  const onLostPointerCapture = (event: PointerEvent) => {
-    stopDragging(event.pointerId, true);
+    return () => {
+      gesture.destroy();
+      content.style.touchAction = authoredTouchAction;
+    };
   };
 
   measureSnapPoints();
@@ -529,23 +443,11 @@ export function createCarousel(
   scrollToIndex(currentIndex);
   applyIndex(currentIndex);
 
-  if (drag) {
-    previousTouchAction = content.style.touchAction;
-    content.style.touchAction = axis.touchAction;
-  }
-
   cleanups.push(on(content, "scroll", onScroll));
   cleanups.push(on(content, "scrollend", syncIndexFromScroll));
   cleanups.push(on(root, "keydown", onKeyDown));
   cleanups.push(on(root, "carousel:set", onSet));
-
-  if (drag) {
-    cleanups.push(on(content, "pointerdown", onPointerDown));
-    cleanups.push(on(doc, "pointermove", onPointerMove));
-    cleanups.push(on(doc, "pointerup", onPointerUp));
-    cleanups.push(on(doc, "pointercancel", onPointerCancel));
-    cleanups.push(on(content, "lostpointercapture", onLostPointerCapture));
-  }
+  if (drag) cleanups.push(bindDrag());
 
   for (const [controls, navigate] of [[previousControls, prev], [nextControls, next]] as const) {
     for (const control of controls) {
@@ -583,13 +485,6 @@ export function createCarousel(
     },
     destroy() {
       win.clearTimeout(settleTimer);
-      stopDragging(null, false);
-
-      if (drag) {
-        content.style.touchAction = previousTouchAction ?? "";
-        previousTouchAction = null;
-      }
-      restoreDragScrollSnap();
       resizeObserver?.disconnect();
       mutationObserver?.disconnect();
       drainCleanups(cleanups);

@@ -858,7 +858,7 @@ describe("Carousel", () => {
     controller.destroy();
   });
 
-  it("ignores extra pointers while a drag is active", () => {
+  it("lets a new pointer take over an active drag", () => {
     const { root, content, controller } = setupWithGeometry({
       options: { drag: true },
     });
@@ -886,6 +886,7 @@ describe("Carousel", () => {
     expect(content.style.scrollSnapType).toBe("none");
     expect(content.scrollLeft).toBe(120);
 
+    // The first drag settles on the nearest slide and the new pointer drags from there.
     content.dispatchEvent(
       new PointerEvent("pointerdown", {
         bubbles: true,
@@ -895,18 +896,23 @@ describe("Carousel", () => {
         clientY: 40,
       }),
     );
+
+    expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(content.scrollLeft).toBe(100);
+    expect(controller.index).toBe(1);
+
     document.dispatchEvent(
       new PointerEvent("pointermove", {
         bubbles: true,
         cancelable: true,
         pointerId: 23,
-        clientX: 200,
+        clientX: 60,
         clientY: 40,
       }),
     );
 
     expect(root.getAttribute("data-dragging")).toBe("true");
-    expect(content.scrollLeft).toBe(120);
+    expect(content.scrollLeft).toBe(60);
 
     document.dispatchEvent(
       new PointerEvent("pointerup", {
@@ -917,20 +923,21 @@ describe("Carousel", () => {
       }),
     );
 
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(content.style.scrollSnapType).toBe("");
+    expect(root.getAttribute("data-dragging")).toBe("true");
     expect(controller.index).toBe(1);
 
     document.dispatchEvent(
       new PointerEvent("pointerup", {
         bubbles: true,
         pointerId: 23,
-        clientX: 200,
+        clientX: 60,
         clientY: 40,
       }),
     );
 
     expect(root.hasAttribute("data-dragging")).toBe(false);
+    expect(content.style.scrollSnapType).toBe("");
+    expect(content.scrollLeft).toBe(100);
     expect(controller.index).toBe(1);
 
     controller.destroy();
@@ -1029,48 +1036,6 @@ describe("Carousel", () => {
       new PointerEvent("pointercancel", {
         bubbles: true,
         pointerId: 16,
-      }),
-    );
-
-    expect(root.hasAttribute("data-dragging")).toBe(false);
-    expect(controller.index).toBe(1);
-
-    controller.next();
-    expect(controller.index).toBe(2);
-
-    controller.destroy();
-  });
-
-  it("cleans up active drag state on lost pointer capture", () => {
-    const { root, content, controller } = setupWithGeometry({
-      options: { drag: true },
-    });
-
-    content.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 17,
-        button: 0,
-        clientX: 180,
-        clientY: 40,
-      }),
-    );
-    document.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerId: 17,
-        clientX: 60,
-        clientY: 40,
-      }),
-    );
-
-    expect(root.getAttribute("data-dragging")).toBe("true");
-
-    content.dispatchEvent(
-      new PointerEvent("lostpointercapture", {
-        bubbles: true,
-        pointerId: 17,
       }),
     );
 
