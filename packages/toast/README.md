@@ -41,7 +41,8 @@ npm install @data-slot/toast
 
 ### `create(scope?)`
 
-Auto-discover and bind all toast roots in a scope (`document` by default).
+Auto-discover and bind uninitialized toast roots in a scope (`document` by default).
+Roots already initialized with either `create()` or `createToast()` are skipped.
 
 ```ts
 import { create } from "@data-slot/toast";
@@ -52,6 +53,9 @@ const controllers = create(); // ToastController[]
 ### `createToast(root, options?)`
 
 Create a controller for one toast root.
+
+Repeated calls for the same root return the existing controller and keep its
+original options. Destroy that controller before rebinding with different options.
 
 ```ts
 import { createToast } from "@data-slot/toast";

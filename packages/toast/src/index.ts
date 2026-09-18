@@ -1,6 +1,7 @@
 import {
   getPart, getRoots, getDataBool, getDataEnum, getDataNumber,
   createPortalLifecycle, createTerminalLifecycle, focusElement, on, emit,
+  reuseRootBinding, hasRootBinding, setRootBinding, clearRootBinding,
 } from "@data-slot/core";
 import { POSITIONS } from "./types";
 import type {
@@ -32,6 +33,10 @@ interface ToastActionDetail {
   value: string | undefined;
 }
 
+const ROOT_BINDING_KEY = "@data-slot/toast";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/toast] createToast() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
+
 /**
  * Create a toast controller for a root element.
  *
@@ -44,6 +49,11 @@ interface ToastActionDetail {
  * ```
  */
 export function createToast(root: Element, options: ToastOptions = {}): ToastController {
+  const existingController = reuseRootBinding<ToastController>(
+    root, ROOT_BINDING_KEY, DUPLICATE_BINDING_WARNING,
+  );
+  if (existingController) return existingController;
+
   const viewport = getPart<HTMLElement>(root, "toast-viewport");
   if (!viewport) {
     throw new Error("Toast requires a toast-viewport slot");
@@ -513,18 +523,18 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     entries.clear();
     previousFocusedElement = null;
     portal.cleanup();
-    bound.delete(root);
+    clearRootBinding(root, ROOT_BINDING_KEY, controller);
   });
 
   layout.update();
-  return {
+  const controller: ToastController = {
     show, update, promise, dismiss, dismissAll,
     get count() { return activeEntries().length; },
     destroy: () => { lifecycle.destroy(); },
   };
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
+  return controller;
 }
-
-const bound = new WeakSet<Element>();
 
 /**
  * Find and bind all toast roots in a scope.
@@ -533,8 +543,7 @@ export function create(scope: ParentNode = document): ToastController[] {
   const controllers: ToastController[] = [];
 
   for (const root of getRoots(scope, "toast")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createToast(root));
   }
 
