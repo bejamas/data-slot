@@ -23,7 +23,7 @@ export { on, onRoot, emit, composeHandlers } from "./events.ts";
 export { createFormFieldAdapter, observeFormReset } from "./form-field.ts";
 export type { FormFieldAdapter, FormResetObserver } from "./form-field.ts";
 export { lockScroll, unlockScroll } from "./scroll.ts";
-export { getAutofocusOrFirstFocusable, getFocusable, getTabbables } from "./focus.ts";
+export { getAutofocusOrFirstFocusable, getFocusable, getTabbables, isFocusable } from "./focus.ts";
 export {
   computeFloatingPosition,
   computeFloatingTransformOrigin,
@@ -64,5 +64,7 @@ export type {
   PresenceLifecycleOptions,
   PresenceLifecycleController,
 } from "./popup.ts";
+export { createSwipeGesture } from "./swipe.ts";
+export type { SwipeAxis, SwipeMove, SwipeRelease, SwipeGestureOptions, SwipeGestureController } from "./swipe.ts";
 export { createTypeahead } from "./typeahead.ts";
 export type { TypeaheadOptions, TypeaheadController } from "./typeahead.ts";

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, copyFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile, copyFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { components } from '../lib/catalog';
 import { themeExamples } from './theme-examples';
@@ -11,8 +11,12 @@ for (const weight of [400, 500, 700]) {
   await copyFile(resolve(project, `node_modules/@fontsource/geist-mono/files/geist-mono-latin-${weight}-normal.woff2`), resolve(project, `public/fonts/geist-mono-${weight}.woff2`));
 }
 
-// Drawer styles are shared by the live markup and the displayed CSS source.
-await write('.generated/examples/drawer.css', themeExamples(await readFile(resolve(project, 'src/components/examples/drawer.css'), 'utf8')));
+// Examples import shared styles and setup scripts relative to themselves; mirror those files next to the generated copies.
+for (const file of await readdir(resolve(project, 'src/components/examples'))) {
+  if (file.endsWith('.astro')) continue;
+  const source = await readFile(resolve(project, `src/components/examples/${file}`), 'utf8');
+  await write(`.generated/examples/${file}`, file.endsWith('.css') ? themeExamples(source) : source);
+}
 
 for (const component of components) {
   for (const variant of ['basic', 'extra'] as const) {

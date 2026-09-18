@@ -129,6 +129,13 @@
         "@data-slot/core": "workspace:*",
       },
     },
+    "packages/toast": {
+      "name": "@data-slot/toast",
+      "version": "0.2.107",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
     "packages/toggle": {
       "name": "@data-slot/toggle",
       "version": "0.2.167",
@@ -170,6 +177,7 @@
         "@data-slot/select": "workspace:*",
         "@data-slot/switch": "workspace:*",
         "@data-slot/tabs": "workspace:*",
+        "@data-slot/toast": "workspace:*",
         "@data-slot/toggle": "workspace:*",
         "@data-slot/toggle-group": "workspace:*",
         "@data-slot/tooltip": "workspace:*",
@@ -246,6 +254,8 @@
     "@data-slot/switch": ["@data-slot/switch@workspace:packages/switch"],
 
     "@data-slot/tabs": ["@data-slot/tabs@workspace:packages/tabs"],
+
+    "@data-slot/toast": ["@data-slot/toast@workspace:packages/toast"],
 
     "@data-slot/toggle": ["@data-slot/toggle@workspace:packages/toggle"],
 

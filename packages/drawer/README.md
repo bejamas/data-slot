@@ -257,9 +257,9 @@ CSS variables include:
 
 - `--drawer-height` and `--drawer-width`
 - `--drawer-snap-point-offset` (signed offset for the configured direction)
-- `--drawer-swipe-movement-x` and `--drawer-swipe-movement-y`
+- `--drawer-swipe-amount-x` and `--drawer-swipe-amount-y`
 - `--drawer-swipe-progress` and release `--drawer-swipe-strength` (`0.1` to `1`)
-- `--nested-drawers` and `--drawer-frontmost-height`
+- `--nested-drawers` and `--drawer-front-height`
 - `--drawer-keyboard-inset` on `drawer-viewport`
 
 ```css
@@ -268,7 +268,7 @@ CSS variables include:
 }
 
 [data-slot="drawer-popup"] {
-  transform: translateY(calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px)));
+  transform: translateY(calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-amount-y, 0px)));
 }
 ```
 

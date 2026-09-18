@@ -1,0 +1,79 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+import styles from "./toast.css?raw";
+import "./toast.css";
+import setupSource from "./toast-example.js?raw";
+
+interface Props { variant?: "basic" | "extra" }
+const { variant = "basic" } = Astro.props;
+const css = {
+  controls: "toast-demo-controls",
+  trigger: "toast-demo-trigger",
+  item: "toast-demo-item",
+  copy: "toast-demo-copy",
+  title: "toast-demo-title",
+  description: "toast-demo-description",
+  button: "toast-demo-button",
+};
+const tailwind = {
+  controls: "flex flex-wrap justify-center gap-2",
+  trigger: "cursor-pointer border border-[#ccc] bg-[#faf9f7] px-3 py-2 text-sm text-[#1a1a1a] hover:bg-[#f0eeeb]",
+  item: "flex items-start gap-3 border border-[#ccc] bg-[#fff] p-4 text-[#1a1a1a] shadow-lg",
+  copy: "min-w-0 flex-1",
+  title: "block text-sm font-bold leading-5",
+  description: "m-0 mt-1 text-xs leading-5 text-[#666] hidden:hidden",
+  button: "shrink-0 cursor-pointer border border-[#ccc] bg-transparent px-2 py-1 text-xs leading-5 hover:bg-[#f0eeeb] hidden:hidden",
+};
+
+function markup(mode: "css" | "tailwind") {
+  const c = mode === "css" ? css : tailwind;
+  const buttons = variant === "basic"
+    ? `<button type="button" data-toast-success class="${c.trigger}">Save changes</button>
+    <button type="button" data-toast-error class="${c.trigger}">Show error</button>
+    <button type="button" data-toast-summary class="${c.trigger}">Show summary</button>`
+    : `<button type="button" data-toast-promise="success" class="${c.trigger}">Upload file</button>
+    <button type="button" data-toast-promise="error" class="${c.trigger}">Fail upload</button>`;
+  return `<div data-slot="toast" data-position="bottom-right" class="toast-demo">
+  <div class="${c.controls}">
+    ${buttons}
+    <button type="button" data-toast-clear class="${c.trigger}">Clear all</button>
+  </div>
+  <template data-slot="toast-template">
+    <li data-slot="toast-item" class="${c.item}">
+      <div class="${c.copy}">
+        <strong data-slot="toast-title" class="${c.title}"></strong>
+        <p data-slot="toast-description" class="${c.description}"></p>
+      </div>
+      <button type="button" data-slot="toast-action" class="${c.button}"></button>
+      <button type="button" data-slot="toast-close" aria-label="Close notification" class="${c.button}">×</button>
+    </li>
+  </template>
+  <ol data-slot="toast-viewport" aria-label="Notifications" class="toast-demo-viewport"></ol>
+</div>`;
+}
+
+const setup = `import { createToast } from "@data-slot/toast";
+
+${setupSource.replace(/\/\*\*[\s\S]*?\*\/\s*/g, "").replace("export function", "function").trim()}
+
+// Initialize after the markup is in the document.
+const abort = new AbortController();
+const controllers = Array.from(document.querySelectorAll('[data-slot="toast"]'), root => {
+  const toaster = createToast(root);
+  bindToastExample(root, toaster, abort.signal);
+  return toaster;
+});
+
+// Clean up before removing the example.
+// abort.abort();
+// controllers.forEach(controller => controller.destroy());`;
+const source = (mode: "css" | "tailwind") => `${markup(mode)}\n\n<style>\n${styles}</style>`;
+---
+
+<ExampleBlock label={variant === "basic" ? "Toast notifications with an undo action" : "Toast loading, success, and error states"} setup={setup}>
+  <Fragment slot="preview-css" set:html={markup("css")} />
+  <Fragment slot="preview-tailwind" set:html={markup("tailwind")} />
+  <Code slot="code-css" code={source("css")} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={source("tailwind")} lang="html" theme="vitesse-light" />
+</ExampleBlock>

@@ -1,0 +1,72 @@
+---
+title: Toast
+description: Brief notifications with actions, automatic dismissal, and loading states for async work.
+---
+
+<PackageInfo name="toast" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/toast
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/toast
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/toast
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+Only `toast-viewport` is required inside the root. Each call to `show()` clones `toast-template` and fills its title, description, and action slots. Without a template, the component creates default markup that you can style with the same slots. Include `toast-close` to let people dismiss a notification themselves.
+
+```html
+<div data-slot="toast" data-position="bottom-right">
+  <template data-slot="toast-template">
+    <li data-slot="toast-item">
+      <strong data-slot="toast-title"></strong>
+      <p data-slot="toast-description"></p>
+      <button type="button" data-slot="toast-action"></button>
+      <button type="button" data-slot="toast-close" aria-label="Close notification">×</button>
+    </li>
+  </template>
+  <ol data-slot="toast-viewport" aria-label="Notifications"></ol>
+</div>
+```
+
+Set the viewport’s position and the items’ appearance in CSS. `data-position` supplies a placement token; it does not position the viewport by itself. Add `data-portal` to move the viewport to `document.body` when it needs to escape a clipping container.
+
+## Examples
+
+### Show a notification
+
+Call `show()` with a title, an optional description, and a type. Add an action such as Undo with its own callback. Notifications dismiss after five seconds by default; hover or focus the stack to pause the timer and expand older items. Use `duration: 0` for a notification that stays until dismissed. The summary notification has a longer description, so the stack measures each item and keeps its offsets correct when heights differ.
+
+<Example name="toast" />
+
+The viewport shows up to three notifications by default. Older items stay mounted but become hidden and non-interactive until space opens. Error and warning messages use `role="alert"`; other types use `role="status"` so they can be announced without moving focus.
+
+### Follow an async operation
+
+Pass a promise to `promise()` to show a persistent loading message, then update that same notification when the operation resolves or rejects. The buttons below simulate both outcomes. Success and error notifications use the normal dismissal timer.
+
+<Example name="toast" variant="extra" />
+
+`promise()` returns an object with `id` and `unwrap()`. Await `unwrap()` when you also need the result in your application, and handle a rejected promise with `try` / `catch`. For other updates, keep the id returned by `show()` and pass it to `update()` or `dismiss()`.
+
+## API reference
+
+<include>../_generated/toast-api.md</include>

@@ -22,6 +22,7 @@ export default defineConfig({
     "src/select.ts",
     "src/combobox.ts",
     "src/command.ts",
+    "src/toast.ts",
   ],
   format: ["esm", "cjs"],
   dts: true,

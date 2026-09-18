@@ -34,6 +34,7 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 | `@data-slot/collapsible` | 1.6 KB | Simple show/hide toggle |
 | `@data-slot/accordion` | 1.4 KB | Collapsible content sections |
 | `@data-slot/toggle` | 740 B | Pressed-state toggle button |
+| `@data-slot/toast` | 2.9 KB | Imperative notifications |
 
 ## Usage
 
@@ -65,6 +66,7 @@ Available subpaths:
 - `@data-slot/ui/select`
 - `@data-slot/ui/combobox`
 - `@data-slot/ui/command`
+- `@data-slot/ui/toast`
 
 ### Direct Package Imports
 
@@ -178,6 +180,7 @@ With Tailwind:
 | `createSwitch` | @data-slot/switch |
 | `createCombobox` | @data-slot/combobox |
 | `createCommand` | @data-slot/command |
+| `createToast` | @data-slot/toast |
 
 ### Types
 
@@ -197,6 +200,7 @@ With Tailwind:
 | `SwitchOptions`, `SwitchController` | @data-slot/switch |
 | `ComboboxOptions`, `ComboboxController` | @data-slot/combobox |
 | `CommandOptions`, `CommandController`, `CommandFilter` | @data-slot/command |
+| `ToastPosition`, `ToastAction`, `ToastShowOptions`, `ToastOptions`, `ToastController` | @data-slot/toast |
 
 ### Core Utilities
 

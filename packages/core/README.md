@@ -38,6 +38,9 @@ const dialogs = getRoots(document, "dialog");
 
 ### Focus Utilities
 
+`isFocusable(element)` checks whether an individual element can receive
+programmatic focus, using the same eligibility rules as descendant discovery.
+
 `getFocusable(container)` returns programmatically focusable descendants in DOM
 order, including elements with a negative `tabindex`. `getTabbables(container)`
 returns the subset eligible for Tab navigation, accounting for checked radio
@@ -143,6 +146,21 @@ Coordinate outside presses, Escape, and focus moving into an outside iframe.
 `"outside-press"`, `"escape-key"`, or `"focus-out"`. Touch dismissal reports the
 activation click; iframe dismissal reports the window blur event. Callbacks that
 do not need these details can continue to take no arguments.
+
+### Swipe Gesture
+
+#### `createSwipeGesture(options)`
+
+Track one pointer or touch swipe at a time from a press on `element`. Nothing
+is reported until movement passes `lockThreshold` (default 8px) on one of the
+allowed `axes`; a drag dominated by another axis, or one the `lock` callback
+refuses (for example when a scroll container owns it), is left to the page.
+`start(event, target)` resolves what a press would swipe or returns `null` to
+ignore it. Once locked, the pointer is captured on the element `capture`
+returns, `move` receives raw deltas, and `release` adds the press duration for
+velocity. `reset` runs when a locked gesture ends without a release. The click
+that follows a released swipe is swallowed. The controller offers `cancel()`,
+optionally for one target, and `destroy()`.
 
 ## Usage in Components
 

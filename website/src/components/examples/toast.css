@@ -1,0 +1,141 @@
+/* Keep the preview stack inside its example. Use position: fixed on the
+   viewport to anchor notifications to the browser window instead. */
+.toast-demo {
+  position: relative;
+  min-height: 19rem;
+  width: 100%;
+}
+
+.toast-demo-viewport {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: min(24rem, 100%);
+  height: var(--toast-stack-size, 0px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  --toast-gap: 12px;
+  --toast-collapsed-peek: 12px;
+}
+
+.toast-demo-viewport [data-slot="toast-item"] {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  transform-origin: bottom center;
+  touch-action: none;
+  opacity: 0;
+  transform: translateY(1rem);
+  transition: transform 250ms ease, opacity 250ms ease, height 250ms ease;
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-mounted="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-expanded="false"][data-front="false"] {
+  transform: translateY(calc(-1 * var(--toast-collapsed-offset-y, 0px)))
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
+  height: var(--toast-front-height);
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-expanded="true"] {
+  transform: translateY(calc(-1 * var(--toast-offset, 0px)));
+  height: var(--toast-initial-height);
+}
+
+/* Bridge the gaps so hovering between notifications keeps the stack open. */
+.toast-demo-viewport [data-slot="toast-item"][data-expanded="true"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 100%;
+  height: calc(var(--toast-gap) + 1px);
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-expanded="false"][data-front="false"] > * {
+  opacity: 0;
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-visible="false"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-removed="true"] {
+  opacity: 0;
+  transform: translateY(1rem);
+  pointer-events: none;
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-swiping="true"] {
+  transition: none;
+  transform: translate(
+    var(--toast-swipe-amount-x, 0px),
+    calc(-1 * var(--toast-offset, 0px) + var(--toast-swipe-amount-y, 0px))
+  );
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-swipe-out="true"] {
+  transform: translate(
+    var(--toast-swipe-end-x, 0px),
+    calc(-1 * var(--toast-offset, 0px) + var(--toast-swipe-end-y, 0px))
+  );
+}
+
+.toast-demo :is(button, [data-slot="toast-item"]):focus-visible {
+  outline: 2px solid #0066cc;
+  outline-offset: 3px;
+}
+
+.toast-demo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.toast-demo-trigger {
+  cursor: pointer;
+  border: 1px solid #ccc;
+  background: #faf9f7;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: #1a1a1a;
+}
+
+.toast-demo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1px solid #ccc;
+  background: #fff;
+  padding: 1rem;
+  color: #1a1a1a;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.1);
+}
+
+.toast-demo-copy { min-width: 0; flex: 1; }
+.toast-demo-title { display: block; font-size: 0.875rem; font-weight: 700; line-height: 1.25rem; }
+.toast-demo-description { margin: 0.25rem 0 0; font-size: 0.75rem; line-height: 1.25rem; color: #666; }
+.toast-demo-button {
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  background: transparent;
+  padding: 0.25rem 0.5rem;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+.toast-demo-trigger:hover, .toast-demo-button:hover { background: #f0eeeb; }
+.toast-demo-viewport [hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-demo-viewport [data-slot="toast-item"] { transition: none; }
+}

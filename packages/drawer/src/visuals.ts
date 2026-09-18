@@ -46,15 +46,15 @@ function renderSwipe(entry: VisualEntry) {
     element.toggleAttribute('data-swiping', swipe !== null);
     element.style.setProperty('--drawer-swipe-progress', String((element === popup ? front.swipe : swipe)?.progress ?? 0));
   }
-  popup.style.setProperty('--drawer-swipe-movement-x', `${swipe?.x ?? 0}px`);
-  popup.style.setProperty('--drawer-swipe-movement-y', `${swipe?.y ?? 0}px`);
+  popup.style.setProperty('--drawer-swipe-amount-x', `${swipe?.x ?? 0}px`);
+  popup.style.setProperty('--drawer-swipe-amount-y', `${swipe?.y ?? 0}px`);
 }
 
 function renderEntry(entry: VisualEntry) {
   entry.popup.toggleAttribute('data-nested', !!entry.parent);
   entry.popup.toggleAttribute('data-nested-drawer-open', entry.front !== null);
   entry.popup.style.setProperty('--nested-drawers', String(entry.descendants.filter((child) => child.open).length));
-  entry.popup.style.setProperty('--drawer-frontmost-height', `${(entry.front ?? entry).height}px`);
+  entry.popup.style.setProperty('--drawer-front-height', `${(entry.front ?? entry).height}px`);
   renderSwipe(entry);
 }
 

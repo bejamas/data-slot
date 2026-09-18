@@ -184,8 +184,8 @@ describe('Drawer', () => {
       const dy = Math.sign(y);
       drag(popup, dx * 100, dy * 100, false, 1000);
       expect(controller.isOpen).toBe(true);
-      expect(popup.style.getPropertyValue('--drawer-swipe-movement-x')).toBe('0px');
-      expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('0px');
+      expect(popup.style.getPropertyValue('--drawer-swipe-amount-x')).toBe('0px');
+      expect(popup.style.getPropertyValue('--drawer-swipe-amount-y')).toBe('0px');
       expect(popup.hasAttribute('data-swiping')).toBe(false);
       drag(popup, dx * 160, dy * 160, false, 1000);
       expect(controller.isOpen).toBe(false);
@@ -197,7 +197,7 @@ describe('Drawer', () => {
     root.addEventListener('drawer:beforechange', (event) => event.preventDefault());
     drag(popup, 0, 700);
     expect(controller.isOpen).toBe(true);
-    expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('0px');
+    expect(popup.style.getPropertyValue('--drawer-swipe-amount-y')).toBe('0px');
     expect(popup.hasAttribute('data-swiping')).toBe(false);
   });
   it('ignores cross-axis, interactive descendants and pointer cancellation', () => {
@@ -376,8 +376,8 @@ describe('single drawer snap point', () => {
       expect(controller.snapPoint).toBe('200px');
       drag(popup, -dx * 300, -dy * 300, false, 1000);
       expect(controller.isOpen).toBe(true);
-      expect(popup.style.getPropertyValue('--drawer-swipe-movement-x')).toBe('0px');
-      expect(popup.style.getPropertyValue('--drawer-swipe-movement-y')).toBe('0px');
+      expect(popup.style.getPropertyValue('--drawer-swipe-amount-x')).toBe('0px');
+      expect(popup.style.getPropertyValue('--drawer-swipe-amount-y')).toBe('0px');
       expect(popup.style.getPropertyValue('--drawer-snap-point-offset')).toBe(`${600 * sign}px`);
       drag(popup, dx * 80, dy * 80, false, 1000);
       expect(controller.isOpen).toBe(false);
