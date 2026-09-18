@@ -1666,7 +1666,7 @@ describe("Toast", () => {
     controller.destroy();
   });
 
-  it("measures toast height within the viewport context so scoped styles are preserved", () => {
+  it("measures toast height in place so ancestor-scoped styles apply", () => {
     const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
 
     HTMLElement.prototype.getBoundingClientRect = function () {
@@ -1685,12 +1685,10 @@ describe("Toast", () => {
       }
 
       if (this.matches('[data-slot="toast-item"]')) {
+        // The natural height is only visible while the controller overrides the
+        // pinned height inline, and only if the item is still inside .scoped.
         const height =
-          this.getAttribute("aria-hidden") === "true"
-            ? this.closest(".scoped")
-              ? 120
-              : 24
-            : 56;
+          this.style.height === "auto" && this.closest(".scoped") ? 120 : 56;
 
         return {
           x: 0,
@@ -1726,10 +1724,13 @@ describe("Toast", () => {
         `,
       );
 
+      const viewport = root.querySelector('[data-slot="toast-viewport"]') as HTMLElement;
       const id = controller.show({ title: "Scoped height" });
       const item = root.querySelector(`[data-id="${id}"]`) as HTMLElement;
 
       expect(item.style.getPropertyValue("--toast-initial-height")).toBe("120px");
+      expect(item.style.height).toBe("");
+      expect(viewport.children.length).toBe(1);
 
       controller.destroy();
     } finally {
@@ -1820,95 +1821,61 @@ describe("Toast", () => {
     }
   });
 
-  it("uses intrinsic toast height for stack offsets when rendered height is collapsed", () => {
-    const OriginalResizeObserver = globalThis.ResizeObserver;
-    let resizeCb: ResizeObserverCallback | null = null;
+  it("measures natural height through a temporary inline override and restores it", () => {
+    const { root, viewport, controller } = setup({ duration: 0 });
 
-    class MockResizeObserver {
-      constructor(cb: ResizeObserverCallback) {
-        resizeCb = cb;
-      }
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    }
+    const firstId = controller.show({ title: "Tall older" });
+    const secondId = controller.show({ title: "Short front" });
 
-    (
-      globalThis as unknown as {
-        ResizeObserver?: typeof ResizeObserver;
-      }
-    ).ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+    const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
+    const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
 
-    try {
-      const { root, controller } = setup({ duration: 0 });
+    // Author CSS pins the rendered height to controller tokens, so the natural
+    // size is only observable while the controller has overridden it inline.
+    const rect = (natural: number, pinned: number) =>
+      function (this: HTMLElement) {
+        const height = this.style.height === "auto" ? natural : pinned;
+        return { x: 0, y: 0, top: 0, left: 0, width: 200, height, right: 200, bottom: height, toJSON: () => ({}) } as DOMRect;
+      };
+    first.getBoundingClientRect = rect(140, 60);
+    second.getBoundingClientRect = rect(60, 60);
+    first.style.height = "60px";
 
-      const firstId = controller.show({ title: "Tall older" });
-      const secondId = controller.show({ title: "Short front" });
+    controller.update(secondId, { title: "Short front!" });
 
-      const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
-      const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
+    expect(first.style.height).toBe("60px");
+    expect(second.style.height).toBe("");
+    expect(first.style.getPropertyValue("--toast-height")).toBe("140px");
+    expect(second.style.getPropertyValue("--toast-height")).toBe("60px");
+    expect(first.style.getPropertyValue("--toast-expanded-offset-y")).toBe("68px");
+    expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("14px");
+    expect(viewport.style.getPropertyValue("--toast-expanded-stack-size")).toBe("208px");
+    expect(viewport.style.getPropertyValue("--toast-collapsed-stack-size")).toBe("74px");
+    expect(viewport.style.getPropertyValue("--toast-stack-size")).toBe("74px");
 
-      first.getBoundingClientRect =
-        (() =>
-          ({
-            x: 0,
-            y: 0,
-            top: 0,
-            left: 0,
-            width: 200,
-            height: 60,
-            right: 200,
-            bottom: 60,
-            toJSON: () => ({}),
-          }) as DOMRect);
-      second.getBoundingClientRect =
-        (() =>
-          ({
-            x: 0,
-            y: 0,
-            top: 0,
-            left: 0,
-            width: 200,
-            height: 60,
-            right: 200,
-            bottom: 60,
-            toJSON: () => ({}),
-          }) as DOMRect);
+    controller.destroy();
+  });
 
-      Object.defineProperty(first, "offsetHeight", { configurable: true, value: 60 });
-      Object.defineProperty(second, "offsetHeight", { configurable: true, value: 60 });
-      Object.defineProperty(first, "scrollHeight", { configurable: true, value: 140 });
-      Object.defineProperty(second, "scrollHeight", { configurable: true, value: 60 });
-      first.style.borderTopWidth = "2px";
-      first.style.borderBottomWidth = "4px";
-      second.style.borderTopWidth = "1px";
-      second.style.borderBottomWidth = "1px";
+  it("keeps the last measured height for an item that measures zero", () => {
+    const { root, controller } = setup({ duration: 0 });
 
-      if (resizeCb) {
-        (resizeCb as ResizeObserverCallback)([], {} as ResizeObserver);
-      }
+    const firstId = controller.show({ title: "Older" });
+    controller.show({ title: "Front" });
+    const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
 
-      expect(first.style.getPropertyValue("--toast-height")).toBe("146px");
-      expect(first.style.getPropertyValue("--toast-expanded-offset-y")).toBe("70px");
-      expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("14px");
-      expect(first.style.getPropertyValue("--toast-offset-y")).toBe("70px");
-      expect(second.style.getPropertyValue("--toast-height")).toBe("62px");
-      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
-        "216px",
-      );
-      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-collapsed-stack-size")).toBe(
-        "76px",
-      );
-      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("76px");
+    let reported = 100;
+    first.getBoundingClientRect = () =>
+      ({ x: 0, y: 0, top: 0, left: 0, width: 200, height: reported, right: 200, bottom: reported, toJSON: () => ({}) }) as DOMRect;
 
-      controller.destroy();
-    } finally {
-      (
-        globalThis as unknown as {
-          ResizeObserver?: typeof ResizeObserver;
-        }
-      ).ResizeObserver = OriginalResizeObserver;
-    }
+    controller.update(firstId, { title: "Older!" });
+    expect(first.style.getPropertyValue("--toast-height")).toBe("100px");
+
+    // e.g. author CSS applies display: none to overflow items
+    reported = 0;
+    controller.update(firstId, { title: "Older!!" });
+    expect(first.style.getPropertyValue("--toast-height")).toBe("100px");
+
+    controller.destroy();
   });
 
   it("keeps a fixed collapsed peek distance across mixed toast heights", () => {

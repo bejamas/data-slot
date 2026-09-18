@@ -4,34 +4,6 @@ const DEFAULT_GAP = 8;
 const DEFAULT_COLLAPSED_PEEK = 14;
 const PREV_TAB_INDEX_ATTR = "data-toast-prev-tabindex";
 const NO_TAB_INDEX = "__none__";
-const RUNTIME_MEASUREMENT_ATTRS = [
-  "data-mounted",
-  "data-expanded",
-  "data-front",
-  "data-visible",
-  "data-removed",
-  "data-swiping",
-  "data-swipe-out",
-  "aria-hidden",
-  "inert",
-] as const;
-const RUNTIME_MEASUREMENT_STYLE_PROPS = [
-  "--toast-index",
-  "--toast-count",
-  "--toast-height",
-  "--toast-initial-height",
-  "--toast-offset",
-  "--toast-expanded-offset-y",
-  "--toast-collapsed-offset-y",
-  "--toast-offset-y",
-  "--toast-lift",
-  "--toast-stack-direction",
-  "--toast-swipe-movement-x",
-  "--toast-swipe-movement-y",
-  "--toast-swipe-end-x",
-  "--toast-swipe-end-y",
-] as const;
-
 const getCssGap = (viewport: HTMLElement): number => {
   const raw = getComputedStyle(viewport).getPropertyValue("--toast-gap").trim();
   if (!raw) return DEFAULT_GAP;
@@ -47,62 +19,19 @@ const getCssCollapsedPeek = (viewport: HTMLElement): number => {
   return Math.max(0, parsed);
 };
 
-const getToastHeight = (
-  item: HTMLElement,
-  viewport: HTMLElement,
-  fallbackWidth: number,
-): number => {
-  const rectHeight = item.getBoundingClientRect().height;
-  const renderedHeight = rectHeight > 0 ? rectHeight : item.offsetHeight;
-  const intrinsicHeight = item.scrollHeight;
-  const styles = getComputedStyle(item);
-  const borderTop = Number.parseFloat(styles.borderTopWidth);
-  const borderBottom = Number.parseFloat(styles.borderBottomWidth);
-  const borderHeight =
-    (Number.isFinite(borderTop) ? borderTop : 0) +
-    (Number.isFinite(borderBottom) ? borderBottom : 0);
-  const intrinsicBorderBoxHeight =
-    intrinsicHeight > 0 ? intrinsicHeight + borderHeight : 0;
-  const measurementWidth =
-    item.getBoundingClientRect().width || item.offsetWidth || fallbackWidth;
-
-  if (measurementWidth > 0) {
-    const clone = item.cloneNode(true) as HTMLElement;
-    for (const attr of RUNTIME_MEASUREMENT_ATTRS) {
-      clone.removeAttribute(attr);
-    }
-    for (const prop of RUNTIME_MEASUREMENT_STYLE_PROPS) {
-      clone.style.removeProperty(prop);
-    }
-
-    clone.setAttribute("aria-hidden", "true");
-    clone.style.position = "absolute";
-    clone.style.inset = "0 auto auto 0";
-    clone.style.width = `${measurementWidth}px`;
-    clone.style.height = "auto";
-    clone.style.maxHeight = "none";
-    clone.style.pointerEvents = "none";
-    clone.style.visibility = "hidden";
-    clone.style.opacity = "1";
-    clone.style.transform = "none";
-    clone.style.transition = "none";
-    clone.style.animation = "none";
-    clone.style.zIndex = "-1";
-
-    viewport.append(clone);
-    const cloneRectHeight = clone.getBoundingClientRect().height;
-    const cloneHeight = cloneRectHeight > 0 ? cloneRectHeight : clone.offsetHeight;
-    clone.remove();
-
-    if (cloneHeight > 0) {
-      return cloneHeight;
-    }
-  }
-
-  if (intrinsicBorderBoxHeight > 0) {
-    return intrinsicBorderBoxHeight;
-  }
-  return renderedHeight;
+/**
+ * Author CSS pins each item's height to tokens this module writes, so the
+ * rendered box never reflects the item's natural size. Override the height
+ * inline for the duration of one synchronous read, then put it back. The
+ * write and restore land in the same task, so no transition or resize fires.
+ */
+const measureNaturalHeight = (item: HTMLElement): number => {
+  const pinnedHeight = item.style.height;
+  item.style.height = "auto";
+  // offsetHeight ignores transforms such as the collapsed-stack scale.
+  const height = item.offsetHeight || item.getBoundingClientRect().height;
+  item.style.height = pinnedHeight;
+  return height;
 };
 
 export const getToastFocusableNodes = (item: HTMLElement): HTMLElement[] => {
@@ -167,6 +96,7 @@ interface ToastLayoutOptions {
 export function createToastLayout({ viewport, limit, stackDirection, getItems, onLayout }: ToastLayoutOptions) {
   const doc = viewport.ownerDocument;
   const observed = new Set<HTMLElement>();
+  const naturalHeights = new WeakMap<HTMLElement, number>();
   let destroyed = false;
   const setExpanded = (expanded: boolean) => {
     if (expanded) {
@@ -202,11 +132,9 @@ export function createToastLayout({ viewport, limit, stackDirection, getItems, o
       const isVisible = index < limit;
       const wasVisible = item.getAttribute("data-visible") !== "false";
 
-      const height = getToastHeight(
-        item,
-        viewport,
-        viewport.getBoundingClientRect().width || viewport.clientWidth,
-      );
+      const height = measureNaturalHeight(item) || (naturalHeights.get(item) ?? 0);
+      // Remember the last real size so hidden items (e.g. display: none overflow) keep their offsets.
+      if (height > 0) naturalHeights.set(item, height);
       if (index === 0) {
         frontHeight = height;
       }

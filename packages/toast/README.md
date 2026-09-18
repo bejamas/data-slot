@@ -179,7 +179,7 @@ Runtime attributes:
 
 ## Animation Tokens
 
-The controller computes and writes stack tokens for animation styling:
+The controller computes and writes stack tokens for animation styling. Item heights are measured by briefly setting `height: auto` inline on the item, so do not pin the item height with `!important`.
 
 - `--toast-index` (0 = newest)
 - `--toast-count`
