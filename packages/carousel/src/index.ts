@@ -16,6 +16,27 @@ import {
 } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
+
+/** Everything that differs between a horizontal and a vertical carousel, resolved once. */
+const AXES = {
+  horizontal: {
+    scroll: "scrollLeft",
+    edge: "left",
+    prevKey: "ArrowLeft",
+    nextKey: "ArrowRight",
+    touchAction: "pan-y",
+    swipe: "x",
+  },
+  vertical: {
+    scroll: "scrollTop",
+    edge: "top",
+    prevKey: "ArrowUp",
+    nextKey: "ArrowDown",
+    touchAction: "pan-x",
+    swipe: "y",
+  },
+} as const;
+type Axis = (typeof AXES)[keyof typeof AXES];
 const MISSING_PARTS_ERROR = "Carousel requires carousel-content and at least one carousel-item";
 const ROOT_BINDING_KEY = "@data-slot/carousel";
 const DUPLICATE_BINDING_WARNING =
@@ -177,7 +198,7 @@ export function createCarousel(
     options.defaultIndex ?? getDataNumber(root, "defaultIndex") ?? 0;
   const onIndexChange = options.onIndexChange;
 
-  const isHorizontal = orientation === "horizontal";
+  const axis: Axis = AXES[orientation];
   const previousControls = getParts<HTMLElement>(root, "carousel-previous");
   const nextControls = getParts<HTMLElement>(root, "carousel-next");
 
@@ -222,27 +243,15 @@ export function createCarousel(
     }, PROGRAMMATIC_SCROLL_LOCK_MS);
   };
 
-  const getAxisPosition = () => (isHorizontal ? content.scrollLeft : content.scrollTop);
+  const getAxisPosition = () => content[axis.scroll];
   const setAxisPosition = (position: number) => {
-    if (isHorizontal) {
-      content.scrollLeft = position;
-      return;
-    }
-
-    content.scrollTop = position;
+    content[axis.scroll] = position;
   };
-  const activeDragAxis = isHorizontal ? "x" : "y";
 
-  const getSnapPointForItem = (item: HTMLElement): number => {
-    const contentRect = content.getBoundingClientRect();
-    const itemRect = item.getBoundingClientRect();
-
-    if (isHorizontal) {
-      return itemRect.left - contentRect.left + content.scrollLeft;
-    }
-
-    return itemRect.top - contentRect.top + content.scrollTop;
-  };
+  const getSnapPointForItem = (item: HTMLElement): number =>
+    item.getBoundingClientRect()[axis.edge] -
+    content.getBoundingClientRect()[axis.edge] +
+    content[axis.scroll];
 
   const getNearestIndex = (position: number): number => {
     let nearest = 0;
@@ -270,7 +279,7 @@ export function createCarousel(
     }
 
     if (absX === absY) {
-      return activeDragAxis;
+      return axis.swipe;
     }
 
     return absX > absY ? "x" : "y";
@@ -400,13 +409,9 @@ export function createCarousel(
   const scrollToCurrent = (behavior: ScrollBehavior = "auto") => {
     if (items.length === 0) return;
 
-    const target = snapPoints[currentIndex] ?? 0;
-    if (isHorizontal) {
-      content.scrollTo({ left: target, behavior });
-      return;
-    }
-
-    content.scrollTo({ top: target, behavior });
+    const target: ScrollToOptions = { behavior };
+    target[axis.edge] = snapPoints[currentIndex] ?? 0;
+    content.scrollTo(target);
   };
 
   const measureSnapPoints = () => {
@@ -515,37 +520,23 @@ export function createCarousel(
     if (event.defaultPrevented || isEditableTarget(event.target)) return;
 
     switch (event.key) {
-      case "ArrowLeft":
-        if (!isHorizontal) return;
-        event.preventDefault();
+      case axis.prevKey:
         prev();
-        return;
-      case "ArrowRight":
-        if (!isHorizontal) return;
-        event.preventDefault();
+        break;
+      case axis.nextKey:
         next();
-        return;
-      case "ArrowUp":
-        if (isHorizontal) return;
-        event.preventDefault();
-        prev();
-        return;
-      case "ArrowDown":
-        if (isHorizontal) return;
-        event.preventDefault();
-        next();
-        return;
+        break;
       case "Home":
-        event.preventDefault();
         setIndex(0, true, true, navigationBehavior);
-        return;
+        break;
       case "End":
-        event.preventDefault();
         setIndex(items.length - 1, true, true, navigationBehavior);
-        return;
+        break;
       default:
         return;
     }
+
+    event.preventDefault();
   };
 
   const onSet = (event: Event) => {
@@ -628,10 +619,10 @@ export function createCarousel(
 
     const deltaX = dragState.currentX - dragState.startX;
     const deltaY = dragState.currentY - dragState.startY;
-    const axis = dragState.axis ?? resolveDragAxis(deltaX, deltaY);
-    dragState.axis = axis;
+    const dragAxis = dragState.axis ?? resolveDragAxis(deltaX, deltaY);
+    dragState.axis = dragAxis;
 
-    if (axis !== activeDragAxis) return;
+    if (dragAxis !== axis.swipe) return;
 
     if (event.cancelable) {
       event.preventDefault();
@@ -644,8 +635,7 @@ export function createCarousel(
       disableDragScrollSnap();
     }
 
-    const delta = isHorizontal ? deltaX : deltaY;
-    setAxisPosition(dragState.startPosition - delta);
+    setAxisPosition(dragState.startPosition - (axis.swipe === "x" ? deltaX : deltaY));
   };
 
   const onPointerUp = (event: PointerEvent) => {
@@ -667,7 +657,7 @@ export function createCarousel(
 
   if (drag) {
     previousTouchAction = content.style.touchAction;
-    content.style.touchAction = isHorizontal ? "pan-y" : "pan-x";
+    content.style.touchAction = axis.touchAction;
   }
 
   cleanups.push(on(content, "scroll", onScroll));
