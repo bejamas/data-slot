@@ -16,6 +16,7 @@ import {
 import { createToastEntry, type ToastEntry } from "./toast-entry";
 import { createToastLayout, getToastFocusableNodes } from "./toast-layout";
 import { createToastGestures } from "./toast-gestures";
+import { createToastInteraction } from "./toast-interaction";
 
 export type {
   ToastAction, ToastActionEvent, ToastController, ToastOptions, ToastPosition,
@@ -104,27 +105,29 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
   const lifecycle = createTerminalLifecycle();
   const cleanups: Array<() => void> = [];
   let idCounter = 0;
-  let pauseHover = false;
-  let pauseFocus = false;
-  let pauseWindow = false;
-  let pauseDocument = doc.visibilityState === "hidden";
-  let collapseDeferred = false;
-  let timersPaused = false;
   let previousFocusedElement: HTMLElement | null = null;
 
   const activeEntries = () => [...entries.values()].filter((entry) => entry.active);
   const isCurrentEntry = (entry: ToastEntry) => entries.get(entry.id) === entry;
+  const hasExitingEntries = () => [...entries.values()].some((entry) => entry.exiting);
 
   const layout = createToastLayout({
     viewport,
     limit: resolvedLimit,
     stackDirection,
     getItems: () => activeEntries().reverse().map((entry) => entry.element),
-    onLayout: () => {
-      if (pauseOnFocus) pauseFocus = hasVisibleFocusWithinViewport();
-      syncPauseState();
+    // Layout changes can move focus; re-derive the focus reason and settle any deferred collapse.
+    onLayout: () => interaction.set("focus", pauseOnFocus && hasVisibleFocusWithinViewport()),
+  });
+  const interaction = createToastInteraction({
+    hasExitingEntries,
+    setExpanded: (expanded) => layout.setExpanded(expanded),
+    setPaused: (paused) => {
+      for (const entry of activeEntries()) entry.setPaused(paused);
     },
   });
+  if (doc.visibilityState === "hidden") interaction.set("document", true);
+
   const isVisibleFocusTarget = (target: EventTarget | null): boolean => {
     if (!(target instanceof Node) || !viewport.contains(target)) return false;
     if (!(target instanceof Element)) return true;
@@ -137,28 +140,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
 
   const hasVisibleFocusWithinViewport = () =>
     isVisibleFocusTarget(doc.activeElement);
-
-  const hasExitingEntries = () => {
-    for (const entry of entries.values()) {
-      if (entry.exiting) return true;
-    }
-    return false;
-  };
-
-  const isViewportExpanded = () => pauseHover || pauseFocus || collapseDeferred;
-
-  const isTimerPauseActive = () => pauseHover || pauseFocus || pauseWindow || pauseDocument;
-
-  const clearDeferredCollapseIfSettled = () => {
-    if (!collapseDeferred) return;
-    if (pauseHover || pauseFocus) {
-      collapseDeferred = false;
-      return;
-    }
-    if (!hasExitingEntries()) {
-      collapseDeferred = false;
-    }
-  };
 
   const focusNextVisibleToast = () => {
     for (const entry of activeEntries().reverse()) {
@@ -189,15 +170,6 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     if (focusNextVisibleToast()) return;
     if (restorePreviousFocus()) return;
     active.blur();
-  };
-
-  const syncPauseState = () => {
-    clearDeferredCollapseIfSettled();
-    layout.setExpanded(isViewportExpanded());
-    const paused = isTimerPauseActive();
-    if (paused === timersPaused) return;
-    timersPaused = paused;
-    for (const entry of activeEntries()) entry.setPaused(paused);
   };
 
   const notifyDismiss = (id: string) => {
@@ -261,8 +233,8 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     };
     const entry = createToastEntry(toast, {
       viewport, template, stackDirection,
-      expanded: isViewportExpanded(),
-      paused: timersPaused,
+      expanded: interaction.expanded,
+      paused: interaction.paused,
       onTimeout: dismissEntry,
       onExitComplete: removeEntry,
     });
@@ -427,71 +399,37 @@ export function createToast(root: Element, options: ToastOptions = {}): ToastCon
     }),
   );
 
-  cleanups.push(
-    on(viewport, "pointerenter", () => {
-      if (!pauseOnHover) return;
-      collapseDeferred = false;
-      pauseHover = true;
-      syncPauseState();
-    }),
-    on(viewport, "pointerleave", () => {
-      if (!pauseOnHover) return;
-      pauseHover = false;
-      if (!pauseFocus && hasExitingEntries()) {
-        collapseDeferred = true;
-      }
-      syncPauseState();
-    }),
-  );
+  // Focus only counts while it sits on a visible, open toast.
+  const hasVisibleFocus = (candidate: EventTarget | null) =>
+    isVisibleFocusTarget(candidate) || hasVisibleFocusWithinViewport();
 
   cleanups.push(
+    on(viewport, "pointerenter", () => {
+      if (pauseOnHover) interaction.set("hover", true);
+    }),
+    on(viewport, "pointerleave", () => {
+      if (pauseOnHover) interaction.set("hover", false);
+    }),
     on(viewport, "focusin", (event) => {
       if (!pauseOnFocus) return;
-      const relatedTarget = (event as FocusEvent).relatedTarget;
-      if (
-        relatedTarget instanceof HTMLElement &&
-        !viewport.contains(relatedTarget)
-      ) {
+      const { relatedTarget, target } = event as FocusEvent;
+      if (relatedTarget instanceof HTMLElement && !viewport.contains(relatedTarget)) {
         previousFocusedElement = relatedTarget;
       }
-      collapseDeferred = false;
-      pauseFocus =
-        isVisibleFocusTarget((event as FocusEvent).target) ||
-        hasVisibleFocusWithinViewport();
-      syncPauseState();
+      interaction.set("focus", hasVisibleFocus(target));
     }),
     on(viewport, "focusout", (event) => {
       if (!pauseOnFocus) return;
-      const nextTarget = (event as FocusEvent).relatedTarget;
-      if (isVisibleFocusTarget(nextTarget)) {
-        collapseDeferred = false;
-        pauseFocus = true;
-        syncPauseState();
-        return;
-      }
-      pauseFocus = hasVisibleFocusWithinViewport();
-      if (!pauseFocus && !pauseHover && hasExitingEntries()) {
-        collapseDeferred = true;
-      }
-      syncPauseState();
+      interaction.set("focus", hasVisibleFocus((event as FocusEvent).relatedTarget));
     }),
   );
 
   const win = doc.defaultView ?? window;
 
   cleanups.push(
-    on(win, "blur", () => {
-      pauseWindow = true;
-      syncPauseState();
-    }),
-    on(win, "focus", () => {
-      pauseWindow = false;
-      syncPauseState();
-    }),
-    on(doc, "visibilitychange", () => {
-      pauseDocument = doc.visibilityState === "hidden";
-      syncPauseState();
-    }),
+    on(win, "blur", () => interaction.set("window", true)),
+    on(win, "focus", () => interaction.set("window", false)),
+    on(doc, "visibilitychange", () => interaction.set("document", doc.visibilityState === "hidden")),
   );
 
   cleanups.push(
