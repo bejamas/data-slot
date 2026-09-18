@@ -41,7 +41,8 @@ const MISSING_PARTS_ERROR = "Carousel requires carousel-content and at least one
 const ROOT_BINDING_KEY = "@data-slot/carousel";
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/carousel] createCarousel() was called on a root that is already bound. Returning the existing controller.";
-const PROGRAMMATIC_SCROLL_LOCK_MS = 1200;
+/** Fallback for browsers without `scrollend`: a scroll is settled after this much quiet. */
+const SCROLL_SETTLE_MS = 150;
 const DRAG_AXIS_LOCK_THRESHOLD = 12;
 const FOCUSABLE_CANDIDATES =
   'a[href],button,input,select,textarea,[contenteditable]:not([contenteditable="false"]),[tabindex]';
@@ -214,34 +215,13 @@ export function createCarousel(
 
   let currentIndex = normalizeIndex(defaultIndex, items.length, loop);
   let snapPoints: number[] = [];
-  let scrollRafId: number | null = null;
-  let pendingProgrammaticIndex: number | null = null;
-  let programmaticUnlockTimeoutId: number | null = null;
+  let settleTimer: number | undefined;
   let dragState: DragState | null = null;
   let previousTouchAction: string | null = null;
   let previousScrollSnapType: string | null = null;
 
   let resizeObserver: ResizeObserver | null = null;
   let mutationObserver: MutationObserver | null = null;
-
-  const clearProgrammaticScrollLock = () => {
-    pendingProgrammaticIndex = null;
-    if (programmaticUnlockTimeoutId !== null) {
-      win.clearTimeout(programmaticUnlockTimeoutId);
-      programmaticUnlockTimeoutId = null;
-    }
-  };
-
-  const lockProgrammaticScroll = (targetIndex: number) => {
-    pendingProgrammaticIndex = targetIndex;
-    if (programmaticUnlockTimeoutId !== null) {
-      win.clearTimeout(programmaticUnlockTimeoutId);
-    }
-    programmaticUnlockTimeoutId = win.setTimeout(() => {
-      pendingProgrammaticIndex = null;
-      programmaticUnlockTimeoutId = null;
-    }, PROGRAMMATIC_SCROLL_LOCK_MS);
-  };
 
   const getAxisPosition = () => content[axis.scroll];
   const setAxisPosition = (position: number) => {
@@ -443,7 +423,6 @@ export function createCarousel(
   const refreshItems = () => {
     const activeItem = items[currentIndex] ?? null;
     items = collectItems();
-    clearProgrammaticScrollLock();
 
     if (items.length === 0) {
       snapPoints = [];
@@ -471,11 +450,6 @@ export function createCarousel(
     if (items.length === 0) return;
 
     const nextIndex = normalizeIndex(requestedIndex, items.length, loop);
-    if (behavior === "smooth" && nextIndex !== currentIndex) {
-      lockProgrammaticScroll(nextIndex);
-    } else {
-      clearProgrammaticScrollLock();
-    }
     scrollToIndex(nextIndex, behavior);
     applyIndex(nextIndex);
   };
@@ -492,22 +466,19 @@ export function createCarousel(
     setIndex(currentIndex + 1);
   };
 
+  // The index follows the scroll position only once scrolling has settled, so a
+  // smooth scroll passes intermediate slides without activating them.
+  const syncIndexFromScroll = () => {
+    win.clearTimeout(settleTimer);
+    settleTimer = undefined;
+    if (dragState?.active || items.length === 0) return;
+    applyIndex(getNearestIndex(getAxisPosition()));
+  };
+
   const onScroll = () => {
     if (dragState?.active) return;
-    if (scrollRafId !== null) return;
-
-    scrollRafId = win.requestAnimationFrame(() => {
-      scrollRafId = null;
-      if (dragState?.active) return;
-      if (items.length === 0) return;
-
-      const nearest = getNearestIndex(getAxisPosition());
-      if (pendingProgrammaticIndex !== null) {
-        if (nearest !== pendingProgrammaticIndex) return;
-        clearProgrammaticScrollLock();
-      }
-      applyIndex(nearest);
-    });
+    win.clearTimeout(settleTimer);
+    settleTimer = win.setTimeout(syncIndexFromScroll, SCROLL_SETTLE_MS);
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -624,7 +595,6 @@ export function createCarousel(
     if (!dragState.active) {
       dragState.active = true;
       root.setAttribute("data-dragging", "true");
-      clearProgrammaticScrollLock();
       disableDragScrollSnap();
     }
 
@@ -654,6 +624,7 @@ export function createCarousel(
   }
 
   cleanups.push(on(content, "scroll", onScroll));
+  cleanups.push(on(content, "scrollend", syncIndexFromScroll));
   cleanups.push(on(root, "keydown", onKeyDown));
   cleanups.push(on(root, "carousel:set", onSet));
 
@@ -700,12 +671,7 @@ export function createCarousel(
       return canScrollNext();
     },
     destroy() {
-      if (scrollRafId !== null) {
-        win.cancelAnimationFrame(scrollRafId);
-        scrollRafId = null;
-      }
-
-      clearProgrammaticScrollLock();
+      win.clearTimeout(settleTimer);
       stopDragging(null, false);
 
       if (drag) {

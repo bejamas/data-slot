@@ -6,13 +6,11 @@ describe("Carousel", () => {
     document.body.innerHTML = "";
   });
 
-  const waitForRaf =
-    typeof requestAnimationFrame === "function"
-      ? () =>
-          new Promise<void>((resolve) => {
-            requestAnimationFrame(() => resolve());
-          })
-      : () => Promise.resolve();
+  const scrollTo = (content: HTMLElement, left: number, settled = false) => {
+    content.scrollLeft = left;
+    content.dispatchEvent(new Event("scroll", { bubbles: true }));
+    if (settled) content.dispatchEvent(new Event("scrollend"));
+  };
 
   const setup = ({
     attrs = "",
@@ -1340,7 +1338,7 @@ describe("Carousel", () => {
     }
   });
 
-  it("keeps programmatic smooth navigation index stable during intermediate scroll events", async () => {
+  it("keeps programmatic smooth navigation index stable during intermediate scroll events", () => {
     document.body.innerHTML = `
       <div data-slot="carousel" id="root">
         <div data-slot="carousel-content" id="content">
@@ -1368,20 +1366,12 @@ describe("Carousel", () => {
     expect(controller.index).toBe(1);
     expect(changes).toEqual([1]);
 
-    content.scrollLeft = 20;
-    content.dispatchEvent(new Event("scroll", { bubbles: true }));
-    await waitForRaf();
-
+    scrollTo(content, 20);
     expect(controller.index).toBe(1);
     expect(changes).toEqual([1]);
 
-    content.scrollLeft = 100;
-    content.dispatchEvent(new Event("scroll", { bubbles: true }));
-    await waitForRaf();
-
-    content.scrollLeft = 210;
-    content.dispatchEvent(new Event("scroll", { bubbles: true }));
-    await waitForRaf();
+    scrollTo(content, 100);
+    scrollTo(content, 210, true);
 
     expect(controller.index).toBe(2);
     expect(changes).toEqual([1, 2]);
@@ -1389,7 +1379,7 @@ describe("Carousel", () => {
     controller.destroy();
   });
 
-  it("syncs active index from native scroll position", async () => {
+  it("syncs active index once native scrolling settles", async () => {
     document.body.innerHTML = `
       <div data-slot="carousel" id="root">
         <div data-slot="carousel-content" id="content">
@@ -1409,11 +1399,14 @@ describe("Carousel", () => {
     const controller = createCarousel(root);
 
     controller.goTo(0);
-    content.scrollLeft = 190;
-    content.dispatchEvent(new Event("scroll", { bubbles: true }));
-    await waitForRaf();
-
+    scrollTo(content, 190, true);
     expect(controller.index).toBe(2);
+
+    // Without scrollend, the index follows after a short quiet period.
+    scrollTo(content, 90);
+    expect(controller.index).toBe(2);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(controller.index).toBe(1);
 
     controller.destroy();
   });
