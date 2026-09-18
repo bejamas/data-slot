@@ -1052,7 +1052,7 @@ describe("Toast", () => {
 
   it("promise() does not reopen a toast that was dismissed before the promise settles", async () => {
     const { root, controller } = setup({ duration: 0 });
-    let resolvePromise: ((value: string) => void) | null = null;
+    let resolvePromise: ((value: string) => void) | undefined;
 
     const handled = controller.promise(
       new Promise<string>((resolve) => {
@@ -1082,25 +1082,19 @@ describe("Toast", () => {
   it("promise() normalizes sync factory throws into rejection and error update", async () => {
     const { root, controller } = setup({ duration: 0 });
 
-    let handled: ReturnType<typeof controller.promise<never>> | null = null;
-    expect(() => {
-      handled = controller.promise(
-        () => {
-          throw new Error("Sync exploded");
-        },
-        {
-          loading: { title: "Loading...", duration: 0 },
-          error: (error) => ({
-            title: error instanceof Error ? error.message : "Error",
-            duration: 0,
-          }),
-        },
-      );
-    }).not.toThrow();
-
-    if (!handled) {
-      throw new Error("Expected promise handle");
-    }
+    // A synchronous throw inside the factory must not escape promise().
+    const handled = controller.promise<never>(
+      () => {
+        throw new Error("Sync exploded");
+      },
+      {
+        loading: { title: "Loading...", duration: 0 },
+        error: (error) => ({
+          title: error instanceof Error ? error.message : "Error",
+          duration: 0,
+        }),
+      },
+    );
 
     const loadingToast = root.querySelector(`[data-slot="toast-item"][data-id="${handled.id}"]`) as HTMLElement;
     expect(loadingToast.querySelector('[data-slot="toast-title"]')?.textContent).toBe("Loading...");
@@ -1808,13 +1802,13 @@ describe("Toast", () => {
       expect(second.style.getPropertyValue("--toast-expanded-offset-y")).toBe("0px");
       expect(second.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("0px");
       expect(second.style.getPropertyValue("--toast-offset-y")).toBe("0px");
-      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
+      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
         "148px",
       );
-      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-collapsed-stack-size")).toBe(
+      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-collapsed-stack-size")).toBe(
         "94px",
       );
-      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("94px");
+      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("94px");
 
       controller.destroy();
     } finally {
@@ -1899,13 +1893,13 @@ describe("Toast", () => {
       expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("14px");
       expect(first.style.getPropertyValue("--toast-offset-y")).toBe("70px");
       expect(second.style.getPropertyValue("--toast-height")).toBe("62px");
-      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
+      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
         "216px",
       );
-      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-collapsed-stack-size")).toBe(
+      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-collapsed-stack-size")).toBe(
         "76px",
       );
-      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("76px");
+      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe("76px");
 
       controller.destroy();
     } finally {
@@ -2079,13 +2073,13 @@ describe("Toast", () => {
 
       expect(first.getAttribute("data-visible")).toBe("false");
       expect(second.getAttribute("data-visible")).toBe("true");
-      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
+      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-expanded-stack-size")).toBe(
         "80px",
       );
-      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-collapsed-stack-size")).toBe(
+      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-collapsed-stack-size")).toBe(
         "80px",
       );
-      expect(root.querySelector('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe(
+      expect(root.querySelector<HTMLElement>('[data-slot="toast-viewport"]')?.style.getPropertyValue("--toast-stack-size")).toBe(
         "80px",
       );
 

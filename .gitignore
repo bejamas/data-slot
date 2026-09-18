@@ -27,8 +27,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cache
 .wrangler
 *.tsbuildinfo
-playwright-report
-test-results
 
 # IntelliJ based IDEs
 .idea
