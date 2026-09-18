@@ -28,13 +28,6 @@
         "@data-slot/core": "workspace:*",
       },
     },
-    "packages/carousel": {
-      "name": "@data-slot/carousel",
-      "version": "0.2.107",
-      "dependencies": {
-        "@data-slot/core": "workspace:*",
-      },
-    },
     "packages/collapsible": {
       "name": "@data-slot/collapsible",
       "version": "0.2.167",
@@ -171,7 +164,6 @@
       "dependencies": {
         "@data-slot/accordion": "workspace:*",
         "@data-slot/alert-dialog": "workspace:*",
-        "@data-slot/carousel": "workspace:*",
         "@data-slot/collapsible": "workspace:*",
         "@data-slot/combobox": "workspace:*",
         "@data-slot/command": "workspace:*",
@@ -233,8 +225,6 @@
     "@data-slot/accordion": ["@data-slot/accordion@workspace:packages/accordion"],
 
     "@data-slot/alert-dialog": ["@data-slot/alert-dialog@workspace:packages/alert-dialog"],
-
-    "@data-slot/carousel": ["@data-slot/carousel@workspace:packages/carousel"],
 
     "@data-slot/collapsible": ["@data-slot/collapsible@workspace:packages/collapsible"],
 

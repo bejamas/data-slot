@@ -128,12 +128,6 @@
       "require": "./dist/command.cjs",
       "default": "./dist/command.js"
     },
-    "./carousel": {
-      "types": "./dist/carousel.d.ts",
-      "import": "./dist/carousel.js",
-      "require": "./dist/carousel.cjs",
-      "default": "./dist/carousel.js"
-    },
     "./toast": {
       "types": "./dist/toast.d.ts",
       "import": "./dist/toast.js",
@@ -167,7 +161,6 @@
     "@data-slot/select": "workspace:*",
     "@data-slot/combobox": "workspace:*",
     "@data-slot/command": "workspace:*",
-    "@data-slot/carousel": "workspace:*",
     "@data-slot/toast": "workspace:*"
   },
   "keywords": [
