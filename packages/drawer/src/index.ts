@@ -4,7 +4,7 @@ import {
   createModalStackItem, createDismissLayer, createPresenceLifecycle, focusElement, getAutofocusOrFirstFocusable,
   getTabbables, containsWithPortals,
 } from '@data-slot/core';
-import { createSwipeGesture, parseSnapPoint, snapPixels, type DrawerSnapPoint, type DrawerSwipeDirection } from './gestures';
+import { createDrawerSwipe, parseSnapPoint, snapPixels, type DrawerSnapPoint, type DrawerSwipeDirection } from './gestures';
 import { trackKeyboard } from './environment';
 import { registerVisuals } from './visuals';
 export type { DrawerSnapPoint, DrawerSwipeDirection } from './gestures';
@@ -450,7 +450,7 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     popup.style.setProperty('--drawer-swipe-strength', String(Math.max(0.1, Math.min(1, 1 / Math.max(1, Math.abs(velocity))))));
     if (distance > visibleSize() * 0.35 || (velocity > 0.5 && distance > 12)) update(false, 'swipe', event);
   };
-  cleanups.push(createSwipeGesture({ element: popup, popup, direction, enabled: () => opened && stack.isTopmost, move: moveSwipe, release: releaseSwipe, reset: resetSwipe }));
+  cleanups.push(createDrawerSwipe({ popup, direction, enabled: () => opened && stack.isTopmost, move: moveSwipe, release: releaseSwipe, reset: resetSwipe }));
   cleanups.push(on(win, 'resize', measure));
   if (typeof win.ResizeObserver !== 'undefined') {
     const observer = new win.ResizeObserver(measure); observer.observe(popup); cleanups.push(() => observer.disconnect());

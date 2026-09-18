@@ -64,5 +64,7 @@ export type {
   PresenceLifecycleOptions,
   PresenceLifecycleController,
 } from "./popup.ts";
+export { createSwipeGesture } from "./swipe.ts";
+export type { SwipeAxis, SwipeMove, SwipeRelease, SwipeGestureOptions, SwipeGestureController } from "./swipe.ts";
 export { createTypeahead } from "./typeahead.ts";
 export type { TypeaheadOptions, TypeaheadController } from "./typeahead.ts";
