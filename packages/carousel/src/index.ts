@@ -8,9 +8,17 @@ import {
   setAria,
   on,
   emit,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
+  drainCleanups,
 } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
+const ROOT_BINDING_KEY = "@data-slot/carousel";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/carousel] createCarousel() was called on a root that is already bound. Returning the existing controller.";
 const PROGRAMMATIC_SCROLL_LOCK_MS = 1200;
 const DRAG_AXIS_LOCK_THRESHOLD = 12;
 const FOCUSABLE_CANDIDATES =
@@ -138,6 +146,13 @@ export function createCarousel(
   root: Element,
   options: CarouselOptions = {},
 ): CarouselController {
+  const existingController = reuseRootBinding<CarouselController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING,
+  );
+  if (existingController) return existingController;
+
   const content = getPart<HTMLElement>(root, "carousel-content");
   if (!content) {
     throw new Error("Carousel requires carousel-content and at least one carousel-item");
@@ -734,16 +749,14 @@ export function createCarousel(
       restoreDragScrollSnap();
       resizeObserver?.disconnect();
       mutationObserver?.disconnect();
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
+      drainCleanups(cleanups);
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };
 
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
 }
-
-// WeakSet to track bound elements
-const bound = new WeakSet<Element>();
 
 /**
  * Find and bind all carousel components in a scope.
@@ -753,8 +766,7 @@ export function create(scope: ParentNode = document): CarouselController[] {
   const controllers: CarouselController[] = [];
 
   for (const root of getRoots(scope, "carousel")) {
-    if (bound.has(root)) continue;
-    bound.add(root);
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
     controllers.push(createCarousel(root));
   }
 

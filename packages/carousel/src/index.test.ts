@@ -1608,5 +1608,15 @@ describe("Carousel", () => {
     expect(second).toHaveLength(0);
 
     first.forEach((controller) => controller.destroy());
+
+    expect(create()).toHaveLength(2);
+  });
+
+  it("returns the existing controller when a bound root is created again", () => {
+    const { root, controller } = setup();
+
+    expect(createCarousel(root)).toBe(controller);
+
+    controller.destroy();
   });
 });
