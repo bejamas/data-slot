@@ -1555,6 +1555,71 @@ describe("Carousel", () => {
     }
   });
 
+  it("parks at index 0 without emitting when every slide is removed", () => {
+    const OriginalMutationObserver = globalThis.MutationObserver;
+    let callback: MutationCallback | null = null;
+
+    class MockMutationObserver {
+      constructor(cb: MutationCallback) {
+        callback = cb;
+      }
+
+      observe() {}
+      disconnect() {}
+      takeRecords() {
+        return [];
+      }
+    }
+
+    (
+      globalThis as unknown as {
+        MutationObserver?: typeof MutationObserver;
+      }
+    ).MutationObserver = MockMutationObserver as unknown as typeof MutationObserver;
+
+    try {
+      const { root, content, items, controller, prev, next } = setup({ options: { defaultIndex: 1 } });
+      const changes: number[] = [];
+      root.addEventListener("carousel:change", (event) => {
+        changes.push((event as CustomEvent<{ index: number }>).detail.index);
+      });
+
+      items.forEach((item) => item.remove());
+      if (callback) {
+        callback([] as MutationRecord[], {} as MutationObserver);
+      }
+
+      expect(controller.count).toBe(0);
+      expect(controller.index).toBe(0);
+      expect(root.getAttribute("data-index")).toBe("0");
+      expect(prev?.disabled).toBe(true);
+      expect(next?.disabled).toBe(true);
+      expect(changes).toEqual([]);
+
+      controller.next();
+      controller.goTo(3);
+      content.dispatchEvent(new Event("scrollend"));
+      expect(controller.index).toBe(0);
+      expect(changes).toEqual([]);
+
+      controller.destroy();
+    } finally {
+      if (OriginalMutationObserver) {
+        (
+          globalThis as unknown as {
+            MutationObserver?: typeof MutationObserver;
+          }
+        ).MutationObserver = OriginalMutationObserver;
+      } else {
+        delete (
+          globalThis as unknown as {
+            MutationObserver?: typeof MutationObserver;
+          }
+        ).MutationObserver;
+      }
+    }
+  });
+
   it("sets nav control buttons to type=button without overriding authored types", () => {
     document.body.innerHTML = `
       <form id="form">

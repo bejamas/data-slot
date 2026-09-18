@@ -387,8 +387,6 @@ export function createCarousel(
   };
 
   const scrollToIndex = (index: number, behavior: ScrollBehavior = "auto") => {
-    if (items.length === 0) return;
-
     const target: ScrollToOptions = { behavior };
     target[axis.edge] = snapPoints[index] ?? 0;
     content.scrollTo(target);
@@ -424,11 +422,11 @@ export function createCarousel(
     const activeItem = items[currentIndex] ?? null;
     items = collectItems();
 
+    // Every slide was removed: park at 0 without scrolling or emitting a change.
     if (items.length === 0) {
       snapPoints = [];
       currentIndex = 0;
-      root.setAttribute("data-index", "0");
-      updateControls();
+      updateStates(false);
       return;
     }
 
@@ -447,23 +445,17 @@ export function createCarousel(
 
   /** Navigate to `index`: scroll there and make it active. */
   const setIndex = (requestedIndex: number, behavior: ScrollBehavior = navigationBehavior) => {
-    if (items.length === 0) return;
-
     const nextIndex = normalizeIndex(requestedIndex, items.length, loop);
     scrollToIndex(nextIndex, behavior);
     applyIndex(nextIndex);
   };
 
   const prev = () => {
-    if (items.length === 0) return;
-    if (!loop && currentIndex <= 0) return;
-    setIndex(currentIndex - 1);
+    if (canScrollPrev()) setIndex(currentIndex - 1);
   };
 
   const next = () => {
-    if (items.length === 0) return;
-    if (!loop && currentIndex >= items.length - 1) return;
-    setIndex(currentIndex + 1);
+    if (canScrollNext()) setIndex(currentIndex + 1);
   };
 
   // The index follows the scroll position only once scrolling has settled, so a
@@ -471,7 +463,7 @@ export function createCarousel(
   const syncIndexFromScroll = () => {
     win.clearTimeout(settleTimer);
     settleTimer = undefined;
-    if (dragState?.active || items.length === 0) return;
+    if (dragState?.active) return;
     applyIndex(getNearestIndex(getAxisPosition()));
   };
 
@@ -539,12 +531,7 @@ export function createCarousel(
       }
     }
 
-    if (!shouldSnap || items.length === 0) {
-      restoreDragScrollSnap();
-      return;
-    }
-
-    setIndex(getNearestIndex(getAxisPosition()));
+    if (shouldSnap) setIndex(getNearestIndex(getAxisPosition()));
     restoreDragScrollSnap();
   };
 
