@@ -180,11 +180,13 @@ For vertical carousels, switch `scroll-snap-type` to `y mandatory` and use colum
 
 ## Accessibility
 
+The carousel shows one slide at a time. Inactive slides are marked `aria-hidden` and `inert`, which removes them and their content from the accessibility tree and the tab order until they become active. Size slides to fill the viewport, as in the styling example above; a layout that shows several slides at once would hide visible neighbours from assistive technology.
+
 The controller automatically sets:
 
 - root: `role="region"`, `aria-roledescription="carousel"`
-- item: `role="group"`, `aria-roledescription="slide"`
-- item state: `data-state`, `aria-hidden`
+- item: `role="group"`, `aria-roledescription="slide"`, `aria-label="n of total"`
+- item state: `data-state`, `aria-hidden`, `inert`
 - root drag state: `data-dragging="true"` during an active pointer drag
 - nav controls: `disabled` / `aria-disabled` synced to scrollability
 

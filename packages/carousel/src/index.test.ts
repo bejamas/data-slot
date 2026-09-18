@@ -1157,7 +1157,7 @@ describe("Carousel", () => {
     controller.destroy();
   });
 
-  it("removes hidden slides from the tab order and restores authored tabindex values", () => {
+  it("hides inactive slides with inert and aria-hidden without touching authored tabindex", () => {
     document.body.innerHTML = `
       <div data-slot="carousel" id="root">
         <div data-slot="carousel-content">
@@ -1180,18 +1180,18 @@ describe("Carousel", () => {
     const secondCustom = document.getElementById("second-custom") as HTMLElement;
     const controller = createCarousel(root);
 
+    expect(slide1.getAttribute("aria-hidden")).toBe("false");
+    expect(slide1.hasAttribute("inert")).toBe(false);
     expect(slide2.getAttribute("aria-hidden")).toBe("true");
     expect(slide2.hasAttribute("inert")).toBe(true);
-    expect(secondButton.getAttribute("tabindex")).toBe("-1");
-    expect(secondCustom.getAttribute("tabindex")).toBe("-1");
 
     controller.goTo(1);
 
     expect(slide1.getAttribute("aria-hidden")).toBe("true");
     expect(slide1.hasAttribute("inert")).toBe(true);
-    expect(firstLink.getAttribute("tabindex")).toBe("-1");
     expect(slide2.getAttribute("aria-hidden")).toBe("false");
     expect(slide2.hasAttribute("inert")).toBe(false);
+    expect(firstLink.hasAttribute("tabindex")).toBe(false);
     expect(secondButton.hasAttribute("tabindex")).toBe(false);
     expect(secondCustom.getAttribute("tabindex")).toBe("0");
 

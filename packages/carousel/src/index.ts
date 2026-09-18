@@ -44,8 +44,8 @@ const DUPLICATE_BINDING_WARNING =
 /** Fallback for browsers without `scrollend`: a scroll is settled after this much quiet. */
 const SCROLL_SETTLE_MS = 150;
 const DRAG_AXIS_LOCK_THRESHOLD = 12;
-const FOCUSABLE_CANDIDATES =
-  'a[href],button,input,select,textarea,[contenteditable]:not([contenteditable="false"]),[tabindex]';
+/** Keyboard navigation stays out of fields so arrow keys keep editing text. */
+const EDITABLE_SELECTOR = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
 const DRAG_BLOCKING_CANDIDATES =
   'a[href],button,input,select,textarea,summary,[contenteditable=""],[contenteditable="true"],[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="radio"],[role="switch"],[role="textbox"]';
 type CarouselSetDetail = { index?: number; action?: "next" | "prev" };
@@ -105,37 +105,14 @@ const normalizeIndex = (index: number, count: number, loop: boolean): number => 
   return Math.min(count - 1, Math.max(0, normalized));
 };
 
-const isEditableTarget = (target: EventTarget | null): boolean => {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-
-  const tag = target.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
-    return true;
-  }
-
-  return !!target.closest(
-    'input, textarea, select, [contenteditable=""], [contenteditable="true"]',
-  );
-};
+const isEditableTarget = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.closest(EDITABLE_SELECTOR) !== null;
 
 const setControlDisabled = (el: HTMLElement, disabled: boolean) => {
   if ("disabled" in el) {
     (el as HTMLButtonElement).disabled = disabled;
   }
   setAria(el, "disabled", disabled);
-};
-
-const setInert = (el: HTMLElement, inert: boolean) => {
-  if ("inert" in el) {
-    (el as HTMLElement & { inert?: boolean }).inert = inert;
-  }
-
-  if (inert) {
-    el.setAttribute("inert", "");
-  } else {
-    el.removeAttribute("inert");
-  }
 };
 
 const isDragBlockingTarget = (target: EventTarget | null): boolean => {
@@ -204,10 +181,6 @@ export function createCarousel(
   const nextControls = getParts<HTMLElement>(root, "carousel-next");
 
   const cleanups: Array<() => void> = [];
-  const managedFocusableByItem = new WeakMap<
-    HTMLElement,
-    Array<{ element: HTMLElement; tabindex: string | null }>
-  >();
   const doc = root.ownerDocument ?? document;
   const win = root.ownerDocument?.defaultView ?? window;
   const reducedMotion = win.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -316,52 +289,6 @@ export function createCarousel(
     }
   };
 
-  const collectFocusableCandidates = (item: HTMLElement) => {
-    const focusable = Array.from(item.querySelectorAll<HTMLElement>(FOCUSABLE_CANDIDATES));
-
-    if (item.matches(FOCUSABLE_CANDIDATES)) {
-      focusable.unshift(item);
-    }
-
-    return focusable;
-  };
-
-  const restoreItemFocusability = (item: HTMLElement) => {
-    setInert(item, false);
-
-    const managed = managedFocusableByItem.get(item);
-    if (!managed) return;
-
-    for (const { element, tabindex } of managed) {
-      if (!element.isConnected) continue;
-
-      if (tabindex === null) {
-        element.removeAttribute("tabindex");
-      } else {
-        element.setAttribute("tabindex", tabindex);
-      }
-    }
-
-    managedFocusableByItem.delete(item);
-  };
-
-  const disableItemFocusability = (item: HTMLElement) => {
-    const managed =
-      managedFocusableByItem.get(item) ??
-      collectFocusableCandidates(item).map((element) => ({
-        element,
-        tabindex: element.getAttribute("tabindex"),
-      }));
-
-    managedFocusableByItem.set(item, managed);
-
-    for (const { element } of managed) {
-      element.setAttribute("tabindex", "-1");
-    }
-
-    setInert(item, true);
-  };
-
   const updateStates = (emitChange: boolean) => {
     root.setAttribute("data-index", String(currentIndex));
 
@@ -370,12 +297,9 @@ export function createCarousel(
       if (!item) continue;
       const active = i === currentIndex;
       item.setAttribute("data-state", active ? "active" : "inactive");
+      // One slide is in view at a time; the rest leave the tab order and the accessibility tree.
       setAria(item, "hidden", !active);
-      if (active) {
-        restoreItemFocusability(item);
-      } else {
-        disableItemFocusability(item);
-      }
+      item.toggleAttribute("inert", !active);
     }
 
     updateControls();
