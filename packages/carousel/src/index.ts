@@ -16,6 +16,7 @@ import {
 } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
+const MISSING_PARTS_ERROR = "Carousel requires carousel-content and at least one carousel-item";
 const ROOT_BINDING_KEY = "@data-slot/carousel";
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/carousel] createCarousel() was called on a root that is already bound. Returning the existing controller.";
@@ -154,9 +155,7 @@ export function createCarousel(
   if (existingController) return existingController;
 
   const content = getPart<HTMLElement>(root, "carousel-content");
-  if (!content) {
-    throw new Error("Carousel requires carousel-content and at least one carousel-item");
-  }
+  if (!content) throw new Error(MISSING_PARTS_ERROR);
 
   const collectItems = () =>
     Array.from(content.children).filter(
@@ -165,9 +164,7 @@ export function createCarousel(
     );
 
   let items = collectItems();
-  if (items.length === 0) {
-    throw new Error("Carousel requires carousel-content and at least one carousel-item");
-  }
+  if (items.length === 0) throw new Error(MISSING_PARTS_ERROR);
 
   // Resolve options with explicit precedence: JS > data-* > default
   const orientation =
@@ -191,15 +188,8 @@ export function createCarousel(
   >();
   const doc = root.ownerDocument ?? document;
   const win = root.ownerDocument?.defaultView ?? window;
-  const matchesMediaQuery = (query: string): boolean => {
-    if (typeof win.matchMedia !== "function") return false;
-    return win.matchMedia(query).matches;
-  };
-  const navigationBehavior: ScrollBehavior = matchesMediaQuery(
-    "(prefers-reduced-motion: reduce)",
-  )
-    ? "auto"
-    : "smooth";
+  const reducedMotion = win.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  const navigationBehavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
 
   let currentIndex = normalizeIndex(defaultIndex, items.length, loop);
   let snapPoints: number[] = [];
@@ -692,18 +682,13 @@ export function createCarousel(
     cleanups.push(on(content, "lostpointercapture", onLostPointerCapture));
   }
 
-  for (const control of previousControls) {
-    if (control.tagName === "BUTTON" && !control.hasAttribute("type")) {
-      (control as HTMLButtonElement).type = "button";
+  for (const [controls, navigate] of [[previousControls, prev], [nextControls, next]] as const) {
+    for (const control of controls) {
+      if (control.tagName === "BUTTON" && !control.hasAttribute("type")) {
+        (control as HTMLButtonElement).type = "button";
+      }
+      cleanups.push(on(control, "click", () => navigate()));
     }
-    cleanups.push(on(control, "click", () => prev()));
-  }
-
-  for (const control of nextControls) {
-    if (control.tagName === "BUTTON" && !control.hasAttribute("type")) {
-      (control as HTMLButtonElement).type = "button";
-    }
-    cleanups.push(on(control, "click", () => next()));
   }
 
   rebindResizeObserver();
