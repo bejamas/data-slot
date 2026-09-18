@@ -3,7 +3,7 @@ import { Code } from "astro:components";
 import ExampleBlock from "../ExampleBlock.astro";
 import styles from "./toast.css?raw";
 import "./toast.css";
-import setupSource from "../../../lib/toast-example.js?raw";
+import setupSource from "./toast-example.js?raw";
 
 interface Props { variant?: "basic" | "extra" }
 const { variant = "basic" } = Astro.props;

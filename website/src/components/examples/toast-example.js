@@ -1,6 +1,6 @@
 /**
  * @param {HTMLElement} root
- * @param {import('../../packages/toast/src/index').ToastController} toaster
+ * @param {import('../../../../packages/toast/src/index').ToastController} toaster
  * @param {AbortSignal} signal
  */
 export function bindToastExample(root, toaster, signal) {

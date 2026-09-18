@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, copyFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile, copyFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { components } from '../lib/catalog';
 import { themeExamples } from './theme-examples';
@@ -11,9 +11,11 @@ for (const weight of [400, 500, 700]) {
   await copyFile(resolve(project, `node_modules/@fontsource/geist-mono/files/geist-mono-latin-${weight}-normal.woff2`), resolve(project, `public/fonts/geist-mono-${weight}.woff2`));
 }
 
-// Share styles between the live markup and the displayed CSS source.
-for (const name of ['drawer', 'toast']) {
-  await write(`.generated/examples/${name}.css`, themeExamples(await readFile(resolve(project, `src/components/examples/${name}.css`), 'utf8')));
+// Examples import shared styles and setup scripts relative to themselves; mirror those files next to the generated copies.
+for (const file of await readdir(resolve(project, 'src/components/examples'))) {
+  if (file.endsWith('.astro')) continue;
+  const source = await readFile(resolve(project, `src/components/examples/${file}`), 'utf8');
+  await write(`.generated/examples/${file}`, file.endsWith('.css') ? themeExamples(source) : source);
 }
 
 for (const component of components) {
@@ -21,7 +23,6 @@ for (const component of components) {
     const filename = variant === 'extra' && 'second' in component ? component.second : component.demo;
     let source = await readFile(resolve(project, `src/components/examples/${filename}.astro`), 'utf8');
     source = source.replace('"../ExampleBlock.astro"', '"../../components/ExampleBlock.astro"');
-    source = source.replaceAll('"../../../lib/', '"../../lib/');
     source = source.replaceAll('theme="vitesse-light"', 'themes={{ light: "github-light-high-contrast", dark: "github-dark-high-contrast" }} defaultColor={false}');
     // Initialization has its own tab; embedded snippets must not double-bind it.
     source = source.replace(/<script type="module">[\s\S]*?<\/script>/g, '');

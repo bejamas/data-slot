@@ -1,5 +1,5 @@
 import { copyText } from 'blume/components/copy-feedback.ts';
-import { bindToastExample } from './toast-example';
+import { bindToastExample } from '../src/components/examples/toast-example';
 
 const loaders = {
   accordion: () => import('../../packages/accordion/dist/index.js'),
@@ -23,9 +23,30 @@ const loaders = {
   'toggle-group': () => import('../../packages/toggle-group/dist/index.js'),
   tooltip: () => import('../../packages/tooltip/dist/index.js'),
 };
+type Slug = keyof typeof loaders;
+type Controller = ReturnType<Awaited<ReturnType<(typeof loaders)[Slug]>>['create']>[number];
+
+/** Demo-only wiring that a component's own create() cannot know about. */
+interface Demo {
+  /** Other packages whose roots appear in this example's markup. */
+  companions?: Slug[];
+  /** Runs once per root of the component, paired with the controller create() returned for it. */
+  bind?(root: HTMLElement, controller: Controller, signal: AbortSignal): void;
+}
+const demos: Partial<Record<Slug, Demo>> = {
+  command: { companions: ['dialog'] },
+  'alert-dialog': {
+    bind(root, _controller, signal) {
+      root.querySelectorAll('[data-demo-alert-confirm]').forEach(button => {
+        button.addEventListener('click', () => root.dispatchEvent(new CustomEvent('alert-dialog:set', { detail: { open: false } })), { signal });
+      });
+    },
+  },
+  toast: { bind: bindToastExample },
+};
 
 class ComponentExample extends HTMLElement {
-  private controllers: { destroy(): void }[] = [];
+  private controllers: Controller[] = [];
   private abort?: AbortController;
 
   async connectedCallback() {
@@ -35,10 +56,9 @@ class ComponentExample extends HTMLElement {
     this.setStyle('css');
     this.addEventListener('click', this.onClick, { signal });
     this.addEventListener('keydown', this.onKeyDown, { signal });
-    const component = this.dataset.component as keyof typeof loaders;
-    const module = await loaders[component]();
-    const dialog = component === 'command' && this.querySelector('[data-slot="dialog"]')
-      ? await loaders.dialog() : undefined;
+    const component = this.dataset.component as Slug;
+    const demo = demos[component];
+    const modules = await Promise.all([component, ...(demo?.companions ?? [])].map(slug => loaders[slug]()));
     if (signal.aborted) return;
     // Popup content can move to document.body; keep its preview theme there.
     this.querySelectorAll<HTMLElement>('.ds-preview-stage [data-slot]').forEach(element => {
@@ -47,23 +67,14 @@ class ComponentExample extends HTMLElement {
       }
     });
     // Scope discovery to this example so page chrome never gets initialized.
-    if ('createToast' in module) {
-      this.controllers = Array.from(this.querySelectorAll<HTMLElement>('[data-slot="toast"]'), root => {
-        const toaster = module.createToast(root);
-        bindToastExample(root, toaster, signal);
-        return toaster;
-      });
-    } else {
-      this.controllers = module.create(this);
-    }
-    if (dialog) this.controllers.push(...dialog.create(this));
-    if (component === 'alert-dialog') {
-      this.querySelectorAll<HTMLElement>('[data-slot="alert-dialog"]').forEach(root => {
-        root.querySelectorAll('[data-demo-alert-confirm]').forEach(button => {
-          button.addEventListener('click', () => root.dispatchEvent(new CustomEvent('alert-dialog:set', { detail: { open: false } })), { signal });
-        });
-      });
-    }
+    // The component's own controllers come first, one per root in DOM order.
+    this.controllers = modules.flatMap(module => module.create(this));
+    const bind = demo?.bind;
+    if (!bind) return;
+    this.querySelectorAll<HTMLElement>(`[data-slot="${component}"]`).forEach((root, index) => {
+      const controller = this.controllers[index];
+      if (controller) bind(root, controller, signal);
+    });
   }
 
   disconnectedCallback() {
