@@ -406,12 +406,19 @@ export function createCarousel(
     }
   };
 
-  const scrollToCurrent = (behavior: ScrollBehavior = "auto") => {
+  const scrollToIndex = (index: number, behavior: ScrollBehavior = "auto") => {
     if (items.length === 0) return;
 
     const target: ScrollToOptions = { behavior };
-    target[axis.edge] = snapPoints[currentIndex] ?? 0;
+    target[axis.edge] = snapPoints[index] ?? 0;
     content.scrollTo(target);
+  };
+
+  /** Make `index` the active slide without scrolling; emits when it changed. */
+  const applyIndex = (index: number) => {
+    const changed = index !== currentIndex;
+    currentIndex = index;
+    updateStates(changed);
   };
 
   const measureSnapPoints = () => {
@@ -424,8 +431,7 @@ export function createCarousel(
     resizeObserver?.disconnect();
     resizeObserver = new ResizeObserver(() => {
       measureSnapPoints();
-      scrollToCurrent();
-      updateStates(false);
+      scrollToIndex(currentIndex);
     });
 
     resizeObserver.observe(content);
@@ -434,7 +440,7 @@ export function createCarousel(
     }
   };
 
-  const refreshItems = (emitChange: boolean) => {
+  const refreshItems = () => {
     const activeItem = items[currentIndex] ?? null;
     items = collectItems();
     clearProgrammaticScrollLock();
@@ -452,50 +458,38 @@ export function createCarousel(
       preservedIndex >= 0
         ? preservedIndex
         : normalizeIndex(currentIndex, items.length, loop);
-    const changed = nextIndex !== currentIndex;
-    currentIndex = nextIndex;
 
     updateStaticA11y();
     measureSnapPoints();
-    scrollToCurrent();
-    updateStates(emitChange && changed);
+    scrollToIndex(nextIndex);
+    applyIndex(nextIndex);
     rebindResizeObserver();
   };
 
-  const setIndex = (
-    requestedIndex: number,
-    emitChange: boolean,
-    scroll: boolean,
-    behavior: ScrollBehavior = "auto",
-  ) => {
+  /** Navigate to `index`: scroll there and make it active. */
+  const setIndex = (requestedIndex: number, behavior: ScrollBehavior = navigationBehavior) => {
     if (items.length === 0) return;
 
     const nextIndex = normalizeIndex(requestedIndex, items.length, loop);
-    const changed = nextIndex !== currentIndex;
-    currentIndex = nextIndex;
-
-    if (scroll) {
-      if (behavior === "smooth" && changed) {
-        lockProgrammaticScroll(nextIndex);
-      } else {
-        clearProgrammaticScrollLock();
-      }
-      scrollToCurrent(behavior);
+    if (behavior === "smooth" && nextIndex !== currentIndex) {
+      lockProgrammaticScroll(nextIndex);
+    } else {
+      clearProgrammaticScrollLock();
     }
-
-    updateStates(changed && emitChange);
+    scrollToIndex(nextIndex, behavior);
+    applyIndex(nextIndex);
   };
 
-  const prev = (behavior: ScrollBehavior = navigationBehavior) => {
+  const prev = () => {
     if (items.length === 0) return;
     if (!loop && currentIndex <= 0) return;
-    setIndex(currentIndex - 1, true, true, behavior);
+    setIndex(currentIndex - 1);
   };
 
-  const next = (behavior: ScrollBehavior = navigationBehavior) => {
+  const next = () => {
     if (items.length === 0) return;
     if (!loop && currentIndex >= items.length - 1) return;
-    setIndex(currentIndex + 1, true, true, behavior);
+    setIndex(currentIndex + 1);
   };
 
   const onScroll = () => {
@@ -512,7 +506,7 @@ export function createCarousel(
         if (nearest !== pendingProgrammaticIndex) return;
         clearProgrammaticScrollLock();
       }
-      setIndex(nearest, true, false);
+      applyIndex(nearest);
     });
   };
 
@@ -527,10 +521,10 @@ export function createCarousel(
         next();
         break;
       case "Home":
-        setIndex(0, true, true, navigationBehavior);
+        setIndex(0);
         break;
       case "End":
-        setIndex(items.length - 1, true, true, navigationBehavior);
+        setIndex(items.length - 1);
         break;
       default:
         return;
@@ -544,7 +538,7 @@ export function createCarousel(
     if (!detail || typeof detail !== "object") return;
 
     if (typeof detail.index === "number") {
-      setIndex(detail.index, true, true, navigationBehavior);
+      setIndex(detail.index);
       return;
     }
 
@@ -579,8 +573,7 @@ export function createCarousel(
       return;
     }
 
-    const nearest = getNearestIndex(getAxisPosition());
-    setIndex(nearest, true, true, navigationBehavior);
+    setIndex(getNearestIndex(getAxisPosition()));
     restoreDragScrollSnap();
   };
 
@@ -652,8 +645,8 @@ export function createCarousel(
 
   measureSnapPoints();
   updateStaticA11y();
-  scrollToCurrent();
-  updateStates(false);
+  scrollToIndex(currentIndex);
+  applyIndex(currentIndex);
 
   if (drag) {
     previousTouchAction = content.style.touchAction;
@@ -684,9 +677,7 @@ export function createCarousel(
   rebindResizeObserver();
 
   if (typeof MutationObserver !== "undefined") {
-    mutationObserver = new MutationObserver(() => {
-      refreshItems(true);
-    });
+    mutationObserver = new MutationObserver(refreshItems);
     mutationObserver.observe(content, { childList: true });
   }
 
@@ -694,7 +685,7 @@ export function createCarousel(
     prev,
     next,
     goTo(index) {
-      setIndex(index, true, true, navigationBehavior);
+      setIndex(index);
     },
     get index() {
       return currentIndex;
