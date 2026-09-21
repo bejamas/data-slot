@@ -9,6 +9,7 @@
     "test:parity": "bun test packages/dialog/src/index.test.ts packages/drawer/src packages/select/src/index.test.ts packages/tooltip/src/index.test.ts packages/hover-card/src/index.test.ts packages/combobox/src/index.test.ts",
     "typecheck": "tsc --noEmit",
     "build": "bun run --filter './packages/*' build",
+    "check:sizes": "bun run build && bun run scripts/check-sizes.ts",
     "build:website": "npm ci --prefix website --workspaces=false && bun run build:docs",
     "preview:website": "bun run build:website && wrangler dev",
     "deploy:website": "bun run build:website && wrangler deploy",
