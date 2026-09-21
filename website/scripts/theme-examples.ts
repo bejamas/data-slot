@@ -3,6 +3,7 @@
 const colors: Record<string, string> = {
   '#faf9f7': 'bg', '#1a1a1a': 'text', '#666': 'muted', '#ccc': 'border',
   '#f0eeeb': 'code-bg', '#fff': 'surface', '#0066cc': 'accent',
+  '#f6f6f6': 'code-bg', '#f1f1f1': 'code-bg', '#cfcfcf': 'border', '#c0c0c0': 'border',
   '98.5% 0.002 247.839': 'bg', '96.7% 0.003 264.542': 'code-bg',
   '92.8% 0.006 264.531': 'border', '87.2% 0.01 258.338': 'border',
   '70.7% 0.022 261.325': 'muted', '55.1% 0.027 264.364': 'muted',
@@ -19,6 +20,7 @@ const utilities: Record<string, string> = {
   'gray-50': 'bg', 'gray-100': 'code-bg', 'gray-200': 'border',
   'gray-300': 'border', 'gray-400': 'muted', 'gray-500': 'muted',
   'gray-600': 'muted', 'gray-700': 'text', 'gray-800': 'text', 'gray-900': 'text',
+  'neutral-100': 'code-bg', 'neutral-300': 'border', 'neutral-400': 'border', 'neutral-900': 'text',
   'stone-50': 'bg', 'stone-100': 'code-bg', 'stone-200': 'code-bg',
   'stone-300': 'border', 'stone-400': 'muted', 'stone-600': 'muted', 'stone-950': 'text',
   'red-50': 'danger-bg', 'red-600': 'danger',
@@ -33,6 +35,6 @@ export function themeExamples(source: string): string {
       return alpha ? `color-mix(in srgb, var(--${token}) ${Number(alpha) * 100}%, transparent)` : `var(--${token})`;
     })
     .replace(/\b(background|color):\s*white\b/g, '$1: var(--surface)')
-    .replace(/\b(bg|text|border|ring|from|to)-(white|muted|border|accent|(?:gray|stone|red)-\d+)\b/g,
+    .replace(/\b(bg|text|border|ring|from|to)-(white|muted|border|accent|(?:gray|stone|red|neutral)-\d+)\b/g,
       (utility, property, color) => utilities[color] ? `${property}-[var(--${utilities[color]})]` : utility);
 }
