@@ -245,6 +245,16 @@ export function createCarousel(
       const item = items[i];
       if (!item) continue;
       const active = i === currentIndex;
+      if (!active && item.contains(root.ownerDocument.activeElement)) {
+        // Keep keyboard navigation inside the carousel when its focused slide leaves the tab order.
+        if (!content.hasAttribute("tabindex")) {
+          content.setAttribute("tabindex", "-1");
+          cleanups.push(() => {
+            if (content.getAttribute("tabindex") === "-1") content.removeAttribute("tabindex");
+          });
+        }
+        content.focus({ preventScroll: true });
+      }
       item.setAttribute("data-state", active ? "active" : "inactive");
       // One slide is in view at a time; the rest leave the tab order and the accessibility tree.
       setAria(item, "hidden", !active);

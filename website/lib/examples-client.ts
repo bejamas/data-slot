@@ -1,5 +1,6 @@
 import { copyText } from 'blume/components/copy-feedback.ts';
 import { bindToastExample } from '../src/components/examples/toast-example';
+import { bindCarouselExample } from '../src/components/examples/carousel-example';
 
 const loaders = {
   accordion: () => import('../../packages/accordion/dist/index.js'),
@@ -44,15 +45,8 @@ const demos: Partial<Record<Slug, Demo>> = {
     },
   },
   carousel: {
-    // Dots are demo markup: drive them through the carousel's own events.
     bind(root, _controller, signal) {
-      const dots = Array.from(root.querySelectorAll<HTMLElement>('[data-slot="carousel-dot"]'));
-      const sync = (index: number) => dots.forEach((dot, i) => { dot.dataset.state = i === index ? 'active' : 'inactive'; });
-      dots.forEach((dot, index) => {
-        dot.addEventListener('click', () => root.dispatchEvent(new CustomEvent('carousel:set', { detail: { index } })), { signal });
-      });
-      root.addEventListener('carousel:change', event => sync((event as CustomEvent<{ index: number }>).detail.index), { signal });
-      sync(Number(root.dataset.index));
+      bindCarouselExample(root, signal);
     },
   },
   toast: { bind: bindToastExample },

@@ -278,6 +278,45 @@ describe("Carousel", () => {
   });
 
   describe("accessibility", () => {
+    it.each([null, "0", "-1"])("preserves keyboard focus when deactivating a slide (content tabindex=%s)", (tabindex) => {
+      const { content, items, controller } = render();
+      if (tabindex !== null) content.setAttribute("tabindex", tabindex);
+      const button = document.createElement("button");
+      items[0]!.appendChild(button);
+      button.focus();
+
+      keydown(button, "ArrowRight");
+
+      expect(controller.index).toBe(1);
+      expect(document.activeElement).toBe(content);
+      expect(items[0]!.hasAttribute("inert")).toBe(true);
+      expect(content.getAttribute("tabindex")).toBe(tabindex ?? "-1");
+
+      keydown(document.activeElement!, "ArrowRight");
+      expect(controller.index).toBe(2);
+      keydown(document.activeElement!, "ArrowLeft");
+      expect(controller.index).toBe(1);
+
+      controller.destroy();
+      expect(content.getAttribute("tabindex")).toBe(tabindex);
+    });
+
+    it("does not move focus from navigation controls or outside the carousel", () => {
+      const { content, next, controller } = render({ options: { loop: true } });
+      next!.focus();
+      controller.next();
+      expect(document.activeElement).toBe(next);
+
+      const outside = document.createElement("button");
+      document.body.appendChild(outside);
+      outside.focus();
+      controller.next();
+      expect(document.activeElement).toBe(outside);
+      expect(content.hasAttribute("tabindex")).toBe(false);
+
+      controller.destroy();
+    });
+
     it("labels the region and slides", () => {
       const { root, items, controller } = render();
 

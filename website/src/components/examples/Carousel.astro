@@ -1,6 +1,22 @@
 ---
 import { Code } from "astro:components";
 import ExampleBlock from "../ExampleBlock.astro";
+import setupSource from "./carousel-example.js?raw";
+
+const setup = `import { create } from "@data-slot/carousel";
+
+${setupSource.replace(/\/\*\*[\s\S]*?\*\/\s*/g, "").replace("export function", "function").trim()}
+
+// Initialize after the markup is in the document.
+const abort = new AbortController();
+const controllers = create();
+document.querySelectorAll('[data-slot="carousel"]').forEach(root => {
+  bindCarouselExample(root, abort.signal);
+});
+
+// Clean up before removing the example.
+// abort.abort();
+// controllers.forEach(controller => controller.destroy());`;
 
 const cssCode = `<div data-slot="carousel" data-loop class="carousel">
   <div data-slot="carousel-content" class="carousel-content">
@@ -200,7 +216,7 @@ const tailwindCode = `<div data-slot="carousel" data-loop class="mx-auto w-full 
 </div>`;
 ---
 
-<ExampleBlock label="Carousel">
+<ExampleBlock label="Carousel" setup={setup}>
   <div slot="preview-css" data-slot="carousel" data-loop class="carousel-css">
     <div data-slot="carousel-content" class="carousel-content-css">
       <div data-slot="carousel-item" class="carousel-item-css">01</div>
