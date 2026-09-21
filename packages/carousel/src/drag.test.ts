@@ -1,6 +1,17 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { createCarousel } from "./index";
-import { cancelPointer, lift, mockGeometry, move, press, render, spyScrollTo } from "./test-helpers";
+import { cancelPointer, lift, mockGeometry, move, press, render, spyScrollTo, withProperty } from "./test-helpers";
+
+/** Keep smooth scrolling pending until the test advances the scroll position. */
+const deferSmoothScroll = (content: HTMLElement) => {
+  const calls: Array<ScrollToOptions & { snap: string }> = [];
+  const apply = content.scrollTo.bind(content);
+  content.scrollTo = ((options: ScrollToOptions) => {
+    calls.push({ ...options, snap: content.style.scrollSnapType });
+    if (options.behavior !== "smooth") apply(options);
+  }) as typeof content.scrollTo;
+  return calls;
+};
 
 describe("Carousel drag", () => {
   beforeEach(() => {
@@ -116,6 +127,100 @@ describe("Carousel drag", () => {
     expect(calls.at(-1)?.behavior).toBe("smooth");
 
     controller.destroy();
+  });
+
+  for (const orientation of ["horizontal", "vertical"] as const) {
+    it(`keeps snapping disabled throughout the ${orientation} release animation`, () => {
+      const { content, controller } = render({ options: { drag: true, orientation } });
+      const horizontal = orientation === "horizontal";
+      const scroll = horizontal ? "scrollLeft" : "scrollTop";
+      const snap = horizontal ? "x mandatory" : "y mandatory";
+      content.style.scrollSnapType = snap;
+      const calls = deferSmoothScroll(content);
+
+      press(content, 30, 180, 180);
+      move(30, horizontal ? 20 : 180, horizontal ? 180 : 20);
+      lift(30, 20, 20);
+
+      expect(calls.at(-1)).toMatchObject({ behavior: "smooth", snap: "none" });
+      expect(content[scroll]).toBe(160);
+      expect(content.style.scrollSnapType).toBe("none");
+      content[scroll] = 180;
+      content.dispatchEvent(new Event("scroll"));
+      expect(content.style.scrollSnapType).toBe("none");
+      content[scroll] = 200;
+      content.dispatchEvent(new Event("scrollend"));
+      expect(content.style.scrollSnapType).toBe(snap);
+      expect(controller.index).toBe(2);
+      controller.destroy();
+    });
+  }
+
+  it("restores snapping after a cancelled drag settles without scrollend", async () => {
+    const { content, controller } = render({ options: { drag: true } });
+    content.style.scrollSnapType = "x mandatory";
+    deferSmoothScroll(content);
+    press(content, 31, 180, 40);
+    move(31, 20, 40);
+    cancelPointer(31);
+    expect(content.style.scrollSnapType).toBe("none");
+    content.scrollLeft = 200;
+    content.dispatchEvent(new Event("scroll"));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(content.style.scrollSnapType).toBe("x mandatory");
+    controller.destroy();
+  });
+
+  it("interrupts a release animation without losing authored snapping", () => {
+    const { content, controller } = render({ options: { drag: true } });
+    content.style.scrollSnapType = "x mandatory";
+    const calls = deferSmoothScroll(content);
+    press(content, 32, 180, 40);
+    move(32, 20, 40);
+    lift(32, 20, 40);
+    content.scrollLeft = 175;
+    press(content, 33, 100, 40);
+    move(33, 130, 40);
+    expect(calls.at(-1)).toMatchObject({ left: 175, behavior: "instant", snap: "none" });
+    expect(content.scrollLeft).toBe(145);
+    // A queued completion from the interrupted scroll cannot restore snapping mid-drag.
+    content.dispatchEvent(new Event("scrollend"));
+    expect(content.style.scrollSnapType).toBe("none");
+    lift(33, 130, 40);
+    content.scrollLeft = 100;
+    content.dispatchEvent(new Event("scrollend"));
+    expect(content.style.scrollSnapType).toBe("x mandatory");
+    expect(controller.index).toBe(1);
+    controller.destroy();
+  });
+
+  it("restores snapping when destroyed during a release animation", async () => {
+    const { content, controller } = render({ options: { drag: true } });
+    content.style.scrollSnapType = "x mandatory";
+    deferSmoothScroll(content);
+    press(content, 34, 180, 40);
+    move(34, 20, 40);
+    lift(34, 20, 40);
+    controller.destroy();
+    expect(content.style.scrollSnapType).toBe("x mandatory");
+    content.style.scrollSnapType = "x proximity";
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(content.style.scrollSnapType).toBe("x proximity");
+  });
+
+  it("settles immediately with reduced motion and restores snapping without scroll events", () => {
+    const matchMedia = ((query: string) => ({ matches: true, media: query }) as MediaQueryList) as typeof window.matchMedia;
+    withProperty(window, "matchMedia", matchMedia, () => {
+      const { content, controller } = render({ options: { drag: true } });
+      const calls = spyScrollTo(content);
+      press(content, 35, 180, 40);
+      move(35, 20, 40);
+      lift(35, 20, 40);
+      expect(calls.at(-1)?.behavior).toBe("auto");
+      expect(content.scrollLeft).toBe(200);
+      expect(content.style.scrollSnapType).toBe("");
+      controller.destroy();
+    });
   });
 
   it("does not wrap drag gestures when loop mode is enabled", () => {

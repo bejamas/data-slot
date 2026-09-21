@@ -175,6 +175,13 @@ export function createCarousel(
   let settleTimer: number | undefined;
   /** A drag has locked to the carousel axis and is driving the scroll position. */
   let dragging = false;
+  /** Keep snapping paused through release so it cannot preempt the smooth scroll. */
+  let authoredSnapType: string | undefined;
+  const restoreScrollSnap = () => {
+    if (authoredSnapType === undefined) return;
+    content.style.scrollSnapType = authoredSnapType;
+    authoredSnapType = undefined;
+  };
 
   let resizeObserver: ResizeObserver | null = null;
   let mutationObserver: MutationObserver | null = null;
@@ -347,6 +354,7 @@ export function createCarousel(
     win.clearTimeout(settleTimer);
     settleTimer = undefined;
     if (dragging) return;
+    restoreScrollSnap();
     applyIndex(getNearestIndex(content[axis.scroll]));
   };
 
@@ -398,12 +406,11 @@ export function createCarousel(
   /**
    * Drag the scroll container along the carousel axis with a pointer or touch,
    * then settle on the nearest slide. Native scroll snapping is paused while
-   * the drag drives the position. Returns the cleanup.
+   * the drag drives the position and the release scroll settles. Returns the cleanup.
    */
   const bindDrag = (): (() => void) => {
     const authoredTouchAction = content.style.touchAction;
-    let authoredSnapType = "";
-    /** Scroll position the drag started from; read at axis lock so a previous drag has settled. */
+    /** Read at axis lock so a new drag takes over from the current visual position. */
     let origin = 0;
     content.style.touchAction = axis.touchAction;
 
@@ -411,9 +418,17 @@ export function createCarousel(
       if (!dragging) return;
       dragging = false;
       root.removeAttribute("data-dragging");
-      content.style.scrollSnapType = authoredSnapType;
     };
-    const settle = () => setIndex(getNearestIndex(content[axis.scroll]));
+    const settle = () => {
+      const index = getNearestIndex(content[axis.scroll]);
+      setIndex(index);
+      // Instant or zero-distance scrolls may not emit scroll/scrollend.
+      if (Math.abs(content[axis.scroll] - (snapPoints[index] ?? 0)) < 1) {
+        restoreScrollSnap();
+      } else {
+        onScroll();
+      }
+    };
 
     const gesture = createSwipeGesture<HTMLElement>({
       element: content,
@@ -424,8 +439,11 @@ export function createCarousel(
         origin = content[axis.scroll];
         dragging = true;
         root.setAttribute("data-dragging", "true");
-        authoredSnapType = content.style.scrollSnapType;
+        win.clearTimeout(settleTimer);
+        authoredSnapType ??= content.style.scrollSnapType;
         content.style.scrollSnapType = "none";
+        // Cancel any native smooth scroll before the pointer takes over.
+        content.scrollTo({ [axis.edge]: origin, behavior: "instant" });
         return true;
       },
       move(_content, { deltaX, deltaY }) {
@@ -444,6 +462,7 @@ export function createCarousel(
 
     return () => {
       gesture.destroy();
+      restoreScrollSnap();
       content.style.touchAction = authoredTouchAction;
     };
   };
