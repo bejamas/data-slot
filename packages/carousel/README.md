@@ -59,6 +59,17 @@ const carousel = createCarousel(element, {
 });
 ```
 
+### Data Attributes
+
+JS options take precedence over data attributes.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-default-index` | number | `0` | Initial active index |
+| `data-orientation` | `horizontal \| vertical` | `horizontal` | Carousel orientation |
+| `data-drag` | boolean | `false` | Enable pointer drag/swipe navigation |
+| `data-loop` | boolean | `false` | Enable soft-wrap loop navigation |
+
 ### Options
 
 | Option | Type | Default | Description |
@@ -94,17 +105,6 @@ Carousel navigation uses native smooth scrolling by default for:
 When the user prefers reduced motion (`prefers-reduced-motion: reduce`), navigation falls back to instant scroll behavior.
 
 When `drag` is enabled, the carousel also supports pointer drag/swipe gestures and snaps to the nearest slide on release.
-
-## Data Attributes
-
-JS options take precedence over data attributes.
-
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `data-default-index` | number | `0` | Initial active index |
-| `data-orientation` | `horizontal \| vertical` | `horizontal` | Carousel orientation |
-| `data-drag` | boolean | `false` | Enable pointer drag/swipe navigation |
-| `data-loop` | boolean | `false` | Enable soft-wrap loop navigation |
 
 ## Events
 
