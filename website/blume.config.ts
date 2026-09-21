@@ -28,6 +28,23 @@ export default defineConfig({
     repo: 'https://github.com/bejamas/data-slot',
   },
   search: { provider: 'orama' },
+  analytics: {
+    scripts: [
+      {
+        src: 'https://plausible.io/js/pa-zvT90o__72pucRtEL557X.js',
+        strategy: 'async',
+      },
+      {
+        content: `window.plausible = window.plausible || function () {
+  (window.plausible.q = window.plausible.q || []).push(arguments);
+};
+window.plausible.init = window.plausible.init || function (options) {
+  window.plausible.o = options || {};
+};
+window.plausible.init();`,
+      },
+    ],
+  },
   feedback: false,
   lastModified: false,
   toc: { minHeadingLevel: 2, maxHeadingLevel: 3 },
