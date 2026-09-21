@@ -7,6 +7,7 @@ export default defineComponents({
   },
   layout: {
     Layout: './components/Layout.astro',
+    Logo: './components/Logo.astro',
     PageFooter: './components/PageFooter.astro',
   },
 });

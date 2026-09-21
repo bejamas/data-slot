@@ -57,7 +57,9 @@ body { font-size: 14px; }
 }
 ::view-transition-old(*) { opacity: 0; }
 [data-astro-transition-scope] { animation: none !important; }
+[data-blume-header],
 [data-blume-doc-grid] { max-width: 1600px; }
+[data-blume-header] { margin-inline: auto; }
 #blume-content { min-width: 0; padding-top: 42px; }
 .prose { font-size: 14px; line-height: 1.85; }
 .prose h1:not(:where(.not-prose *)) { font-size: clamp(2rem, 3vw, 2.5rem); font-weight: 500; letter-spacing: -.06em; margin-bottom: 14px; }
