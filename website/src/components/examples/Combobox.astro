@@ -53,14 +53,15 @@ const cssCode = `<label for="fruit-combo" class="combobox-field-label">Fruit</la
   .combobox-input-wrapper {
     display: flex;
     align-items: center;
-    background: #1a1a1a;
+    background: var(--surface);
+    border: 1px solid var(--border);
     min-width: 14rem;
   }
   .combobox-input {
     flex: 1;
     padding: 0.5rem 0.75rem;
     background: transparent;
-    color: #faf9f7;
+    color: var(--text);
     border: none;
     outline: none;
     font-size: 0.875rem;
@@ -131,11 +132,11 @@ const cssCode = `<label for="fruit-combo" class="combobox-field-label">Fruit</la
 
 const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium text-gray-700 mb-1">Fruit</label>
 <div data-slot="combobox" data-placeholder="Search fruits..." class="relative inline-block">
-  <div class="flex items-center bg-text min-w-56">
+  <div class="flex items-center bg-white border border-border min-w-56">
     <input
       data-slot="combobox-input"
       id="fruit-combo"
-      class="flex-1 px-3 py-2 bg-transparent text-bg border-none outline-none text-sm
+      class="flex-1 px-3 py-2 bg-transparent text-text border-none outline-none text-sm
              placeholder:text-gray-400"
     />
     <button
@@ -264,11 +265,11 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
   </div>
   <label slot="preview-tailwind" for="combobox-tw" class="block text-sm font-medium text-gray-700 mb-1">Fruit</label>
   <div slot="preview-tailwind" data-slot="combobox" data-placeholder="Search fruits..." class="relative inline-block">
-    <div class="flex items-center bg-text min-w-56">
+    <div class="flex items-center bg-white border border-border min-w-56">
       <input
         data-slot="combobox-input"
         id="combobox-tw"
-        class="flex-1 px-3 py-2 bg-transparent text-bg border-none outline-none text-sm placeholder:text-gray-400"
+        class="flex-1 px-3 py-2 bg-transparent text-text border-none outline-none text-sm placeholder:text-gray-400"
       />
       <button
         data-slot="combobox-trigger"
@@ -360,14 +361,15 @@ const tailwindCode = `<label for="fruit-combo" class="block text-sm font-medium 
   .combobox-input-wrapper {
     display: flex;
     align-items: center;
-    background: #1a1a1a;
+    background: var(--surface);
+    border: 1px solid var(--border);
     min-width: 14rem;
   }
   .combobox-input {
     flex: 1;
     padding: 0.5rem 0.75rem;
     background: transparent;
-    color: #faf9f7;
+    color: var(--text);
     border: none;
     outline: none;
     font-size: 0.875rem;

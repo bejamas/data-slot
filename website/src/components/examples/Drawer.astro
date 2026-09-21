@@ -15,7 +15,7 @@ const css = {
   close: "drawer-demo-close",
 };
 const tailwind = {
-  trigger: "cursor-pointer border-0 bg-[#1a1a1a] px-4 py-2 text-[#faf9f7]",
+  trigger: "cursor-pointer border border-border bg-white px-4 py-2 text-text",
   backdrop: "fixed inset-0 z-[110] bg-black/45 opacity-[calc(1-var(--drawer-swipe-progress,0))] transition-opacity duration-300 ease-[ease] motion-reduce:transition-none data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[swiping]:transition-none hidden:hidden",
   viewport: "pointer-events-none fixed inset-0 z-[111] flex h-dvh w-full justify-end hidden:hidden",
   popup: "pointer-events-auto flex h-full w-full max-w-sm flex-col border-l border-[#ccc] bg-[#faf9f7] text-[#1a1a1a] shadow-[0_0_50px_rgb(0_0_0/20%)] transition-transform duration-300 ease-[ease] motion-reduce:transition-none [transform:translateX(calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-amount-x,0px)))] data-[starting-style]:[transform:translateX(100%)] data-[ending-style]:[transform:translateX(100%)] data-[swiping]:transition-none hidden:hidden",

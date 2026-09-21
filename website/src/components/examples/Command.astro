@@ -147,7 +147,7 @@ const dialogCssCode = `<div data-slot="dialog" class="command-dialog">
 const dialogTailwindCode = `<div data-slot="dialog">
   <button
     data-slot="dialog-trigger"
-    class="border border-stone-950 bg-stone-950 px-4 py-2 text-sm font-medium text-stone-50 transition hover:opacity-90"
+    class="border border-border bg-white px-4 py-2 text-sm font-medium text-text transition hover:opacity-90"
   >
     Open Command Palette
   </button>
@@ -358,7 +358,7 @@ const dialogTailwindCode = `<div data-slot="dialog">
   <div slot="preview-tailwind" data-slot="dialog">
     <button
       data-slot="dialog-trigger"
-      class="border border-stone-950 bg-stone-950 px-4 py-2 text-sm font-medium text-stone-50 transition hover:opacity-90"
+      class="border border-border bg-white px-4 py-2 text-sm font-medium text-text transition hover:opacity-90"
     >
       Open Command Palette
     </button>
@@ -539,9 +539,9 @@ const dialogTailwindCode = `<div data-slot="dialog">
   }
 
   .command-dialog-trigger {
-    border: 1px solid oklch(14.7% 0.004 49.25);
-    background: oklch(14.7% 0.004 49.25);
-    color: oklch(98.5% 0.001 106.423);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
     font-weight: 500;

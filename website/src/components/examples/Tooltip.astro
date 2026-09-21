@@ -32,8 +32,8 @@ const cssCode = `<div data-slot="tooltip" class="tooltip-root">
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    background: #1a1a1a;
-    color: #faf9f7;
+    background: var(--tooltip-bg);
+    color: var(--tooltip-text);
     padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
     white-space: nowrap;
@@ -128,8 +128,8 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
     data-slot="tooltip-content"
     data-side="top"
     class="absolute
-           inline-flex items-center gap-1.5 bg-text px-3 py-1.5
-           text-xs whitespace-nowrap text-bg z-50
+           inline-flex items-center gap-1.5 bg-[var(--tooltip-bg)] px-3 py-1.5
+           text-xs whitespace-nowrap text-[var(--tooltip-text)] z-50
            opacity-0 pointer-events-none transition-opacity duration-150
            data-open:opacity-100 data-open:pointer-events-auto
            data-instant:transition-none data-instant:animate-none
@@ -138,7 +138,7 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
     Tooltip content
     <div
       data-slot="tooltip-arrow"
-      class="absolute size-2.5 bg-text rotate-45
+      class="absolute size-2.5 bg-[var(--tooltip-bg)] rotate-45
              data-[side=top]:-bottom-1
              data-[side=bottom]:-top-1
              data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5
@@ -211,10 +211,10 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
         <div
           data-slot="tooltip-content"
           data-side="top"
-          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-[var(--tooltip-bg)] px-3 py-1.5 text-xs whitespace-nowrap text-[var(--tooltip-text)] z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: top (default)
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-[var(--tooltip-bg)] rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="inline-block">
@@ -227,10 +227,10 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
         <div
           data-slot="tooltip-content"
           data-side="bottom"
-          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-[var(--tooltip-bg)] px-3 py-1.5 text-xs whitespace-nowrap text-[var(--tooltip-text)] z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: bottom
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-[var(--tooltip-bg)] rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="inline-block">
@@ -243,10 +243,10 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
         <div
           data-slot="tooltip-content"
           data-side="left"
-          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-[var(--tooltip-bg)] px-3 py-1.5 text-xs whitespace-nowrap text-[var(--tooltip-text)] z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: left
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-[var(--tooltip-bg)] rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="inline-block">
@@ -259,10 +259,10 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
         <div
           data-slot="tooltip-content"
           data-side="right"
-          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-[var(--tooltip-bg)] px-3 py-1.5 text-xs whitespace-nowrap text-[var(--tooltip-text)] z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: right
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-[var(--tooltip-bg)] rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
     </div>
@@ -277,10 +277,10 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
         <div
           data-slot="tooltip-content"
           data-side="inline-start"
-          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-[var(--tooltip-bg)] px-3 py-1.5 text-xs whitespace-nowrap text-[var(--tooltip-text)] z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: inline-start
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-[var(--tooltip-bg)] rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
       <div data-slot="tooltip" class="inline-block">
@@ -293,10 +293,10 @@ const tailwindCode = `<div data-slot="tooltip" class="inline-block">
         <div
           data-slot="tooltip-content"
           data-side="inline-end"
-          class="absolute inline-flex items-center gap-1.5 bg-text px-3 py-1.5 text-xs whitespace-nowrap text-bg z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
+          class="absolute inline-flex items-center gap-1.5 bg-[var(--tooltip-bg)] px-3 py-1.5 text-xs whitespace-nowrap text-[var(--tooltip-text)] z-50 opacity-0 pointer-events-none transition-opacity duration-150 data-open:opacity-100 data-open:pointer-events-auto data-instant:transition-none data-instant:animate-none"
         >
           Side: inline-end
-          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-text rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
+          <div data-slot="tooltip-arrow" class="absolute size-2.5 bg-[var(--tooltip-bg)] rotate-45 data-[side=top]:-bottom-1 data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=left]:-translate-x-0.5 data-[side=right]:-left-1 data-[side=right]:translate-x-0.5 data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-x-0.5 data-[side=inline-end]:-left-1 data-[side=inline-end]:translate-x-0.5"></div>
         </div>
       </div>
     </div>

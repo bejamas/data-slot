@@ -1,10 +1,10 @@
 .drawer-demo-trigger {
   font: inherit;
   cursor: pointer;
-  border: 0;
+  border: 1px solid var(--border);
   padding: 0.5rem 1rem;
-  background: #1a1a1a;
-  color: #faf9f7;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .drawer-demo-backdrop {

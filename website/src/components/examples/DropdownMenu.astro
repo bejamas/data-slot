@@ -36,9 +36,9 @@ const cssCode = `<div data-slot="dropdown-menu" data-align="center" class="dropd
   .dropdown-root { position: relative; display: inline-block; }
   .dropdown-trigger {
     padding: 0.5rem 1rem;
-    background: #1a1a1a;
-    color: #faf9f7;
-    border: none;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
     cursor: pointer;
     transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -102,7 +102,7 @@ const cssCode = `<div data-slot="dropdown-menu" data-align="center" class="dropd
 const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-block">
   <button
     data-slot="dropdown-menu-trigger"
-    class="px-4 py-2 bg-text text-bg border-none cursor-pointer
+    class="px-4 py-2 bg-white text-text border border-border cursor-pointer
            hover:opacity-90 transition-opacity"
   >
     Actions ▼
@@ -203,7 +203,7 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
   <div slot="preview-tailwind" data-slot="dropdown-menu" class="relative inline-block" id="dropdown-menu-tw">
     <button
       data-slot="dropdown-menu-trigger"
-      class="px-4 py-2 bg-text text-bg border-none cursor-pointer hover:opacity-90 transition-opacity"
+      class="px-4 py-2 bg-white text-text border border-border cursor-pointer hover:opacity-90 transition-opacity"
     >
       Actions ▼
     </button>
@@ -265,9 +265,9 @@ const tailwindCode = `<div data-slot="dropdown-menu" class="relative inline-bloc
   .dropdown-root { display: inline-block; }
   .dropdown-trigger {
     padding: 0.5rem 1rem;
-    background: #1a1a1a;
-    color: #faf9f7;
-    border: none;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
     cursor: pointer;
     transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
