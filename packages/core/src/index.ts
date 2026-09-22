@@ -68,3 +68,6 @@ export { createSwipeGesture } from "./swipe.ts";
 export type { SwipeAxis, SwipeMove, SwipeRelease, SwipeGestureOptions, SwipeGestureController } from "./swipe.ts";
 export { createTypeahead } from "./typeahead.ts";
 export type { TypeaheadOptions, TypeaheadController } from "./typeahead.ts";
+
+export { createContentMount } from "./content-mount.ts";
+export type { MountStrategy, ContentMountOptions } from "./content-mount.ts";

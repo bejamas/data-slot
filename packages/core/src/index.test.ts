@@ -2097,6 +2097,7 @@ describe('core/popup', () => {
 
       presence.exit()
       expect(content.hasAttribute('data-ending-style')).toBe(true)
+      await new Promise(resolve => setTimeout(resolve, 50))
       content.dispatchEvent(new TransitionEvent('transitionend', { bubbles: true }))
 
       expect(exited).toBe(1)

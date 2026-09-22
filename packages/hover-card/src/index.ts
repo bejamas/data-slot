@@ -1,3 +1,4 @@
+import type { MountStrategy } from "@data-slot/core";
 import {
   getPart,
   getRoots,
@@ -14,6 +15,7 @@ import {
   measurePopupContentRect,
   createPositionSync,
   createPortalLifecycle,
+  createContentMount,
   createPresenceLifecycle,
   createTerminalLifecycle,
   registerFloatingTerminalResources,
@@ -77,6 +79,8 @@ export interface HoverCardOptions {
 
   /** Portal content to body while open. @default true */
   portal?: boolean;
+  /** Detach closed content by default; eager keeps it connected and hidden. */
+  mountStrategy?: MountStrategy;
   /** Close when clicking outside. @default true */
   closeOnClickOutside?: boolean;
   /** Close when pressing Escape. @default true */
@@ -218,10 +222,18 @@ export function createHoverCard(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
 
+  const mounting = createContentMount({
+    root,
+    target: authoredPortal ?? authoredPositioner ?? content,
+    strategy: options.mountStrategy ?? getDataEnum(root, "mountStrategy", ["lazy", "eager"] as const) ?? "lazy",
+  });
+  cleanups.push(() => mounting.cleanup());
+
   // ARIA setup
   const contentId = ensureId(content, "hover-card-content");
   trigger.setAttribute("aria-haspopup", "dialog");
-  trigger.setAttribute("aria-controls", contentId);
+  if (isOpen) trigger.setAttribute("aria-controls", contentId);
+  else trigger.removeAttribute("aria-controls");
   content.setAttribute("data-side", preferredSide);
   content.setAttribute("data-align", preferredAlign);
 
@@ -360,8 +372,14 @@ export function createHoverCard(
     element: content,
     onExitComplete: () => {
       if (terminalLifecycle.isDestroyed) return;
+      // Restore only focus still inside the closing card, never outside focus.
+      if (content.contains(root.ownerDocument.activeElement)) {
+        lastTabKeydownAt = -Infinity;
+        trigger.focus();
+      }
       portal.restore();
       content.hidden = true;
+      mounting.unmount();
     },
   });
 
@@ -385,7 +403,9 @@ export function createHoverCard(
     setAria(trigger, "expanded", isOpen);
 
     if (open) {
+      mounting.mount();
       portal.mount();
+      trigger.setAttribute("aria-controls", contentId);
       content.hidden = false;
       setDataState("open");
       presence.enter();
@@ -393,6 +413,7 @@ export function createHoverCard(
       positionSync.start();
       positionSync.update();
     } else {
+      trigger.removeAttribute("aria-controls");
       setDataState("closed");
       presence.exit();
       positionSync.stop();
@@ -662,6 +683,7 @@ export function createHoverCard(
       resetInteractionState();
       isOpen = false;
       setAria(trigger, "expanded", false);
+      trigger.removeAttribute("aria-controls");
       setDataState("closed");
       content.hidden = true;
     },
@@ -675,6 +697,7 @@ export function createHoverCard(
     unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
   });
 
+  if (!isOpen) mounting.unmount();
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
 }

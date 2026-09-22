@@ -133,6 +133,8 @@ describe('HoverCard', () => {
     const { trigger, content, controller } = setup()
 
     expect(trigger.getAttribute('aria-haspopup')).toBe('dialog')
+    expect(trigger.hasAttribute('aria-controls')).toBe(false)
+    controller.open()
     expect(trigger.getAttribute('aria-controls')).toBe(content.id)
 
     controller.destroy()
@@ -830,7 +832,7 @@ describe('HoverCard', () => {
   })
 
   describe('content portaling', () => {
-    it('portals by default and restores on close', async () => {
+    it('portals by default and detaches on close', async () => {
       const { root, content, controller } = setup({ delay: 0 })
       const originalParent = content.parentNode
 
@@ -843,14 +845,15 @@ describe('HoverCard', () => {
       await waitForClose()
 
       expect(content.parentNode).toBe(originalParent)
-      expect(root.contains(content)).toBe(true)
+      expect(root.contains(content)).toBe(false)
 
       controller.destroy()
+      expect(root.contains(content)).toBe(true)
     })
 
     it('respects portal=false and positions content directly', () => {
       const { root, content, controller } = setup({ delay: 0, portal: false })
-      const originalParent = content.parentNode
+      const originalParent = root
 
       controller.open()
 
@@ -943,10 +946,11 @@ describe('HoverCard', () => {
       controller.close()
       await waitForClose()
 
-      expect(portal.parentElement).toBe(root)
+      expect(portal.isConnected).toBe(false)
       expect(content.parentElement).toBe(positioner)
 
       controller.destroy()
+      expect(portal.parentElement).toBe(root)
     })
   })
 

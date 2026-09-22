@@ -116,6 +116,7 @@ Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align
 | `data-avoid-collisions` | boolean | `true` | Collision handling |
 | `data-collision-padding` | number | `8` | Viewport edge padding (px) |
 | `data-portal` | boolean | `true` | Portal while open |
+| `data-mount-strategy` (root) | `"lazy" \| "eager"` | `"lazy"` | Detach closed content, or retain it in the document |
 
 ```html
 <!-- Tooltip with faster response -->
@@ -183,6 +184,7 @@ The component sets these attributes automatically:
 | `avoidCollisions` | `boolean` | `true` | Flip/shift to stay in viewport |
 | `collisionPadding` | `number` | `8` | Viewport edge padding in pixels |
 | `portal` | `boolean` | `true` | Portal content to `document.body` while open |
+| `mountStrategy` | `"lazy" \| "eager"` | `"lazy"` | Detach closed content; JS overrides root `data-mount-strategy` |
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when visibility changes |
 
 **Note:** `side` and `align` are preferred placement inputs resolved at bind time. With collision handling enabled, computed `data-side` can differ at runtime.
@@ -202,8 +204,38 @@ The component sets these attributes automatically:
 emitting an additional change event. Repeated destruction is safe; methods on the
 old controller become no-ops. Create a new controller on the same root to rebind it.
 
-Cleanup removes only the description reference added by this tooltip; authored
-`aria-describedby` references are preserved.
+Cleanup removes the description reference added by this tooltip and preserves
+other authored `aria-describedby` references. An authored reference to the tooltip
+itself is suspended while its content is detached and restored on destruction.
+
+### Content mounting and server rendering
+
+Closed content is detached from the document after initialization by default.
+Opening reconnects it before positioning and exposure; closing detaches it after
+its exit animation. Reopening during an exit cancels the pending removal. The
+same nodes are reused, preserving attached listeners, DOM references, and local
+state. Authored portal/positioner wrappers are detached with their content.
+This also applies with `portal: false`.
+
+To retain hidden content in the document, use `createTooltip(root, { mountStrategy: "eager" })`
+or set `data-mount-strategy="eager"` on the `tooltip` root. JavaScript takes precedence.
+Document/root DOM queries no longer find lazy content while closed; retain a
+reference before initialization if you need to change it later. The library's
+`create(scope)` discovery includes nested roots in retained content, so nested
+components can still be initialized after their parent. Ordinary DOM queries do
+not search retained content.
+
+`destroy()` restores content to its authored position, removes the mounting
+placeholder, and leaves content hidden for a subsequent rebind. If the authored
+root was removed, cleanup does not reconnect it to the document.
+
+This is a **live-DOM optimization after JavaScript initialization**. Authored
+content remains in server-rendered HTML and is still downloaded and parsed;
+there is no initial HTML-size or retained-memory reduction claim. A `<template>`
+would also still transmit its contents; template authoring and deferred fetching
+are not supported by this mounting option. Keep initial overlay markup hidden to
+avoid a pre-initialization flash. The trigger must have its own accessible name;
+tooltip content should provide supplemental information, not an essential label.
 
 ### Events
 
