@@ -62,7 +62,7 @@ const cssCode = `<div data-slot="carousel" data-loop class="carousel">
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     border: 1px solid #cfcfcf;
-    border-radius: 0.75rem;
+    border-radius: 0;
     background: #f6f6f6;
   }
 
@@ -100,9 +100,13 @@ const cssCode = `<div data-slot="carousel" data-loop class="carousel">
   }
 
   .carousel-nav {
+    display: grid;
+    place-items: center;
+    touch-action: manipulation;
+    padding: 0;
     width: 3rem;
     height: 3rem;
-    border-radius: 0.5rem;
+    border-radius: 0;
     border: 1px solid #cfcfcf;
     background: #fff;
     color: #1a1a1a;
@@ -129,6 +133,7 @@ const cssCode = `<div data-slot="carousel" data-loop class="carousel">
   }
 
   .carousel-dot {
+    padding: 0;
     width: 0.75rem;
     height: 0.75rem;
     border-radius: 9999px;
@@ -143,7 +148,7 @@ const cssCode = `<div data-slot="carousel" data-loop class="carousel">
     background: #1a1a1a;
   }
 
-  @media (max-width: 40rem) {
+  @media (width < 40rem) {
     .carousel-item {
       height: 14rem;
       font-size: 2.5rem;
@@ -168,49 +173,49 @@ const cssCode = `<div data-slot="carousel" data-loop class="carousel">
 const tailwindCode = `<div data-slot="carousel" data-loop class="mx-auto w-full max-w-4xl font-mono text-neutral-900">
   <div
     data-slot="carousel-content"
-    class="flex overflow-x-auto snap-x snap-mandatory rounded-xl border border-neutral-300 bg-neutral-100 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    class="flex overflow-x-auto snap-x snap-mandatory rounded-none border border-neutral-300 bg-neutral-100 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
   >
-    <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+    <div data-slot="carousel-item" class="grid h-56 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-[2.5rem] leading-none font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-84 sm:text-6xl">
       01
     </div>
-    <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+    <div data-slot="carousel-item" class="grid h-56 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-[2.5rem] leading-none font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-84 sm:text-6xl">
       02
     </div>
-    <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+    <div data-slot="carousel-item" class="grid h-56 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-[2.5rem] leading-none font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-84 sm:text-6xl">
       03
     </div>
-    <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+    <div data-slot="carousel-item" class="grid h-56 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-[2.5rem] leading-none font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-84 sm:text-6xl">
       04
     </div>
-    <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+    <div data-slot="carousel-item" class="grid h-56 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-[2.5rem] leading-none font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-84 sm:text-6xl">
       05
     </div>
   </div>
 
-  <div class="mt-4 flex items-center justify-between gap-4">
+  <div class="mt-4 flex items-center justify-between gap-4 sm:mt-5">
     <div class="flex items-center gap-3">
       <button
         data-slot="carousel-previous"
-        class="grid h-10 w-10 touch-manipulation place-items-center rounded-md border border-neutral-300 bg-white text-lg leading-none transition-colors hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
+        class="grid h-10 w-10 touch-manipulation place-items-center rounded-none border border-neutral-300 bg-white p-0 text-[1.1rem] leading-none cursor-pointer transition-colors duration-[180ms] ease-[ease] sm:h-12 sm:w-12 sm:text-xl sm:leading-none hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
         aria-label="Previous slide"
       >
         &lt;
       </button>
       <button
         data-slot="carousel-next"
-        class="grid h-10 w-10 touch-manipulation place-items-center rounded-md border border-neutral-300 bg-white text-lg leading-none transition-colors hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
+        class="grid h-10 w-10 touch-manipulation place-items-center rounded-none border border-neutral-300 bg-white p-0 text-[1.1rem] leading-none cursor-pointer transition-colors duration-[180ms] ease-[ease] sm:h-12 sm:w-12 sm:text-xl sm:leading-none hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
         aria-label="Next slide"
       >
         &gt;
       </button>
     </div>
 
-    <div class="flex items-center gap-3">
-      <button data-slot="carousel-dot" data-state="active" type="button" aria-label="Go to slide 1" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
-      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 2" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
-      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 3" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
-      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 4" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
-      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 5" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+    <div class="flex items-center gap-2 sm:gap-3">
+      <button data-slot="carousel-dot" data-state="active" type="button" aria-label="Go to slide 1" class="h-3 w-3 rounded-full border border-neutral-400 bg-white p-0 cursor-pointer transition-colors duration-[180ms] ease-[ease] data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 2" class="h-3 w-3 rounded-full border border-neutral-400 bg-white p-0 cursor-pointer transition-colors duration-[180ms] ease-[ease] data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 3" class="h-3 w-3 rounded-full border border-neutral-400 bg-white p-0 cursor-pointer transition-colors duration-[180ms] ease-[ease] data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 4" class="h-3 w-3 rounded-full border border-neutral-400 bg-white p-0 cursor-pointer transition-colors duration-[180ms] ease-[ease] data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+      <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 5" class="h-3 w-3 rounded-full border border-neutral-400 bg-white p-0 cursor-pointer transition-colors duration-[180ms] ease-[ease] data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
     </div>
   </div>
 </div>`;
@@ -249,49 +254,49 @@ const tailwindCode = `<div data-slot="carousel" data-loop class="mx-auto w-full 
   <div slot="preview-tailwind" data-slot="carousel" data-loop class="mx-auto w-full max-w-4xl font-mono text-neutral-900">
     <div
       data-slot="carousel-content"
-      class="flex overflow-x-auto snap-x snap-mandatory rounded-xl border border-neutral-300 bg-neutral-100 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      class="flex overflow-x-auto snap-x snap-mandatory rounded-none border border-neutral-300 bg-neutral-100 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+      <div data-slot="carousel-item" class="grid h-56 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-[2.5rem] leading-none font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-84 sm:text-6xl">
         01
       </div>
-      <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+      <div data-slot="carousel-item" class="grid h-56 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-[2.5rem] leading-none font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-84 sm:text-6xl">
         02
       </div>
-      <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+      <div data-slot="carousel-item" class="grid h-56 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-[2.5rem] leading-none font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-84 sm:text-6xl">
         03
       </div>
-      <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+      <div data-slot="carousel-item" class="grid h-56 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-[2.5rem] leading-none font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-84 sm:text-6xl">
         04
       </div>
-      <div data-slot="carousel-item" class="grid h-64 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-5xl font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-80 sm:text-6xl">
+      <div data-slot="carousel-item" class="grid h-56 min-w-0 shrink-0 grow-0 basis-full place-items-center snap-start text-[2.5rem] leading-none font-medium tracking-[0.2em] text-neutral-900 [text-indent:0.2em] sm:h-84 sm:text-6xl">
         05
       </div>
     </div>
 
-    <div class="mt-4 flex items-center justify-between gap-4">
+    <div class="mt-4 flex items-center justify-between gap-4 sm:mt-5">
       <div class="flex items-center gap-3">
         <button
           data-slot="carousel-previous"
-          class="grid h-10 w-10 touch-manipulation place-items-center rounded-md border border-neutral-300 bg-white text-lg leading-none transition-colors hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
+          class="grid h-10 w-10 touch-manipulation place-items-center rounded-none border border-neutral-300 bg-white p-0 text-[1.1rem] leading-none cursor-pointer transition-colors duration-[180ms] ease-[ease] sm:h-12 sm:w-12 sm:text-xl sm:leading-none hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
           aria-label="Previous slide"
         >
           &lt;
         </button>
         <button
           data-slot="carousel-next"
-          class="grid h-10 w-10 touch-manipulation place-items-center rounded-md border border-neutral-300 bg-white text-lg leading-none transition-colors hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
+          class="grid h-10 w-10 touch-manipulation place-items-center rounded-none border border-neutral-300 bg-white p-0 text-[1.1rem] leading-none cursor-pointer transition-colors duration-[180ms] ease-[ease] sm:h-12 sm:w-12 sm:text-xl sm:leading-none hover:border-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45"
           aria-label="Next slide"
         >
           &gt;
         </button>
       </div>
 
-      <div class="flex items-center gap-3">
-        <button data-slot="carousel-dot" data-state="active" type="button" aria-label="Go to slide 1" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
-        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 2" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
-        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 3" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
-        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 4" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
-        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 5" class="h-3 w-3 rounded-full border border-neutral-400 bg-white transition-colors duration-200 ease-out data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button data-slot="carousel-dot" data-state="active" type="button" aria-label="Go to slide 1" class="h-3 w-3 rounded-full border border-neutral-400 bg-white p-0 cursor-pointer transition-colors duration-[180ms] ease-[ease] data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 2" class="h-3 w-3 rounded-full border border-neutral-400 bg-white p-0 cursor-pointer transition-colors duration-[180ms] ease-[ease] data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 3" class="h-3 w-3 rounded-full border border-neutral-400 bg-white p-0 cursor-pointer transition-colors duration-[180ms] ease-[ease] data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 4" class="h-3 w-3 rounded-full border border-neutral-400 bg-white p-0 cursor-pointer transition-colors duration-[180ms] ease-[ease] data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
+        <button data-slot="carousel-dot" data-state="inactive" type="button" aria-label="Go to slide 5" class="h-3 w-3 rounded-full border border-neutral-400 bg-white p-0 cursor-pointer transition-colors duration-[180ms] ease-[ease] data-[state=active]:border-neutral-900 data-[state=active]:bg-neutral-900"></button>
       </div>
     </div>
   </div>
@@ -315,7 +320,7 @@ const tailwindCode = `<div data-slot="carousel" data-loop class="mx-auto w-full 
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     border: 1px solid #cfcfcf;
-    border-radius: 0.75rem;
+    border-radius: 0;
     background: #f6f6f6;
   }
 
@@ -353,9 +358,13 @@ const tailwindCode = `<div data-slot="carousel" data-loop class="mx-auto w-full 
   }
 
   .carousel-nav-css {
+    display: grid;
+    place-items: center;
+    touch-action: manipulation;
+    padding: 0;
     width: 3rem;
     height: 3rem;
-    border-radius: 0.5rem;
+    border-radius: 0;
     border: 1px solid #cfcfcf;
     background: #fff;
     color: #1a1a1a;
@@ -382,6 +391,7 @@ const tailwindCode = `<div data-slot="carousel" data-loop class="mx-auto w-full 
   }
 
   .carousel-dot-css {
+    padding: 0;
     width: 0.75rem;
     height: 0.75rem;
     border-radius: 9999px;
@@ -396,7 +406,7 @@ const tailwindCode = `<div data-slot="carousel" data-loop class="mx-auto w-full 
     background: #1a1a1a;
   }
 
-  @media (max-width: 40rem) {
+  @media (width < 40rem) {
     .carousel-item-css {
       height: 14rem;
       font-size: 2.5rem;
