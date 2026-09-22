@@ -54,7 +54,67 @@ console.log(group.value); // ["left"]
 group.destroy();
 ```
 
-## Options
+## API
+
+### Initialization
+
+#### `create(scope?)`
+
+Find and bind uninitialized `[data-slot="toggle-group"]` descendants of `scope` (defaults to `document`). Returns `ToggleGroupController[]` for newly bound roots. To initialize the scope element itself, use `createToggleGroup`.
+
+```typescript
+import { create } from "@data-slot/toggle-group";
+
+const controllers = create();
+```
+
+#### `createToggleGroup(root, options?)`
+
+Create a `ToggleGroupController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
+
+```typescript
+import { createToggleGroup } from "@data-slot/toggle-group";
+
+const controller = createToggleGroup(element, {});
+```
+
+### Slots
+
+#### Runtime Slots
+
+- `toggle-group` - Root element that manages single or multiple selection and keyboard navigation between items.
+- `toggle-group-item` - Toggle button inside the group, identified by a unique `data-value`; receives `aria-pressed` and `data-state` as its selection changes.
+
+### Data Attributes
+
+#### Root Element
+
+| Attribute | Description |
+|-----------|-------------|
+| `data-slot="toggle-group"` | Required. Identifies the root element. |
+| `data-default-value` | Initial selected value(s). Space-separated for multiple values. |
+| `data-multiple` | Enable multiple selection mode. |
+| `data-orientation` | `"horizontal"` or `"vertical"` for keyboard navigation. |
+| `data-loop` | Wrap keyboard focus at the ends (default `true`); use `"false"` to stop at the ends. |
+| `data-disabled` | Disable the entire group. |
+
+#### Item Elements
+
+| Attribute | Description |
+|-----------|-------------|
+| `data-slot="toggle-group-item"` | Required. Identifies an item. |
+| `data-value` | Required. The value associated with this item. |
+| `data-disabled` | Disable this specific item. |
+
+#### State Attributes (set by component)
+
+| Attribute | Values | Description |
+|-----------|--------|-------------|
+| `aria-pressed` | `"true"` \| `"false"` | Whether item is pressed. |
+| `data-state` | `"on"` \| `"off"` | Visual state for styling. |
+| `data-value` (on root) | Space-separated values | Current selection. |
+
+### Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -65,37 +125,20 @@ group.destroy();
 | `disabled` | `boolean` | `false` | Disable the entire group. |
 | `onValueChange` | `(value: string[]) => void` | - | Callback when selection changes. |
 
-## Data Attributes
+### Controller
 
-### Root Element
+| Method/Property | Description |
+| --- | --- |
+| `setValue(value: string \| string[])` | Replace the selection. Strings are space-separated; unknown values are ignored and single mode keeps the first matching value. |
+| `toggle(value: string)` | Toggle one value; single mode clears the previous selection. |
+| `value` | Current selection (readonly `string[]`, including in single mode). |
+| `destroy()` | Remove listeners and release the root binding. |
 
-| Attribute | Description |
-|-----------|-------------|
-| `data-slot="toggle-group"` | Required. Identifies the root element. |
-| `data-default-value` | Initial selected value(s). Space-separated for multiple values. |
-| `data-multiple` | Enable multiple selection mode. |
-| `data-orientation` | `"horizontal"` or `"vertical"` for keyboard navigation. |
-| `data-disabled` | Disable the entire group. |
+Controller methods work while the group is disabled. User interaction and `toggle-group:set` are blocked while disabled.
 
-### Item Elements
+### Events
 
-| Attribute | Description |
-|-----------|-------------|
-| `data-slot="toggle-group-item"` | Required. Identifies an item. |
-| `data-value` | Required. The value associated with this item. |
-| `data-disabled` | Disable this specific item. |
-
-### State Attributes (set by component)
-
-| Attribute | Values | Description |
-|-----------|--------|-------------|
-| `aria-pressed` | `"true"` \| `"false"` | Whether item is pressed. |
-| `data-state` | `"on"` \| `"off"` | Visual state for styling. |
-| `data-value` (on root) | Space-separated values | Current selection. |
-
-## Events
-
-### Outbound Events
+#### Outbound Events
 
 ```javascript
 // Listen for changes
@@ -104,7 +147,7 @@ root.addEventListener("toggle-group:change", (e) => {
 });
 ```
 
-### Inbound Events
+#### Inbound Events
 
 | Event | Detail | Description |
 |-------|--------|-------------|
@@ -124,7 +167,7 @@ root.dispatchEvent(new CustomEvent("toggle-group:set", {
 
 **Note:** Blocked when group is disabled.
 
-### Deprecated Shapes
+#### Deprecated Shapes
 
 The following shapes are deprecated and will be removed in v1.0:
 
@@ -142,17 +185,7 @@ root.dispatchEvent(new CustomEvent("toggle-group:set", {
 
 Use `{ value: ... }` instead.
 
-## Keyboard Navigation
-
-| Key | Action |
-|-----|--------|
-| `ArrowRight` / `ArrowDown` | Move to next item (based on orientation) |
-| `ArrowLeft` / `ArrowUp` | Move to previous item (based on orientation) |
-| `Home` | Move to first item |
-| `End` | Move to last item |
-| `Enter` / `Space` | Toggle current item |
-
-## Styling
+### Styling
 
 ```css
 /* Style pressed items */
@@ -168,7 +201,17 @@ Use `{ value: ... }` instead.
 }
 ```
 
-## Accessibility
+### Keyboard Navigation
+
+| Key | Action |
+|-----|--------|
+| `ArrowRight` / `ArrowDown` | Move to next item (based on orientation) |
+| `ArrowLeft` / `ArrowUp` | Move to previous item (based on orientation) |
+| `Home` | Move to first item |
+| `End` | Move to last item |
+| `Enter` / `Space` | Toggle current item |
+
+### Accessibility
 
 - Root has `role="group"`
 - Items have `aria-pressed` attribute

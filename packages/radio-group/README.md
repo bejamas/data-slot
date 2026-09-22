@@ -57,15 +57,39 @@ console.log(radioGroup.value); // null
 radioGroup.destroy();
 ```
 
-## Slots
+## API
 
-| Slot | Description |
-|------|-------------|
-| `radio-group` | Root container |
-| `radio-group-item` | Individual radio control |
-| `radio-group-indicator` | Optional visual indicator inside an item |
+### Initialization
 
-## Options
+#### `create(scope?)`
+
+Find and bind uninitialized `[data-slot="radio-group"]` descendants of `scope` (defaults to `document`). Returns `RadioGroupController[]` for newly bound roots. To initialize the scope element itself, use `createRadioGroup`.
+
+```typescript
+import { create } from "@data-slot/radio-group";
+
+const controllers = create();
+```
+
+#### `createRadioGroup(root, options?)`
+
+Create a `RadioGroupController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
+
+```typescript
+import { createRadioGroup } from "@data-slot/radio-group";
+
+const controller = createRadioGroup(element, {});
+```
+
+### Slots
+
+#### Runtime Slots
+
+- `radio-group` - Root element that manages the selected value, radio-group semantics, and keyboard navigation.
+- `radio-group-item` - Individual radio control identified by `data-value`; receives checked state and participates in roving focus.
+- `radio-group-indicator` - Optional visual indicator inside an item; receives checked and disabled state for styling.
+
+### Options
 
 Options can be passed via JavaScript or data attributes (JS takes precedence).
 
@@ -78,7 +102,7 @@ Options can be passed via JavaScript or data attributes (JS takes precedence).
 | `required` | `data-required` | `boolean` | `false` | Require a selected value for native validation |
 | `onValueChange` | - | `(value: string \| null) => void` | - | Callback fired when selection changes |
 
-## Controller API
+### Controller
 
 ```typescript
 interface RadioGroupController {
@@ -89,15 +113,21 @@ interface RadioGroupController {
 }
 ```
 
-## Events
+### Events
 
-### Outbound Events (on root)
+#### Outbound Events
+
+Listen for these events on the root element.
+
 
 | Event | Detail | Description |
 |-------|--------|-------------|
 | `radio-group:change` | `{ value: string \| null }` | Fires when the selected value changes |
 
-### Inbound Events (on root)
+#### Inbound Events
+
+Dispatch these events on the root element.
+
 
 | Event | Detail | Description |
 |-------|--------|-------------|
@@ -126,29 +156,7 @@ root.dispatchEvent(
 
 **Note:** Inbound events are blocked when the group is disabled or read-only. Controller methods still work.
 
-## Labeling Patterns
-
-### Wrapping labels
-
-```html
-<label>
-  <span data-slot="radio-group-item" data-value="starter">
-    <span data-slot="radio-group-indicator"></span>
-  </span>
-  Starter
-</label>
-```
-
-### Sibling `label[for]`
-
-```html
-<label for="plan-pro">Pro</label>
-<span id="plan-pro" data-slot="radio-group-item" data-value="pro">
-  <span data-slot="radio-group-indicator"></span>
-</span>
-```
-
-## Styling
+### Styling
 
 The controller mirrors Base/shadcn-style presence attributes onto items and indicators:
 
@@ -166,7 +174,7 @@ The root also mirrors the current value:
 [data-slot="radio-group"][data-value="pro"] { ... }
 ```
 
-## Keyboard Navigation
+### Keyboard Navigation
 
 | Key | Action |
 |-----|--------|
@@ -176,14 +184,36 @@ The root also mirrors the current value:
 | `End` | Select the last enabled item |
 | `Space` / `Enter` | Select the focused item |
 
-## Accessibility
+### Accessibility
 
 - Root gets `role="radiogroup"` plus `aria-disabled`, `aria-readonly`, and `aria-required`
 - Items get `role="radio"`, `aria-checked`, `aria-disabled`, and roving `tabindex`
 - Disabled items are skipped during keyboard navigation
 - Wrapping labels and `label[for]` associations are mirrored to `aria-labelledby`
 
-## Form Integration
+#### Labeling Patterns
+
+##### Wrapping Labels
+
+```html
+<label>
+  <span data-slot="radio-group-item" data-value="starter">
+    <span data-slot="radio-group-indicator"></span>
+  </span>
+  Starter
+</label>
+```
+
+##### Sibling `label[for]`
+
+```html
+<label for="plan-pro">Pro</label>
+<span id="plan-pro" data-slot="radio-group-item" data-value="pro">
+  <span data-slot="radio-group-indicator"></span>
+</span>
+```
+
+### Form Integration
 
 The controller generates one visually hidden native radio input per item. When `name` is provided, those inputs share the same field name and participate in native form submission and reset behavior.
 

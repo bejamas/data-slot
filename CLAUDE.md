@@ -6,7 +6,7 @@ This document captures conventions, patterns, and guidelines for developing new 
 
 **Monorepo structure:**
 - `packages/` - Component packages and core utilities
-- `website/` - Astro-based documentation site
+- `website/` - Blume documentation site with Astro examples
 
 **Package naming:** `@data-slot/{component-name}`
 
@@ -395,30 +395,13 @@ Create `website/src/components/examples/{ComponentName}.astro`:
 </div>
 ```
 
-### 2. Update Package Sizes
-Edit `website/src/data/package-sizes.json`:
-```json
-{
-  "component": { "esm": 1234, "cjs": 1567 }
-}
-```
+### 2. Register the Component
+Add the component slug and example filenames to `website/lib/catalog.ts`. Add its lazy initializer to `website/lib/examples-client.ts`.
 
-### 3. Update Homepage
-Edit `website/src/pages/index.astro`:
-```astro
----
-import ComponentExample from '../components/examples/ComponentName.astro';
----
+### 3. Add Documentation
+Create `website/content/components/{component-name}.mdx` using an existing component page as a template. API references are generated from the package README's `## API` section.
 
-<!-- Add to components section -->
-<ComponentExample />
-
-<!-- Add to script imports -->
-<script>
-  import { create as createComponent } from '@data-slot/component';
-  createComponent();
-</script>
-```
+Run `bun run dev:docs` to rebuild the packages and generate examples and API references. Use `bun run check:docs` and `bun run build:website` to validate the site.
 
 ### 4. Add Styles (if needed)
 Edit `website/src/styles/demo.css`:

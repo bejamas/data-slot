@@ -48,19 +48,20 @@ const cssCode = `<div class="radio-card">
 <style>
   .radio-card {
     display: grid;
-    gap: 0.875rem;
+    gap: 0.75rem;
     max-width: 18rem;
   }
 
   .radio-heading {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #111827;
+    color: #1a1a1a;
+    line-height: 1.25rem;
   }
 
   .radio-group {
     display: grid;
-    gap: 0.625rem;
+    gap: 0.5rem;
     width: 100%;
   }
 
@@ -68,11 +69,13 @@ const cssCode = `<div class="radio-card">
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
-    color: #111827;
+    color: #1a1a1a;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
   }
 
   .radio-option--disabled {
-    color: #9ca3af;
+    color: oklch(70.7% 0.022 261.325);
   }
 
   .radio-item {
@@ -83,7 +86,7 @@ const cssCode = `<div class="radio-card">
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    border: 1px solid #d1d5db;
+    border: 1px solid oklch(55.1% 0.027 264.364);
     border-radius: 999px;
     background: #fff;
     outline: none;
@@ -91,8 +94,8 @@ const cssCode = `<div class="radio-card">
   }
 
   .radio-item[data-checked] {
-    background: #111827;
-    border-color: #111827;
+    background: #1a1a1a;
+    border-color: #1a1a1a;
   }
 
   .radio-item[data-disabled] {
@@ -101,7 +104,7 @@ const cssCode = `<div class="radio-card">
   }
 
   .radio-item:focus-visible {
-    box-shadow: 0 0 0 3px rgb(17 24 39 / 0.18);
+    box-shadow: 0 0 0 3px oklch(21% 0.034 264.665 / 0.2);
   }
 
   .radio-indicator {
@@ -116,7 +119,7 @@ const cssCode = `<div class="radio-card">
     width: 0.5rem;
     height: 0.5rem;
     border-radius: 999px;
-    background: #f9fafb;
+    background: oklch(98.5% 0.002 247.839);
     opacity: 0;
     transform: scale(0.75);
     transition: opacity 150ms ease, transform 150ms ease;
@@ -129,7 +132,7 @@ const cssCode = `<div class="radio-card">
 </style>`;
 
 const tailwindCode = `<div class="grid max-w-72 gap-3">
-  <div id="plan-tw-label" class="text-sm font-semibold text-gray-900">Choose a plan</div>
+  <div id="plan-tw-label" class="text-sm font-semibold text-text">Choose a plan</div>
   <div
     data-slot="radio-group"
     data-default-value="pro"
@@ -137,11 +140,11 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
     aria-labelledby="plan-tw-label"
     class="grid w-full gap-2"
   >
-    <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+    <label class="inline-flex items-center gap-3 text-sm text-text">
       <span
         data-slot="radio-group-item"
         data-value="starter"
-        class="border-input data-checked:bg-gray-900 data-checked:border-gray-900 focus-visible:ring-gray-900/20 relative inline-flex size-4 shrink-0 rounded-full border bg-white outline-none focus-visible:ring-3"
+        class="border-gray-500 data-checked:bg-text data-checked:border-text focus-visible:ring-gray-900/20 data-disabled:opacity-50 relative inline-flex size-4 items-center justify-center shrink-0 rounded-full border bg-white outline-none focus-visible:ring-3"
       >
         <span
           data-slot="radio-group-indicator"
@@ -153,11 +156,11 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
       Starter
     </label>
 
-    <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+    <label class="inline-flex items-center gap-3 text-sm text-text">
       <span
         data-slot="radio-group-item"
         data-value="pro"
-        class="border-input data-checked:bg-gray-900 data-checked:border-gray-900 focus-visible:ring-gray-900/20 relative inline-flex size-4 shrink-0 rounded-full border bg-white outline-none focus-visible:ring-3"
+        class="border-gray-500 data-checked:bg-text data-checked:border-text focus-visible:ring-gray-900/20 data-disabled:opacity-50 relative inline-flex size-4 items-center justify-center shrink-0 rounded-full border bg-white outline-none focus-visible:ring-3"
       >
         <span
           data-slot="radio-group-indicator"
@@ -174,7 +177,7 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
         data-slot="radio-group-item"
         data-value="enterprise"
         data-disabled
-        class="border-input data-checked:bg-gray-900 data-checked:border-gray-900 relative inline-flex size-4 shrink-0 rounded-full border bg-white opacity-50 outline-none"
+        class="border-gray-500 data-checked:bg-text data-checked:border-text data-disabled:opacity-50 relative inline-flex size-4 items-center justify-center shrink-0 rounded-full border bg-white opacity-50 outline-none"
       >
         <span
           data-slot="radio-group-indicator"
@@ -234,7 +237,7 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
   </div>
 
   <div slot="preview-tailwind" class="grid max-w-72 gap-3">
-    <div id="plan-tw-label" class="text-sm font-semibold text-gray-900">Choose a plan</div>
+    <div id="plan-tw-label" class="text-sm font-semibold text-text">Choose a plan</div>
     <div
       data-slot="radio-group"
       data-default-value="pro"
@@ -242,11 +245,11 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
       aria-labelledby="plan-tw-label"
       class="grid w-full gap-2"
     >
-      <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+      <label class="inline-flex items-center gap-3 text-sm text-text">
         <span
           data-slot="radio-group-item"
           data-value="starter"
-          class="data-checked:bg-gray-900 data-checked:border-gray-900 focus-visible:ring-gray-900/20 relative inline-flex size-4 shrink-0 rounded-full border border-gray-300 bg-white outline-none focus-visible:ring-3"
+          class="data-checked:bg-text data-checked:border-text focus-visible:ring-gray-900/20 data-disabled:opacity-50 relative inline-flex size-4 items-center justify-center shrink-0 rounded-full border border-gray-500 bg-white outline-none focus-visible:ring-3"
         >
           <span
             data-slot="radio-group-indicator"
@@ -258,11 +261,11 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
         Starter
       </label>
 
-      <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+      <label class="inline-flex items-center gap-3 text-sm text-text">
         <span
           data-slot="radio-group-item"
           data-value="pro"
-          class="data-checked:bg-gray-900 data-checked:border-gray-900 focus-visible:ring-gray-900/20 relative inline-flex size-4 shrink-0 rounded-full border border-gray-300 bg-white outline-none focus-visible:ring-3"
+          class="data-checked:bg-text data-checked:border-text focus-visible:ring-gray-900/20 data-disabled:opacity-50 relative inline-flex size-4 items-center justify-center shrink-0 rounded-full border border-gray-500 bg-white outline-none focus-visible:ring-3"
         >
           <span
             data-slot="radio-group-indicator"
@@ -279,7 +282,7 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
           data-slot="radio-group-item"
           data-value="enterprise"
           data-disabled
-          class="data-checked:bg-gray-900 data-checked:border-gray-900 relative inline-flex size-4 shrink-0 rounded-full border border-gray-300 bg-white opacity-50 outline-none"
+          class="data-checked:bg-text data-checked:border-text data-disabled:opacity-50 relative inline-flex size-4 items-center justify-center shrink-0 rounded-full border border-gray-500 bg-white opacity-50 outline-none"
         >
           <span
             data-slot="radio-group-indicator"
@@ -300,19 +303,20 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
 <style>
   .radio-card {
     display: grid;
-    gap: 0.875rem;
+    gap: 0.75rem;
     max-width: 18rem;
   }
 
   .radio-heading {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #111827;
+    color: #1a1a1a;
+    line-height: 1.25rem;
   }
 
   .radio-group {
     display: grid;
-    gap: 0.625rem;
+    gap: 0.5rem;
     width: 100%;
   }
 
@@ -320,11 +324,13 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
-    color: #111827;
+    color: #1a1a1a;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
   }
 
   .radio-option--disabled {
-    color: #9ca3af;
+    color: oklch(70.7% 0.022 261.325);
   }
 
   .radio-item {
@@ -335,7 +341,7 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    border: 1px solid #d1d5db;
+    border: 1px solid oklch(55.1% 0.027 264.364);
     border-radius: 999px;
     background: #fff;
     outline: none;
@@ -343,8 +349,8 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
   }
 
   .radio-item[data-checked] {
-    background: #111827;
-    border-color: #111827;
+    background: #1a1a1a;
+    border-color: #1a1a1a;
   }
 
   .radio-item[data-disabled] {
@@ -353,7 +359,7 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
   }
 
   .radio-item:focus-visible {
-    box-shadow: 0 0 0 3px rgb(17 24 39 / 0.18);
+    box-shadow: 0 0 0 3px oklch(21% 0.034 264.665 / 0.2);
   }
 
   .radio-indicator {
@@ -368,7 +374,7 @@ const tailwindCode = `<div class="grid max-w-72 gap-3">
     width: 0.5rem;
     height: 0.5rem;
     border-radius: 999px;
-    background: #f9fafb;
+    background: oklch(98.5% 0.002 247.839);
     opacity: 0;
     transform: scale(0.75);
     transition: opacity 150ms ease, transform 150ms ease;

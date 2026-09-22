@@ -1,0 +1,63 @@
+---
+title: Dropdown Menu
+description: A menu of actions or selectable items opened from a trigger.
+---
+
+<PackageInfo name="dropdown-menu" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/dropdown-menu
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/dropdown-menu
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/dropdown-menu
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+Each item’s `data-value` is what arrives in the select event. `data-variant` is a styling hook only — it changes nothing about behavior.
+
+```html
+<div data-slot="dropdown-menu">
+  <button data-slot="dropdown-menu-trigger">Actions</button>
+  <div data-slot="dropdown-menu-content">
+    <button data-slot="dropdown-menu-item" data-value="edit">Edit</button>
+    <button data-slot="dropdown-menu-item" data-value="copy">Copy</button>
+    <button data-slot="dropdown-menu-item" data-variant="destructive" data-value="delete">
+      Delete
+    </button>
+  </div>
+</div>
+```
+
+## Examples
+
+### A menu of actions
+
+<Example name="dropdown-menu" />
+
+### Align with the trigger’s edge
+
+`data-align="end"` lines the menu up with the trailing edge of its trigger.
+
+<Example name="dropdown-menu" variant="extra" />
+
+## API reference
+
+<include>../_generated/dropdown-menu-api.md</include>

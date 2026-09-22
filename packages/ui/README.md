@@ -27,12 +27,15 @@ This is a convenience package that re-exports all `@data-slot/*` packages:
 | `@data-slot/tooltip` | 2.2 KB | Hover/focus tooltips |
 | `@data-slot/popover` | 2.0 KB | Anchored floating content |
 | `@data-slot/dialog` | 1.9 KB | Modal dialogs with focus management |
+| `@data-slot/drawer` | 6.7 KB | Swipeable drawers with nested dialogs |
 | `@data-slot/alert-dialog` | 1.8 KB | Blocking confirmation dialogs |
 | `@data-slot/switch` | 1.8 KB | Form-ready on/off switch |
 | `@data-slot/toggle-group` | 1.7 KB | Single/multi toggle groups |
 | `@data-slot/collapsible` | 1.6 KB | Simple show/hide toggle |
 | `@data-slot/accordion` | 1.4 KB | Collapsible content sections |
 | `@data-slot/toggle` | 740 B | Pressed-state toggle button |
+| `@data-slot/toast` | 2.9 KB | Imperative notifications |
+| `@data-slot/carousel` | 1.8 KB | Scroll-snap carousels |
 
 ## Usage
 
@@ -49,6 +52,7 @@ Available subpaths:
 - `@data-slot/ui/core`
 - `@data-slot/ui/tabs`
 - `@data-slot/ui/dialog`
+- `@data-slot/ui/drawer`
 - `@data-slot/ui/alert-dialog`
 - `@data-slot/ui/accordion`
 - `@data-slot/ui/popover`
@@ -63,19 +67,22 @@ Available subpaths:
 - `@data-slot/ui/select`
 - `@data-slot/ui/combobox`
 - `@data-slot/ui/command`
+- `@data-slot/ui/toast`
+- `@data-slot/ui/carousel`
 
 ### Direct Package Imports
 
 For the smallest bundle, install and import specific packages:
 
 ```bash
-npm install @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
+npm install @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/drawer
 ```
 
 ```typescript
 import { create } from "@data-slot/tabs";
 import { createDialog } from "@data-slot/dialog";
 import { createAlertDialog } from "@data-slot/alert-dialog";
+import { createDrawer } from "@data-slot/drawer";
 ```
 
 ### Barrel Import
@@ -83,7 +90,7 @@ import { createAlertDialog } from "@data-slot/alert-dialog";
 Import everything (larger bundle):
 
 ```typescript
-import { createTabs, createDialog, createAlertDialog } from "@data-slot/ui";
+import { createTabs, createDialog, createAlertDialog, createDrawer } from "@data-slot/ui";
 ```
 
 ## Quick Start
@@ -163,6 +170,7 @@ With Tailwind:
 |--------|---------|
 | `createTabs` | @data-slot/tabs |
 | `createDialog` | @data-slot/dialog |
+| `createDrawer` | @data-slot/drawer |
 | `createAlertDialog` | @data-slot/alert-dialog |
 | `createAccordion` | @data-slot/accordion |
 | `createPopover` | @data-slot/popover |
@@ -174,6 +182,8 @@ With Tailwind:
 | `createSwitch` | @data-slot/switch |
 | `createCombobox` | @data-slot/combobox |
 | `createCommand` | @data-slot/command |
+| `createToast` | @data-slot/toast |
+| `createCarousel` | @data-slot/carousel |
 
 ### Types
 
@@ -181,6 +191,7 @@ With Tailwind:
 |--------|---------|
 | `TabsOptions`, `TabsController` | @data-slot/tabs |
 | `DialogOptions`, `DialogController` | @data-slot/dialog |
+| `DrawerOptions`, `DrawerController`, `DrawerSnapPoint` | @data-slot/drawer |
 | `AlertDialogOptions`, `AlertDialogController` | @data-slot/alert-dialog |
 | `AccordionOptions`, `AccordionController` | @data-slot/accordion |
 | `PopoverOptions`, `PopoverController` | @data-slot/popover |
@@ -192,6 +203,8 @@ With Tailwind:
 | `SwitchOptions`, `SwitchController` | @data-slot/switch |
 | `ComboboxOptions`, `ComboboxController` | @data-slot/combobox |
 | `CommandOptions`, `CommandController`, `CommandFilter` | @data-slot/command |
+| `ToastPosition`, `ToastAction`, `ToastShowOptions`, `ToastOptions`, `ToastController` | @data-slot/toast |
+| `CarouselOptions`, `CarouselController` | @data-slot/carousel |
 
 ### Core Utilities
 

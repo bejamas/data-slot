@@ -8,14 +8,18 @@ import {
   clearRootBinding,
 } from "@data-slot/core";
 import { setAria, ensureId, linkLabelledBy } from "@data-slot/core";
-import { on, emit } from "@data-slot/core";
+import { on, onRoot, emit } from "@data-slot/core";
 import { lockScroll, unlockScroll } from "@data-slot/core";
 import {
   createPortalLifecycle,
   createModalStackItem,
   createDismissLayer,
   createPresenceLifecycle,
+  createTerminalLifecycle,
+  registerModalTerminalResources,
   focusElement,
+  getAutofocusOrFirstFocusable,
+  getTabbables,
 } from "@data-slot/core";
 
 export interface AlertDialogOptions {
@@ -47,9 +51,6 @@ export interface AlertDialogController {
 const ROOT_BINDING_KEY = "@data-slot/alert-dialog";
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/alert-dialog] createAlertDialog() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
-
-const FOCUSABLE =
-  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export function createAlertDialog(
   root: Element,
@@ -84,7 +85,7 @@ export function createAlertDialog(
   }
 
   let isOpen = false;
-  let isDestroyed = false;
+  const terminalLifecycle = createTerminalLifecycle();
   let previousActiveElement: HTMLElement | null = null;
   const cleanups: Array<() => void> = [];
 
@@ -93,6 +94,18 @@ export function createAlertDialog(
     : null;
 
   let didLockScroll = false;
+  const restoreFocusOnDestroy = () => {
+    terminalLifecycle.trackFinalRaf(() => {
+      if (previousActiveElement) {
+        if (document.contains(previousActiveElement)) {
+          focusElement(previousActiveElement);
+        } else if (trigger && document.contains(trigger)) {
+          focusElement(trigger);
+        }
+      }
+      previousActiveElement = null;
+    });
+  };
 
   ensureId(content, "alert-dialog-content");
   content.setAttribute("role", "alertdialog");
@@ -126,18 +139,15 @@ export function createAlertDialog(
   };
 
   const focusFirst = () => {
-    const autofocusEl = content.querySelector<HTMLElement>("[autofocus]");
-    if (autofocusEl) return autofocusEl.focus();
-
-    const first = content.querySelector<HTMLElement>(FOCUSABLE);
-    if (first) return first.focus();
+    const initialFocus = getAutofocusOrFirstFocusable(content);
+    if (initialFocus) return initialFocus.focus();
 
     ensureContentFocusable();
     content.focus();
   };
 
   const restoreFocus = () => {
-    requestAnimationFrame(() => {
+    terminalLifecycle.trackRaf(() => {
       if (
         previousActiveElement &&
         document.contains(previousActiveElement) &&
@@ -185,7 +195,7 @@ export function createAlertDialog(
   let contentExitEpoch = 0;
 
   const finishClosePart = (element: HTMLElement, epoch: number) => {
-    if (isDestroyed || isOpen || epoch !== currentExitEpoch) return;
+    if (terminalLifecycle.isDestroyed || isOpen || epoch !== currentExitEpoch) return;
 
     element.hidden = true;
     pendingExitCount = Math.max(0, pendingExitCount - 1);
@@ -209,7 +219,7 @@ export function createAlertDialog(
   const handleKeydown = (e: KeyboardEvent) => {
     if (e.key !== "Tab") return;
 
-    const focusables = content.querySelectorAll<HTMLElement>(FOCUSABLE);
+    const focusables = getTabbables(content);
 
     if (focusables.length === 0) {
       e.preventDefault();
@@ -220,11 +230,12 @@ export function createAlertDialog(
 
     const first = focusables[0]!;
     const last = focusables[focusables.length - 1]!;
-    const active = document.activeElement;
+    const active = content.ownerDocument.activeElement;
 
-    if (!content.contains(active)) {
+    // Initial or programmatic focus may be inside the dialog but outside its tab order.
+    if (!focusables.includes(active as HTMLElement)) {
       e.preventDefault();
-      first.focus();
+      (e.shiftKey ? last : first).focus();
       return;
     }
 
@@ -252,6 +263,7 @@ export function createAlertDialog(
   });
 
   const updateState = (open: boolean, force = false) => {
+    if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open && !force) return;
 
     if (open) {
@@ -300,7 +312,7 @@ export function createAlertDialog(
     onOpenChange?.(isOpen);
 
     if (open) {
-      requestAnimationFrame(focusFirst);
+      terminalLifecycle.trackRaf(() => focusFirst());
     }
   };
 
@@ -346,19 +358,24 @@ export function createAlertDialog(
   );
 
   const controller: AlertDialogController = {
-    open: () => updateState(true),
-    close: () => updateState(false),
-    toggle: () => updateState(!isOpen),
+    open: () => { if (!terminalLifecycle.isDestroyed) updateState(true); },
+    close: () => { if (!terminalLifecycle.isDestroyed) updateState(false); },
+    toggle: () => { if (!terminalLifecycle.isDestroyed) updateState(!isOpen); },
     get isOpen() {
       return isOpen;
     },
-    destroy: () => {
-      isDestroyed = true;
-      modalStack.destroy();
+    destroy: () => { terminalLifecycle.destroy(); },
+  };
+
+  registerModalTerminalResources(terminalLifecycle, {
+    cleanups,
+    modalStack,
+    presence: [overlayPresence, contentPresence],
+    portal: portalLifecycle,
+    beforeDestroy: restoreFocusOnDestroy,
+    reset: () => {
       currentExitEpoch += 1;
       pendingExitCount = 0;
-      overlayPresence.cleanup();
-      contentPresence.cleanup();
       isOpen = false;
       setDataState("closed");
       overlay.hidden = true;
@@ -366,24 +383,19 @@ export function createAlertDialog(
       if (trigger) {
         setAria(trigger, "expanded", false);
       }
+    },
+    releaseScrollLock: () => {
       if (didLockScroll) {
         unlockScroll();
         didLockScroll = false;
       }
-      cleanupContentFocusable();
-      if (previousActiveElement !== null) {
-        restoreFocus();
-      }
-      cleanups.forEach((fn) => fn());
-      cleanups.length = 0;
-
-      portalLifecycle?.cleanup();
-      clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
-  };
+    cleanup: cleanupContentFocusable,
+    unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
+  });
 
   cleanups.push(
-    on(root, "alert-dialog:set", (e) => {
+    onRoot(root, "alert-dialog:set", (e) => {
       const detail = (e as CustomEvent).detail;
       if (typeof detail?.open === "boolean") {
         updateState(detail.open);

@@ -1,6 +1,7 @@
 import {
   getRoots,
   getParts,
+  getOwnedElements,
   getDataBool,
   getDataString,
   reuseRootBinding,
@@ -10,7 +11,9 @@ import {
   setAria,
   ensureId,
   on,
+  onRoot,
   emit,
+  observeFormReset,
 } from "@data-slot/core";
 
 export interface RadioGroupOptions {
@@ -214,7 +217,7 @@ export function createRadioGroup(
       el,
       value,
       authoredDisabled,
-      indicators: getParts<HTMLElement>(el, "radio-group-indicator"),
+      indicators: getOwnedElements<HTMLElement>(rootElement, el, '[data-slot="radio-group-indicator"]'),
       hiddenInput,
     };
 
@@ -499,26 +502,21 @@ export function createRadioGroup(
   syncRoot();
   syncItems();
 
-  const form =
-    items.find((item) => item.hiddenInput.form)?.hiddenInput.form ??
-    (rootElement.closest("form") instanceof HTMLFormElement
-      ? rootElement.closest("form")
-      : null);
-
-  if (form) {
-    cleanups.push(
-      on(form, "reset", () => {
-        queueMicrotask(() => {
-          const checkedItem =
-            items.find((candidate) => candidate.hiddenInput.checked) ?? null;
-          applyState(checkedItem, false);
-        });
-      }),
-    );
-  }
+  const resetObserver = observeFormReset({
+    root: rootElement,
+    getForm: () =>
+      items.find((item) => item.hiddenInput.form)?.hiddenInput.form ??
+      rootElement.closest("form"),
+    onReset: () => {
+      const checkedItem =
+        items.find((candidate) => candidate.hiddenInput.checked) ?? null;
+      applyState(checkedItem, false);
+    },
+  });
+  cleanups.push(() => resetObserver.destroy());
 
   cleanups.push(
-    on(rootElement, "radio-group:set", (event) => {
+    onRoot(rootElement, "radio-group:set", (event) => {
       if (disabled || readOnly) return;
 
       const detail = (event as CustomEvent).detail;

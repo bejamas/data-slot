@@ -25,6 +25,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # caches
 .eslintcache
 .cache
+.wrangler
 *.tsbuildinfo
 
 # IntelliJ based IDEs
@@ -33,3 +34,13 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 .astro
+
+tmp
+.tmp-*
+
+# Blume generated documentation runtime
+.blume
+.blume-verify
+website/.generated/
+website/content/_generated/
+website/public/fonts/

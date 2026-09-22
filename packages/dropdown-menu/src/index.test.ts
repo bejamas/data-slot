@@ -42,6 +42,32 @@ describe("DropdownMenu", () => {
     return { root, trigger, content, items, controller };
   };
 
+  it("preserves queued item-selection focus restoration when destroyed before the next frame", async () => {
+    const { trigger, content, controller } = setup();
+    trigger.focus();
+    controller.open();
+    await waitForRaf();
+    await waitForRaf();
+    content.focus();
+    content.querySelector<HTMLButtonElement>('[data-slot="dropdown-menu-item"]')!.click();
+    await waitForRaf();
+    controller.destroy();
+    controller.destroy();
+    await waitForRaf();
+    await waitForRaf();
+    expect(document.activeElement === trigger).toBe(true);
+  });
+
+  it("does not move outside focus when destroyed without a pending restoration", async () => {
+    const { controller } = setup();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+    controller.destroy();
+    await waitForRaf();
+    expect(document.activeElement === outside).toBe(true);
+  });
+
   const waitForRaf = () =>
     new Promise<void>((resolve) => {
       requestAnimationFrame(() => resolve());
@@ -594,6 +620,47 @@ describe("DropdownMenu", () => {
 
       controller.destroy();
     });
+
+    for (const action of ["click", "set"]) {
+      it(`clears the last checkbox through ${action}`, () => {
+        const { root, controller } = setup(
+          { defaultValues: ["email"], closeOnSelect: false },
+          `
+          <div data-slot="dropdown-menu" id="root">
+            <button data-slot="dropdown-menu-trigger">Options</button>
+            <div data-slot="dropdown-menu-content">
+              <button data-slot="dropdown-menu-checkbox-item" data-value="email">Email</button>
+            </div>
+          </div>
+          `,
+        );
+        const item = root.querySelector<HTMLElement>('[data-slot="dropdown-menu-checkbox-item"]')!;
+        const changes: unknown[] = [];
+        root.addEventListener("dropdown-menu:values-change", (event) => {
+          changes.push((event as CustomEvent).detail);
+        });
+        try {
+          controller.open();
+          if (action === "click") item.click();
+          else controller.set({ values: [] });
+
+          expect(controller.values).toEqual([]);
+          expect(item.getAttribute("aria-checked")).toBe("false");
+          expect(item.hasAttribute("data-checked")).toBe(false);
+          expect(controller.isOpen).toBe(true);
+          expect(changes).toEqual([{
+            values: [],
+            previousValues: ["email"],
+            changedValue: "email",
+            checked: false,
+            item,
+            source: action === "click" ? "pointer" : "programmatic",
+          }]);
+        } finally {
+          controller.destroy();
+        }
+      });
+    }
 
     it("supports canceling dropdown-menu:select before commit and close", () => {
       const { root, trigger, controller } = setup(
@@ -2176,5 +2243,42 @@ describe("DropdownMenu", () => {
 
       controller.destroy();
     });
+  });
+
+  it("keeps nested dropdown items owned by the nested menu", () => {
+    document.body.innerHTML = `
+      <div data-slot="dropdown-menu" id="outer">
+        <button data-slot="dropdown-menu-trigger">Outer</button>
+        <div data-slot="dropdown-menu-content">
+          <button data-slot="dropdown-menu-item" data-value="outer-item">Outer item</button>
+          <div data-slot="dropdown-menu" id="inner">
+            <button data-slot="dropdown-menu-trigger">Inner</button>
+            <div data-slot="dropdown-menu-content">
+              <button data-slot="dropdown-menu-item" id="inner-item" data-value="inner-item">Inner item</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    let outerSelections = 0;
+    const outer = createDropdownMenu(document.getElementById("outer")!, {
+      onSelect: () => {
+        outerSelections += 1;
+      },
+    });
+    const innerItem = document.getElementById("inner-item") as HTMLElement;
+
+    expect(innerItem.getAttribute("role")).toBeNull();
+
+    const inner = createDropdownMenu(document.getElementById("inner")!);
+    outer.open();
+    innerItem.click();
+
+    expect(outerSelections).toBe(0);
+    expect(inner.isOpen).toBe(false);
+
+    outer.destroy();
+    inner.destroy();
   });
 });

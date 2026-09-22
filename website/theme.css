@@ -1,0 +1,205 @@
+@import "tw-animate-css";
+@source "./.generated/examples";
+
+/* Semantic utilities shared by CSS and Tailwind examples. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-text: var(--text);
+  --color-code-bg: var(--code-bg);
+}
+
+:root {
+  --blume-background: #faf9f7;
+  --blume-foreground: #1a1a1a;
+  --blume-muted: #f0eeeb;
+  --blume-muted-foreground: #6c6a66;
+  --blume-border: #d6d3cd;
+  --blume-code-background: #f0eeeb;
+  --blume-font-body: 'Geist Mono', monospace;
+  --blume-font-display: 'Geist Mono', monospace;
+  --blume-font-mono: 'Geist Mono', monospace;
+  --blume-radius: 0;
+  --bg: var(--blume-background);
+  --text: var(--blume-foreground);
+  --muted: var(--blume-muted-foreground);
+  --border: var(--blume-border);
+  --code-bg: var(--blume-muted);
+  --surface: #fff;
+  --surface-raised: #fff;
+  --tooltip-bg: #e5e2dc;
+  --tooltip-text: var(--text);
+  --accent: #0066cc;
+  --danger: #c62828;
+  --danger-bg: #fff1f0;
+  --reference-name: #075fa8;
+  --reference-type: #7542ad;
+  --reference-default: #23744d;
+}
+:root[data-theme='dark'] {
+  --blume-background: #191918;
+  --blume-foreground: #eae7e1;
+  --blume-muted: #242423;
+  --blume-muted-foreground: #a6a39c;
+  --blume-border: #3b3a36;
+  --blume-code-background: #222220;
+  --surface: #242423;
+  --surface-raised: #3b3a36;
+  --tooltip-bg: var(--surface-raised);
+  --tooltip-text: var(--text);
+  --accent: #75baff;
+  --danger: #ff9494;
+  --danger-bg: #3b2424;
+  --reference-name: #8bc4ff;
+  --reference-type: #c9a4f5;
+  --reference-default: #8bd5aa;
+}
+body { font-size: 14px; }
+/* Swap docs pages immediately in both native and fallback view transitions. */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation: none !important;
+  mix-blend-mode: normal;
+}
+::view-transition-old(*) { opacity: 0; }
+[data-astro-transition-scope] { animation: none !important; }
+[data-blume-header],
+[data-blume-doc-grid] { max-width: 1600px; }
+[data-blume-header] { margin-inline: auto; }
+#blume-content { min-width: 0; padding-top: 42px; }
+.prose { font-size: 14px; line-height: 1.85; }
+.prose h1:not(:where(.not-prose *)) { font-size: clamp(2rem, 3vw, 2.5rem); font-weight: 500; letter-spacing: -.06em; margin-bottom: 14px; }
+.prose h2:not(:where(.not-prose *)) { margin-top: 3.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--blume-border); font-size: 1.25rem; font-weight: 500; letter-spacing: -.04em; }
+.prose h3:not(:where(.not-prose *)) { margin-top: 2.2rem; font-size: 1rem; font-weight: 500; letter-spacing: -.025em; }
+.prose h2:not(:where(.not-prose *))::before { content: '## '; color: var(--blume-muted-foreground); opacity: .5; }
+.prose h3:not(:where(.not-prose *))::before { content: '↳ '; color: var(--blume-muted-foreground); opacity: .65; }
+.prose :is(h2,h3,h4) { scroll-margin-top: 96px; }
+.prose :is(p,li) { text-wrap: pretty; }
+.prose :is(pre,table) { font-size: 12px; }
+.prose table { display: block; overflow-x: auto; max-width: 100%; }
+.prose th { font-weight: 500; white-space: nowrap; }
+.prose td { min-width: 110px; }
+.prose :not(pre)>code { font-size: .88em; }
+/* A shared syntax palette for API columns, including plain-text types/defaults. */
+.prose td[data-reference='name'] { --reference-color: var(--reference-name); }
+.prose td[data-reference='type'] { --reference-color: var(--reference-type); }
+.prose td[data-reference='default'] { --reference-color: var(--reference-default); }
+.prose td[data-reference] { color: var(--reference-color); }
+.prose td[data-reference='name'] code { white-space: nowrap; }
+.prose td[data-reference] code {
+  color: var(--reference-color);
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+[data-blume-nav-drawer] { padding-top: 32px; }
+[data-blume-nav-drawer] a { font-size: 12px; border-radius: 0; padding-block: 6px; }
+[data-blume-nav-drawer] a[aria-current='page'] { background: var(--blume-muted); box-shadow: inset 2px 0 var(--blume-foreground); }
+blume-toc { font-size: 11px; line-height: 1.65; }
+blume-toc a { padding-block: 5px; }
+[data-blume-search-dialog] mark { color: var(--blume-foreground); }
+.ds-package { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 11px; padding-top: 16px; color: var(--blume-muted-foreground); }
+.ds-package code { padding: 4px 8px; background: var(--blume-muted); border: 1px dashed var(--blume-border); }
+.ds-package a { text-decoration: none; }
+.ds-package a:hover { color: var(--blume-foreground); }
+.ds-intro-tag { display: inline-block; padding: 5px 10px; background: var(--blume-muted); border: 1px dashed var(--blume-border); font-size: 12px; }
+.ds-example { display: block; border: 1px dashed var(--blume-border); margin: 1.5rem 0 2rem; min-width: 0; }
+.ds-example-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px dashed var(--blume-border); }
+.ds-preview-label { color: var(--blume-muted-foreground); font-size: 11px; display: flex; gap: 9px; align-items: center; }
+.ds-style-options { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--blume-border); background: var(--blume-muted); }
+.ds-style-options button { font: inherit; font-size: 10px; padding: 4px 9px; cursor: pointer; color: var(--blume-muted-foreground); }
+.ds-style-options button[aria-pressed='true'] { background: var(--blume-background); color: var(--blume-foreground); box-shadow: 0 1px 2px #00000012; }
+.ds-example :is(button,input,textarea,[tabindex]):focus-visible,
+[data-ds-preview] :focus-visible,
+.ds-source summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* The combobox input and trigger form one field; outline their shared wrapper. */
+.ds-preview-stage :has(> [data-slot='combobox-input']):has(> :focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.ds-preview-stage :is([data-slot='combobox-input'], [data-slot='combobox-trigger']):focus-visible {
+  outline: none;
+}
+/* Select moves focus into its portaled list. Keep option rings inside the
+   scroll area instead of drawing an extra outline around the entire popup. */
+[data-ds-preview][data-slot='select-content']:focus-visible { outline: none; }
+[data-ds-preview] [data-slot='select-item']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* Mouse/touch focus still works, but only keyboard navigation shows demo rings.
+   Include portal roots themselves as well as their descendants. */
+:root[data-ds-input='pointer'] :is(.ds-preview-stage, [data-ds-preview]) :focus-visible,
+:root[data-ds-input='pointer'] [data-ds-preview]:focus-visible,
+:root[data-ds-input='pointer'] .ds-preview-stage :has(> [data-slot='combobox-input']) {
+  outline: none;
+}
+.ds-preview-stage { padding: 36px 28px; min-height: 180px; display: flex; flex-direction: column; justify-content: center; background: var(--bg); color: var(--text); font-family: 'Geist Mono', monospace; font-size: 14px; line-height: 1.25rem; }
+.ds-preview-stage button { cursor: pointer; }
+@layer base {
+  [data-ds-preview] {
+    color: var(--text);
+    font-family: 'Geist Mono', monospace;
+    font-size: 14px;
+    line-height: 1.25rem;
+  }
+}
+.ds-example-note { padding: 0 28px 24px; color: var(--blume-muted-foreground); font-size: 12px; overflow-wrap: anywhere; }
+.ds-example-note p { color: inherit; margin-top: 12px; }
+.ds-example-note code { color: var(--blume-foreground); background: var(--blume-muted); }
+.ds-preview-stage button[disabled] { cursor: not-allowed; }
+.ds-preview-stage :is(input,textarea) { max-width: 100%; }
+.ds-preview-stage [data-slot$='overlay'] { z-index: 100; }
+.ds-preview-stage [data-slot='dialog-content'], .ds-preview-stage [data-slot='alert-dialog-content'] { z-index: 101; }
+.ds-example[data-styling='css'] :is(.preview-tailwind,.code-tailwind),
+.ds-example[data-styling='tailwind'] :is(.preview-css,.code-css) { display: none !important; }
+.ds-example[data-styling='css'] :is(.preview-css,.code-css),
+.ds-example[data-styling='tailwind'] :is(.preview-tailwind,.code-tailwind) { display: block !important; }
+.ds-source { border-top: 1px dashed var(--blume-border); }
+.ds-source summary { display: flex; align-items: center; gap: 10px; padding: 12px 16px; list-style: none; cursor: pointer; font-size: 11px; color: var(--blume-muted-foreground); }
+.ds-source summary::-webkit-details-marker { display: none; }
+.ds-source-chevron { margin-left: auto; }
+.ds-source .ds-hide-code, .ds-source[open] .ds-show-code { display: none; }
+.ds-source[open] .ds-hide-code { display: inline; }
+.ds-source[open] .ds-source-chevron { transform: rotate(180deg); }
+.ds-code-toolbar { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: var(--blume-muted); border-block: 1px solid var(--blume-border); }
+.ds-file-options { display: flex; }
+.ds-file-options button { padding: 12px 9px; font-size: 10px; color: var(--blume-muted-foreground); cursor: pointer; border-bottom: 1px solid transparent; }
+.ds-file-options button[aria-selected='true'] { color: var(--blume-foreground); border-bottom-color: currentColor; }
+.ds-copy { padding: 5px 8px; font-size: 10px; cursor: pointer; }
+.ds-copy-status { position: absolute; right: 60px; font-size: 10px; background: var(--blume-muted); }
+.ds-source [data-panel][hidden] { display: none; }
+.ds-source .astro-code { margin: 0; padding: 20px; font-size: 11px; line-height: 1.75; max-height: 460px; overflow: auto; border: 0; border-radius: 0; background: var(--blume-code-background) !important; }
+.ds-source .astro-code code { font-family: 'Geist Mono', monospace; background: none; padding: 0; }
+@media (min-width: 1024px) {
+  [data-blume-doc-grid] { grid-template-columns: 240px minmax(0,1fr); }
+  [data-blume-nav-drawer] { border-right: 1px dashed var(--blume-border); padding-inline: 22px; }
+  #blume-content { padding-inline: 48px; }
+}
+@media (min-width: 1280px) {
+  [data-blume-doc-grid] { grid-template-columns: 240px minmax(0,1fr) 220px; }
+  [data-blume-doc-grid] > aside:last-child { padding-top: 46px; }
+  /* Scroll the headings without clipping page-action menus or their shadows. */
+  aside[data-blume-toc] { display: flex; flex-direction: column; overflow: visible; z-index: 10; }
+  aside[data-blume-toc] > blume-toc { min-height: 0; overflow-y: auto; }
+  aside[data-blume-toc] > :is(p, [data-blume-page-actions]) { flex-shrink: 0; }
+}
+@media (max-width: 640px) {
+  #blume-content { padding: 24px 18px; }
+  .prose { font-size: 13px; }
+  .ds-preview-stage { padding: 28px 16px; }
+  .ds-example-note { padding: 0 16px 20px; }
+  .ds-package { flex-wrap: wrap; }
+  .ds-source .astro-code { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ds-preview-stage *, .ds-source-chevron { transition: none !important; animation: none !important; }
+}
+/* The example toolbar owns copying; suppress the automatic per-pre button. */
+.ds-source [data-blume-copy] { display: none; }
+
+/* Blume's prose rules are unlayered. Let example text use its Tailwind
+   utilities, including when popup content is portaled outside the preview. */
+:is(.preview-tailwind, [data-ds-preview='tailwind']) :where(h1, h2, h3, h4, p, a) {
+  all: revert-layer;
+}

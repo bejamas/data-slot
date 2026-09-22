@@ -63,27 +63,51 @@ console.log(controller.value); // 'banana'
 controller.destroy();
 ```
 
-## Slots
+## API
 
-| Slot | Description |
-|------|-------------|
-| `combobox` | Root container |
-| `combobox-input` | Text input for filtering |
-| `combobox-trigger` | Optional button that toggles the popup |
-| `combobox-clear` | Optional button that clears the current value and focuses input |
-| `combobox-value` | Optional selected-value text target (typically inside `combobox-trigger`) |
-| `combobox-content` | Popup container |
-| `combobox-list` | Scrollable list wrapper |
-| `combobox-item` | Individual selectable option |
-| `combobox-item-indicator` | Optional selected-state indicator inside `combobox-item`; hidden automatically for unselected items |
-| `combobox-group` | Groups related items |
-| `combobox-label` | Group label (inside a `combobox-group`) |
-| `combobox-separator` | Visual divider between items/groups |
-| `combobox-empty` | Message shown when no items match filter |
-| `combobox-positioner` | Optional authored positioning wrapper (reused instead of generated wrapper) |
-| `combobox-portal` | Optional authored portal wrapper that can contain `combobox-positioner` |
+### Initialization
 
-### Composed Portal Markup (Optional)
+#### `create(scope?)`
+
+Find and bind uninitialized `[data-slot="combobox"]` descendants of `scope` (defaults to `document`). Returns `ComboboxController[]` for newly bound roots. To initialize the scope element itself, use `createCombobox`.
+
+```typescript
+import { create } from "@data-slot/combobox";
+
+const controllers = create();
+```
+
+#### `createCombobox(root, options?)`
+
+Create a `ComboboxController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
+
+```typescript
+import { createCombobox } from "@data-slot/combobox";
+
+const controller = createCombobox(element, {});
+```
+
+### Slots
+
+#### Runtime Slots
+
+- `combobox` - Root container.
+- `combobox-input` - Required text input for filtering and keyboard navigation.
+- `combobox-trigger` - Optional button that toggles the popup.
+- `combobox-clear` - Optional button that clears the current value and focuses input.
+- `combobox-value` - Optional selected-value text target (typically inside `combobox-trigger`).
+- `combobox-content` - Required popup container for the search results.
+- `combobox-list` - Optional scrollable listbox wrapper; the content acts as the listbox when omitted.
+- `combobox-item` - Individual selectable option.
+- `combobox-item-indicator` - Optional selected-state indicator inside `combobox-item`; hidden automatically for unselected items.
+- `combobox-group` - Groups related items.
+- `combobox-label` - Group label (inside a `combobox-group`).
+- `combobox-separator` - Divider between items or groups; its visibility is updated as results are filtered.
+- `combobox-empty` - Message shown when no items match filter.
+- `combobox-positioner` - Optional authored positioning wrapper (reused instead of generated wrapper).
+- `combobox-portal` - Optional authored portal wrapper that can contain `combobox-positioner`.
+
+#### Composed Portal Markup (Optional)
 
 ```html
 <div data-slot="combobox">
@@ -97,7 +121,7 @@ controller.destroy();
 </div>
 ```
 
-### Popup-Input Composition (Optional)
+#### Popup-Input Composition (Optional)
 
 Use this when you want a trigger with committed value text and a separate search input inside the popup.
 
@@ -118,7 +142,7 @@ In popup-input mode (`combobox-input` inside `combobox-content`):
 - Search input is cleared each time the popup opens.
 - Closing keeps the popup input empty.
 
-### Clear Button (Optional)
+#### Clear Button (Optional)
 
 ```html
 <div data-slot="combobox">
@@ -135,13 +159,13 @@ When `combobox-clear` is clicked:
 - If popup is open, it remains open.
 - By default it is out of keyboard tab order (`tabindex="-1"` behavior). Set `tabindex="0"` to make it tabbable.
 
-### Keyboard Tab Stops
+#### Keyboard Tab Stops
 
 - `combobox-input` is the primary keyboard tab stop.
 - `combobox-trigger` and `combobox-clear` are out of tab order by default.
 - To opt into keyboard tabbing for either control, author `tabindex="0"` on that element.
 
-### Native Label Support
+#### Native Label Support
 
 Use a standard HTML `<label for="...">` element to label the combobox. The `for` attribute should match the `id` on the input. Clicking the label focuses the input, and `aria-labelledby` is set automatically.
 
@@ -157,20 +181,21 @@ Use a standard HTML `<label for="...">` element to label the combobox. The `for`
 </div>
 ```
 
-## Options
+### Options
 
 Options can be passed via JavaScript or data attributes (JS takes precedence).
 
 | Option | Data Attribute | Type | Default | Description |
 |--------|---------------|------|---------|-------------|
 | `defaultValue` | `data-default-value` | `string` | `null` | Initial selected value |
+| `defaultOpen` | `data-default-open` | `boolean` | `false` | Initial popup open state |
 | `placeholder` | `data-placeholder` | `string` | `""` | Input placeholder text |
 | `disabled` | `data-disabled` | `boolean` | `false` | Disable interaction |
 | `required` | `data-required` | `boolean` | `false` | Form validation required |
 | `name` | `data-name` | `string` | - | Form field name (creates hidden input) |
 | `openOnFocus` | `data-open-on-focus` | `boolean` | `true` | Open popup when input is focused |
 | `autoHighlight` | `data-auto-highlight` | `boolean` | `false` | Auto-highlight first visible item after non-whitespace query input |
-| `filter` | - | `function` | substring | Custom filter function |
+| `filter` | - | `(inputValue: string, itemValue: string, itemLabel: string) => boolean` | case-insensitive label substring match | Return `true` to show an item |
 | `itemToStringValue` | - | `(item: HTMLElement \| null, value: string \| null) => string` | item label | Custom text resolver for committed selected-value text (input in inline mode, `combobox-value` in popup-input mode) |
 | `side` | `data-side` | `"top" \| "bottom"` | `"bottom"` | Popup placement |
 | `align` | `data-align` | `"start" \| "center" \| "end"` | `"start"` | Popup alignment |
@@ -196,7 +221,7 @@ The positioned element (`combobox-positioner`, or `combobox-content` when no pos
 
 When a separate `combobox-positioner` is present, the same values are also mirrored onto `combobox-content` so copied style packs can branch from either element.
 
-### Mobile Behavior
+#### Mobile Behavior
 
 - On touch/coarse-pointer environments, outside `pointerdown` (for example during scroll gestures) does not dismiss the popup.
 - Outside tap/click still dismisses the popup.
@@ -204,7 +229,7 @@ When a separate `combobox-positioner` is present, the same values are also mirro
 - On touch/coarse-pointer environments, combobox always positions on the `bottom` side.
 - On touch/coarse-pointer environments, collision side-flipping is disabled to avoid jumpy repositioning.
 
-### Callbacks
+#### Callbacks
 
 | Callback | Type | Description |
 |----------|------|-------------|
@@ -212,7 +237,7 @@ When a separate `combobox-positioner` is present, the same values are also mirro
 | `onOpenChange` | `(open: boolean) => void` | Called when popup opens/closes |
 | `onInputValueChange` | `(inputValue: string) => void` | Called when user types in the input |
 
-## Controller API
+### Controller
 
 ```typescript
 interface ComboboxController {
@@ -228,9 +253,15 @@ interface ComboboxController {
 }
 ```
 
-## Events
+#### Controller Destruction
 
-### Outbound Events (component emits)
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+### Events
+
+#### Outbound Events
 
 ```javascript
 root.addEventListener('combobox:change', (e) => {
@@ -246,7 +277,18 @@ root.addEventListener('combobox:input-change', (e) => {
 });
 ```
 
-### Inbound Events (component listens)
+#### Inbound Events
+
+`combobox:set` accepts a partial update with these fields, applied in table order:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `value` | `string \| null` | Select a value, or clear with `null` |
+| `open` | `boolean` | Open or close the popup; opening is blocked when disabled |
+| `inputValue` | `string` | Replace the input text without filtering or firing the input-change callback |
+| `itemToStringValue` | `ComboboxItemToStringValue \| null` | Replace or clear the selected-value formatter and resync the displayed value |
+
+Programmatic selection works while disabled. In inline-input mode, updating the formatter resynchronizes the input, so it can overwrite `inputValue` supplied in the same event.
 
 ```javascript
 // Set value
@@ -265,7 +307,7 @@ root.dispatchEvent(new CustomEvent('combobox:set', {
 }));
 ```
 
-## Keyboard Navigation
+### Keyboard Navigation
 
 | Key | Action |
 |-----|--------|
@@ -277,7 +319,7 @@ root.dispatchEvent(new CustomEvent('combobox:set', {
 | `Escape` | Close popup, restore input to committed value |
 | `Tab` | Close popup, restore input, allow normal tab flow |
 
-## Accessibility
+### Accessibility
 
 - Input: `role="combobox"`, `aria-expanded`, `aria-controls`, `aria-activedescendant`, `aria-autocomplete="list"`
 - List: `role="listbox"`, `aria-labelledby`
@@ -285,7 +327,7 @@ root.dispatchEvent(new CustomEvent('combobox:set', {
 - Group: `role="group"`, `aria-labelledby`
 - Disabled items are skipped during keyboard navigation
 
-## Form Integration
+### Form Integration
 
 When `name` is provided, a hidden input is automatically created for form submission:
 
@@ -302,6 +344,21 @@ When `name` is provided, a hidden input is automatically created for form submis
   <button type="submit">Submit</button>
 </form>
 ```
+
+An authored `name` on the combobox input is also supported. The generated input
+submits the selected value; the visible input keeps the search or display text.
+Destroying the controller removes the generated input and restores the authored name.
+
+**Behavior change:** earlier releases left an authored `name` on the visible input,
+so the form received the displayed or typed text. It now receives the selected value
+(or an empty string when nothing is selected). To submit free text, keep `name` off the
+combobox input and mirror `combobox:input-change` into a separate field.
+A disabled combobox does not submit its value.
+
+Resetting the form restores `defaultValue` and the displayed selection without
+emitting a value-change event. An open popup also resets its search and highlight.
+Synchronization happens on the next event-loop task, after the browser resets
+native controls. Calling `preventDefault()` on the reset event preserves the current state.
 
 ## License
 

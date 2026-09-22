@@ -1,0 +1,54 @@
+---
+title: Toggle
+description: A button with a pressed state for toggling an option on or off.
+---
+
+<PackageInfo name="toggle" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/toggle
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/toggle
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/toggle
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+A single button, no inner parts. The controller keeps `aria-pressed` and `data-state="on|off"` in sync.
+
+```html
+<button data-slot="toggle">Label</button>
+```
+
+## Examples
+
+### A pressed state
+
+<Example name="toggle" />
+
+### Disabled state
+
+`data-disabled` blocks clicks while the pressed state stays visible.
+
+<Example name="toggle" variant="extra" />
+
+## API reference
+
+<include>../_generated/toggle-api.md</include>

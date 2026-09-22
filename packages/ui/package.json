@@ -1,6 +1,6 @@
 {
   "name": "@data-slot/ui",
-  "version": "0.2.166",
+  "version": "0.2.167",
   "type": "module",
   "sideEffects": false,
   "description": "Headless UI components for vanilla JavaScript. Convenience re-exports from @data-slot/* packages.",
@@ -31,6 +31,12 @@
       "import": "./dist/dialog.js",
       "require": "./dist/dialog.cjs",
       "default": "./dist/dialog.js"
+    },
+    "./drawer": {
+      "types": "./dist/drawer.d.ts",
+      "import": "./dist/drawer.js",
+      "require": "./dist/drawer.cjs",
+      "default": "./dist/drawer.js"
     },
     "./alert-dialog": {
       "types": "./dist/alert-dialog.d.ts",
@@ -121,6 +127,18 @@
       "import": "./dist/command.js",
       "require": "./dist/command.cjs",
       "default": "./dist/command.js"
+    },
+    "./toast": {
+      "types": "./dist/toast.d.ts",
+      "import": "./dist/toast.js",
+      "require": "./dist/toast.cjs",
+      "default": "./dist/toast.js"
+    },
+    "./carousel": {
+      "types": "./dist/carousel.d.ts",
+      "import": "./dist/carousel.js",
+      "require": "./dist/carousel.cjs",
+      "default": "./dist/carousel.js"
     }
   },
   "files": [
@@ -133,6 +151,7 @@
     "@data-slot/core": "workspace:*",
     "@data-slot/tabs": "workspace:*",
     "@data-slot/dialog": "workspace:*",
+    "@data-slot/drawer": "workspace:*",
     "@data-slot/alert-dialog": "workspace:*",
     "@data-slot/accordion": "workspace:*",
     "@data-slot/popover": "workspace:*",
@@ -147,7 +166,9 @@
     "@data-slot/toggle-group": "workspace:*",
     "@data-slot/select": "workspace:*",
     "@data-slot/combobox": "workspace:*",
-    "@data-slot/command": "workspace:*"
+    "@data-slot/command": "workspace:*",
+    "@data-slot/toast": "workspace:*",
+    "@data-slot/carousel": "workspace:*"
   },
   "keywords": [
     "headless",

@@ -13,6 +13,7 @@ npm install @data-slot/dialog
 ```html
 <div data-slot="dialog">
   <button data-slot="dialog-trigger">Open Dialog</button>
+  <div data-slot="dialog-overlay" hidden></div>
   <div data-slot="dialog-content" hidden>
     <h2 data-slot="dialog-title">Dialog Title</h2>
     <p data-slot="dialog-description">Dialog description text.</p>
@@ -29,7 +30,9 @@ npm install @data-slot/dialog
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all dialog instances in a scope (defaults to `document`).
 
@@ -39,7 +42,7 @@ import { create } from "@data-slot/dialog";
 const controllers = create(); // Returns DialogController[]
 ```
 
-### `createDialog(root, options?)`
+#### `createDialog(root, options?)`
 
 Create a controller for a specific element.
 
@@ -55,16 +58,32 @@ const dialog = createDialog(element, {
 });
 ```
 
-### Options
+### Slots
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultOpen` | `boolean` | `false` | Initial open state |
-| `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside content |
-| `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
-| `lockScroll` | `boolean` | `true` | Lock body scroll when open |
-| `alertDialog` | `boolean` | `false` | Use alertdialog role for confirmations |
-| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
+#### Runtime Slots
+
+- `dialog` - Root element that manages the open state and receives dialog events.
+- `dialog-trigger` - Optional button that toggles the dialog.
+- `dialog-portal` - Optional wrapper moved to `document.body` while the dialog is open.
+- `dialog-overlay` - Required backdrop; clicking it dismisses the dialog when outside-click dismissal is enabled.
+- `dialog-content` - Required modal panel with dialog semantics and focus management.
+- `dialog-title` - Optional title used for the panel's `aria-labelledby`.
+- `dialog-description` - Optional description used for the panel's `aria-describedby`.
+- `dialog-close` - Optional button that closes the dialog; multiple close buttons are supported.
+
+#### Markup
+
+```html
+<div data-slot="dialog">
+  <button data-slot="dialog-trigger">Open</button>
+  <div data-slot="dialog-overlay" hidden></div>
+  <div data-slot="dialog-content" role="dialog">
+    <h2 data-slot="dialog-title">Title</h2>
+    <p data-slot="dialog-description">Description</p>
+    <button data-slot="dialog-close">Close</button>
+  </div>
+</div>
+```
 
 ### Data Attributes
 
@@ -92,6 +111,17 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
 </div>
 ```
 
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultOpen` | `boolean` | `false` | Initial open state |
+| `closeOnClickOutside` | `boolean` | `true` | Close when clicking outside content |
+| `closeOnEscape` | `boolean` | `true` | Close when pressing Escape |
+| `lockScroll` | `boolean` | `true` | Lock body scroll when open |
+| `alertDialog` | `boolean` | `false` | Use alertdialog role for confirmations |
+| `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes |
+
 ### Controller
 
 | Method/Property | Description |
@@ -102,31 +132,61 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
 | `isOpen` | Current open state (readonly `boolean`) |
 | `destroy()` | Cleanup all event listeners |
 
-## Markup Structure
+#### Controller Destruction
 
-```html
-<div data-slot="dialog">
-  <button data-slot="dialog-trigger">Open</button>
-  <div data-slot="dialog-content" role="dialog">
-    <h2 data-slot="dialog-title">Title</h2>
-    <p data-slot="dialog-description">Description</p>
-    <button data-slot="dialog-close">Close</button>
-  </div>
-</div>
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+Destruction restores prior focus, falling back to a surviving trigger if the prior
+target was removed. Destroying an unopened modal does not move focus.
+
+### Events
+
+#### Outbound Events
+
+Listen for changes via custom events:
+
+```javascript
+element.addEventListener("dialog:change", (e) => {
+  console.log("Dialog open:", e.detail.open);
+});
 ```
 
-### Required Slots
+#### Inbound Events
 
-- `dialog-content` - The dialog panel (required)
+Control the dialog via events:
 
-### Optional Slots
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `dialog:set` | `{ open: boolean }` | Set open state programmatically |
 
-- `dialog-trigger` - Button to open the dialog
-- `dialog-title` - Title for `aria-labelledby`
-- `dialog-description` - Description for `aria-describedby`
-- `dialog-close` - Button to close the dialog
+```javascript
+// Open the dialog
+element.dispatchEvent(
+  new CustomEvent("dialog:set", { detail: { open: true } })
+);
 
-## Styling
+// Close the dialog
+element.dispatchEvent(
+  new CustomEvent("dialog:set", { detail: { open: false } })
+);
+```
+
+##### Deprecated Shapes
+
+The following shape is deprecated and will be removed in v1.0:
+
+```javascript
+// Deprecated: { value: boolean }
+element.dispatchEvent(
+  new CustomEvent("dialog:set", { detail: { value: true } })
+);
+```
+
+Use `{ open: boolean }` instead.
+
+### Styling
 
 Dialog exposes both `data-state="open|closed"` and popup-style animation hooks:
 
@@ -192,13 +252,21 @@ With Tailwind:
 ></div>
 <div
   data-slot="dialog-content"
-  class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 opacity-0 scale-95 transition-all duration-200 data-[open]:opacity-100 data-[open]:scale-100 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95"
+  class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 opacity-0 scale-95 transition-all duration-200 data-[open]:opacity-100 data-[open]:scale-100 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95"
 >
   <!-- Dialog content -->
 </div>
 ```
 
-## Accessibility
+### Keyboard Navigation
+
+| Key | Action |
+|-----|--------|
+| `Escape` | Close dialog |
+| `Tab` | Cycle focus within dialog |
+| `Shift+Tab` | Cycle focus backwards |
+
+### Accessibility
 
 The component automatically handles:
 
@@ -210,59 +278,6 @@ The component automatically handles:
 - `aria-expanded` state on trigger
 - Focus trap within dialog
 - Focus restoration on close
-
-## Keyboard Navigation
-
-| Key | Action |
-|-----|--------|
-| `Escape` | Close dialog |
-| `Tab` | Cycle focus within dialog |
-| `Shift+Tab` | Cycle focus backwards |
-
-## Events
-
-### Outbound Events
-
-Listen for changes via custom events:
-
-```javascript
-element.addEventListener("dialog:change", (e) => {
-  console.log("Dialog open:", e.detail.open);
-});
-```
-
-### Inbound Events
-
-Control the dialog via events:
-
-| Event | Detail | Description |
-|-------|--------|-------------|
-| `dialog:set` | `{ open: boolean }` | Set open state programmatically |
-
-```javascript
-// Open the dialog
-element.dispatchEvent(
-  new CustomEvent("dialog:set", { detail: { open: true } })
-);
-
-// Close the dialog
-element.dispatchEvent(
-  new CustomEvent("dialog:set", { detail: { open: false } })
-);
-```
-
-#### Deprecated Shapes
-
-The following shape is deprecated and will be removed in v1.0:
-
-```javascript
-// Deprecated: { value: boolean }
-element.dispatchEvent(
-  new CustomEvent("dialog:set", { detail: { value: true } })
-);
-```
-
-Use `{ open: boolean }` instead.
 
 ## License
 

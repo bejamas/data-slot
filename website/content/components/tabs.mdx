@@ -1,0 +1,61 @@
+---
+title: Tabs
+description: Layered panels of content, with one panel displayed at a time.
+---
+
+<PackageInfo name="tabs" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/tabs
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/tabs
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/tabs
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+Triggers and panels are paired by matching `data-value`. The indicator is optional.
+
+```html
+<div data-slot="tabs" data-default-value="initial-tab">
+  <div data-slot="tabs-list">
+    <button data-slot="tabs-trigger" data-value="unique-id">Label</button>
+    <!-- Optional animated indicator -->
+    <div data-slot="tabs-indicator"></div>
+  </div>
+  <div data-slot="tabs-content" data-value="unique-id">Panel content</div>
+</div>
+```
+
+## Examples
+
+### Switch between panels
+
+<Example name="tabs" />
+
+### Animated indicator
+
+The optional `tabs-indicator` receives `--active-tab-left` and `--active-tab-width`, so it can slide under the active trigger.
+
+<Example name="tabs" variant="extra" />
+
+## API reference
+
+<include>../_generated/tabs-api.md</include>

@@ -27,7 +27,9 @@ npm install @data-slot/switch
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all switch instances in a scope (defaults to `document`).
 
@@ -37,7 +39,7 @@ import { create } from "@data-slot/switch";
 const controllers = create(); // Returns SwitchController[]
 ```
 
-### `createSwitch(root, options?)`
+#### `createSwitch(root, options?)`
 
 Create a controller for a specific element.
 
@@ -52,18 +54,22 @@ const controller = createSwitch(element, {
 });
 ```
 
-### Options
+### Slots
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `defaultChecked` | `boolean` | `false` | Initial checked state |
-| `disabled` | `boolean` | `false` | Disable user interaction and form submission |
-| `readOnly` | `boolean` | `false` | Prevent user interaction while keeping the field enabled |
-| `required` | `boolean` | `false` | Require the switch to be checked for native form validation |
-| `name` | `string` | - | Form field name |
-| `value` | `string` | native checkbox `"on"` | Submitted value when checked |
-| `uncheckedValue` | `string` | - | Submitted value when unchecked |
-| `onCheckedChange` | `(checked: boolean) => void` | `undefined` | Callback when checked state changes |
+#### Runtime Slots
+
+- `switch` - Root control that toggles the checked state and receives switch semantics, keyboard handling, and form integration.
+- `switch-thumb` - Optional visual thumb inside the root; receives checked and disabled state for styling.
+
+#### Markup
+
+```html
+<span data-slot="switch">
+  <span data-slot="switch-thumb"></span>
+</span>
+```
+
+Use a neutral root element (`span` or `div`) when you want Base UI-style label wrapping and shadcn-like composition. The controller injects a visually hidden checkbox next to the root for form submission, label support, and native validation.
 
 ### Data Attributes
 
@@ -79,7 +85,20 @@ JS options take precedence over data attributes on the root element.
 | `data-value` | `string` | native checkbox `"on"` | Submitted value when checked |
 | `data-unchecked-value` / `data-uncheckedValue` | `string` | - | Submitted value when unchecked |
 
-## Controller
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultChecked` | `boolean` | `false` | Initial checked state |
+| `disabled` | `boolean` | `false` | Disable user interaction and form submission |
+| `readOnly` | `boolean` | `false` | Prevent user interaction while keeping the field enabled |
+| `required` | `boolean` | `false` | Require the switch to be checked for native form validation |
+| `name` | `string` | - | Form field name |
+| `value` | `string` | native checkbox `"on"` | Submitted value when checked |
+| `uncheckedValue` | `string` | - | Submitted value when unchecked |
+| `onCheckedChange` | `(checked: boolean) => void` | `undefined` | Callback when checked state changes |
+
+### Controller
 
 | Method/Property | Description |
 |-----------------|-------------|
@@ -90,21 +109,27 @@ JS options take precedence over data attributes on the root element.
 | `setChecked(checked)` | Set the checked state explicitly |
 | `destroy()` | Remove listeners and generated inputs |
 
-## Markup Structure
+### Events
 
-The authored API is just a root and an optional thumb:
+#### Outbound Events
 
-```html
-<span data-slot="switch">
-  <span data-slot="switch-thumb"></span>
-</span>
+```javascript
+element.addEventListener("switch:change", (event) => {
+  console.log(event.detail.checked);
+});
 ```
 
-Use a neutral root element (`span` or `div`) when you want Base UI-style label wrapping and shadcn-like composition. The controller injects a visually hidden checkbox next to the root for form submission, label support, and native validation.
+#### Inbound Events
 
-## Styling
+```javascript
+element.dispatchEvent(
+  new CustomEvent("switch:set", { detail: { checked: true } })
+);
+```
 
-### State Attributes
+### Styling
+
+#### State Attributes
 
 The root and thumb expose presence attributes:
 
@@ -122,7 +147,7 @@ The root also syncs:
 - `aria-readonly="true"` when read-only
 - `aria-required="true"` when required
 
-### Tailwind Example
+#### Tailwind Example
 
 ```html
 <label class="inline-flex items-center gap-3">
@@ -131,39 +156,21 @@ The root also syncs:
     data-size="default"
     class="data-checked:bg-primary data-unchecked:bg-input
            focus-visible:border-ring focus-visible:ring-ring/50
-           shrink-0 rounded-full border border-transparent
+           shrink-0 rounded-full p-px
            focus-visible:ring-3 peer group/switch relative
            inline-flex items-center transition-all outline-none
-           h-[18.4px] w-[32px]"
+           h-4.5 w-8"
   >
     <span
       data-slot="switch-thumb"
       class="bg-background rounded-full size-4
-             data-checked:translate-x-[calc(100%-2px)]
+             data-checked:translate-x-3.5
              data-unchecked:translate-x-0
              pointer-events-none block transition-transform"
     ></span>
   </span>
   Notifications
 </label>
-```
-
-## Events
-
-### Outbound
-
-```javascript
-element.addEventListener("switch:change", (event) => {
-  console.log(event.detail.checked);
-});
-```
-
-### Inbound
-
-```javascript
-element.dispatchEvent(
-  new CustomEvent("switch:set", { detail: { checked: true } })
-);
 ```
 
 ## License

@@ -26,6 +26,32 @@ describe('Popover', () => {
     return { root, trigger, content, closeBtn, controller }
   }
 
+  it("preserves queued close focus restoration when destroyed before the next frame", async () => {
+    const { trigger, content, controller } = setup();
+    trigger.focus();
+    controller.open();
+    await waitForRaf();
+    await waitForRaf();
+    content.focus();
+    controller.close();
+    await waitForRaf();
+    controller.destroy();
+    controller.destroy();
+    await waitForRaf();
+    await waitForRaf();
+    expect(document.activeElement === trigger).toBe(true);
+  });
+
+  it("does not move outside focus when destroyed without a pending restoration", async () => {
+    const { controller } = setup();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+    controller.destroy();
+    await waitForRaf();
+    expect(document.activeElement === outside).toBe(true);
+  });
+
   const waitForRaf = () =>
     new Promise<void>((resolve) => {
       requestAnimationFrame(() => resolve())
@@ -542,6 +568,28 @@ describe('Popover', () => {
 
   // Focus management tests
   describe('focus management', () => {
+    it('skips invalid autofocus targets and permits programmatic initial focus', async () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="root">
+          <button data-slot="popover-trigger">Open</button>
+          <div data-slot="popover-content">
+            <summary autofocus>Not focusable</summary>
+            <button hidden autofocus>Hidden</button>
+            <h2 id="intro" tabindex="-1">Introduction</h2>
+            <button>Action</button>
+          </div>
+        </div>
+      `
+      const controller = createPopover(document.getElementById('root')!)
+      try {
+        controller.open()
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+        expect(document.activeElement).toBe(document.getElementById('intro'))
+      } finally {
+        controller.destroy()
+      }
+    })
+
     it('focuses first focusable element on open', () => {
       document.body.innerHTML = `
         <div data-slot="popover" id="root">

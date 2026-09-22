@@ -10,7 +10,9 @@ import {
   setAria,
   ensureId,
   on,
+  onRoot,
   emit,
+  observeFormReset,
 } from "@data-slot/core";
 
 export interface SwitchOptions {
@@ -309,20 +311,12 @@ export function createSwitch(
   syncGeneratedInputs();
   syncRoot();
 
-  const form =
-    hiddenInput.form ??
-    (rootElement.closest("form") instanceof HTMLFormElement
-      ? rootElement.closest("form")
-      : null);
-  if (form) {
-    cleanups.push(
-      on(form, "reset", () => {
-        queueMicrotask(() => {
-          updateState(hiddenInput.checked, false);
-        });
-      }),
-    );
-  }
+  const resetObserver = observeFormReset({
+    root: rootElement,
+    getForm: () => hiddenInput.form ?? rootElement.closest("form"),
+    onReset: () => updateState(hiddenInput.checked, false),
+  });
+  cleanups.push(() => resetObserver.destroy());
 
   cleanups.push(
     on(hiddenInput, "click", (event) => {
@@ -376,7 +370,7 @@ export function createSwitch(
   }
 
   cleanups.push(
-    on(rootElement, "switch:set", (event) => {
+    onRoot(rootElement, "switch:set", (event) => {
       const detail = (event as CustomEvent).detail;
       const checked =
         typeof detail === "boolean"

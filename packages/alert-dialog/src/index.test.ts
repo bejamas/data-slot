@@ -63,6 +63,44 @@ describe("AlertDialog", () => {
     };
   };
 
+
+  for (const singleControl of [true, false]) {
+    for (const shiftKey of [false, true]) {
+      it(`moves ${shiftKey ? "backward" : "forward"} from programmatic focus with ${singleControl ? "one tabbable control" : "two tabbable controls"}`, async () => {
+        const { title, cancel, action, controller } = setup();
+        title.setAttribute("tabindex", "-1");
+        if (singleControl) action.remove();
+        try {
+          controller.open();
+          await waitForRaf();
+          expect(document.activeElement?.getAttribute("data-slot")).toBe("alert-dialog-title");
+          const event = new KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true, cancelable: true });
+          title.dispatchEvent(event);
+          expect(event.defaultPrevented).toBe(true);
+          expect(document.activeElement).toBe(shiftKey && !singleControl ? action : cancel);
+        } finally {
+          controller.destroy();
+        }
+      });
+    }
+  }
+
+  it("focuses the content when no eligible descendants remain", async () => {
+    const { content, controller } = setup();
+    content.innerHTML = '<summary>Not focusable</summary><button hidden>Hidden</button>';
+    try {
+      controller.open();
+      await waitForRaf();
+      expect(document.activeElement).toBe(content);
+      const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+      content.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      expect(document.activeElement).toBe(content);
+    } finally {
+      controller.destroy();
+    }
+  });
+
   beforeEach(() => {
     document.body.innerHTML = "";
   });
@@ -81,6 +119,35 @@ describe("AlertDialog", () => {
     expect(controller.isOpen).toBe(false);
 
     controller.destroy();
+  });
+
+  it("restores trigger focus on destroy when the original focus target was removed", async () => {
+    const { trigger, controller } = setup();
+    const outside = document.createElement("button");
+    document.body.prepend(outside);
+    outside.focus();
+    try {
+      controller.open();
+      await waitForRaf();
+      outside.remove();
+      controller.destroy();
+      await waitForRaf();
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      controller.destroy();
+    }
+  });
+
+  it("keeps outside focus when destroyed before opening", async () => {
+    const { controller } = setup();
+    const outside = document.createElement("button");
+    document.body.prepend(outside);
+    outside.focus();
+
+    controller.destroy();
+    await waitForRaf();
+
+    expect(document.activeElement).toBe(outside);
   });
 
   it("opens on trigger click and closes on cancel click", async () => {
@@ -334,5 +401,64 @@ describe("AlertDialog", () => {
     expect(document.activeElement).toBe(alertFirst);
 
     alertController.destroy();
+  });
+
+  it("traps Tab among currently tabbable controls, skipping hidden, inert, and newly disabled descendants", async () => {
+    document.body.innerHTML = `
+      <div data-slot="alert-dialog" id="alert-root">
+        <div data-slot="alert-dialog-overlay"></div>
+        <div data-slot="alert-dialog-content">
+          <div hidden><button id="hidden-control">Hidden</button></div>
+          <div inert><button id="inert-control">Inert</button></div>
+          <button id="first-control">First</button>
+          <button id="last-control">Last</button>
+        </div>
+      </div>
+    `;
+    const root = document.getElementById("alert-root")!;
+    const controller = createAlertDialog(root);
+    const first = document.getElementById("first-control") as HTMLButtonElement;
+    const last = document.getElementById("last-control") as HTMLButtonElement;
+
+    controller.open();
+    await waitForRaf();
+    expect(document.activeElement).toBe(first);
+
+    last.focus();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    expect(document.activeElement).toBe(first);
+
+    last.disabled = true;
+    first.focus();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    expect(document.activeElement).toBe(first);
+
+    controller.destroy();
+  });
+
+  it("keeps a retained controller inert, cancels queued focus, and releases scroll lock on destroy", async () => {
+    document.body.innerHTML = `
+      <button id="outside">Outside</button>
+      <div data-slot="alert-dialog" id="root">
+        <div data-slot="alert-dialog-overlay"></div>
+        <div data-slot="alert-dialog-content"><button id="inside">Inside</button></div>
+      </div>
+    `;
+    const outside = document.getElementById("outside") as HTMLButtonElement;
+    const root = document.getElementById("root")!;
+    const controller = createAlertDialog(root);
+
+    outside.focus();
+    controller.open();
+    await waitForRaf();
+    expect(document.activeElement).toBe(document.getElementById("inside"));
+    expect(document.documentElement.style.overflow).toBe("hidden");
+    controller.destroy();
+    controller.open();
+    controller.destroy();
+
+    await waitForRaf();
+    expect(document.activeElement).toBe(outside);
+    expect(document.documentElement.style.overflow).toBe("");
   });
 });

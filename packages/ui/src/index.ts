@@ -37,6 +37,17 @@ export type { TooltipOptions, TooltipController } from "@data-slot/tooltip";
 export { createDialog } from "@data-slot/dialog";
 export type { DialogOptions, DialogController } from "@data-slot/dialog";
 
+export { createDrawer } from "@data-slot/drawer";
+export type {
+  DrawerOptions,
+  DrawerController,
+  DrawerSnapPoint,
+  DrawerSwipeDirection,
+  DrawerChangeReason,
+  DrawerChangeDetails,
+  DrawerSnapChangeDetails,
+} from "@data-slot/drawer";
+
 export { createAlertDialog } from "@data-slot/alert-dialog";
 export type {
   AlertDialogOptions,
@@ -76,3 +87,12 @@ export type {
   CommandController,
   CommandFilter,
 } from "@data-slot/command";
+
+export { createToast } from "@data-slot/toast";
+export type { ToastPosition, ToastAction, ToastShowOptions, ToastOptions, ToastController } from "@data-slot/toast";
+
+export { createCarousel } from "@data-slot/carousel";
+export type {
+  CarouselOptions,
+  CarouselController,
+} from "@data-slot/carousel";

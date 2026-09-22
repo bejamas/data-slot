@@ -1,0 +1,62 @@
+---
+import { Code } from "astro:components";
+import ExampleBlock from "../ExampleBlock.astro";
+import styles from "./drawer.css?raw";
+import "./drawer.css";
+
+const css = {
+  trigger: "drawer-demo-trigger",
+  backdrop: "drawer-demo-backdrop",
+  viewport: "drawer-demo-viewport",
+  popup: "drawer-demo-popup",
+  content: "drawer-demo-content",
+  title: "drawer-demo-title",
+  description: "drawer-demo-description",
+  close: "drawer-demo-close",
+};
+const tailwind = {
+  trigger: "cursor-pointer border border-border bg-white px-4 py-2 text-text",
+  backdrop: "fixed inset-0 z-[110] bg-black/45 opacity-[calc(1-var(--drawer-swipe-progress,0))] transition-opacity duration-300 ease-[ease] motion-reduce:transition-none data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[swiping]:transition-none hidden:hidden",
+  viewport: "pointer-events-none fixed inset-0 z-[111] flex h-dvh w-full justify-end hidden:hidden",
+  popup: "pointer-events-auto flex h-full w-full max-w-sm flex-col border-l border-[#ccc] bg-[#faf9f7] text-[#1a1a1a] shadow-[0_0_50px_rgb(0_0_0/20%)] transition-transform duration-300 ease-[ease] motion-reduce:transition-none [transform:translateX(calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-amount-x,0px)))] data-[starting-style]:[transform:translateX(100%)] data-[ending-style]:[transform:translateX(100%)] data-[swiping]:transition-none hidden:hidden",
+  content: "grid min-h-0 content-start gap-4 overflow-y-auto overscroll-contain p-6",
+  title: "m-0 text-lg leading-7 font-bold",
+  description: "m-0 text-sm leading-[1.5] text-[#666]",
+  close: "cursor-pointer border border-[#ccc] bg-transparent px-3 py-2 hover:bg-[#f0eeeb]",
+};
+
+function markup(mode: "css" | "tailwind") {
+  const c = mode === "css" ? css : tailwind;
+  return `<div id="drawer-${mode}" data-slot="drawer" data-swipe-direction="right">
+  <button type="button" data-slot="drawer-trigger" class="${c.trigger}">Open drawer</button>
+  <div data-slot="drawer-portal">
+    <div data-slot="drawer-backdrop" class="${c.backdrop}" hidden></div>
+    <div data-slot="drawer-viewport" class="${c.viewport}" hidden>
+      <div data-slot="drawer-popup" class="${c.popup}" hidden>
+        <div data-slot="drawer-content" class="${c.content}">
+          <h2 data-slot="drawer-title" class="${c.title}">Drawer</h2>
+          <p data-slot="drawer-description" class="${c.description}">This drawer slides in from the right. Swipe right, click outside, or press Escape to close it.</p>
+          <button type="button" data-slot="drawer-close" class="${c.close}">Close drawer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+function source(mode: "css" | "tailwind") {
+  return `${markup(mode)}
+
+<script type="module">
+  import { createDrawer } from "@data-slot/drawer";
+  createDrawer(document.querySelector("#drawer-${mode}"));
+</script>${mode === "css" ? `\n\n<style>\n${styles}</style>` : ""}`;
+}
+---
+
+<ExampleBlock label="right-side drawer">
+  <Fragment slot="preview-css" set:html={markup("css")} />
+  <Fragment slot="preview-tailwind" set:html={markup("tailwind")} />
+  <Code slot="code-css" code={source("css")} lang="html" theme="vitesse-light" />
+  <Code slot="code-tailwind" code={source("tailwind")} lang="html" theme="vitesse-light" />
+</ExampleBlock>

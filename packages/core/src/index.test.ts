@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from 'bun:test'
 import {
   getPart,
   getParts,
+  getOwnedElements,
   getRoots,
   getRootBinding,
   hasRootBinding,
@@ -17,6 +18,8 @@ import {
 import { ensureId, setAria, linkLabelledBy } from './index'
 import { on, emit, composeHandlers } from './index'
 import { lockScroll, unlockScroll } from './index'
+import { createTypeahead } from './index'
+import { getAutofocusOrFirstFocusable, getFocusable, getTabbables } from './index'
 import { containsWithPortals, portalToBody, restorePortal } from './index'
 import {
   computeFloatingPosition,
@@ -29,9 +32,162 @@ import {
   createPortalLifecycle,
   createPresenceLifecycle,
   createPositionSync,
+  createTerminalLifecycle,
+  registerModalTerminalResources,
 } from './index'
 import type { PortalState } from './index'
 import { getScrollLockCount, resetScrollLock } from './scroll'
+
+describe('core/focusability', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('returns only visible, enabled focusable descendants and keeps negative tabindex focusable', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <button id="visible">Visible</button>
+        <button id="hidden" hidden>Hidden</button>
+        <div style="display: none"><button id="display-none">Display none</button></div>
+        <div style="visibility: hidden"><button id="visibility-hidden">Visibility hidden</button></div>
+        <div inert><button id="inert">Inert</button></div>
+        <fieldset disabled><button id="fieldset-disabled">Disabled by fieldset</button></fieldset>
+        <button id="disabled" disabled>Disabled</button>
+        <div id="programmatic" tabindex="-1">Programmatic</div>
+      </div>
+    `
+    const root = document.getElementById('root')!
+
+    expect(getFocusable(root).map((element) => element.id)).toEqual(['visible', 'programmatic'])
+    expect(getTabbables(root).map((element) => element.id)).toEqual(['visible'])
+  })
+
+  it('uses radio-group tabbing semantics and reflects runtime state changes', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <input id="first" type="radio" name="plan">
+        <input id="selected" type="radio" name="plan" checked>
+        <input id="third" type="radio" name="plan">
+        <button id="action">Action</button>
+      </div>
+    `
+    const root = document.getElementById('root')!
+    const action = document.getElementById('action') as HTMLButtonElement
+
+    expect(getTabbables(root).map((element) => element.id)).toEqual(['selected', 'action'])
+    action.disabled = true
+    expect(getTabbables(root).map((element) => element.id)).toEqual(['selected'])
+    root.setAttribute('inert', '')
+    expect(getFocusable(root)).toEqual([])
+  })
+
+  it('groups radios by form owner or tree, including form-associated controls outside the form', () => {
+    document.body.innerHTML = `
+      <form id="first-form"><input id="first-form-radio" type="radio" name="plan"></form>
+      <form id="second-form"><input id="second-form-radio" type="radio" name="plan" checked></form>
+      <input id="associated-radio" type="radio" name="plan" form="first-form" checked>
+      <div id="root"><input id="unowned-radio" type="radio" name="plan"></div>
+    `
+    const root = document.getElementById('root')!
+    const firstForm = document.getElementById('first-form')!
+
+    expect(getTabbables(firstForm).map((element) => element.id)).toEqual([])
+    expect(getTabbables(root).map((element) => element.id)).toEqual(['unowned-radio'])
+  })
+
+  it('excludes descendants of closed details except content within every first summary', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <details>
+          <summary id="summary">Summary <button id="summary-control">Summary control</button><details><summary id="nested-summary-visible">Nested visible summary</summary><button id="nested-visible-control">Nested closed</button></details></summary>
+          <details><summary id="nested-summary-hidden">Nested hidden summary</summary><button id="nested-hidden-control">Nested closed</button></details>
+          <button id="closed-control">Closed</button>
+        </details>
+        <details open><summary id="open-summary">Open summary</summary><button id="open-control">Open</button></details>
+      </div>
+    `
+    const root = document.getElementById('root')!
+
+    expect(getFocusable(root).map((element) => element.id)).toEqual([
+      'summary',
+      'summary-control',
+      'nested-summary-visible',
+      'open-summary',
+      'open-control',
+    ])
+  })
+
+  it('scopes radio groups to their shadow root or detached fragment', () => {
+    const host = document.createElement('div')
+    const shadow = host.attachShadow({ mode: 'open' })
+    const shadowFirst = document.createElement('input')
+    shadowFirst.id = 'shadow-first'
+    shadowFirst.type = 'radio'
+    shadowFirst.name = 'plan'
+    const shadowSelected = document.createElement('input')
+    shadowSelected.id = 'shadow-selected'
+    shadowSelected.type = 'radio'
+    shadowSelected.name = 'plan'
+    shadowSelected.checked = true
+    shadow.append(shadowFirst, shadowSelected)
+    const fragment = document.createDocumentFragment()
+    const detached = document.createElement('div')
+    detached.innerHTML = `<input id="fragment-first" type="radio" name="plan"><input id="fragment-selected" type="radio" name="plan">`
+    ;(detached.querySelector('#fragment-selected') as HTMLInputElement).checked = true
+    fragment.append(detached)
+
+    expect(getTabbables(shadow).map((element) => element.id)).toEqual(['shadow-selected'])
+    expect(getTabbables(fragment).map((element) => element.id)).toEqual(['fragment-selected'])
+  })
+
+  it('prefers a valid autofocus target over the first focusable descendant', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <button id="first">First</button>
+        <button id="hidden-autofocus" hidden autofocus>Hidden</button>
+        <button id="autofocus" autofocus>Autofocus</button>
+      </div>
+    `
+
+    expect(getAutofocusOrFirstFocusable(document.getElementById('root')!)?.id).toBe('autofocus')
+  })
+})
+
+describe('core/modal terminal resources', () => {
+  it('disposes modal resources in a stable terminal order', () => {
+    const calls: string[] = []
+    const lifecycle = createTerminalLifecycle()
+
+    registerModalTerminalResources(lifecycle, {
+      cleanups: [() => calls.push('listener')],
+      modalStack: { destroy: () => calls.push('modal stack') },
+      presence: [
+        { cleanup: () => calls.push('overlay presence') },
+        { cleanup: () => calls.push('content presence') },
+      ],
+      portal: { cleanup: () => calls.push('portal') },
+      beforeDestroy: () => calls.push('before destroy'),
+      reset: () => calls.push('reset'),
+      releaseScrollLock: () => calls.push('scroll lock'),
+      cleanup: () => calls.push('component cleanup'),
+      unbind: () => calls.push('root unbind'),
+    })
+
+    expect(lifecycle.destroy()).toBe(true)
+    expect(calls).toEqual([
+      'before destroy',
+      'modal stack',
+      'overlay presence',
+      'content presence',
+      'reset',
+      'scroll lock',
+      'component cleanup',
+      'portal',
+      'listener',
+      'root unbind',
+    ])
+  })
+})
 
 describe('core/parts', () => {
   it('getPart finds a single slot', () => {
@@ -66,6 +222,70 @@ describe('core/parts', () => {
     expect(items).toHaveLength(3)
   })
 
+  it('keeps parts owned by a nested component out of its parent query', () => {
+    document.body.innerHTML = `
+      <div data-slot="accordion" id="outer">
+        <button data-slot="accordion-trigger" id="outer-trigger">Outer</button>
+        <div data-slot="accordion">
+          <button data-slot="accordion-trigger" id="inner-trigger">Inner</button>
+        </div>
+      </div>
+    `
+
+    const outer = document.getElementById('outer')!
+    expect(getPart(outer, 'accordion-trigger')?.id).toBe('outer-trigger')
+    expect(getParts(outer, 'accordion-trigger').map((part) => part.id)).toEqual([
+      'outer-trigger',
+    ])
+  })
+
+  it('keeps nested parts out of a portaled component scope', () => {
+    document.body.innerHTML = `
+      <div data-slot="dropdown-menu" id="outer"></div>
+      <div data-slot="dropdown-menu-content" id="content">
+        <button data-slot="dropdown-menu-item" id="outer-item">Outer</button>
+        <div data-slot="dropdown-menu">
+          <button data-slot="dropdown-menu-item" id="inner-item">Inner</button>
+        </div>
+      </div>
+    `
+
+    const outer = document.getElementById('outer')!
+    const content = document.getElementById('content')!
+    expect(
+      getOwnedElements(outer, content, '[data-slot="dropdown-menu-item"]').map(
+        (part) => part.id
+      )
+    ).toEqual(['outer-item'])
+  })
+
+  for (const scopeType of ['fragment', 'shadow root'] as const) {
+    it(`finds owned parts in a ${scopeType} while excluding nested components`, () => {
+      const root = document.createElement('div')
+      root.setAttribute('data-slot', 'dropdown-menu')
+      const scope = scopeType === 'fragment'
+        ? document.createDocumentFragment()
+        : document.createElement('div').attachShadow({ mode: 'open' })
+      const template = document.createElement('template')
+      template.innerHTML = `
+        <button data-slot="dropdown-menu-item" id="direct-item">Direct</button>
+        <div>
+          <button data-slot="dropdown-menu-item" id="wrapped-item">Wrapped</button>
+          <div data-slot="dropdown-menu">
+            <button data-slot="dropdown-menu-item" id="nested-item">Nested</button>
+          </div>
+        </div>
+      `
+      scope.appendChild(template.content)
+
+      expect(
+        getOwnedElements(root, scope, '[data-slot="dropdown-menu-item"]').map(
+          (part) => part.id
+        )
+      ).toEqual(['direct-item', 'wrapped-item'])
+    })
+  }
+
   it('getRoots finds all component roots by data-slot', () => {
     document.body.innerHTML = `
       <div data-slot="dialog">Dialog 1</div>
@@ -83,7 +303,7 @@ describe('core/parts', () => {
     expect(getRootBinding(root, 'test')).toBeUndefined()
     expect(hasRootBinding(root, 'test')).toBe(false)
     expect(setRootBinding(root, 'test', controller)).toBe(controller)
-    expect(getRootBinding(root, 'test')).toBe(controller)
+    expect(getRootBinding<typeof controller>(root, 'test')).toBe(controller)
     expect(hasRootBinding(root, 'test')).toBe(true)
   })
 
@@ -95,7 +315,7 @@ describe('core/parts', () => {
     setRootBinding(root, 'test', first)
 
     expect(clearRootBinding(root, 'test', second)).toBe(false)
-    expect(getRootBinding(root, 'test')).toBe(first)
+    expect(getRootBinding<typeof first>(root, 'test')).toBe(first)
     expect(clearRootBinding(root, 'test', first)).toBe(true)
     expect(getRootBinding(root, 'test')).toBeUndefined()
     expect(hasRootBinding(root, 'test')).toBe(false)
@@ -131,8 +351,8 @@ describe('core/parts', () => {
 
     try {
       setRootBinding(root, 'test', controller)
-      expect(reuseRootBinding(root, 'test', 'duplicate')).toBe(controller)
-      expect(reuseRootBinding(root, 'test', 'duplicate')).toBe(controller)
+      expect(reuseRootBinding<typeof controller>(root, 'test', 'duplicate')).toBe(controller)
+      expect(reuseRootBinding<typeof controller>(root, 'test', 'duplicate')).toBe(controller)
     } finally {
       console.warn = originalWarn
     }
@@ -749,7 +969,7 @@ describe('core/portal', () => {
     const content = document.getElementById('content')!
 
     // Simulate ownership written by another bundled copy of core
-    ;(content as Element & { [key: symbol]: Element })[Symbol.for('data-slot.portal-owner')] = root
+    Reflect.set(content, Symbol.for('data-slot.portal-owner'), root)
     document.body.appendChild(content)
 
     expect(containsWithPortals(root, content)).toBe(true)
@@ -982,7 +1202,7 @@ describe('core/popup', () => {
       if (original) {
         Object.defineProperty(window, 'visualViewport', original)
       } else {
-        Reflect.deleteProperty(window as Window & Record<string, unknown>, 'visualViewport')
+        Reflect.deleteProperty(window, 'visualViewport')
       }
     }
   })
@@ -1774,7 +1994,7 @@ describe('core/popup', () => {
     expect(wrapper?.style.isolation).toBe('isolate')
     expect(wrapper?.style.zIndex).toBe('50')
     expect(wrapper?.parentElement).toBe(document.body)
-    expect(lifecycle.container).toBe(wrapper)
+    expect(lifecycle.container).toBe(wrapper!)
 
     lifecycle.restore()
     expect(content.parentElement).toBe(root)
@@ -1836,7 +2056,7 @@ describe('core/popup', () => {
       }) as typeof window.cancelAnimationFrame,
       setTimeout: window.setTimeout.bind(window),
       clearTimeout: window.clearTimeout.bind(window),
-    } as Window
+    } as unknown as Window
 
     const flushOneRaf = () => {
       const pending = [...rafCallbacks.values()]
@@ -1975,5 +2195,110 @@ describe('core/popup', () => {
         value: originalGetComputedStyle,
       })
     }
+  })
+})
+
+describe('core/typeahead', () => {
+  const labels = ['Apple', 'Banana', 'Blueberry', 'Cherry', 'Other']
+
+  it('matches the first label starting with the typed character', () => {
+    const typeahead = createTypeahead()
+    expect(typeahead.match('b', labels, -1)).toBe(1)
+    typeahead.destroy()
+  })
+
+  it('matches case-insensitively', () => {
+    const typeahead = createTypeahead()
+    expect(typeahead.match('C', labels, -1)).toBe(3)
+    expect(typeahead.match('h', labels, 3)).toBe(3)
+    typeahead.destroy()
+  })
+
+  it('accumulates characters into a prefix buffer', () => {
+    const typeahead = createTypeahead()
+    expect(typeahead.match('b', labels, -1)).toBe(1)
+    expect(typeahead.match('l', labels, 1)).toBe(2)
+    expect(typeahead.match('u', labels, 2)).toBe(2)
+    typeahead.destroy()
+  })
+
+  it('returns -1 when the buffer matches nothing', () => {
+    const typeahead = createTypeahead()
+    expect(typeahead.match('z', labels, -1)).toBe(-1)
+    expect(typeahead.match('a', labels, -1)).toBe(-1) // buffer is now "za"
+    typeahead.destroy()
+  })
+
+  it('treats a repeated character as a longer prefix (parity with select/dropdown-menu)', () => {
+    const typeahead = createTypeahead()
+    expect(typeahead.match('b', labels, -1)).toBe(1)
+    // Buffer is now "bb": no label starts with it and the single-character
+    // wrap-around does not apply, so the highlight does not cycle.
+    expect(typeahead.match('b', labels, 1)).toBe(-1)
+    typeahead.destroy()
+  })
+
+  it('single-character wrap-around searches forward from currentIndex + 1', () => {
+    // The wrap-around is only consulted when a one-character buffer has no
+    // prefix match anywhere; assert its ordering via an injected label list
+    // where the prefix search and the wrap search would disagree if reached.
+    const typeahead = createTypeahead()
+    expect(typeahead.match('c', ['Cherry', 'apple', 'Cranberry'], 0)).toBe(0)
+    typeahead.reset()
+    expect(typeahead.match('a', ['Cherry', 'apple', 'Cranberry'], 2)).toBe(1)
+    typeahead.destroy()
+  })
+
+  it('treats -1 as "start from the first item" in the wrap-around search', () => {
+    const typeahead = createTypeahead()
+    typeahead.match('x', labels, -1) // buffer "x" -> no match
+    typeahead.reset()
+    // fresh single "o": prefix match finds Other regardless of index
+    expect(typeahead.match('o', labels, -1)).toBe(4)
+    // "oo" -> no prefix match; single-char fallback does not apply (length 2)
+    expect(typeahead.match('o', labels, 4)).toBe(-1)
+    typeahead.destroy()
+  })
+
+  it('resets the buffer after the delay elapses', async () => {
+    const typeahead = createTypeahead({ resetDelayMs: 20 })
+    expect(typeahead.match('b', labels, -1)).toBe(1)
+    await new Promise((resolve) => setTimeout(resolve, 40))
+    // A fresh "c" must not be read as "bc"
+    expect(typeahead.match('c', labels, 1)).toBe(3)
+    typeahead.destroy()
+  })
+
+  it('keeps the buffer while characters arrive within the delay', async () => {
+    const typeahead = createTypeahead({ resetDelayMs: 60 })
+    expect(typeahead.match('o', labels, -1)).toBe(4)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(typeahead.match('t', labels, 4)).toBe(4)
+    typeahead.destroy()
+  })
+
+  it('reset() clears the buffer and cancels the timer', async () => {
+    const typeahead = createTypeahead({ resetDelayMs: 1000 })
+    expect(typeahead.match('b', labels, -1)).toBe(1)
+    typeahead.reset()
+    expect(typeahead.match('c', labels, 1)).toBe(3)
+    typeahead.destroy()
+  })
+
+  it('uses the provided window for timers', () => {
+    const calls: Array<{ name: string; delay?: number }> = []
+    const fakeWin = {
+      setTimeout: (_fn: () => void, delay: number) => {
+        calls.push({ name: 'set', delay })
+        return 42
+      },
+      clearTimeout: (id: number) => {
+        calls.push({ name: `clear:${id}` })
+      },
+    } as unknown as Window
+    const typeahead = createTypeahead({ win: fakeWin, resetDelayMs: 123 })
+    typeahead.match('a', labels, -1)
+    typeahead.destroy()
+    expect(calls).toEqual([{ name: 'set', delay: 123 }, { name: 'clear:42' }])
   })
 })

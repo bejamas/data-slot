@@ -22,6 +22,7 @@
       "@data-slot/core": ["./packages/core/src/index.ts"],
       "@data-slot/tabs": ["./packages/tabs/src/index.ts"],
       "@data-slot/dialog": ["./packages/dialog/src/index.ts"],
+      "@data-slot/drawer": ["./packages/drawer/src/index.ts"],
       "@data-slot/alert-dialog": ["./packages/alert-dialog/src/index.ts"],
       "@data-slot/accordion": ["./packages/accordion/src/index.ts"],
       "@data-slot/popover": ["./packages/popover/src/index.ts"],
@@ -30,6 +31,8 @@
       "@data-slot/collapsible": ["./packages/collapsible/src/index.ts"],
       "@data-slot/command": ["./packages/command/src/index.ts"],
       "@data-slot/switch": ["./packages/switch/src/index.ts"],
+      "@data-slot/toast": ["./packages/toast/src/index.ts"],
+      "@data-slot/carousel": ["./packages/carousel/src/index.ts"],
       "@data-slot/ui": ["./packages/ui/src/index.ts"],
       "@data-slot/ui/*": ["./packages/ui/src/*.ts"]
     }

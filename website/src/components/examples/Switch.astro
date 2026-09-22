@@ -21,14 +21,16 @@ const cssCode = `<div class="switch-stack">
 <style>
   .switch-stack {
     display: grid;
-    gap: 0.875rem;
+    gap: 0.75rem;
   }
 
   .switch-row {
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
-    color: #1f2937;
+    color: #1a1a1a;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
   }
 
   .switch-root {
@@ -38,14 +40,15 @@ const cssCode = `<div class="switch-stack">
     height: 18px;
     align-items: center;
     border-radius: 999px;
-    background: #d1d5db;
+    background: oklch(55.1% 0.027 264.364);
     padding: 1px;
     transition: background-color 150ms ease;
     outline: none;
+    flex-shrink: 0;
   }
 
   .switch-root[data-checked] {
-    background: #111827;
+    background: #1a1a1a;
   }
 
   .switch-root--compact {
@@ -59,7 +62,7 @@ const cssCode = `<div class="switch-stack">
     height: 16px;
     border-radius: 999px;
     background: white;
-    box-shadow: 0 1px 2px rgb(15 23 42 / 0.18);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     transition: transform 150ms ease;
   }
 
@@ -75,33 +78,34 @@ const cssCode = `<div class="switch-stack">
   .switch-root--compact .switch-thumb[data-checked] {
     transform: translateX(10px);
   }
+  .switch-root:focus-visible { box-shadow: 0 0 0 2px oklch(70.7% 0.022 261.325 / 0.7); }
 </style>`;
 
 const tailwindCode = `<div class="grid gap-3">
-  <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+  <label class="inline-flex items-center gap-3 text-sm text-text">
     <span
       data-slot="switch"
       data-default-checked
       data-size="default"
-      class="data-checked:bg-gray-900 data-unchecked:bg-gray-300 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-[18px] w-[32px] shrink-0 items-center rounded-full border border-transparent p-px outline-none transition-colors focus-visible:ring-2"
+      class="data-checked:bg-text data-unchecked:bg-gray-500 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-4.5 w-8 shrink-0 items-center rounded-full p-px outline-none transition-colors focus-visible:ring-2"
     >
       <span
         data-slot="switch-thumb"
-        class="pointer-events-none block size-4 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-[14px] data-unchecked:translate-x-0"
+        class="pointer-events-none block size-4 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-3.5 data-unchecked:translate-x-0"
       ></span>
     </span>
     Release updates
   </label>
 
-  <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+  <label class="inline-flex items-center gap-3 text-sm text-text">
     <span
       data-slot="switch"
       data-size="sm"
-      class="data-checked:bg-gray-900 data-unchecked:bg-gray-300 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-[14px] w-[24px] shrink-0 items-center rounded-full border border-transparent p-px outline-none transition-colors focus-visible:ring-2"
+      class="data-checked:bg-text data-unchecked:bg-gray-500 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full p-px outline-none transition-colors focus-visible:ring-2"
     >
       <span
         data-slot="switch-thumb"
-        class="pointer-events-none block size-3 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-[10px] data-unchecked:translate-x-0"
+        class="pointer-events-none block size-3 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-2.5 data-unchecked:translate-x-0"
       ></span>
     </span>
     Compact alerts
@@ -127,30 +131,30 @@ const tailwindCode = `<div class="grid gap-3">
   </div>
 
   <div slot="preview-tailwind" class="grid gap-3">
-    <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+    <label class="inline-flex items-center gap-3 text-sm text-text">
       <span
         data-slot="switch"
         data-default-checked
         data-size="default"
-        class="data-checked:bg-gray-900 data-unchecked:bg-gray-300 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-[18px] w-[32px] shrink-0 items-center rounded-full border border-transparent p-px outline-none transition-colors focus-visible:ring-2"
+        class="data-checked:bg-text data-unchecked:bg-gray-500 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-4.5 w-8 shrink-0 items-center rounded-full p-px outline-none transition-colors focus-visible:ring-2"
       >
         <span
           data-slot="switch-thumb"
-          class="pointer-events-none block size-4 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-[14px] data-unchecked:translate-x-0"
+          class="pointer-events-none block size-4 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-3.5 data-unchecked:translate-x-0"
         ></span>
       </span>
       Release updates
     </label>
 
-    <label class="inline-flex items-center gap-3 text-sm text-gray-900">
+    <label class="inline-flex items-center gap-3 text-sm text-text">
       <span
         data-slot="switch"
         data-size="sm"
-        class="data-checked:bg-gray-900 data-unchecked:bg-gray-300 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-[14px] w-[24px] shrink-0 items-center rounded-full border border-transparent p-px outline-none transition-colors focus-visible:ring-2"
+        class="data-checked:bg-text data-unchecked:bg-gray-500 focus-visible:ring-gray-400/70 group/switch relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full p-px outline-none transition-colors focus-visible:ring-2"
       >
         <span
           data-slot="switch-thumb"
-          class="pointer-events-none block size-3 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-[10px] data-unchecked:translate-x-0"
+          class="pointer-events-none block size-3 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-2.5 data-unchecked:translate-x-0"
         ></span>
       </span>
       Compact alerts
@@ -164,14 +168,16 @@ const tailwindCode = `<div class="grid gap-3">
 <style>
   .switch-stack {
     display: grid;
-    gap: 0.875rem;
+    gap: 0.75rem;
   }
 
   .switch-row {
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
-    color: #1f2937;
+    color: #1a1a1a;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
   }
 
   .switch-root {
@@ -181,14 +187,15 @@ const tailwindCode = `<div class="grid gap-3">
     height: 18px;
     align-items: center;
     border-radius: 999px;
-    background: #d1d5db;
+    background: oklch(55.1% 0.027 264.364);
     padding: 1px;
     transition: background-color 150ms ease;
     outline: none;
+    flex-shrink: 0;
   }
 
   .switch-root[data-checked] {
-    background: #111827;
+    background: #1a1a1a;
   }
 
   .switch-root--compact {
@@ -202,7 +209,7 @@ const tailwindCode = `<div class="grid gap-3">
     height: 16px;
     border-radius: 999px;
     background: white;
-    box-shadow: 0 1px 2px rgb(15 23 42 / 0.18);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     transition: transform 150ms ease;
   }
 
@@ -218,4 +225,5 @@ const tailwindCode = `<div class="grid gap-3">
   .switch-root--compact .switch-thumb[data-checked] {
     transform: translateX(10px);
   }
+  .switch-root:focus-visible { box-shadow: 0 0 0 2px oklch(70.7% 0.022 261.325 / 0.7); }
 </style>

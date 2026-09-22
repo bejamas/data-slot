@@ -1,0 +1,74 @@
+---
+title: Drawer
+description: A sliding panel with swipe-to-dismiss, modal focus management, and an optional snap point.
+---
+
+<PackageInfo name="drawer" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/drawer
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/drawer
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/drawer
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+Only `drawer-popup` is required inside the root. It is the dialog surface; `drawer-content` is an optional inner content or scroll container. Add `drawer-title` and `drawer-description` to supply its accessible name and description. The optional portal moves to `document.body` while open.
+
+```html
+<div data-slot="drawer" data-swipe-direction="down">
+  <button type="button" data-slot="drawer-trigger">Open drawer</button>
+  <div data-slot="drawer-portal">
+    <div data-slot="drawer-backdrop" hidden></div>
+    <div data-slot="drawer-viewport" hidden>
+      <div data-slot="drawer-popup" hidden>
+        <div data-slot="drawer-content">
+          <h2 data-slot="drawer-title">Title</h2>
+          <p data-slot="drawer-description">Description</p>
+          <button type="button" data-slot="drawer-close">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+Set the popup’s size, position, and transitions in CSS. `data-swipe-direction` controls the dismissal gesture; pair it with a layout and transform for that edge. Include `--drawer-swipe-amount-x` or `--drawer-swipe-amount-y` in the transform so the panel follows the pointer.
+
+## Examples
+
+### Open a side panel
+
+Use `data-swipe-direction="right"` for a panel anchored to the right edge. By default the drawer traps focus, makes the rest of the page inert, and locks scrolling. Swipe right, click the backdrop, press Escape, or use the close button to dismiss it.
+
+<Example name="drawer" />
+
+### Set a bottom sheet’s open height
+
+`data-snap-point="0.6"` shows 60% of the viewport, capped at the popup’s CSS height. This sheet has a full height of `80dvh`; its transform combines `--drawer-snap-point-offset` with the vertical swipe movement. Its scrollable content stays within the visible portion of the sheet.
+
+<Example name="drawer" variant="extra" />
+
+A drawer supports one open position. Dragging either returns to that position or dismisses it; it does not cycle through multiple snap points. Snap points also accept pixel numbers greater than `1`, or strings such as `"320px"` and `"24rem"`. Use `setSnapPoint()` or a `drawer:set` event to change the position after initialization; changing the data attribute alone does not update it.
+
+## API reference
+
+<include>../_generated/drawer-api.md</include>

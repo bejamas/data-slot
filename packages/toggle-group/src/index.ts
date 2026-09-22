@@ -9,7 +9,7 @@ import {
   setRootBinding,
   clearRootBinding,
 } from "@data-slot/core";
-import { setAria, ensureId, on, emit } from "@data-slot/core";
+import { setAria, ensureId, on, onRoot, emit } from "@data-slot/core";
 
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
 
@@ -414,7 +414,7 @@ export function createToggleGroup(
   // Preferred shape: { value: string | string[] }
   // Deprecated shapes: string | string[]
   cleanups.push(
-    on(root, "toggle-group:set", (e) => {
+    onRoot(root, "toggle-group:set", (e) => {
       if (isGroupDisabled()) return;
 
       const evt = e as CustomEvent;

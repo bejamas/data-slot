@@ -48,21 +48,30 @@ Install individual packages as needed:
 
 ```bash
 # npm
-npm install @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
+npm install @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/drawer
 
 # pnpm
-pnpm add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
+pnpm add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/drawer
 
 # yarn
-yarn add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
+yarn add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/drawer
 
 # bun
-bun add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog
+bun add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/drawer
 ```
 
 ## Packages
 
 All packages are independently installable. Each package includes its own README with detailed documentation.
+
+For current sizes, run `bun run check:sizes`. This rebuilds all packages and reports
+minified and gzipped ESM entry sizes, sorted by gzip size. The measurements exclude
+imported dependencies, additional entry points, and type declarations; the `ui`
+entry is a re-export layer, not the full library bundle. The sizes below are a
+snapshot and may differ from the current build.
+
+To measure an existing build without rebuilding, run `bun run scripts/check-sizes.ts`.
+The script discovers packages automatically and exits with an error if a build is missing.
 
 | Package                      | Size   | Description                 | Documentation                                |
 | ---------------------------- | ------ | --------------------------- | -------------------------------------------- |
@@ -75,9 +84,12 @@ All packages are independently installable. Each package includes its own README
 | `@data-slot/tooltip`         | 2.2 KB | Hover/focus tooltips        | [README](packages/tooltip/README.md)         |
 | `@data-slot/popover`         | 2.0 KB | Anchored floating content   | [README](packages/popover/README.md)         |
 | `@data-slot/dialog`          | 1.9 KB | Modal dialogs, focus trap   | [README](packages/dialog/README.md)          |
+| `@data-slot/drawer`          | 6.8 KB      | Swipeable drawers and sheets | [README](packages/drawer/README.md)        |
 | `@data-slot/alert-dialog`    | 1.8 KB | Blocking confirmation dialogs | [README](packages/alert-dialog/README.md)  |
 | `@data-slot/collapsible`     | 1.6 KB | Simple show/hide toggle     | [README](packages/collapsible/README.md)     |
 | `@data-slot/accordion`       | 1.4 KB | Collapsible sections        | [README](packages/accordion/README.md)       |
+| `@data-slot/toast`           | 2.9 KB | Imperative notifications   | [README](packages/toast/README.md)           |
+| `@data-slot/carousel`        | 1.8 KB | Scroll-snap carousel       | [README](packages/carousel/README.md)        |
 
 ## API
 
@@ -120,6 +132,7 @@ The same pattern applies to all components:
 ```typescript
 import { createDialog } from "@data-slot/dialog";
 import { createAlertDialog } from "@data-slot/alert-dialog";
+import { createDrawer } from "@data-slot/drawer";
 import { createAccordion } from "@data-slot/accordion";
 import { createPopover } from "@data-slot/popover";
 import { createHoverCard } from "@data-slot/hover-card";
@@ -127,6 +140,7 @@ import { createCommand } from "@data-slot/command";
 
 const dialog = createDialog(element);
 const alertDialog = createAlertDialog(element);
+const drawer = createDrawer(element);
 const accordion = createAccordion(element);
 const popover = createPopover(element);
 const hoverCard = createHoverCard(element);
@@ -216,9 +230,44 @@ bun run typecheck
 
 # Build all packages
 bun run build
+
+# Build the documentation website
+bun run build:website
+
+# Preview the website in the Cloudflare Workers runtime
+bun run preview:website
 ```
 
 Each package has its own directory in `packages/` with its own `package.json`, source code, and tests.
+
+### Documentation website
+
+The Blume documentation lives in [`website`](website/README.md) and is the target of `build:website` and the Cloudflare deployment commands. Run it directly with `bun run --cwd website dev` after installing its dependencies and building the packages, or use the root commands below.
+
+```bash
+bun run install:docs
+bun run dev:docs       # http://localhost:4322
+bun run build:docs
+```
+
+
+### Cloudflare Workers deployment
+
+The documentation website is served from the `data-slot` Worker in the Bejamas OSS Cloudflare account (`705e6a1ce1620c4ac2ce279a064dec41`) at `https://data-slot.com`. The Worker custom domain is managed in `wrangler.jsonc`. A local deployment can be created with:
+
+```bash
+bun run deploy:website
+```
+
+For Cloudflare Workers Builds, connect `bejamas/data-slot`, leave the root directory blank (the repository root), and use `main` as the production branch. Use these commands:
+
+- Build command: `bun run build:website`
+- Deploy command: `bunx wrangler deploy`
+- Non-production branch deploy command: `bunx wrangler versions upload`
+
+The build command installs the website's locked dependencies, builds the library packages, and outputs the site to `website/dist`, which Wrangler serves as static assets. PR builds upload preview versions; builds on `main` deploy to production.
+
+Set the build variable `BUN_VERSION` to `1.3.14`. Node.js is pinned to `24.18.0` in `.node-version` for Blume's Astro 7 runtime. If `NODE_VERSION` is set in the Cloudflare build settings, keep it aligned with that file. No application secrets or runtime variables are required.
 
 ## License
 

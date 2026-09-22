@@ -15,14 +15,6 @@ import { spawnSync } from "child_process";
 
 const repoRoot = join(import.meta.dir, "..");
 const packagesDir = join(import.meta.dir, "..", "packages");
-const websiteSettingsPath = join(
-  import.meta.dir,
-  "..",
-  "website",
-  "src",
-  "components",
-  "SettingsPanel.astro",
-);
 
 function getPackages(): string[] {
   return readdirSync(packagesDir, { withFileTypes: true })
@@ -58,20 +50,6 @@ function bumpVersion(current: string, type: string): string {
       throw new Error(
         `Invalid version type: ${type}. Use patch, minor, major, or an exact version like 0.2.0`,
       );
-  }
-}
-
-function updateWebsiteVersion(version: string) {
-  try {
-    let content = readFileSync(websiteSettingsPath, "utf-8");
-    content = content.replace(
-      /const version = "[^"]+"/,
-      `const version = "${version}"`,
-    );
-    writeFileSync(websiteSettingsPath, content);
-    console.log(`  Updated website settings panel`);
-  } catch {
-    // Website might not exist, that's fine
   }
 }
 
@@ -125,13 +103,11 @@ function main() {
     console.log(`  Updated ${json.name} to ${newVersion}`);
   }
 
-  // Update website version display
-  updateWebsiteVersion(newVersion);
   refreshLockfile();
 
   console.log(`
 Done! Next steps:
-  1. Commit: git add '**/package.json' website/src/components/SettingsPanel.astro && git commit -m "chore: bump version to ${newVersion}"
+  1. Commit: git add '**/package.json' bun.lock && git commit -m "chore: bump version to ${newVersion}"
   2. Tag:    git tag v${newVersion}
   3. Push:   git push && git push --tags
 

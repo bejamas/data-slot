@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "data-slot",
+  "account_id": "705e6a1ce1620c4ac2ce279a064dec41",
+  "compatibility_date": "2026-08-31",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "routes": [
+    {
+      "pattern": "data-slot.com",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "directory": "./website/dist",
+    "html_handling": "auto-trailing-slash"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

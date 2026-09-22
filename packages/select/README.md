@@ -68,24 +68,53 @@ controller.destroy();
 
 `createSelect(root)` is idempotent per root. Calling it again for the same element returns the existing controller; destroy it first if you need to rebind with different options.
 
-## Slots
+## API
 
-| Slot | Description |
-|------|-------------|
-| `select` | Root container |
-| `select-trigger` | Button that opens the popup |
-| `select-value` | Displays selected value (inside trigger) |
-| `select-content` | Popup container for options |
-| `select-viewport` | Optional scroll container inside `select-content`; used for item-aligned scrolling when present |
-| `select-item` | Individual selectable option |
-| `select-item-text` | Optional text anchor inside `select-item`; preferred for exact item-aligned parity with Base/shadcn styles |
-| `select-group` | Groups related items |
-| `select-label` | Group label (inside a `select-group`) |
-| `select-separator` | Visual divider between items/groups |
-| `select-positioner` | Optional authored positioning wrapper (reused instead of generated wrapper) |
-| `select-portal` | Optional authored portal wrapper that can contain `select-positioner` |
+### Initialization
 
-### Composed Portal Markup (Optional)
+#### `create(scope?)`
+
+Find and bind uninitialized `[data-slot="select"]` descendants of `scope` (defaults to `document`). Returns `SelectController[]` for newly bound roots. To initialize the scope element itself, use `createSelect`.
+
+```typescript
+import { create } from "@data-slot/select";
+
+const controllers = create();
+```
+
+#### `createSelect(root, options?)`
+
+Create a `SelectController` for one root element. JavaScript options take precedence over the corresponding data attributes. Calling this again for a bound root returns its existing controller; destroy it before rebinding with new options.
+
+```typescript
+import { createSelect } from "@data-slot/select";
+
+const controller = createSelect(element, {});
+```
+
+### Slots
+
+#### Runtime Slots
+
+- `select` - Root container.
+- `select-trigger` - Required button that opens the popup and anchors its position.
+- `select-value` - Optional text target inside the trigger; displays the selected label or placeholder.
+- `select-content` - Required popup container for options.
+- `select-viewport` - Optional scroll container inside `select-content`; used for item-aligned scrolling when present.
+- `select-item` - Individual selectable option.
+- `select-item-text` - Optional text anchor inside `select-item`; preferred for exact item-aligned parity with Base/shadcn styles.
+- `select-group` - Groups related items.
+- `select-label` - Group label (inside a `select-group`).
+- `select-positioner` - Optional authored positioning wrapper (reused instead of generated wrapper).
+- `select-portal` - Optional authored portal wrapper that can contain `select-positioner`.
+
+#### Style-only Slots
+
+- `select-separator` - Visual divider between items/groups.
+
+Item labels resolve from authored `data-label`, then `select-item-text`, then the item's text content. `data-label` is an input attribute, not generated state.
+
+#### Composed Portal Markup (Optional)
 
 ```html
 <div data-slot="select">
@@ -100,7 +129,7 @@ controller.destroy();
 </div>
 ```
 
-### Native Label Support
+#### Native Label Support
 
 Use a standard HTML `<label for="...">` element to label the select. The `for` attribute should match the `id` on the trigger button. Clicking the label opens the select, and `aria-labelledby` is set automatically.
 
@@ -119,7 +148,21 @@ Use a standard HTML `<label for="...">` element to label the select. The `for` a
 </div>
 ```
 
-## Options
+### Data Attributes
+
+The component sets these attributes to reflect state:
+
+| Attribute | Element | Values | Description |
+|-----------|---------|--------|-------------|
+| `data-state` | root, trigger, content | `"open" \| "closed"` | Open state |
+| `data-position` | content, viewport | `"item-aligned" \| "popper"` | Resolved positioning mode authored by the controller |
+| `data-align-trigger` | content | `"true" \| "false"` | Whether the current mode aligns the selected item to the trigger |
+| `data-value` | root | `string` | Current selected value |
+| `data-selected` | item | (presence) | Selected item |
+| `data-highlighted` | item | (presence) | Focused/highlighted item |
+| `data-placeholder` | trigger | (presence) | When showing placeholder |
+
+### Options
 
 Options can be passed via JavaScript or data attributes (JS takes precedence).
 Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, `avoidCollisions`, `collisionPadding`) resolve in this order:
@@ -132,16 +175,18 @@ Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, 
 | Option | Data Attribute | Type | Default | Description |
 |--------|---------------|------|---------|-------------|
 | `defaultValue` | `data-default-value` | `string` | `null` | Initial selected value |
+| `defaultOpen` | `data-default-open` | `boolean` | `false` | Initial popup open state |
 | `placeholder` | `data-placeholder` | `string` | `""` | Text when no value selected |
 | `disabled` | `data-disabled` | `boolean` | `false` | Disable interaction |
 | `required` | `data-required` | `boolean` | `false` | Form validation required |
-| `name` | `data-name` | `string` | - | Form field name (creates hidden input) |
+| `name` | `data-name` | `string` | - | Form field name (creates an internal form control) |
 | `position` | `data-position` | `"item-aligned" \| "popper"` | `"item-aligned"` | Positioning mode (see below) |
 | `avoidCollisions` | `data-avoid-collisions` | `boolean` | `true` | Adjust to stay in viewport |
 | `collisionPadding` | `data-collision-padding` | `number` | `8` | Viewport edge padding (px) |
+| `lockScroll` | `data-lock-scroll` | `boolean` | `true` | Lock page scroll while the popup is open |
 | `highlightItemOnHover` | `data-highlight-item-on-hover` | `boolean` | `true` | Highlight and focus items on pointer hover |
 
-### Positioning Modes
+#### Positioning Modes
 
 **`item-aligned` (default)**: The popup positions itself so the selected item aligns with the trigger, similar to native `<select>` elements. The popup width matches the trigger width.
 
@@ -166,14 +211,14 @@ The controller also mirrors the resolved positioning mode onto the DOM for styli
 
 Consumers can style against these attributes directly and do not need to author them manually.
 
-### Callbacks
+#### Callbacks
 
 | Callback | Type | Description |
 |----------|------|-------------|
 | `onValueChange` | `(value: string \| null) => void` | Called when selection changes |
 | `onOpenChange` | `(open: boolean) => void` | Called when popup opens/closes |
 
-## Controller API
+### Controller
 
 ```typescript
 interface SelectController {
@@ -186,9 +231,18 @@ interface SelectController {
 }
 ```
 
-## Events
+#### Controller Destruction
 
-### Outbound Events (component emits)
+`destroy()` permanently disposes the controller and hides any open surface without
+emitting an additional change event. Repeated destruction is safe; methods on the
+old controller become no-ops. Create a new controller on the same root to rebind it.
+
+Focus restoration already queued by a close survives destruction.
+Closing with Tab still skips focus restoration to preserve normal Tab navigation.
+
+### Events
+
+#### Outbound Events
 
 ```javascript
 root.addEventListener('select:change', (e) => {
@@ -200,7 +254,9 @@ root.addEventListener('select:open-change', (e) => {
 });
 ```
 
-### Inbound Events (component listens)
+#### Inbound Events
+
+`select:set` accepts `{ value?: string | null, open?: boolean }`. Use `value: null` to clear the selection. When both fields are supplied, the value is applied before the open state. Programmatic selection works while disabled, but opening is blocked.
 
 ```javascript
 // Set value
@@ -214,22 +270,7 @@ root.dispatchEvent(new CustomEvent('select:set', {
 }));
 ```
 
-## Data Attributes (State)
-
-The component sets these attributes to reflect state:
-
-| Attribute | Element | Values | Description |
-|-----------|---------|--------|-------------|
-| `data-state` | root, trigger, content | `"open" \| "closed"` | Open state |
-| `data-position` | content, viewport | `"item-aligned" \| "popper"` | Resolved positioning mode authored by the controller |
-| `data-align-trigger` | content | `"true" \| "false"` | Whether the current mode aligns the selected item to the trigger |
-| `data-value` | root | `string` | Current selected value |
-| `data-selected` | item | (presence) | Selected item |
-| `data-highlighted` | item | (presence) | Focused/highlighted item |
-| `data-placeholder` | trigger | (presence) | When showing placeholder |
-| `data-label` | item | `string` | Display text for trigger (optional, falls back to textContent) |
-
-## Keyboard Navigation
+### Keyboard Navigation
 
 | Key | Action |
 |-----|--------|
@@ -243,7 +284,7 @@ The component sets these attributes to reflect state:
 | `Tab` | Close popup and move focus |
 | Type characters | Jump to matching item |
 
-## Accessibility
+### Accessibility
 
 - Trigger: `role="combobox"`, `aria-haspopup="listbox"`, `aria-expanded`, `aria-controls`
 - Content: `role="listbox"`, `aria-labelledby`
@@ -251,9 +292,9 @@ The component sets these attributes to reflect state:
 - Group: `role="group"`, `aria-labelledby`
 - Disabled items are skipped during keyboard navigation
 
-## Form Integration
+### Form Integration
 
-When `name` is provided, a hidden input is automatically created for form submission:
+When `name` is provided, an internal control is automatically created for form submission and kept out of the visual and keyboard flow:
 
 ```html
 <form>
@@ -263,6 +304,13 @@ When `name` is provided, a hidden input is automatically created for form submis
   <button type="submit">Submit</button>
 </form>
 ```
+
+With `required` / `data-required`, this control participates in native validation. An empty required select blocks form submission and focuses the visible trigger. Disabled selects are excluded from validation and submission. Selected values are preserved exactly, including line breaks.
+
+Resetting the form restores `defaultValue` and its displayed selection without
+emitting a value-change event, including when the select has no `name`.
+Synchronization happens on the next event-loop task, after the browser resets
+native controls. Calling `preventDefault()` on the reset event preserves the current state.
 
 ## License
 

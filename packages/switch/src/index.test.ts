@@ -254,7 +254,7 @@ describe("Switch", () => {
       expect(hidden?.required).toBe(true);
     });
 
-    it("restores a checked-by-default switch on native form reset", async () => {
+    it.each(["connected", "detached", "canceled second reset"])("restores a checked-by-default switch on native form reset (%s)", async (scenario) => {
       document.body.innerHTML = `
         <form id="form">
           <label>
@@ -269,17 +269,24 @@ describe("Switch", () => {
       const form = document.getElementById("form") as HTMLFormElement;
       const root = document.getElementById("root") as HTMLElement;
       const controller = createSwitch(root);
+      const hidden = getHiddenCheckbox();
 
       controller.uncheck();
       expect(controller.checked).toBe(false);
 
+      if (scenario === "detached") form.remove();
       form.reset();
-      await new Promise<void>((resolve) => queueMicrotask(resolve));
+      if (scenario === "canceled second reset") {
+        form.addEventListener("reset", (event) => event.preventDefault(), { once: true });
+        form.reset();
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
       expect(controller.checked).toBe(true);
       expect(root.getAttribute("aria-checked")).toBe("true");
       expect(root.hasAttribute("data-checked")).toBe(true);
-      expect(getHiddenCheckbox()?.checked).toBe(true);
+      expect(hidden?.checked).toBe(true);
+      controller.destroy();
     });
 
     it("restores an unchecked-by-default switch on native form reset", async () => {
@@ -308,7 +315,7 @@ describe("Switch", () => {
       expect(getHiddenUncheckedInput()).toBeNull();
 
       form.reset();
-      await new Promise<void>((resolve) => queueMicrotask(resolve));
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
       expect(controller.checked).toBe(false);
       expect(root.getAttribute("aria-checked")).toBe("false");

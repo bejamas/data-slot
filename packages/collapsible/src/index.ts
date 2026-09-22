@@ -9,6 +9,7 @@ import {
   setAria,
   ensureId,
   on,
+  onRoot,
   emit,
   createPresenceLifecycle,
 } from "@data-slot/core";
@@ -326,7 +327,7 @@ export function createCollapsible(
 
   // Inbound event - blocked when trigger is disabled (consistent with click behavior)
   cleanups.push(
-    on(root, "collapsible:set", (e) => {
+    onRoot(root, "collapsible:set", (e) => {
       if (
         trigger.hasAttribute("disabled") ||
         trigger.getAttribute("aria-disabled") === "true"
