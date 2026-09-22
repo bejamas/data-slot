@@ -34,8 +34,8 @@ Keep each component's reference inside the package README's `## API` section. Us
 
 1. Initialization
 2. Slots
-3. Options
-4. Data Attributes
+3. Data Attributes
+4. Options
 5. Controller
 6. Events
 7. Styling

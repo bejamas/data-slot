@@ -16,6 +16,7 @@ const loaders = {
   'navigation-menu': () => import('../../packages/navigation-menu/dist/index.js'),
   popover: () => import('../../packages/popover/dist/index.js'),
   'radio-group': () => import('../../packages/radio-group/dist/index.js'),
+  resizable: () => import('../../packages/resizable/dist/index.js'),
   select: () => import('../../packages/select/dist/index.js'),
   slider: () => import('../../packages/slider/dist/index.js'),
   switch: () => import('../../packages/switch/dist/index.js'),

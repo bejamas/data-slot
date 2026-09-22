@@ -29,7 +29,7 @@
     },
     "packages/carousel": {
       "name": "@data-slot/carousel",
-      "version": "0.2.107",
+      "version": "0.2.167",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
@@ -104,6 +104,13 @@
     "packages/radio-group": {
       "name": "@data-slot/radio-group",
       "version": "0.2.167",
+      "dependencies": {
+        "@data-slot/core": "workspace:*",
+      },
+    },
+    "packages/resizable": {
+      "name": "@data-slot/resizable",
+      "version": "0.2.166",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
@@ -256,6 +263,8 @@
     "@data-slot/popover": ["@data-slot/popover@workspace:packages/popover"],
 
     "@data-slot/radio-group": ["@data-slot/radio-group@workspace:packages/radio-group"],
+
+    "@data-slot/resizable": ["@data-slot/resizable@workspace:packages/resizable"],
 
     "@data-slot/select": ["@data-slot/select@workspace:packages/select"],
 

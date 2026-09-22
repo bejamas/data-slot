@@ -1,0 +1,42 @@
+{
+  "name": "@data-slot/resizable",
+  "version": "0.2.166",
+  "keywords": [
+    "data-slot",
+    "headless",
+    "panels",
+    "resizable",
+    "split-view",
+    "splitter",
+    "ui",
+    "vanilla"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bejamas/data-slot.git",
+    "directory": "packages/resizable"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown"
+  },
+  "dependencies": {
+    "@data-slot/core": "workspace:*"
+  }
+}
