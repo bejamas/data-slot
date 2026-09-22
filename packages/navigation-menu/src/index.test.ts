@@ -306,7 +306,7 @@ describe("NavigationMenu", () => {
     expect(contents[0]?.hidden).toBe(false);
     expect(contents[0]?.getAttribute("data-state")).toBe("active");
     expect(contents[0]?.parentElement).toBe(viewport);
-    expect(originalParent?.contains(contents[0]!)).toBe(false);
+    expect(originalParent).toBeNull();
     const viewportPopup = getViewportPopup(viewport);
     const viewportPositioner = getViewportPositioner(viewport);
     const viewportPortal = getViewportPortal(viewport);
@@ -394,10 +394,11 @@ describe("NavigationMenu", () => {
     const content = contents[0]!;
 
     expect(trigger.getAttribute("aria-haspopup")).toBe("true");
-    expect(trigger.getAttribute("aria-controls")).toBe(content.id);
+    expect(trigger.hasAttribute("aria-controls")).toBe(false);
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
 
     controller.open("products");
+    expect(trigger.getAttribute("aria-controls")).toBe(content.id);
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
 
     controller.destroy();
@@ -2761,12 +2762,11 @@ describe("NavigationMenu", () => {
       </nav>
     `;
 
-    const controllers = create();
-    expect(controllers).toHaveLength(1);
-
     const content = document.querySelector(
       '[data-slot="navigation-menu-content"]'
     ) as HTMLElement;
+    const controllers = create();
+    expect(controllers).toHaveLength(1);
     expect(content.hidden).toBe(true);
 
     controllers[0]?.open("test");
@@ -3046,7 +3046,7 @@ describe("NavigationMenu", () => {
 
     controller.close();
     await waitForPresenceExit();
-    expect(content.parentElement).toBe(contentPositioner);
+    expect(content.isConnected).toBe(false);
     expect(contentPortal.parentElement).toBe(root.querySelector('[data-slot="navigation-menu-item"]'));
     expect(viewportPortal.parentElement).toBe(root);
     expect(viewport.parentElement).toBe(viewportPositioner);
@@ -3060,6 +3060,7 @@ describe("NavigationMenu", () => {
     expect(viewportPositioner.style.pointerEvents).toBe("");
 
     controller.destroy();
+    expect(content.parentElement === contentPositioner).toBe(true);
   });
 
   // Content keyboard navigation tests
@@ -3195,8 +3196,8 @@ describe("NavigationMenu", () => {
     });
 
     it("clicking another trigger switches menu and focuses new content", async () => {
-      const { triggers, link1, controller } = setupWithLinks();
-      const btn1 = document.getElementById("btn1") as HTMLElement;
+      const { triggers, contents, link1, controller } = setupWithLinks();
+      const btn1 = contents[1]!.querySelector("#btn1") as HTMLElement;
 
       triggers[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await flushRAF();
@@ -3205,7 +3206,7 @@ describe("NavigationMenu", () => {
       triggers[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await flushRAF();
       expect(controller.value).toBe("solutions");
-      expect(document.activeElement).toBe(btn1);
+      expect(document.activeElement === btn1).toBe(true);
 
       controller.destroy();
     });

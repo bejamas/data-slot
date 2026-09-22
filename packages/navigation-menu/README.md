@@ -27,7 +27,7 @@ npm install @data-slot/navigation-menu
         <a href="/careers">Careers</a>
       </div>
     </li>
-    <div data-slot="navigation-menu-indicator"></div>
+    <li data-slot="navigation-menu-indicator" role="presentation" aria-hidden="true"></li>
   </ul>
   <div data-slot="navigation-menu-portal">
     <div data-slot="navigation-menu-positioner">
@@ -109,7 +109,7 @@ const menu = createNavigationMenu(element, {
       </div>
     </li>
     <!-- Optional hover indicator -->
-    <div data-slot="navigation-menu-indicator"></div>
+    <li data-slot="navigation-menu-indicator" role="presentation" aria-hidden="true"></li>
   </ul>
   <div data-slot="navigation-menu-portal">
     <div data-slot="navigation-menu-positioner">
@@ -134,6 +134,7 @@ Options can also be set via data attributes on the root element. JS options take
 | `data-delay-open` | number | `0` | Delay before opening on hover (ms) |
 | `data-delay-close` | number | `0` | Delay before closing on mouse leave (ms) |
 | `data-open-on-focus` | boolean | `false` | Whether focusing a trigger opens its content |
+| `data-mount-strategy` | `"lazy" \| "eager"` | `"lazy"` | Detach inactive panels or keep them connected and hidden |
 | `data-side` | string | `"bottom"` | Side: `"top"`, `"right"`, `"bottom"`, `"left"` |
 | `data-align` | string | `"start"` | Viewport alignment: `"start"`, `"center"`, or `"end"` |
 | `data-side-offset` | number | `0` | Distance from trigger to viewport (px) |
@@ -195,6 +196,7 @@ A full close is intentionally non-directional.
 | `delayOpen` | `number` | `0` | Delay before opening on hover (ms) |
 | `delayClose` | `number` | `0` | Delay before closing on mouse leave (ms) |
 | `openOnFocus` | `boolean` | `false` | Whether focusing a trigger opens its content |
+| `mountStrategy` | `"lazy" \| "eager"` | `"lazy"` | Detach inactive panels or keep them connected and hidden |
 | `side` | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Viewport side relative to trigger |
 | `align` | `"start" \| "center" \| "end"` | `"start"` | Viewport alignment on cross-axis |
 | `sideOffset` | `number` | `0` | Distance from trigger to viewport (px) |
@@ -203,6 +205,36 @@ A full close is intentionally non-directional.
 | `safeTriangle` | `boolean` | `false` | Enable hover safe-triangle switching guard |
 | `onValueChange` | `(value: string \| null) => void` | `undefined` | Callback when active item changes |
 | `debugSafeTriangle` | `boolean` | `false` | Show red hover safe-triangle debug overlay |
+
+### Content mounting and server rendering
+
+Inactive panels and their descendants are detached from the document after
+initialization by default. Opening reconnects the same panel before ARIA linking,
+measurement, and focus. Switching mounts the incoming panel while the outgoing
+panel finishes its exit animation; only the active panel remains after that exit.
+Closing waits for panel exits, and the shared popup/viewport shell waits for all
+panel and shell exits before being restored. Reopening cancels pending removal
+for the reopened panel. Nodes, listeners, and local form state survive reopening.
+
+Use `createNavigationMenu(root, { mountStrategy: "eager" })` or root
+`data-mount-strategy="eager"` to retain inactive panels in the document. JavaScript
+takes precedence. Triggers, plain navigation links, and empty authored viewport or
+wrapper elements remain connected when closed. `aria-controls` is present on an
+active trigger only while its panel is connected and open.
+
+Document/root queries no longer find lazy panels while closed; retain references
+before initialization if needed. Component `create(scope)` discovery includes
+nested roots in retained panels. `destroy()` restores panels to their authored
+positions and removes mounting placeholders for rebinding, including when the
+root has been removed from the document.
+
+This reduces live DOM after initialization, **not initial HTML bytes**. Panel
+markup remains in server-rendered HTML and is still downloaded and parsed; this
+option does not add templates or deferred fetching. Choose progressive enhancement
+deliberately for navigation: leave essential links accessible in authored HTML
+until JavaScript initializes, or provide accessible fallback navigation if panels
+are initially hidden. The `eager` option controls post-initialization mounting and
+does not itself provide a no-JavaScript fallback.
 
 ### Controller
 
@@ -260,8 +292,8 @@ generated while open and removed on close.
 Runtime geometry is owned by `navigation-menu-positioner`: `position`, `top`, `left`, `width`,
 and `height` are written inline and reset on close. `navigation-menu-popup` is the canonical
 animated shell. The active `navigation-menu-content` panel is mounted inside
-`navigation-menu-viewport` while open and restored to its original markup location when inactive
-or closed.
+`navigation-menu-viewport` while open. Inactive panels are detached after their exit
+animation by default; eager panels return to their original markup location.
 
 Use `positionMethod: "fixed"` or `data-position-method="fixed"` when the menu needs viewport-based
 anchoring, such as inside sticky headers.

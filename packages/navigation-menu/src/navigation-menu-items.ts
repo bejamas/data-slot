@@ -42,9 +42,9 @@ export function createNavigationMenuItems(
     itemMap.set(value, managed);
     const safe = safeId(value);
     const triggerId = ensureId(trigger, `nav-menu-trigger-${safe}`);
-    const contentId = ensureId(content, `nav-menu-content-${safe}`);
+    ensureId(content, `nav-menu-content-${safe}`);
     trigger.setAttribute("aria-haspopup", "true");
-    trigger.setAttribute("aria-controls", contentId);
+    trigger.removeAttribute("aria-controls");
     content.setAttribute("aria-labelledby", triggerId);
   }
 

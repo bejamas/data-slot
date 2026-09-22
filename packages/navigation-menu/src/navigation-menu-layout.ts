@@ -252,7 +252,7 @@ export function createNavigationMenuLayout(
   const restore = (content: HTMLElement) => {
     const state = contentPlacement.get(content);
     if (!state?.mountedInViewport) return;
-    if (state.originalParent?.isConnected) {
+    if (state.originalParent) {
       if (state.originalNextSibling?.parentNode === state.originalParent)
         state.originalParent.insertBefore(content, state.originalNextSibling);
       else state.originalParent.appendChild(content);
