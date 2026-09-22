@@ -88,8 +88,8 @@ describe("Resizable", () => {
       panes: [{ "data-default-size": "25" }, { "data-default-size": "75" }],
     });
     // CSS normalizes the number, so `25` not `25.0` regardless of how it's set.
-    expect(parseFloat(panes[0].style.flexGrow)).toBeCloseTo(25);
-    expect(parseFloat(panes[1].style.flexGrow)).toBeCloseTo(75);
+    expect(parseFloat(panes[0]!.style.flexGrow)).toBeCloseTo(25);
+    expect(parseFloat(panes[1]!.style.flexGrow)).toBeCloseTo(75);
     controller.destroy();
   });
 
@@ -99,26 +99,26 @@ describe("Resizable", () => {
     });
     const [a, b] = controller.layout;
     expect(a).toBeLessThanOrEqual(60);
-    expect(a + b).toBeCloseTo(100);
+    expect(a! + b!).toBeCloseTo(100);
     controller.destroy();
   });
 
   it('sets role="separator" and aria-orientation on handles', () => {
     const { handles, controller } = setup();
-    expect(handles[0].getAttribute("role")).toBe("separator");
-    expect(handles[0].getAttribute("aria-orientation")).toBe("vertical");
+    expect(handles[0]!.getAttribute("role")).toBe("separator");
+    expect(handles[0]!.getAttribute("aria-orientation")).toBe("vertical");
     controller.destroy();
   });
 
   it('uses aria-orientation="horizontal" for a vertical group', () => {
     const { handles, controller } = setup({ direction: "vertical" });
-    expect(handles[0].getAttribute("aria-orientation")).toBe("horizontal");
+    expect(handles[0]!.getAttribute("aria-orientation")).toBe("horizontal");
     controller.destroy();
   });
 
   it("sets aria-controls linking handle to the preceding pane", () => {
     const { handles, panes, controller } = setup();
-    expect(handles[0].getAttribute("aria-controls")).toBe(panes[0].id);
+    expect(handles[0]!.getAttribute("aria-controls")).toBe(panes[0]!.id);
     controller.destroy();
   });
 
@@ -126,15 +126,15 @@ describe("Resizable", () => {
     const { handles, controller } = setup({
       panes: [{ "data-default-size": "40" }, { "data-default-size": "60" }],
     });
-    expect(handles[0].getAttribute("aria-valuenow")).toBe("40");
-    expect(handles[0].getAttribute("aria-valuemin")).toBe("0");
-    expect(handles[0].getAttribute("aria-valuemax")).toBe("100");
+    expect(handles[0]!.getAttribute("aria-valuenow")).toBe("40");
+    expect(handles[0]!.getAttribute("aria-valuemin")).toBe("0");
+    expect(handles[0]!.getAttribute("aria-valuemax")).toBe("100");
     controller.destroy();
   });
 
   it("adds a default tabindex to handles", () => {
     const { handles, controller } = setup();
-    expect(handles[0].getAttribute("tabindex")).toBe("0");
+    expect(handles[0]!.getAttribute("tabindex")).toBe("0");
     controller.destroy();
   });
 
@@ -155,9 +155,9 @@ describe("Resizable", () => {
 
   it("sets data-state / data-expanded on panes", () => {
     const { panes, controller } = setup();
-    expect(panes[0].getAttribute("data-state")).toBe("expanded");
-    expect(panes[0].hasAttribute("data-expanded")).toBe(true);
-    expect(panes[0].hasAttribute("data-collapsed")).toBe(false);
+    expect(panes[0]!.getAttribute("data-state")).toBe("expanded");
+    expect(panes[0]!.hasAttribute("data-expanded")).toBe(true);
+    expect(panes[0]!.hasAttribute("data-collapsed")).toBe(false);
     controller.destroy();
   });
 
@@ -166,8 +166,8 @@ describe("Resizable", () => {
       panes: [{ "data-default-size": "50" }, { "data-default-size": "50" }],
     });
     controller.resizePane(0, 70);
-    expect(controller.layout[0]).toBeCloseTo(70);
-    expect(controller.layout[1]).toBeCloseTo(30);
+    expect(controller.layout[0]!).toBeCloseTo(70);
+    expect(controller.layout[1]!).toBeCloseTo(30);
     controller.destroy();
   });
 
@@ -179,8 +179,8 @@ describe("Resizable", () => {
       ],
     });
     controller.resizePane(0, 5);
-    expect(controller.layout[0]).toBeGreaterThanOrEqual(20);
-    expect(controller.layout[1]).toBeLessThanOrEqual(80);
+    expect(controller.layout[0]!).toBeGreaterThanOrEqual(20);
+    expect(controller.layout[1]!).toBeLessThanOrEqual(80);
     controller.destroy();
   });
 
@@ -200,12 +200,12 @@ describe("Resizable", () => {
     expect(controller.isCollapsed(0)).toBe(false);
     controller.collapse(0);
     expect(controller.isCollapsed(0)).toBe(true);
-    expect(controller.layout[0]).toBeCloseTo(0);
-    expect(controller.layout[1]).toBeCloseTo(100);
+    expect(controller.layout[0]!).toBeCloseTo(0);
+    expect(controller.layout[1]!).toBeCloseTo(100);
 
     controller.expand(0);
     expect(controller.isCollapsed(0)).toBe(false);
-    expect(controller.layout[0]).toBeCloseTo(50);
+    expect(controller.layout[0]!).toBeCloseTo(50);
     controller.destroy();
   });
 
@@ -223,7 +223,7 @@ describe("Resizable", () => {
     });
     controller.collapse(0);
     controller.expand(0);
-    expect(controller.layout[0]).toBeCloseTo(35);
+    expect(controller.layout[0]!).toBeCloseTo(35);
     controller.destroy();
   });
 
@@ -249,8 +249,8 @@ describe("Resizable", () => {
       ],
     });
     controller.collapse(0);
-    expect(panes[0].getAttribute("data-state")).toBe("collapsed");
-    expect(panes[0].hasAttribute("data-collapsed")).toBe(true);
+    expect(panes[0]!.getAttribute("data-state")).toBe("collapsed");
+    expect(panes[0]!.hasAttribute("data-collapsed")).toBe(true);
     controller.destroy();
   });
 
@@ -268,8 +268,8 @@ describe("Resizable", () => {
       panes: [{ "data-default-size": "50" }, { "data-default-size": "50" }],
     });
     controller.setLayout([20, 80]);
-    expect(controller.layout[0]).toBeCloseTo(20);
-    expect(controller.layout[1]).toBeCloseTo(80);
+    expect(controller.layout[0]!).toBeCloseTo(20);
+    expect(controller.layout[1]!).toBeCloseTo(80);
     controller.destroy();
   });
 
@@ -278,7 +278,7 @@ describe("Resizable", () => {
       panes: [{ "data-default-size": "50" }, { "data-default-size": "50" }],
     });
     controller.setLayout([30, 30]);
-    const sum = controller.layout[0] + controller.layout[1];
+    const sum = controller.layout[0]! + controller.layout[1]!;
     expect(sum).toBeCloseTo(100);
     controller.destroy();
   });
@@ -315,7 +315,7 @@ describe("Resizable", () => {
       panes: [{ "data-default-size": "50" }, { "data-default-size": "50" }],
     });
     root.dispatchEvent(new CustomEvent("resizable:set", { detail: { layout: [25, 75] } }));
-    expect(controller.layout[0]).toBeCloseTo(25);
+    expect(controller.layout[0]!).toBeCloseTo(25);
     controller.destroy();
   });
 
@@ -325,11 +325,11 @@ describe("Resizable", () => {
     });
     mockGroupSize(root as HTMLElement, 1000, true);
 
-    handles[0].dispatchEvent(new MouseEvent("mousedown", { clientX: 500, bubbles: true }));
+    handles[0]!.dispatchEvent(new MouseEvent("mousedown", { clientX: 500, bubbles: true }));
     document.body.dispatchEvent(new MouseEvent("mousemove", { clientX: 600, bubbles: true }));
     // Moved +100px of 1000px == +10%.
-    expect(controller.layout[0]).toBeCloseTo(60);
-    expect(controller.layout[1]).toBeCloseTo(40);
+    expect(controller.layout[0]!).toBeCloseTo(60);
+    expect(controller.layout[1]!).toBeCloseTo(40);
 
     window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     controller.destroy();
@@ -346,10 +346,10 @@ describe("Resizable", () => {
   it("sets data-active during a pointer drag", () => {
     const { root, handles, controller } = setup();
     mockGroupSize(root as HTMLElement, 1000, true);
-    handles[0].dispatchEvent(new MouseEvent("mousedown", { clientX: 500, bubbles: true }));
-    expect(handles[0].getAttribute("data-active")).toBe("pointer");
+    handles[0]!.dispatchEvent(new MouseEvent("mousedown", { clientX: 500, bubbles: true }));
+    expect(handles[0]!.getAttribute("data-active")).toBe("pointer");
     window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-    expect(handles[0].hasAttribute("data-active")).toBe(false);
+    expect(handles[0]!.hasAttribute("data-active")).toBe(false);
     controller.destroy();
   });
 
@@ -357,9 +357,9 @@ describe("Resizable", () => {
     const { handles, controller } = setup({
       panes: [{ "data-default-size": "50" }, { "data-default-size": "50" }],
     });
-    handles[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    handles[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     // default keyboardResizeBy is 10
-    expect(controller.layout[0]).toBeCloseTo(60);
+    expect(controller.layout[0]!).toBeCloseTo(60);
     controller.destroy();
   });
 
@@ -370,10 +370,10 @@ describe("Resizable", () => {
         { "data-default-size": "50", "data-min-size": "10" },
       ],
     });
-    handles[0].dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
-    expect(controller.layout[0]).toBeCloseTo(10);
-    handles[0].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
-    expect(controller.layout[0]).toBeCloseTo(90);
+    handles[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+    expect(controller.layout[0]!).toBeCloseTo(10);
+    handles[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+    expect(controller.layout[0]!).toBeCloseTo(90);
     controller.destroy();
   });
 
@@ -389,15 +389,15 @@ describe("Resizable", () => {
         { "data-default-size": "50" },
       ],
     });
-    handles[0].dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    handles[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     expect(controller.isCollapsed(0)).toBe(true);
     controller.destroy();
   });
 
   it('sets data-active="keyboard" on focus', () => {
     const { handles, controller } = setup();
-    handles[0].dispatchEvent(new FocusEvent("focus"));
-    expect(handles[0].getAttribute("data-active")).toBe("keyboard");
+    handles[0]!.dispatchEvent(new FocusEvent("focus"));
+    expect(handles[0]!.getAttribute("data-active")).toBe("keyboard");
     controller.destroy();
   });
 
@@ -412,7 +412,7 @@ describe("Resizable", () => {
     expect(handles).toHaveLength(2);
     expect(controller.layout).toHaveLength(3);
     controller.resizePane(0, 50);
-    expect(controller.layout[0]).toBeCloseTo(50);
+    expect(controller.layout[0]!).toBeCloseTo(50);
     expect(controller.layout.reduce((a, b) => a + b, 0)).toBeCloseTo(100);
     controller.destroy();
   });
@@ -437,7 +437,7 @@ describe("Resizable", () => {
   it("cleans up listeners and global styles on destroy", () => {
     const { root, handles, controller } = setup();
     mockGroupSize(root as HTMLElement, 1000, true);
-    handles[0].dispatchEvent(new MouseEvent("mousedown", { clientX: 500, bubbles: true }));
+    handles[0]!.dispatchEvent(new MouseEvent("mousedown", { clientX: 500, bubbles: true }));
     controller.destroy();
     // After destroy, body mousemove should not move anything (no controller).
     document.body.dispatchEvent(new MouseEvent("mousemove", { clientX: 800, bubbles: true }));
@@ -466,7 +466,7 @@ describe("Resizable", () => {
       const controller = createResizable(root);
       const handle = root.querySelector('[data-slot="resizable-handle"]')!;
       handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-      expect(controller.layout[0]).toBeCloseTo(75);
+      expect(controller.layout[0]!).toBeCloseTo(75);
       controller.destroy();
     });
   });
