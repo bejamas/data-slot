@@ -1,3 +1,5 @@
+import type { MountStrategy } from "@data-slot/core";
+
 /** Side of the trigger to place the content */
 export type Side = "top" | "bottom";
 
@@ -14,6 +16,8 @@ export interface SelectOptions {
   onValueChange?: (value: string | null) => void;
   /** Initial open state */
   defaultOpen?: boolean;
+  /** Detach closed content by default; eager keeps it connected and hidden. */
+  mountStrategy?: MountStrategy;
   /** Callback when open state changes */
   onOpenChange?: (open: boolean) => void;
   /** Placeholder text when no value selected */
