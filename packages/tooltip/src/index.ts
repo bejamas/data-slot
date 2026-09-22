@@ -1,3 +1,4 @@
+import type { MountStrategy } from "@data-slot/core";
 import {
   getPart,
   getOwnedElements,
@@ -15,6 +16,7 @@ import {
   measurePopupContentRect,
   createPositionSync,
   createPortalLifecycle,
+  createContentMount,
   createPresenceLifecycle,
   createTerminalLifecycle,
   registerFloatingTerminalResources,
@@ -90,6 +92,8 @@ export interface TooltipOptions {
   collisionPadding?: number;
   /** Portal content to body while open. Default: true */
   portal?: boolean;
+  /** Detach closed content by default; eager keeps it connected and hidden. */
+  mountStrategy?: MountStrategy;
   /** Callback when visibility changes */
   onOpenChange?: (open: boolean) => void;
 }
@@ -232,9 +236,18 @@ export function createTooltip(
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
 
+  const mountStrategy = options.mountStrategy ?? getDataEnum(root, "mountStrategy", ["lazy", "eager"] as const) ?? "lazy";
+  const mounting = createContentMount({
+    root,
+    target: authoredPortal ?? authoredPositioner ?? content,
+    strategy: mountStrategy,
+  });
+  cleanups.push(() => mounting.cleanup());
+
   // ARIA setup - ensure content has stable id
   const contentId = ensureId(content, "tooltip-content");
   let ownsDescription = false;
+  let suspendedAuthoredDescription = false;
   const descriptionIds = () =>
     trigger.getAttribute("aria-describedby")?.split(/\s+/).filter(Boolean) ?? [];
   const addDescription = () => {
@@ -249,6 +262,14 @@ export function createTooltip(
     if (ids.length) trigger.setAttribute("aria-describedby", ids.join(" "));
     else trigger.removeAttribute("aria-describedby");
     ownsDescription = false;
+  };
+  const detachContent = () => {
+    if (mountStrategy === "lazy" && descriptionIds().includes(contentId)) {
+      suspendedAuthoredDescription ||= !ownsDescription;
+      ownsDescription = true;
+      removeDescription();
+    }
+    mounting.unmount();
   };
   content.setAttribute("role", "tooltip");
   const resolveDirection = (): TooltipDirection => {
@@ -408,6 +429,7 @@ export function createTooltip(
       if (terminalLifecycle.isDestroyed) return;
       portal.restore();
       content.hidden = true;
+      detachContent();
     },
   });
 
@@ -438,9 +460,10 @@ export function createTooltip(
     isOpen = open;
 
     if (isOpen) {
+      mounting.mount();
+      portal.mount();
       addDescription();
       content.setAttribute("aria-hidden", "false");
-      portal.mount();
       content.hidden = false;
       setDataState("open");
       presence.enter();
@@ -643,6 +666,7 @@ export function createTooltip(
       isOpen = false;
       setDataState("closed");
       removeDescription();
+      if (suspendedAuthoredDescription) addDescription();
       content.setAttribute("aria-hidden", "true");
       content.hidden = true;
     },
@@ -656,6 +680,7 @@ export function createTooltip(
     unbind: () => clearRootBinding(root, ROOT_BINDING_KEY, controller),
   });
 
+  detachContent();
   setRootBinding(root, ROOT_BINDING_KEY, controller);
   return controller;
 }

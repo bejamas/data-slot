@@ -1,3 +1,5 @@
+import { getRetainedContent } from "./content-mount.ts";
+
 /**
  * Return whether a part belongs to this root rather than a nested instance of
  * the same component. Roots without a data-slot retain the usual descendant
@@ -57,7 +59,28 @@ export const getParts = <T extends Element = Element>(
 export const getRoots = <T extends Element = Element>(
   scope: ParentNode,
   slot: string
-): T[] => [...scope.querySelectorAll<T>(`[data-slot="${slot}"]`)];
+): T[] => {
+  const roots = new Set<T>();
+  const visited = new Set<ParentNode>();
+  const visit = (current: ParentNode) => {
+    if (visited.has(current)) return;
+    visited.add(current);
+    const elements = [...current.querySelectorAll<Element>("[data-slot]")];
+    for (const element of elements) {
+      if (element.getAttribute("data-slot") === slot) roots.add(element as T);
+    }
+    const owners = current instanceof Element ? [current, ...elements] : elements;
+    for (const owner of owners) {
+      for (const content of getRetainedContent(owner)) {
+        if (owner.contains(content)) continue;
+        if (content.getAttribute("data-slot") === slot) roots.add(content as T);
+        visit(content);
+      }
+    }
+  };
+  visit(scope);
+  return [...roots];
+};
 
 const ROOT_BINDINGS_SYMBOL = Symbol.for("data-slot.root-bindings");
 const ROOT_BINDING_WARNINGS_SYMBOL = Symbol.for("data-slot.root-binding-warnings");

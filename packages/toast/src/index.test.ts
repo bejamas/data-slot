@@ -2255,6 +2255,7 @@ describe("Toast", () => {
     expect(newest.getAttribute("data-ending-style")).toBe("");
     expect(viewport.hasAttribute("data-expanded")).toBe(true);
 
+    await new Promise(resolve => setTimeout(resolve, 1000));
     newest.dispatchEvent(new TransitionEvent("transitionend", { bubbles: true }));
     await waitForClose();
 

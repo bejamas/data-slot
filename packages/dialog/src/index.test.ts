@@ -369,6 +369,7 @@ describe("Dialog", () => {
     expect(overlay.hasAttribute("data-ending-style")).toBe(true);
     expect(content.hasAttribute("data-ending-style")).toBe(true);
 
+    await new Promise(resolve => setTimeout(resolve, 200));
     overlay.dispatchEvent(new Event("transitionend", { bubbles: true }));
     expect(overlay.hidden).toBe(true);
     expect(content.hidden).toBe(false);
@@ -1012,6 +1013,7 @@ describe("Dialog", () => {
     controller.close();
     expect(document.activeElement).not.toBe(outsideBtn);
 
+    await new Promise(resolve => setTimeout(resolve, 200));
     overlay.dispatchEvent(new Event("transitionend", { bubbles: true }));
     expect(document.activeElement).not.toBe(outsideBtn);
 

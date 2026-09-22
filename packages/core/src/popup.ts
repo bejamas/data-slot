@@ -836,8 +836,8 @@ const getMaxTimingMs = (durationsRaw: string, delaysRaw: string): number => {
   let max = 0;
 
   for (let i = 0; i < len; i++) {
-    const duration = parseTimingToMs(durations[i] ?? durations[durations.length - 1] ?? "0");
-    const delay = parseTimingToMs(delays[i] ?? delays[delays.length - 1] ?? "0");
+    const duration = parseTimingToMs(durations[i % durations.length] ?? "0");
+    const delay = parseTimingToMs(delays[i % delays.length] ?? "0");
     max = Math.max(max, duration + delay);
   }
 
@@ -921,10 +921,14 @@ export function createPresenceLifecycle(options: PresenceLifecycleOptions): Pres
       exiting = true;
       options.element.setAttribute("data-ending-style", "");
 
+      const exitStartedAt = win.performance.now();
       const maxDuration = getMaxExitDurationMs(options.element);
       if (maxDuration > 0) {
         const onEnd = (event: Event) => {
           if (event.target !== options.element) return;
+          // A shorter transition can end before the rest of the exit. The
+          // timeout also covers canceled/missing events and reduced motion.
+          if (win.performance.now() - exitStartedAt < maxDuration - 1) return;
           finishExit();
         };
         options.element.addEventListener("transitionend", onEnd);

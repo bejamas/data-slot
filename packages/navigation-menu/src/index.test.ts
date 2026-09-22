@@ -1076,6 +1076,7 @@ describe("NavigationMenu", () => {
         );
         expect(contents[1]?.getAttribute("data-motion")).toBeNull();
 
+        await new Promise(resolve => setTimeout(resolve, 120));
         contents[0]?.dispatchEvent(
           new TransitionEvent("transitionend", { bubbles: true }),
         );
@@ -1128,6 +1129,7 @@ describe("NavigationMenu", () => {
         expect(viewportPopup.hasAttribute("data-ending-style")).toBe(true);
         expect(viewport.hasAttribute("data-ending-style")).toBe(true);
 
+        await new Promise(resolve => setTimeout(resolve, 50));
         viewportPopup.dispatchEvent(
           new TransitionEvent("transitionend", { bubbles: true }),
         );
@@ -1138,6 +1140,7 @@ describe("NavigationMenu", () => {
           viewportPopup,
         );
 
+        await new Promise(resolve => setTimeout(resolve, 70));
         viewport.dispatchEvent(
           new TransitionEvent("transitionend", { bubbles: true }),
         );

@@ -539,7 +539,7 @@ describe('Tooltip', () => {
         `
       )
 
-      const arrow = getArrow(document)!
+      const arrow = getArrow(content)!
       trigger.getBoundingClientRect = () => rect(100, 100, 80, 20)
       content.getBoundingClientRect = () => {
         const positioner = getPositioner(content)
@@ -585,7 +585,7 @@ describe('Tooltip', () => {
         `
       )
 
-      const arrow = getArrow(document)!
+      const arrow = getArrow(content)!
       trigger.getBoundingClientRect = () => rect(100, 100, 80, 20)
       content.getBoundingClientRect = () => {
         const positioner = getPositioner(content)
@@ -632,7 +632,7 @@ describe('Tooltip', () => {
         `
       )
 
-      const arrow = getArrow(document)!
+      const arrow = getArrow(content)!
       trigger.getBoundingClientRect = () => rect(200, 100, 40, 20)
       content.getBoundingClientRect = () => {
         const positioner = getPositioner(content)
@@ -677,7 +677,7 @@ describe('Tooltip', () => {
         `
       )
 
-      const arrow = getArrow(document)!
+      const arrow = getArrow(content)!
       trigger.getBoundingClientRect = () => rect(200, 100, 40, 20)
       content.getBoundingClientRect = () => {
         const positioner = getPositioner(content)
@@ -723,7 +723,7 @@ describe('Tooltip', () => {
         `
       )
 
-      const arrow = getArrow(document)!
+      const arrow = getArrow(content)!
       trigger.getBoundingClientRect = () => rect(0, 100, 10, 20)
       content.getBoundingClientRect = () => {
         const positioner = getPositioner(content)
@@ -904,7 +904,7 @@ describe('Tooltip', () => {
       controller.destroy()
     })
 
-    it('portals by default and restores on hide', async () => {
+    it('portals by default and detaches on hide', async () => {
       const { root, content, controller } = setup({ delay: 0 })
 
       controller.show()
@@ -914,9 +914,10 @@ describe('Tooltip', () => {
 
       controller.hide()
       await waitForClose()
-      expect(content.parentElement).toBe(root)
+      expect(content.isConnected).toBe(false)
 
       controller.destroy()
+      expect(content.parentElement).toBe(root)
     })
 
     it('uses authored portal and positioner when provided', async () => {
@@ -944,10 +945,11 @@ describe('Tooltip', () => {
 
       controller.hide()
       await waitForClose()
-      expect(portal.parentElement).toBe(root)
+      expect(portal.isConnected).toBe(false)
       expect(content.parentElement).toBe(positioner)
 
       controller.destroy()
+      expect(portal.parentElement).toBe(root)
     })
   })
 

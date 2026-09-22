@@ -228,3 +228,19 @@ callbacks should complete synchronously without throwing.
 ## License
 
 MIT
+
+## Retaining closed overlay content
+
+`createContentMount({ root, target, strategy: "lazy" })` retains the same authored
+nodes outside the connected document. Pass the outer authored portal/positioner
+as `target` when present. `strategy: "eager"` leaves content connected.
+
+- Call `mount()` before portal mounting, positioning, ARIA references, or focus.
+- Call `unmount()` after the presence exit completes and the portal is restored.
+- Call `cleanup()` after portal cleanup to restore authored placement and remove
+  the placeholder. Cleanup is terminal and idempotent.
+
+The helper only owns placement. Components own visibility, animation, focus,
+ARIA, and open state. `getRoots(scope, slot)` includes nested component roots in
+retained content owned by roots within that scope; regular DOM queries do not.
+Detachment reduces live DOM after initialization, not server-rendered HTML bytes.
