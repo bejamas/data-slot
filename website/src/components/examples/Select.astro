@@ -80,9 +80,9 @@ const cssCode = `<label for="fruit-select" class="select-field-label">Fruit</lab
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     min-width: 12rem;
-    background: #1a1a1a;
-    color: #faf9f7;
-    border: none;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
     cursor: pointer;
     transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -148,8 +148,8 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
   <button
     data-slot="select-trigger"
     id="fruit-select"
-    class="flex items-center gap-2 px-4 py-2 min-w-48 bg-text text-bg
-           border-none cursor-pointer hover:opacity-90 transition-opacity"
+    class="flex items-center gap-2 px-4 py-2 min-w-48 bg-white text-text
+           border border-border cursor-pointer hover:opacity-90 transition-opacity"
   >
     <span data-slot="select-value" class="data-placeholder:text-gray-400"></span>
     <span class="ml-auto text-xs">▼</span>
@@ -378,7 +378,7 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
     <button
       data-slot="select-trigger"
       id="select-tw"
-      class="flex items-center gap-2 px-4 py-2 min-w-48 bg-text text-bg border-none cursor-pointer hover:opacity-90 transition-opacity"
+      class="flex items-center gap-2 px-4 py-2 min-w-48 bg-white text-text border border-border cursor-pointer hover:opacity-90 transition-opacity"
     >
       <span data-slot="select-value" class="data-placeholder:text-gray-400"></span>
       <span class="ml-auto text-xs">▼</span>
@@ -538,9 +538,9 @@ const tailwindCode = `<label for="fruit-select" class="block mb-1 text-sm font-m
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     min-width: 12rem;
-    background: #1a1a1a;
-    color: #faf9f7;
-    border: none;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
     cursor: pointer;
     transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }

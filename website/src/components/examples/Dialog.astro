@@ -17,9 +17,9 @@ const cssCode = `<div data-slot="dialog">
 <style>
   .dialog-trigger-btn {
     padding: 0.5rem 1rem;
-    background: #1a1a1a;
-    color: #faf9f7;
-    border: none;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
     cursor: pointer;
   }
   .dialog-overlay {
@@ -80,7 +80,7 @@ const cssCode = `<div data-slot="dialog">
 const tailwindCode = `<div data-slot="dialog" class="group/dialog">
   <button
     data-slot="dialog-trigger"
-    class="px-4 py-2 bg-text text-bg border-none cursor-pointer
+    class="px-4 py-2 bg-white text-text border border-border cursor-pointer
            hover:opacity-90 transition-opacity"
   >
     Open Dialog
@@ -136,7 +136,7 @@ const tailwindCode = `<div data-slot="dialog" class="group/dialog">
   <div slot="preview-tailwind" data-slot="dialog" id="demo-dialog-tw" class="group/dialog">
     <button
       data-slot="dialog-trigger"
-      class="px-4 py-2 bg-text text-bg border-none cursor-pointer hover:opacity-90 transition-opacity"
+      class="px-4 py-2 bg-white text-text border border-border cursor-pointer hover:opacity-90 transition-opacity"
     >
       Open Dialog
     </button>

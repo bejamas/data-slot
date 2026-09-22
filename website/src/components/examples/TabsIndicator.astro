@@ -25,7 +25,7 @@ const cssCode = `<div data-slot="tabs" data-default-value="overview">
     position: absolute;
     top: 0.25rem;
     height: calc(100% - 0.5rem);
-    background: #fff;
+    background: var(--surface-raised);
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     transform: translateX(var(--active-tab-left, 0));
     width: var(--active-tab-width, 0);
@@ -49,7 +49,7 @@ const tailwindCode = `<div data-slot="tabs" data-default-value="overview">
   >
     <div
       data-slot="tabs-indicator"
-      class="absolute top-1 bottom-1 bg-white shadow
+      class="absolute top-1 bottom-1 bg-[var(--surface-raised)] shadow
              transition-all duration-200
              translate-x-(--active-tab-left)
              w-(--active-tab-width)"
@@ -105,7 +105,7 @@ const tailwindCode = `<div data-slot="tabs" data-default-value="overview">
     <div data-slot="tabs-list" class="relative flex gap-1 p-1 bg-code-bg mb-4">
       <div
         data-slot="tabs-indicator"
-        class="absolute top-1 left-0 bottom-1 bg-white shadow transition-all duration-200 translate-x-(--active-tab-left) w-(--active-tab-width)"
+        class="absolute top-1 left-0 bottom-1 bg-[var(--surface-raised)] shadow transition-all duration-200 translate-x-(--active-tab-left) w-(--active-tab-width)"
       ></div>
       <button
         data-slot="tabs-trigger"
@@ -145,4 +145,3 @@ const tailwindCode = `<div data-slot="tabs" data-default-value="overview">
   <Code slot="code-css" code={cssCode} lang="html" theme="vitesse-light" />
   <Code slot="code-tailwind" code={tailwindCode} lang="html" theme="vitesse-light" />
 </ExampleBlock>
-

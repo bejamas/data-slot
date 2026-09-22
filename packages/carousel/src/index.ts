@@ -1,0 +1,541 @@
+import {
+  getPart,
+  getParts,
+  getRoots,
+  getDataNumber,
+  getDataEnum,
+  getDataBool,
+  setAria,
+  on,
+  emit,
+  reuseRootBinding,
+  hasRootBinding,
+  setRootBinding,
+  clearRootBinding,
+  drainCleanups,
+  createSwipeGesture,
+} from "@data-slot/core";
+
+const ORIENTATIONS = ["horizontal", "vertical"] as const;
+
+/** Everything that differs between a horizontal and a vertical carousel, resolved once. */
+const AXES = {
+  horizontal: {
+    scroll: "scrollLeft",
+    edge: "left",
+    prevKey: "ArrowLeft",
+    nextKey: "ArrowRight",
+    touchAction: "pan-y",
+    swipe: "x",
+  },
+  vertical: {
+    scroll: "scrollTop",
+    edge: "top",
+    prevKey: "ArrowUp",
+    nextKey: "ArrowDown",
+    touchAction: "pan-x",
+    swipe: "y",
+  },
+} as const;
+type Axis = (typeof AXES)[keyof typeof AXES];
+const MISSING_PARTS_ERROR = "Carousel requires carousel-content and at least one carousel-item";
+const ROOT_BINDING_KEY = "@data-slot/carousel";
+const DUPLICATE_BINDING_WARNING =
+  "[@data-slot/carousel] createCarousel() was called on a root that is already bound. Returning the existing controller.";
+/** Fallback for browsers without `scrollend`: a scroll is settled after this much quiet. */
+const SCROLL_SETTLE_MS = 150;
+const DRAG_AXIS_LOCK_THRESHOLD = 12;
+/** Keyboard navigation stays out of fields so arrow keys keep editing text. */
+const EDITABLE_SELECTOR = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
+/** A press on nested controls never starts a drag, so they keep their own clicks. */
+const INTERACTIVE_SELECTOR =
+  'a[href], button, input, select, textarea, summary, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], [role="textbox"]';
+type CarouselSetDetail = { index?: number; action?: "next" | "prev" };
+
+export interface CarouselOptions {
+  /** Initial slide index */
+  defaultIndex?: number;
+  /** Carousel orientation */
+  orientation?: "horizontal" | "vertical";
+  /** Enable soft-wrap looping for keyboard/button/API navigation */
+  loop?: boolean;
+  /** Enable pointer drag/swipe navigation */
+  drag?: boolean;
+  /** Callback when active index changes */
+  onIndexChange?: (index: number) => void;
+}
+
+export interface CarouselController {
+  /** Scroll to previous slide */
+  prev(): void;
+  /** Scroll to next slide */
+  next(): void;
+  /** Scroll to a specific slide index */
+  goTo(index: number): void;
+  /** Current active index */
+  readonly index: number;
+  /** Number of slides */
+  readonly count: number;
+  /** Whether navigating to previous slide is possible */
+  readonly canScrollPrev: boolean;
+  /** Whether navigating to next slide is possible */
+  readonly canScrollNext: boolean;
+  /** Cleanup all event listeners and observers */
+  destroy(): void;
+}
+
+const normalizeIndex = (index: number, count: number, loop: boolean): number => {
+  if (count <= 0) return 0;
+
+  const normalized = Number.isFinite(index) ? Math.trunc(index) : 0;
+
+  if (loop) {
+    return ((normalized % count) + count) % count;
+  }
+
+  return Math.min(count - 1, Math.max(0, normalized));
+};
+
+const isEditableTarget = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.closest(EDITABLE_SELECTOR) !== null;
+
+const setControlDisabled = (el: HTMLElement, disabled: boolean) => {
+  if ("disabled" in el) {
+    (el as HTMLButtonElement).disabled = disabled;
+  }
+  setAria(el, "disabled", disabled);
+};
+
+/**
+ * Create a carousel controller for a root element.
+ *
+ * ## Events
+ * - **Outbound** `carousel:change` (on root): Fires when active index changes.
+ *   `event.detail: { index: number }`
+ * - **Inbound** `carousel:set` (on root): Set carousel position programmatically.
+ *   `event.detail: { index?: number; action?: "next" | "prev" }`
+ *
+ * Expected markup:
+ * ```html
+ * <div data-slot="carousel" data-default-index="0">
+ *   <div data-slot="carousel-content">
+ *     <div data-slot="carousel-item">Slide 1</div>
+ *     <div data-slot="carousel-item">Slide 2</div>
+ *   </div>
+ *   <button data-slot="carousel-previous">Previous</button>
+ *   <button data-slot="carousel-next">Next</button>
+ * </div>
+ * ```
+ */
+export function createCarousel(
+  root: Element,
+  options: CarouselOptions = {},
+): CarouselController {
+  const existingController = reuseRootBinding<CarouselController>(
+    root,
+    ROOT_BINDING_KEY,
+    DUPLICATE_BINDING_WARNING,
+  );
+  if (existingController) return existingController;
+
+  const content = getPart<HTMLElement>(root, "carousel-content");
+  if (!content) throw new Error(MISSING_PARTS_ERROR);
+
+  const collectItems = () =>
+    Array.from(content.children).filter(
+      (child): child is HTMLElement =>
+        child instanceof HTMLElement && child.getAttribute("data-slot") === "carousel-item",
+    );
+
+  let items = collectItems();
+  if (items.length === 0) throw new Error(MISSING_PARTS_ERROR);
+
+  // Resolve options with explicit precedence: JS > data-* > default
+  const orientation =
+    options.orientation ??
+    getDataEnum(root, "orientation", ORIENTATIONS) ??
+    "horizontal";
+  const loop = options.loop ?? getDataBool(root, "loop") ?? false;
+  const drag = options.drag ?? getDataBool(root, "drag") ?? false;
+  const defaultIndex =
+    options.defaultIndex ?? getDataNumber(root, "defaultIndex") ?? 0;
+  const onIndexChange = options.onIndexChange;
+
+  const axis: Axis = AXES[orientation];
+  const previousControls = getParts<HTMLElement>(root, "carousel-previous");
+  const nextControls = getParts<HTMLElement>(root, "carousel-next");
+
+  const cleanups: Array<() => void> = [];
+  const win = root.ownerDocument?.defaultView ?? window;
+  const reducedMotion = win.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  const navigationBehavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
+
+  let currentIndex = normalizeIndex(defaultIndex, items.length, loop);
+  let snapPoints: number[] = [];
+  let settleTimer: number | undefined;
+  /** A drag has locked to the carousel axis and is driving the scroll position. */
+  let dragging = false;
+  /** Keep snapping paused through release so it cannot preempt the smooth scroll. */
+  let authoredSnapType: string | undefined;
+  const restoreScrollSnap = () => {
+    if (authoredSnapType === undefined) return;
+    content.style.scrollSnapType = authoredSnapType;
+    authoredSnapType = undefined;
+  };
+
+  let resizeObserver: ResizeObserver | null = null;
+  let mutationObserver: MutationObserver | null = null;
+
+  const getSnapPointForItem = (item: HTMLElement): number =>
+    item.getBoundingClientRect()[axis.edge] -
+    content.getBoundingClientRect()[axis.edge] +
+    content[axis.scroll];
+
+  const getNearestIndex = (position: number): number => {
+    let nearest = 0;
+    let minDistance = Number.POSITIVE_INFINITY;
+
+    for (let i = 0; i < snapPoints.length; i += 1) {
+      const point = snapPoints[i];
+      if (point === undefined) continue;
+      const distance = Math.abs(point - position);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearest = i;
+      }
+    }
+
+    return nearest;
+  };
+
+  const canScrollPrev = () => {
+    if (items.length <= 1) return false;
+    return loop || currentIndex > 0;
+  };
+
+  const canScrollNext = () => {
+    if (items.length <= 1) return false;
+    return loop || currentIndex < items.length - 1;
+  };
+
+  const updateStaticA11y = () => {
+    root.setAttribute("role", "region");
+    root.setAttribute("aria-roledescription", "carousel");
+    root.setAttribute("data-orientation", orientation);
+
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (!item) continue;
+      item.setAttribute("role", "group");
+      item.setAttribute("aria-roledescription", "slide");
+      item.setAttribute("aria-label", `${i + 1} of ${items.length}`);
+    }
+  };
+
+  const updateControls = () => {
+    const prevDisabled = !canScrollPrev();
+    const nextDisabled = !canScrollNext();
+
+    for (const control of previousControls) {
+      setControlDisabled(control, prevDisabled);
+    }
+
+    for (const control of nextControls) {
+      setControlDisabled(control, nextDisabled);
+    }
+  };
+
+  const updateStates = (emitChange: boolean) => {
+    root.setAttribute("data-index", String(currentIndex));
+
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (!item) continue;
+      const active = i === currentIndex;
+      if (!active && item.contains(root.ownerDocument.activeElement)) {
+        // Keep keyboard navigation inside the carousel when its focused slide leaves the tab order.
+        if (!content.hasAttribute("tabindex")) {
+          content.setAttribute("tabindex", "-1");
+          cleanups.push(() => {
+            if (content.getAttribute("tabindex") === "-1") content.removeAttribute("tabindex");
+          });
+        }
+        content.focus({ preventScroll: true });
+      }
+      item.setAttribute("data-state", active ? "active" : "inactive");
+      // One slide is in view at a time; the rest leave the tab order and the accessibility tree.
+      setAria(item, "hidden", !active);
+      item.toggleAttribute("inert", !active);
+    }
+
+    updateControls();
+
+    if (emitChange) {
+      emit(root, "carousel:change", { index: currentIndex });
+      onIndexChange?.(currentIndex);
+    }
+  };
+
+  const scrollToIndex = (index: number, behavior: ScrollBehavior = "auto") => {
+    const target: ScrollToOptions = { behavior };
+    target[axis.edge] = snapPoints[index] ?? 0;
+    content.scrollTo(target);
+  };
+
+  /** Make `index` the active slide without scrolling; emits when it changed. */
+  const applyIndex = (index: number) => {
+    const changed = index !== currentIndex;
+    currentIndex = index;
+    updateStates(changed);
+  };
+
+  const measureSnapPoints = () => {
+    snapPoints = items.map((item) => getSnapPointForItem(item));
+  };
+
+  const rebindResizeObserver = () => {
+    if (typeof ResizeObserver === "undefined") return;
+
+    resizeObserver?.disconnect();
+    resizeObserver = new ResizeObserver(() => {
+      measureSnapPoints();
+      scrollToIndex(currentIndex);
+    });
+
+    resizeObserver.observe(content);
+    for (const item of items) {
+      resizeObserver.observe(item);
+    }
+  };
+
+  const refreshItems = () => {
+    const activeItem = items[currentIndex] ?? null;
+    items = collectItems();
+
+    // Every slide was removed: park at 0 without scrolling or emitting a change.
+    if (items.length === 0) {
+      snapPoints = [];
+      currentIndex = 0;
+      updateStates(false);
+      return;
+    }
+
+    const preservedIndex = activeItem ? items.indexOf(activeItem) : -1;
+    const nextIndex =
+      preservedIndex >= 0
+        ? preservedIndex
+        : normalizeIndex(currentIndex, items.length, loop);
+
+    updateStaticA11y();
+    measureSnapPoints();
+    scrollToIndex(nextIndex);
+    applyIndex(nextIndex);
+    rebindResizeObserver();
+  };
+
+  /** Navigate to `index`: scroll there and make it active. */
+  const setIndex = (requestedIndex: number, behavior: ScrollBehavior = navigationBehavior) => {
+    const nextIndex = normalizeIndex(requestedIndex, items.length, loop);
+    scrollToIndex(nextIndex, behavior);
+    applyIndex(nextIndex);
+  };
+
+  const prev = () => {
+    if (canScrollPrev()) setIndex(currentIndex - 1);
+  };
+
+  const next = () => {
+    if (canScrollNext()) setIndex(currentIndex + 1);
+  };
+
+  // The index follows the scroll position only once scrolling has settled, so a
+  // smooth scroll passes intermediate slides without activating them.
+  const syncIndexFromScroll = () => {
+    win.clearTimeout(settleTimer);
+    settleTimer = undefined;
+    if (dragging) return;
+    restoreScrollSnap();
+    applyIndex(getNearestIndex(content[axis.scroll]));
+  };
+
+  const onScroll = () => {
+    if (dragging) return;
+    win.clearTimeout(settleTimer);
+    settleTimer = win.setTimeout(syncIndexFromScroll, SCROLL_SETTLE_MS);
+  };
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.defaultPrevented || isEditableTarget(event.target)) return;
+
+    switch (event.key) {
+      case axis.prevKey:
+        prev();
+        break;
+      case axis.nextKey:
+        next();
+        break;
+      case "Home":
+        setIndex(0);
+        break;
+      case "End":
+        setIndex(items.length - 1);
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+  };
+
+  const onSet = (event: Event) => {
+    const detail = (event as CustomEvent<CarouselSetDetail>).detail;
+    if (!detail || typeof detail !== "object") return;
+
+    if (typeof detail.index === "number") {
+      setIndex(detail.index);
+      return;
+    }
+
+    if (detail.action === "next") {
+      next();
+    } else if (detail.action === "prev") {
+      prev();
+    }
+  };
+
+  /**
+   * Drag the scroll container along the carousel axis with a pointer or touch,
+   * then settle on the nearest slide. Native scroll snapping is paused while
+   * the drag drives the position and the release scroll settles. Returns the cleanup.
+   */
+  const bindDrag = (): (() => void) => {
+    const authoredTouchAction = content.style.touchAction;
+    /** Read at axis lock so a new drag takes over from the current visual position. */
+    let origin = 0;
+    content.style.touchAction = axis.touchAction;
+
+    const end = () => {
+      if (!dragging) return;
+      dragging = false;
+      root.removeAttribute("data-dragging");
+    };
+    const settle = () => {
+      const index = getNearestIndex(content[axis.scroll]);
+      setIndex(index);
+      // Instant or zero-distance scrolls may not emit scroll/scrollend.
+      if (Math.abs(content[axis.scroll] - (snapPoints[index] ?? 0)) < 1) {
+        restoreScrollSnap();
+      } else {
+        onScroll();
+      }
+    };
+
+    const gesture = createSwipeGesture<HTMLElement>({
+      element: content,
+      axes: [axis.swipe],
+      lockThreshold: DRAG_AXIS_LOCK_THRESHOLD,
+      start: (_event, target) => (target.closest(INTERACTIVE_SELECTOR) ? null : content),
+      lock() {
+        origin = content[axis.scroll];
+        dragging = true;
+        root.setAttribute("data-dragging", "true");
+        win.clearTimeout(settleTimer);
+        authoredSnapType ??= content.style.scrollSnapType;
+        content.style.scrollSnapType = "none";
+        // Cancel any native smooth scroll before the pointer takes over.
+        content.scrollTo({ [axis.edge]: origin, behavior: "instant" });
+        return true;
+      },
+      move(_content, { deltaX, deltaY }) {
+        content[axis.scroll] = origin - (axis.swipe === "x" ? deltaX : deltaY);
+      },
+      release() {
+        end();
+        settle();
+      },
+      reset(_content, event) {
+        end();
+        // A cancelled gesture settles like a release; destroy() cancels without an event.
+        if (event) settle();
+      },
+    });
+
+    return () => {
+      gesture.destroy();
+      restoreScrollSnap();
+      content.style.touchAction = authoredTouchAction;
+    };
+  };
+
+  measureSnapPoints();
+  updateStaticA11y();
+  scrollToIndex(currentIndex);
+  applyIndex(currentIndex);
+
+  cleanups.push(on(content, "scroll", onScroll));
+  cleanups.push(on(content, "scrollend", syncIndexFromScroll));
+  cleanups.push(on(root, "keydown", onKeyDown));
+  cleanups.push(on(root, "carousel:set", onSet));
+  if (drag) cleanups.push(bindDrag());
+
+  for (const [controls, navigate] of [[previousControls, prev], [nextControls, next]] as const) {
+    for (const control of controls) {
+      if (control.tagName === "BUTTON" && !control.hasAttribute("type")) {
+        (control as HTMLButtonElement).type = "button";
+      }
+      cleanups.push(on(control, "click", () => navigate()));
+    }
+  }
+
+  rebindResizeObserver();
+
+  if (typeof MutationObserver !== "undefined") {
+    mutationObserver = new MutationObserver(refreshItems);
+    mutationObserver.observe(content, { childList: true });
+  }
+
+  const controller: CarouselController = {
+    prev,
+    next,
+    goTo(index) {
+      setIndex(index);
+    },
+    get index() {
+      return currentIndex;
+    },
+    get count() {
+      return items.length;
+    },
+    get canScrollPrev() {
+      return canScrollPrev();
+    },
+    get canScrollNext() {
+      return canScrollNext();
+    },
+    destroy() {
+      win.clearTimeout(settleTimer);
+      resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
+      drainCleanups(cleanups);
+      clearRootBinding(root, ROOT_BINDING_KEY, controller);
+    },
+  };
+
+  setRootBinding(root, ROOT_BINDING_KEY, controller);
+  return controller;
+}
+
+/**
+ * Find and bind all carousel components in a scope.
+ * Returns array of controllers for programmatic access.
+ */
+export function create(scope: ParentNode = document): CarouselController[] {
+  const controllers: CarouselController[] = [];
+
+  for (const root of getRoots(scope, "carousel")) {
+    if (hasRootBinding(root, ROOT_BINDING_KEY)) continue;
+    controllers.push(createCarousel(root));
+  }
+
+  return controllers;
+}

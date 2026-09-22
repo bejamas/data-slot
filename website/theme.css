@@ -25,6 +25,9 @@
   --border: var(--blume-border);
   --code-bg: var(--blume-muted);
   --surface: #fff;
+  --surface-raised: #fff;
+  --tooltip-bg: #e5e2dc;
+  --tooltip-text: var(--text);
   --accent: #0066cc;
   --danger: #c62828;
   --danger-bg: #fff1f0;
@@ -40,6 +43,9 @@
   --blume-border: #3b3a36;
   --blume-code-background: #222220;
   --surface: #242423;
+  --surface-raised: #3b3a36;
+  --tooltip-bg: var(--surface-raised);
+  --tooltip-text: var(--text);
   --accent: #75baff;
   --danger: #ff9494;
   --danger-bg: #3b2424;

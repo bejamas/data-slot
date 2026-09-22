@@ -1,9 +1,11 @@
 import { copyText } from 'blume/components/copy-feedback.ts';
 import { bindToastExample } from '../src/components/examples/toast-example';
+import { bindCarouselExample } from '../src/components/examples/carousel-example';
 
 const loaders = {
   accordion: () => import('../../packages/accordion/dist/index.js'),
   'alert-dialog': () => import('../../packages/alert-dialog/dist/index.js'),
+  carousel: () => import('../../packages/carousel/dist/index.js'),
   collapsible: () => import('../../packages/collapsible/dist/index.js'),
   combobox: () => import('../../packages/combobox/dist/index.js'),
   command: () => import('../../packages/command/dist/index.js'),
@@ -40,6 +42,11 @@ const demos: Partial<Record<Slug, Demo>> = {
       root.querySelectorAll('[data-demo-alert-confirm]').forEach(button => {
         button.addEventListener('click', () => root.dispatchEvent(new CustomEvent('alert-dialog:set', { detail: { open: false } })), { signal });
       });
+    },
+  },
+  carousel: {
+    bind(root, _controller, signal) {
+      bindCarouselExample(root, signal);
     },
   },
   toast: { bind: bindToastExample },

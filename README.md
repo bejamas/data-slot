@@ -64,6 +64,15 @@ bun add @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/dra
 
 All packages are independently installable. Each package includes its own README with detailed documentation.
 
+For current sizes, run `bun run check:sizes`. This rebuilds all packages and reports
+minified and gzipped ESM entry sizes, sorted by gzip size. The measurements exclude
+imported dependencies, additional entry points, and type declarations; the `ui`
+entry is a re-export layer, not the full library bundle. The sizes below are a
+snapshot and may differ from the current build.
+
+To measure an existing build without rebuilding, run `bun run scripts/check-sizes.ts`.
+The script discovers packages automatically and exits with an error if a build is missing.
+
 | Package                      | Size   | Description                 | Documentation                                |
 | ---------------------------- | ------ | --------------------------- | -------------------------------------------- |
 | `@data-slot/navigation-menu` | 7.2 KB | Dropdown navigation menus   | [README](packages/navigation-menu/README.md) |
@@ -80,6 +89,7 @@ All packages are independently installable. Each package includes its own README
 | `@data-slot/collapsible`     | 1.6 KB | Simple show/hide toggle     | [README](packages/collapsible/README.md)     |
 | `@data-slot/accordion`       | 1.4 KB | Collapsible sections        | [README](packages/accordion/README.md)       |
 | `@data-slot/toast`           | 2.9 KB | Imperative notifications   | [README](packages/toast/README.md)           |
+| `@data-slot/carousel`        | 1.8 KB | Scroll-snap carousel       | [README](packages/carousel/README.md)        |
 
 ## API
 

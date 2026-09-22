@@ -18,9 +18,9 @@ const cssCode = `<div data-slot="popover" class="popover-root">
   .popover-root { display: inline-block; }
   .popover-trigger-btn {
     padding: 0.5rem 1rem;
-    background: #1a1a1a;
-    color: #faf9f7;
-    border: none;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
     cursor: pointer;
   }
   .popover-content {
@@ -98,7 +98,7 @@ const cssCode = `<div data-slot="popover" class="popover-root">
 const tailwindCode = `<div data-slot="popover" class="relative inline-block">
   <button
     data-slot="popover-trigger"
-    class="px-4 py-2 bg-text text-bg border-none cursor-pointer
+    class="px-4 py-2 bg-white text-text border border-border cursor-pointer
            hover:opacity-90 transition-opacity"
   >
     Open Popover
@@ -194,7 +194,7 @@ const tailwindCode = `<div data-slot="popover" class="relative inline-block">
   <div slot="preview-tailwind" data-slot="popover" class="relative inline-block" id="popover-tw">
     <button
       data-slot="popover-trigger"
-      class="px-4 py-2 bg-text text-bg border-none cursor-pointer hover:opacity-90 transition-opacity"
+      class="px-4 py-2 bg-white text-text border border-border cursor-pointer hover:opacity-90 transition-opacity"
     >
       Open Popover
     </button>
