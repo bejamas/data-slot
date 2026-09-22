@@ -95,6 +95,12 @@ On each `resizable-panel`:
 | `data-collapsible`    | boolean | `false`    | Pane can collapse       |
 | `data-collapsed-size` | number  | `0`        | Size (%) when collapsed |
 
+Panel sizes and constraints must be between 0 and 100. `minSize` must not exceed
+`maxSize`, and a collapsible panel's `collapsedSize` must not exceed `minSize`.
+The constraints must allow a layout totaling 100%; initialization throws if they
+cannot. A collapsible panel can occupy its collapsed size or any size between
+its minimum and maximum.
+
 ### Options
 
 | Option             | Type                         | Default        | Description                      |
@@ -210,6 +216,16 @@ The component automatically handles:
 Give each handle an accessible name with `aria-label` or `aria-labelledby`.
 
 ### Behavior
+
+#### Switching input methods
+
+Keyboard resizing and valid imperative layout updates end an active drag before
+applying the change. Subsequent pointer movement has no effect until a new drag
+starts. Only one group can drag at a time in each document.
+
+All input methods remember a panel's size immediately before it collapses.
+`expand()` and `Enter` restore that size, subject to the other panels' constraints.
+An initially collapsed panel expands to its minimum size when no prior size exists.
 
 #### Persisting Layout
 

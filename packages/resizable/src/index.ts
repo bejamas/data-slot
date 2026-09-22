@@ -11,6 +11,18 @@ import {
   on,
   emit,
 } from "@data-slot/core";
+import {
+  adjustLayoutByDelta,
+  almostEqual,
+  arraysEqual,
+  assert,
+  calculateAriaValues,
+  getUnsafeDefaultLayout,
+  resolvePaneConstraints,
+  validateLayout,
+  type ResolvedPaneConstraints,
+} from "./layout";
+import { createResizeDrag } from "./drag";
 
 /* -------------------------------------------------------------------------------------------------
  * Types
@@ -18,13 +30,7 @@ import {
 
 export type ResizableDirection = "horizontal" | "vertical";
 
-export interface PaneConstraints {
-  collapsedSize?: number;
-  collapsible?: boolean;
-  defaultSize?: number;
-  maxSize?: number;
-  minSize?: number;
-}
+export type { PaneConstraints } from "./layout";
 
 export interface ResizableOptions {
   /** Layout axis. @default "horizontal" */
@@ -59,14 +65,6 @@ export interface ResizableController {
   destroy(): void;
 }
 
-type ResizeEvent = KeyboardEvent | MouseEvent | TouchEvent;
-
-interface DragState {
-  handleIndex: number;
-  initialCursorPosition: number;
-  initialLayout: number[];
-}
-
 /* -------------------------------------------------------------------------------------------------
  * Constants
  * -----------------------------------------------------------------------------------------------*/
@@ -75,394 +73,19 @@ const ROOT_BINDING_KEY = "@data-slot/resizable";
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/resizable] createResizable() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
-const PRECISION = 10;
 const RESIZE_KEYS = ["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Home"];
-
-/* -------------------------------------------------------------------------------------------------
- * Numeric helpers (ported from PaneForge / react-resizable-panels)
- * -----------------------------------------------------------------------------------------------*/
-
-const roundTo = (value: number, decimals: number): number =>
-  Number.parseFloat(value.toFixed(decimals));
-
-const compareWithTolerance = (
-  actual: number,
-  expected: number,
-  fractionDigits: number = PRECISION,
-): number => Math.sign(roundTo(actual, fractionDigits) - roundTo(expected, fractionDigits));
-
-const almostEqual = (
-  actual: number,
-  expected: number,
-  fractionDigits: number = PRECISION,
-): boolean => compareWithTolerance(actual, expected, fractionDigits) === 0;
-
-const arraysEqual = (a: number[], b: number[]): boolean => {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-};
-
-function assert(condition: unknown, message = "Assertion failed"): asserts condition {
-  if (!condition) throw new Error(`[@data-slot/resizable] ${message}`);
-}
-
-/* -------------------------------------------------------------------------------------------------
- * Constraint solver
- * -----------------------------------------------------------------------------------------------*/
-
-const adjustedSizeForCollapsible = (
-  size: number,
-  collapsible: boolean | undefined,
-  collapsedSize: number,
-  minSize: number,
-): number => {
-  if (!collapsible) return minSize;
-  const halfway = (collapsedSize + minSize) / 2;
-  return compareWithTolerance(size, halfway) < 0 ? collapsedSize : minSize;
-};
-
-const resizePaneSize = (
-  constraints: PaneConstraints[],
-  index: number,
-  initialSize: number,
-): number => {
-  const c = constraints[index];
-  assert(c != null, "Pane constraints should not be null.");
-  const { collapsedSize = 0, collapsible, maxSize = 100, minSize = 0 } = c;
-
-  let next = initialSize;
-  if (compareWithTolerance(next, minSize) < 0) {
-    next = adjustedSizeForCollapsible(next, collapsible, collapsedSize, minSize);
-  }
-  next = Math.min(maxSize, next);
-  return Number.parseFloat(next.toFixed(PRECISION));
-};
-
-/**
- * Adjusts the layout based on the delta of the resize handle.
- * All units are percentages. Ported from react-resizable-panels via PaneForge.
- */
-const adjustLayoutByDelta = (
-  delta: number,
-  prevLayout: number[],
-  constraints: PaneConstraints[],
-  pivotIndices: readonly [number, number],
-  trigger: "imperative-api" | "keyboard" | "mouse-or-touch",
-): number[] => {
-  if (almostEqual(delta, 0)) return prevLayout;
-
-  const nextLayout = [...prevLayout];
-  const [firstPivot, secondPivot] = pivotIndices;
-  let deltaApplied = 0;
-
-  if (trigger === "keyboard") {
-    {
-      const index = delta < 0 ? secondPivot : firstPivot;
-      const c = constraints[index];
-      assert(c);
-      if (c.collapsible) {
-        const prevSize = prevLayout[index];
-        assert(prevSize != null);
-        const { collapsedSize = 0, minSize = 0 } = c;
-        if (almostEqual(prevSize, collapsedSize)) {
-          const localDelta = minSize - prevSize;
-          if (compareWithTolerance(localDelta, Math.abs(delta)) > 0) {
-            delta = delta < 0 ? 0 - localDelta : localDelta;
-          }
-        }
-      }
-    }
-    {
-      const index = delta < 0 ? firstPivot : secondPivot;
-      const c = constraints[index];
-      assert(c);
-      if (c.collapsible) {
-        const prevSize = prevLayout[index];
-        assert(prevSize != null);
-        const { collapsedSize = 0, minSize = 0 } = c;
-        if (almostEqual(prevSize, minSize)) {
-          const localDelta = prevSize - collapsedSize;
-          if (compareWithTolerance(localDelta, Math.abs(delta)) > 0) {
-            delta = delta < 0 ? 0 - localDelta : localDelta;
-          }
-        }
-      }
-    }
-  }
-
-  {
-    const increment = delta < 0 ? 1 : -1;
-    let index = delta < 0 ? secondPivot : firstPivot;
-    let maxAvailableDelta = 0;
-
-    while (true) {
-      const prevSize = prevLayout[index];
-      assert(prevSize != null);
-      const maxSafeSize = resizePaneSize(constraints, index, 100);
-      maxAvailableDelta += maxSafeSize - prevSize;
-      index += increment;
-      if (index < 0 || index >= constraints.length) break;
-    }
-
-    const minAbsDelta = Math.min(Math.abs(delta), Math.abs(maxAvailableDelta));
-    delta = delta < 0 ? 0 - minAbsDelta : minAbsDelta;
-  }
-
-  {
-    const pivotIndex = delta < 0 ? firstPivot : secondPivot;
-    let index = pivotIndex;
-    while (index >= 0 && index < constraints.length) {
-      const deltaRemaining = Math.abs(delta) - Math.abs(deltaApplied);
-      const prevSize = prevLayout[index];
-      assert(prevSize != null);
-      const unsafeSize = prevSize - deltaRemaining;
-      const safeSize = resizePaneSize(constraints, index, unsafeSize);
-
-      if (!almostEqual(prevSize, safeSize)) {
-        deltaApplied += prevSize - safeSize;
-        nextLayout[index] = safeSize;
-        if (
-          deltaApplied.toPrecision(3).localeCompare(Math.abs(delta).toPrecision(3), undefined, {
-            numeric: true,
-          }) >= 0
-        ) {
-          break;
-        }
-      }
-      if (delta < 0) index -= 1;
-      else index += 1;
-    }
-  }
-
-  if (almostEqual(deltaApplied, 0)) return prevLayout;
-
-  {
-    const pivotIndex = delta < 0 ? secondPivot : firstPivot;
-    const prevSize = prevLayout[pivotIndex];
-    assert(prevSize != null);
-    const unsafeSize = prevSize + deltaApplied;
-    const safeSize = resizePaneSize(constraints, pivotIndex, unsafeSize);
-    nextLayout[pivotIndex] = safeSize;
-
-    if (!almostEqual(safeSize, unsafeSize)) {
-      let deltaRemaining = unsafeSize - safeSize;
-      const innerPivot = delta < 0 ? secondPivot : firstPivot;
-      let index = innerPivot;
-      while (index >= 0 && index < constraints.length) {
-        const prevInner = nextLayout[index];
-        assert(prevInner != null);
-        const unsafeInner = prevInner + deltaRemaining;
-        const safeInner = resizePaneSize(constraints, index, unsafeInner);
-        if (!almostEqual(prevInner, safeInner)) {
-          deltaRemaining -= safeInner - prevInner;
-          nextLayout[index] = safeInner;
-        }
-        if (almostEqual(deltaRemaining, 0)) break;
-        if (delta > 0) index -= 1;
-        else index += 1;
-      }
-    }
-  }
-
-  const totalSize = nextLayout.reduce((sum, size) => sum + size, 0);
-  if (!almostEqual(totalSize, 100)) return prevLayout;
-
-  return nextLayout;
-};
-
-const getUnsafeDefaultLayout = (constraints: PaneConstraints[]): number[] => {
-  const layout = new Array<number>(constraints.length);
-  let numWithSizes = 0;
-  let remaining = 100;
-
-  for (let i = 0; i < constraints.length; i += 1) {
-    const { defaultSize } = constraints[i]!;
-    if (defaultSize != null) {
-      numWithSizes += 1;
-      layout[i] = defaultSize;
-      remaining -= defaultSize;
-    }
-  }
-
-  for (let i = 0; i < constraints.length; i += 1) {
-    const { defaultSize } = constraints[i]!;
-    if (defaultSize != null) continue;
-    const numRemaining = constraints.length - numWithSizes;
-    const size = remaining / numRemaining;
-    numWithSizes += 1;
-    layout[i] = size;
-    remaining -= size;
-  }
-
-  return layout;
-};
-
-const validateLayout = (prevLayout: number[], constraints: PaneConstraints[]): number[] => {
-  const nextLayout = [...prevLayout];
-  const total = nextLayout.reduce((acc, cur) => acc + cur, 0);
-
-  if (nextLayout.length !== constraints.length) {
-    throw new Error(
-      `[@data-slot/resizable] Invalid ${constraints.length} pane layout: ${nextLayout
-        .map((s) => `${s}%`)
-        .join(", ")}`,
-    );
-  }
-
-  if (!Number.isFinite(total) || total <= 0 || nextLayout.some(size => !Number.isFinite(size) || size < 0)) {
-    throw new Error("[@data-slot/resizable] Layout sizes must be finite, non-negative numbers with a positive total.");
-  }
-
-  if (!almostEqual(total, 100)) {
-    for (let i = 0; i < constraints.length; i += 1) {
-      nextLayout[i] = (100 / total) * nextLayout[i]!;
-    }
-  }
-
-  let remaining = 0;
-  for (let i = 0; i < constraints.length; i += 1) {
-    const unsafe = nextLayout[i]!;
-    const safe = resizePaneSize(constraints, i, unsafe);
-    if (unsafe !== safe) {
-      remaining += unsafe - safe;
-      nextLayout[i] = safe;
-    }
-  }
-
-  if (!almostEqual(remaining, 0)) {
-    for (let i = 0; i < constraints.length; i += 1) {
-      const prev = nextLayout[i]!;
-      const unsafe = prev + remaining;
-      const safe = resizePaneSize(constraints, i, unsafe);
-      if (prev !== safe) {
-        remaining -= safe - prev;
-        nextLayout[i] = safe;
-        if (almostEqual(remaining, 0)) break;
-      }
-    }
-  }
-
-  return nextLayout;
-};
-
-const calculateAriaValues = (
-  layout: number[],
-  constraints: PaneConstraints[],
-  pivotIndices: readonly [number, number],
-): { valueMax: number; valueMin: number; valueNow: number } => {
-  let currentMin = 0;
-  let currentMax = 100;
-  let totalMin = 0;
-  let totalMax = 0;
-  const firstIndex = pivotIndices[0];
-
-  for (let i = 0; i < constraints.length; i += 1) {
-    const { maxSize = 100, minSize = 0 } = constraints[i]!;
-    if (i === firstIndex) {
-      currentMin = minSize;
-      currentMax = maxSize;
-    } else {
-      totalMin += minSize;
-      totalMax += maxSize;
-    }
-  }
-
-  return {
-    valueMax: Math.min(currentMax, 100 - totalMin),
-    valueMin: Math.max(currentMin, 100 - totalMax),
-    valueNow: layout[firstIndex]!,
-  };
-};
-
-/* -------------------------------------------------------------------------------------------------
- * Global cursor style (shared across all groups, like PaneForge)
- * -----------------------------------------------------------------------------------------------*/
-
-type CursorState =
-  | "horizontal"
-  | "horizontal-max"
-  | "horizontal-min"
-  | "vertical"
-  | "vertical-max"
-  | "vertical-min";
-
-let cursorStyleEl: HTMLStyleElement | null = null;
-let cursorState: CursorState | null = null;
-
-const cursorFor = (state: CursorState): string => {
-  switch (state) {
-    case "horizontal":
-      return "ew-resize";
-    case "horizontal-max":
-      return "w-resize";
-    case "horizontal-min":
-      return "e-resize";
-    case "vertical":
-      return "ns-resize";
-    case "vertical-max":
-      return "n-resize";
-    case "vertical-min":
-      return "s-resize";
-  }
-};
-
-const setGlobalCursor = (state: CursorState, doc: Document): void => {
-  if (cursorState === state) return;
-  cursorState = state;
-  if (cursorStyleEl === null) {
-    cursorStyleEl = doc.createElement("style");
-    doc.head.appendChild(cursorStyleEl);
-  }
-  cursorStyleEl.innerHTML = `*{cursor: ${cursorFor(state)}!important;}`;
-};
-
-const resetGlobalCursor = (): void => {
-  if (cursorStyleEl === null) return;
-  cursorStyleEl.parentNode?.removeChild(cursorStyleEl);
-  cursorStyleEl = null;
-  cursorState = null;
-};
-
-/* -------------------------------------------------------------------------------------------------
- * Geometry helpers
- * -----------------------------------------------------------------------------------------------*/
-
-const cursorPosition = (dir: ResizableDirection, e: ResizeEvent): number => {
-  const horizontal = dir === "horizontal";
-  if (e.type.startsWith("mouse")) {
-    const me = e as MouseEvent;
-    return horizontal ? me.clientX : me.clientY;
-  }
-  if (e.type.startsWith("touch")) {
-    const te = e as TouchEvent;
-    const t = te.touches[0];
-    assert(t, "Expected a touch point");
-    return horizontal ? t.screenX : t.screenY;
-  }
-  throw new Error(`[@data-slot/resizable] Unsupported event type "${e.type}"`);
-};
 
 /* -------------------------------------------------------------------------------------------------
  * createResizable
  * -----------------------------------------------------------------------------------------------*/
 
-const readPaneConstraints = (pane: HTMLElement): PaneConstraints => {
-  const constraints: PaneConstraints = {};
-  const defaultSize = getDataNumber(pane, "defaultSize");
-  const minSize = getDataNumber(pane, "minSize");
-  const maxSize = getDataNumber(pane, "maxSize");
-  const collapsedSize = getDataNumber(pane, "collapsedSize");
-  const collapsible = getDataBool(pane, "collapsible");
-  if (defaultSize != null) constraints.defaultSize = defaultSize;
-  if (minSize != null) constraints.minSize = minSize;
-  if (maxSize != null) constraints.maxSize = maxSize;
-  if (collapsedSize != null) constraints.collapsedSize = collapsedSize;
-  if (collapsible != null) constraints.collapsible = collapsible;
-  return constraints;
-};
+const readPaneConstraints = (pane: HTMLElement): ResolvedPaneConstraints => resolvePaneConstraints({
+  defaultSize: getDataNumber(pane, "defaultSize"),
+  minSize: getDataNumber(pane, "minSize"),
+  maxSize: getDataNumber(pane, "maxSize"),
+  collapsedSize: getDataNumber(pane, "collapsedSize"),
+  collapsible: getDataBool(pane, "collapsible"),
+});
 
 /**
  * Create a resizable panel group controller for a root element.
@@ -506,15 +129,12 @@ export function createResizable(
     );
   }
 
-  const win = root.ownerDocument?.defaultView ?? window;
   const doc = root.ownerDocument ?? document;
   const isHorizontal = direction === "horizontal";
 
-  const constraints: PaneConstraints[] = panes.map(readPaneConstraints);
+  const constraints = panes.map(readPaneConstraints);
   let layout = validateLayout(getUnsafeDefaultLayout(constraints), constraints);
   const sizeBeforeCollapse = new Map<number, number>();
-  let dragState: DragState | null = null;
-  let prevDelta = 0;
   const cleanups: Array<() => void> = [];
 
   // ---- DOM wiring -------------------------------------------------------------
@@ -566,7 +186,7 @@ export function createResizable(
   const applyLayout = (): void => {
     panes.forEach((pane, i) => {
       pane.style.flexGrow = panes.length === 1 ? "1" : layout[i]!.toPrecision(3);
-      pane.style.pointerEvents = dragState !== null ? "none" : "";
+      pane.style.pointerEvents = drag.activeHandle !== null ? "none" : "";
     });
     handles.forEach((handle, i) => {
       const { valueMax, valueMin, valueNow } = calculateAriaValues(layout, constraints, [i, i + 1]);
@@ -579,6 +199,11 @@ export function createResizable(
 
   const commitLayout = (next: number[]): void => {
     if (arraysEqual(layout, next)) return;
+    constraints.forEach((c, index) => {
+      if (c.collapsible && !almostEqual(layout[index]!, c.collapsedSize) && almostEqual(next[index]!, c.collapsedSize)) {
+        sizeBeforeCollapse.set(index, layout[index]!);
+      }
+    });
     layout = next;
     applyLayout();
     emit(root, "resizable:change", { layout: [...layout] });
@@ -589,7 +214,7 @@ export function createResizable(
     const c = constraints[index];
     const size = layout[index];
     if (!c || typeof size !== "number") return false;
-    const { collapsedSize = 0, collapsible } = c;
+    const { collapsedSize, collapsible } = c;
     return collapsible === true && almostEqual(size, collapsedSize);
   }
 
@@ -597,7 +222,7 @@ export function createResizable(
     const c = constraints[index];
     const size = layout[index];
     if (!c || size == null) return false;
-    const { collapsedSize = 0, collapsible } = c;
+    const { collapsedSize, collapsible } = c;
     return !collapsible || size > collapsedSize;
   }
 
@@ -606,9 +231,7 @@ export function createResizable(
   // ---- Resize handlers --------------------------------------------------------
 
   const deltaForKeyboard = (e: KeyboardEvent): number => {
-    let step = 10;
-    if (e.shiftKey) step = 100;
-    else if (keyboardResizeBy != null) step = keyboardResizeBy;
+    const step = e.shiftKey ? 100 : keyboardResizeBy;
 
     switch (e.key) {
       case "ArrowDown":
@@ -628,137 +251,58 @@ export function createResizable(
     }
   };
 
-  const runResize = (handleIndex: number, event: ResizeEvent): void => {
-    const prevLayout = layout;
-    const pivotIndices = pivotForHandle(handleIndex);
-    const keyboard = event.type === "keydown";
+  const drag = createResizeDrag({
+    root: root as HTMLElement,
+    handles,
+    horizontal: isHorizontal,
+    getLayout: () => [...layout],
+    onMove(handleIndex, initialLayout, delta) {
+      const next = adjustLayoutByDelta(delta, initialLayout, constraints, pivotForHandle(handleIndex), "mouse-or-touch");
+      const changed = !arraysEqual(layout, next);
+      commitLayout(next);
+      return changed;
+    },
+    onActiveChange(dragging) {
+      applyLayout();
+      emit(root, "resizable:dragging", { dragging });
+    },
+  });
+  cleanups.push(() => drag.destroy());
 
-    let delta: number;
-    if (keyboard) {
-      delta = deltaForKeyboard(event as KeyboardEvent);
-    } else if (dragState != null) {
-      const groupRect = (root as HTMLElement).getBoundingClientRect();
-      const groupSize = isHorizontal ? groupRect.width : groupRect.height;
-      const offsetPixels = cursorPosition(direction, event) - dragState.initialCursorPosition;
-      delta = groupSize === 0 ? 0 : (offsetPixels / groupSize) * 100;
-    } else {
-      return;
-    }
-    // A drag returning to its origin must restore its initial layout.
-    if (delta === 0 && keyboard) return;
-
+  const resizeFromKeyboard = (handleIndex: number, event: KeyboardEvent): void => {
+    let delta = deltaForKeyboard(event);
+    if (delta === 0) return;
+    drag.stop();
     if (doc.dir === "rtl" && isHorizontal) delta = -delta;
-
-    const base = dragState?.initialLayout ?? prevLayout;
-    const next = adjustLayoutByDelta(
-      delta,
-      base,
-      constraints,
-      pivotIndices,
-      keyboard ? "keyboard" : "mouse-or-touch",
-    );
-    const changed = !arraysEqual(prevLayout, next);
-
-    if (event.type.startsWith("mouse") || event.type.startsWith("touch")) {
-      if (prevDelta !== delta) {
-        prevDelta = delta;
-        if (!changed) {
-          if (isHorizontal) {
-            setGlobalCursor(delta < 0 ? "horizontal-min" : "horizontal-max", doc);
-          } else {
-            setGlobalCursor(delta < 0 ? "vertical-min" : "vertical-max", doc);
-          }
-        } else {
-          setGlobalCursor(isHorizontal ? "horizontal" : "vertical", doc);
-        }
-      }
-    }
-
-    if (changed) commitLayout(next);
-  };
-
-  // ---- Drag lifecycle ---------------------------------------------------------
-
-  const onMove = (e: Event): void => {
-    if (dragState == null) return;
-    e.preventDefault();
-    runResize(dragState.handleIndex, e as ResizeEvent);
-  };
-
-  const stopDragging = (): void => {
-    resetGlobalCursor();
-    if (dragState != null) {
-      const handle = handles[dragState.handleIndex]!;
-      handle.removeAttribute("data-active");
-      handle.blur();
-    }
-    dragState = null;
-    applyLayout();
-    emit(root, "resizable:dragging", { dragging: false });
-  };
-
-  const startDragging = (handleIndex: number, e: ResizeEvent): void => {
-    e.preventDefault();
-    const handle = handles[handleIndex]!;
-    if (handle.getAttribute("data-disabled") === "true") return;
-    dragState = {
-      handleIndex,
-      initialCursorPosition: cursorPosition(direction, e),
-      initialLayout: [...layout],
-    };
-    handle.setAttribute("data-active", "pointer");
-    applyLayout();
-    emit(root, "resizable:dragging", { dragging: true });
+    commitLayout(adjustLayoutByDelta(delta, layout, constraints, pivotForHandle(handleIndex), "keyboard"));
   };
 
   // ---- Listeners --------------------------------------------------------------
 
   handles.forEach((handle, handleIndex) => {
-    cleanups.push(on(handle, "mousedown", (e) => startDragging(handleIndex, e as MouseEvent)));
-    cleanups.push(
-      on(handle, "touchstart", (e) => startDragging(handleIndex, e as TouchEvent), {
-        passive: false,
-      }),
-    );
-    cleanups.push(on(handle, "mouseup", stopDragging));
-    cleanups.push(on(handle, "touchend", stopDragging));
-    cleanups.push(on(handle, "touchcancel", stopDragging));
     cleanups.push(on(handle, "focus", () => handle.setAttribute("data-active", "keyboard")));
     cleanups.push(
       on(handle, "blur", () => {
-        if (dragState?.handleIndex !== handleIndex) {
+        if (drag.activeHandle !== handleIndex) {
           handle.removeAttribute("data-active");
         }
       }),
     );
     cleanups.push(
-      on(handle, "keydown", (e) => {
-        const ke = e as KeyboardEvent;
+      on(handle, "keydown", (ke) => {
         if (handle.getAttribute("data-disabled") === "true" || ke.defaultPrevented) {
           return;
         }
         if (RESIZE_KEYS.includes(ke.key)) {
           ke.preventDefault();
-          runResize(handleIndex, ke);
+          resizeFromKeyboard(handleIndex, ke);
           return;
         }
         if (ke.key === "Enter") {
           // Toggle collapse on the pane before the handle.
           ke.preventDefault();
-          const c = constraints[handleIndex]!;
-          const size = layout[handleIndex];
-          const { collapsedSize = 0, collapsible, minSize = 0 } = c;
-          if (size == null || !collapsible) return;
-          const delta = almostEqual(size, collapsedSize) ? minSize - size : collapsedSize - size;
-          commitLayout(
-            adjustLayoutByDelta(
-              delta,
-              layout,
-              constraints,
-              pivotForHandle(handleIndex),
-              "keyboard",
-            ),
-          );
+          if (isPaneCollapsed(handleIndex)) expand(handleIndex);
+          else collapse(handleIndex);
           return;
         }
         if (ke.key === "F6") {
@@ -772,14 +316,6 @@ export function createResizable(
     );
   });
 
-  const body = doc.body;
-  cleanups.push(on(body, "mousemove", onMove));
-  cleanups.push(on(body, "touchmove", onMove, { passive: false }));
-  cleanups.push(on(body, "mouseleave", onMove));
-  cleanups.push(on(body, "contextmenu", stopDragging));
-  cleanups.push(on(win, "mouseup", stopDragging));
-  cleanups.push(on(win, "touchend", stopDragging));
-
   // ---- Imperative API ---------------------------------------------------------
 
   const getSize = (paneIndex: number): number => {
@@ -792,6 +328,7 @@ export function createResizable(
     const current = getSize(paneIndex);
     assert(Number.isFinite(unsafeSize), "Pane size must be finite.");
     if (panes.length === 1) return;
+    drag.stop();
     const isLast = paneIndex === panes.length - 1;
     const pivotIndices: [number, number] = isLast
       ? [paneIndex - 1, paneIndex]
@@ -804,9 +341,8 @@ export function createResizable(
     const current = getSize(paneIndex);
     const c = constraints[paneIndex]!;
     if (!c.collapsible) return;
-    const { collapsedSize = 0 } = c;
+    const { collapsedSize } = c;
     if (almostEqual(current, collapsedSize)) return;
-    sizeBeforeCollapse.set(paneIndex, current);
     resizePane(paneIndex, collapsedSize);
   };
 
@@ -814,11 +350,17 @@ export function createResizable(
     const current = getSize(paneIndex);
     const c = constraints[paneIndex]!;
     if (!c.collapsible) return;
-    const { collapsedSize = 0, minSize = 0 } = c;
+    const { collapsedSize, minSize } = c;
     if (!almostEqual(current, collapsedSize)) return;
     const prev = sizeBeforeCollapse.get(paneIndex);
     const baseSize = prev != null && prev >= minSize ? prev : minSize;
     resizePane(paneIndex, baseSize);
+  };
+
+  const setLayout = (next: number[]): void => {
+    const validated = validateLayout(next, constraints);
+    drag.stop();
+    commitLayout(validated);
   };
 
   applyLayout();
@@ -830,7 +372,7 @@ export function createResizable(
       if (e.target !== root) return;
       const detail = (e as CustomEvent).detail;
       if (detail?.layout && Array.isArray(detail.layout)) {
-        commitLayout(validateLayout(detail.layout as number[], constraints));
+        setLayout(detail.layout);
       }
     }),
   );
@@ -839,7 +381,7 @@ export function createResizable(
     get layout() {
       return [...layout];
     },
-    setLayout: (next) => commitLayout(validateLayout(next, constraints)),
+    setLayout,
     resizePane,
     collapse,
     expand,
@@ -847,7 +389,6 @@ export function createResizable(
     isExpanded: isPaneExpanded,
     getSize,
     destroy: () => {
-      stopDragging();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
