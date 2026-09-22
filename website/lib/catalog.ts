@@ -13,6 +13,7 @@ export const components = [
   { slug: 'navigation-menu', demo: 'NavigationMenu', attrs: 'data-position-method="fixed"' },
   { slug: 'popover', demo: 'Popover', attrs: 'data-side="top"' },
   { slug: 'radio-group', demo: 'RadioGroup', attrs: 'data-disabled' },
+  { slug: 'resizable', demo: 'Resizable', attrs: 'data-direction="vertical"' },
   { slug: 'select', demo: 'Select', attrs: 'data-default-value="banana"' },
   { slug: 'slider', demo: 'Slider', attrs: 'data-disabled' },
   { slug: 'switch', demo: 'Switch', attrs: 'data-disabled' },

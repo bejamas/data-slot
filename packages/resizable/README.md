@@ -16,7 +16,7 @@ npm install @data-slot/resizable
 ```html
 <div data-slot="resizable" data-direction="horizontal">
   <div data-slot="resizable-panel" data-default-size="50" data-min-size="20">Left</div>
-  <div data-slot="resizable-handle"></div>
+  <div data-slot="resizable-handle" aria-label="Resize panels"></div>
   <div data-slot="resizable-panel" data-default-size="50">Right</div>
 </div>
 
@@ -29,7 +29,9 @@ npm install @data-slot/resizable
 
 ## API
 
-### `create(scope?)`
+### Initialization
+
+#### `create(scope?)`
 
 Auto-discover and bind all resizable groups in a scope (defaults to `document`).
 
@@ -39,7 +41,7 @@ import { create } from "@data-slot/resizable";
 const controllers = create(); // Returns ResizableController[]
 ```
 
-### `createResizable(root, options?)`
+#### `createResizable(root, options?)`
 
 Create a controller for a specific element.
 
@@ -52,6 +54,25 @@ const resizable = createResizable(element, {
   onLayoutChange: (layout) => console.log(layout),
 });
 ```
+
+### Slots
+
+| Slot | Description |
+| ---- | ----------- |
+| `resizable` | Root flex container for the group |
+| `resizable-panel` | A panel with a percentage size |
+| `resizable-handle` | Focusable separator between adjacent panels |
+
+```html
+<div data-slot="resizable">
+  <div data-slot="resizable-panel">A</div>
+  <div data-slot="resizable-handle" aria-label="Resize panels"></div>
+  <div data-slot="resizable-panel">B</div>
+</div>
+```
+
+A group needs at least one `resizable-panel`, and exactly one
+`resizable-handle` between each adjacent pair of panes.
 
 ### Options
 
@@ -84,6 +105,12 @@ On each `resizable-panel`:
 
 ### Controller
 
+Pane indices start at zero. `setLayout()` requires one finite, non-negative number
+per panel and a positive total; it normalizes the values to 100% and applies the
+panel constraints. Invalid layouts throw without changing the current layout.
+`resizePane()` requires a finite size. Indexed mutation methods and `getSize()`
+throw for an invalid pane index.
+
 | Method/Property           | Description                                            |
 | ------------------------- | ------------------------------------------------------ |
 | `layout`                  | Current layout as `number[]` of percentages (readonly) |
@@ -96,23 +123,35 @@ On each `resizable-panel`:
 | `getSize(index)`          | Current size (%) of a pane                             |
 | `destroy()`               | Cleanup all listeners and global styles                |
 
-## Markup Structure
+### Events
 
-```html
-<div data-slot="resizable">
-  <div data-slot="resizable-panel">A</div>
-  <div data-slot="resizable-handle"></div>
-  <div data-slot="resizable-panel">B</div>
-</div>
+#### Outbound Events
+
+```javascript
+element.addEventListener("resizable:change", (e) => {
+  console.log("Layout:", e.detail.layout);
+});
+
+element.addEventListener("resizable:dragging", (e) => {
+  console.log("Dragging:", e.detail.dragging);
+});
 ```
 
-A group needs at least one `resizable-panel`, and exactly one
-`resizable-handle` between each adjacent pair of panes.
+#### Inbound Events
 
-## Styling
+| Event           | Detail                 | Description                     |
+| --------------- | ---------------------- | ------------------------------- |
+| `resizable:set` | `{ layout: number[] }` | Set the layout programmatically |
 
-The component sets `flex` styles on the root and panes directly so it works
-with no CSS at all. Use `data-*` attributes for visual styling:
+```javascript
+element.dispatchEvent(new CustomEvent("resizable:set", { detail: { layout: [30, 70] } }));
+```
+
+### Styling
+
+The component sets `flex` styles on the root and panels directly. Give the group
+a height and the handles a visible width or height. Use `data-*` attributes for
+visual styling:
 
 ```css
 /* Style the handle */
@@ -145,7 +184,20 @@ Add a CSS transition on `flex-grow` for animated collapse/expand:
 }
 ```
 
-## Accessibility
+### Keyboard Navigation
+
+Focus a handle with `Tab` before using these keys:
+
+| Key | Action |
+| --- | ------ |
+| `ArrowLeft` / `ArrowRight` | Resize a horizontal group by `keyboardResizeBy` (10% by default) |
+| `ArrowUp` / `ArrowDown` | Resize a vertical group by the same step |
+| `Shift` + arrow key | Move to the limit in that direction |
+| `Home` / `End` | Minimize / maximize the preceding panel within constraints |
+| `Enter` | Toggle collapse of the preceding panel when it is collapsible |
+| `F6` / `Shift` + `F6` | Focus the next / previous handle, wrapping within the group |
+
+### Accessibility
 
 The component automatically handles:
 
@@ -153,11 +205,13 @@ The component automatically handles:
 - `aria-orientation` (perpendicular to the layout direction)
 - `aria-controls` linking each handle to its preceding pane
 - `aria-valuemin` / `aria-valuemax` / `aria-valuenow` reflecting live constraints
-- Keyboard resizing: Arrow keys, `Home`/`End` (extremes), `Enter` (toggle
-  collapse), `F6` (cycle focus between handles); `Shift` for larger steps
 - Unique ID generation for the root, panes, and handles
 
-## Persisting Layout
+Give each handle an accessible name with `aria-label` or `aria-labelledby`.
+
+### Behavior
+
+#### Persisting Layout
 
 There is no built-in persistence, but reading and restoring the split is a
 one-liner:
@@ -175,30 +229,6 @@ const resizable = createResizable(el, {
 });
 
 if (saved) resizable.setLayout(JSON.parse(saved));
-```
-
-## Events
-
-### Outbound Events
-
-```javascript
-element.addEventListener("resizable:change", (e) => {
-  console.log("Layout:", e.detail.layout);
-});
-
-element.addEventListener("resizable:dragging", (e) => {
-  console.log("Dragging:", e.detail.dragging);
-});
-```
-
-### Inbound Events
-
-| Event           | Detail                 | Description                     |
-| --------------- | ---------------------- | ------------------------------- |
-| `resizable:set` | `{ layout: number[] }` | Set the layout programmatically |
-
-```javascript
-element.dispatchEvent(new CustomEvent("resizable:set", { detail: { layout: [30, 70] } }));
 ```
 
 ## License

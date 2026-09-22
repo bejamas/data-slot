@@ -33,6 +33,7 @@
       "@data-slot/switch": ["./packages/switch/src/index.ts"],
       "@data-slot/toast": ["./packages/toast/src/index.ts"],
       "@data-slot/carousel": ["./packages/carousel/src/index.ts"],
+      "@data-slot/resizable": ["./packages/resizable/src/index.ts"],
       "@data-slot/ui": ["./packages/ui/src/index.ts"],
       "@data-slot/ui/*": ["./packages/ui/src/*.ts"]
     }

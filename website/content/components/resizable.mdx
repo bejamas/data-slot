@@ -1,0 +1,66 @@
+---
+title: Resizable
+description: Panels that share space and resize with a draggable, keyboard-accessible handle.
+---
+
+<PackageInfo name="resizable" />
+
+<Tabs>
+  <Tab title="bun">
+
+```bash
+bun add @data-slot/resizable
+```
+
+  </Tab>
+  <Tab title="npm">
+
+```bash
+npm install @data-slot/resizable
+```
+
+  </Tab>
+  <Tab title="pnpm">
+
+```bash
+pnpm add @data-slot/resizable
+```
+
+  </Tab>
+</Tabs>
+
+## Anatomy
+
+Place one handle between each pair of panels. Sizes are percentages of the space shared by the panels; the component applies the flex layout, while you style the panels and handles.
+
+```html
+<div data-slot="resizable" data-direction="horizontal">
+  <div data-slot="resizable-panel" data-default-size="50" data-min-size="20">
+    Panel A
+  </div>
+  <div data-slot="resizable-handle" aria-label="Resize panels"></div>
+  <div data-slot="resizable-panel" data-default-size="50" data-min-size="20">
+    Panel B
+  </div>
+</div>
+```
+
+Use `data-default-size` for the initial split and `data-min-size` / `data-max-size` for limits. Panels without a default size share the remaining space. Give each handle an accessible name with `aria-label` or `aria-labelledby`.
+
+## Examples
+
+### Resize side by side
+
+Drag the handle, or focus it with `Tab` and use the left and right arrow keys. Each panel keeps at least 20% of the available space. `Home` and `End` move to the limits.
+
+<Example name="resizable" />
+
+### Stack panels vertically
+
+Set `data-direction="vertical"` and give the group a height. The handle moves up and down, and the up and down arrow keys resize the panels.
+
+<Example name="resizable" variant="extra" />
+
+## API reference
+
+<include>../_generated/resizable-api.md</include>
