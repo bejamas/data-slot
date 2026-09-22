@@ -129,7 +129,8 @@ describe("Select", () => {
         const outerRoot = document.getElementById("outer")!;
         const innerRoot = document.getElementById("inner")!;
         const outer = createSelect(outerRoot, { name: "outer", defaultValue: "outer" });
-        const inner = bindInner ? createSelect(innerRoot) : null;
+        // Keep the inner item connected so synthetic events exercise ownership filtering.
+        const inner = bindInner ? createSelect(innerRoot, { mountStrategy: "eager" }) : null;
         try {
           outer.open();
           const innerItem = document.getElementById("inner-item")!;
@@ -244,8 +245,10 @@ describe("Select", () => {
 
       expect(trigger.getAttribute("role")).toBe("combobox");
       expect(trigger.getAttribute("aria-haspopup")).toBe("listbox");
-      expect(trigger.getAttribute("aria-controls")).toBe(content.id);
+      expect(trigger.hasAttribute("aria-controls")).toBe(false);
       expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      controller.open();
+      expect(trigger.getAttribute("aria-controls")).toBe(content.id);
 
       controller.destroy();
     });
@@ -456,11 +459,12 @@ describe("Select", () => {
 
       expect(controller.isOpen).toBe(false);
       expect(content.hidden).toBe(true);
-      expect(content.parentElement).toBe(root);
+      expect(content.isConnected).toBe(false);
       expect(content.getAttribute("data-state")).toBe("closed");
       expect(content.hasAttribute("data-ending-style")).toBe(false);
 
       controller.destroy();
+      expect(root.contains(content)).toBe(true);
     });
 
     it("marks selected item with data-selected and aria-selected", () => {
@@ -796,10 +800,11 @@ describe("Select", () => {
 
       expect(controller.isOpen).toBe(false);
       expect(content.hidden).toBe(true);
-      expect(content.parentElement).toBe(root);
+      expect(content.isConnected).toBe(false);
       expect(content.hasAttribute("data-ending-style")).toBe(false);
 
       controller.destroy();
+      expect(root.contains(content)).toBe(true);
     });
 
     it("selects item with Space", () => {
@@ -834,10 +839,11 @@ describe("Select", () => {
 
       expect(controller.isOpen).toBe(false);
       expect(content.hidden).toBe(true);
-      expect(content.parentElement).toBe(root);
+      expect(content.isConnected).toBe(false);
       expect(content.hasAttribute("data-ending-style")).toBe(false);
 
       controller.destroy();
+      expect(root.contains(content)).toBe(true);
     });
 
     it("closes on Escape", () => {
@@ -1577,6 +1583,7 @@ describe("Select", () => {
         </div></form>`;
       const root = document.getElementById("root")!;
       const form = root.closest("form")!;
+      const content = root.querySelector('[data-slot="select-content"]')!;
       let changes = 0;
       const controller = createSelect(root, { name: "fruit", defaultValue: "banana", onValueChange: () => changes++ });
 
@@ -1586,7 +1593,7 @@ describe("Select", () => {
 
       expect(controller.value).toBe("banana");
       expect(root.querySelector('[data-slot="select-value"]')?.textContent).toBe("Banana");
-      expect(root.querySelector('[data-value="banana"]')?.getAttribute("aria-selected")).toBe("true");
+      expect(content.querySelector('[data-value="banana"]')?.getAttribute("aria-selected")).toBe("true");
       expect(new FormData(form).get("fruit")).toBe("banana");
       expect(changes).toBe(1);
       controller.destroy();
@@ -2866,11 +2873,11 @@ describe("Select", () => {
         </div>
       `;
 
+      const content = document.querySelector('[data-slot="select-content"]') as HTMLElement;
       const controllers = create();
       expect(controllers).toHaveLength(2);
 
       const trigger = document.querySelector('[data-slot="select-trigger"]') as HTMLElement;
-      const content = document.querySelector('[data-slot="select-content"]') as HTMLElement;
 
       expect(content.hidden).toBe(true);
       trigger.click();
@@ -3871,11 +3878,11 @@ describe("Select", () => {
   });
 
   describe("content portaling", () => {
-    it("portals content to body when open and restores on close", async () => {
+    it("portals content to body when open and detaches on close", async () => {
       const { root, trigger, content, controller } = setup();
 
-      // Content starts inside root
-      expect(content.parentElement).toBe(root);
+      // Closed content starts detached
+      expect(content.isConnected).toBe(false);
 
       trigger.click();
       // Content is portaled to body when open
@@ -3884,10 +3891,11 @@ describe("Select", () => {
 
       controller.close();
       await waitForClose();
-      // Content is restored to root when closed
-      expect(content.parentElement).toBe(root);
+      // Closed content is detached after exit
+      expect(content.isConnected).toBe(false);
 
       controller.destroy();
+      expect(content.parentElement === root).toBe(true);
     });
 
     it("restores content before applying closed hidden/data-state", async () => {
@@ -3933,11 +3941,12 @@ describe("Select", () => {
       }
 
       expect(observedRestore).toBe(true);
-      expect(content.parentElement).toBe(root);
+      expect(content.isConnected).toBe(false);
       expect(content.hidden).toBe(true);
       expect(content.getAttribute("data-state")).toBe("closed");
 
       controller.destroy();
+      expect(root.contains(content)).toBe(true);
     });
 
     it("restores content to root on destroy while open", () => {
@@ -4012,10 +4021,11 @@ describe("Select", () => {
 
       controller.close();
       await waitForClose();
-      expect(portal.parentElement).toBe(root);
+      expect(portal.isConnected).toBe(false);
       expect(content.parentElement).toBe(positioner);
 
       controller.destroy();
+      expect(root.contains(content)).toBe(true);
     });
   });
 

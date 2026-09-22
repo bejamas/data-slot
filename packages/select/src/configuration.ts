@@ -17,6 +17,7 @@ export function resolveSelectConfiguration(
   return {
     defaultValue: options.defaultValue ?? getDataString(root, "defaultValue") ?? null,
     defaultOpen: options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false,
+    mountStrategy: options.mountStrategy ?? getDataEnum(root, "mountStrategy", ["lazy", "eager"] as const) ?? "lazy",
     placeholder: options.placeholder ?? getDataString(root, "placeholder") ?? (valueSlot ? getDataString(valueSlot, "placeholder") : undefined) ?? "",
     disabled: options.disabled ?? getDataBool(root, "disabled") ?? false,
     required: options.required ?? getDataBool(root, "required") ?? false,

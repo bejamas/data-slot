@@ -15,6 +15,7 @@ import {
   ensureItemVisibleInContainer,
   focusElement,
   createPortalLifecycle,
+  createContentMount,
   createPresenceLifecycle,
   createTerminalLifecycle,
   registerFloatingTerminalResources,
@@ -80,7 +81,7 @@ export function createSelect(
   const {
     defaultValue, defaultOpen, placeholder, disabled, required, name, onValueChange, onOpenChange,
     position, preferredSide, preferredAlign, sideOffset, alignOffset, avoidCollisions,
-    collisionPadding, lockScrollOption, highlightItemOnHover,
+    collisionPadding, lockScrollOption, highlightItemOnHover, mountStrategy,
   } = resolveSelectConfiguration(root, content, valueSlot, authoredPositioner, options);
 
   let isOpen = false;
@@ -113,6 +114,12 @@ export function createSelect(
     container: authoredPositioner ?? undefined,
     mountTarget: authoredPositioner ? authoredPortal ?? authoredPositioner : undefined,
   });
+  const mounting = createContentMount({
+    root,
+    target: authoredPortal ?? authoredPositioner ?? content,
+    strategy: mountStrategy,
+  });
+  cleanups.push(() => mounting.cleanup());
   const terminalLifecycle = createTerminalLifecycle();
   terminalLifecycle.onDestroy(() => {
     if (didLockScroll) {
@@ -131,7 +138,7 @@ export function createSelect(
   const contentId = ensureId(content, "select-content");
   trigger.setAttribute("role", "combobox");
   trigger.setAttribute("aria-haspopup", "listbox");
-  trigger.setAttribute("aria-controls", contentId);
+  trigger.removeAttribute("aria-controls");
   if (!trigger.hasAttribute("type")) {
     trigger.setAttribute("type", "button");
   }
@@ -295,8 +302,10 @@ export function createSelect(
   };
 
   let pendingFocusRestore = false;
+  let focusRestoreRaf: number | null = null;
   const restoreFocusNow = () => {
     pendingFocusRestore = false;
+    focusRestoreRaf = null;
     if (previousActiveElement && document.contains(previousActiveElement)) {
       focusElement(previousActiveElement);
     } else if (trigger && document.contains(trigger)) {
@@ -306,7 +315,7 @@ export function createSelect(
   };
   const restoreFocus = () => {
     pendingFocusRestore = true;
-    terminalLifecycle.trackRaf(restoreFocusNow);
+    focusRestoreRaf = terminalLifecycle.trackRaf(restoreFocusNow);
   };
   terminalLifecycle.onBeforeDestroy(() => {
     if (pendingFocusRestore) terminalLifecycle.trackFinalRaf(restoreFocusNow);
@@ -316,6 +325,7 @@ export function createSelect(
     if (terminalLifecycle.isDestroyed) return;
     portal.restore();
     content.hidden = true;
+    mounting.unmount();
     if (shouldRestoreFocusOnClose) {
       restoreFocus();
     } else {
@@ -356,10 +366,20 @@ export function createSelect(
       const openedByPointer = pendingPointerOpen;
       pendingPointerOpen = false;
       shouldRestoreFocusOnClose = true;
-      previousActiveElement = document.activeElement as HTMLElement;
+      const activeElement = document.activeElement as HTMLElement | null;
+      // An immediate selection close queues focus restoration. Reopening must
+      // cancel that work and retain its target if detachment moved focus to body.
+      if (!pendingFocusRestore || (activeElement !== document.body && !content.contains(activeElement))) {
+        previousActiveElement = activeElement;
+      }
+      terminalLifecycle.cancelRaf(focusRestoreRaf);
+      focusRestoreRaf = null;
+      pendingFocusRestore = false;
       isOpen = true;
-      setAria(trigger, "expanded", true);
+      mounting.mount();
       portal.mount();
+      trigger.setAttribute("aria-controls", contentId);
+      setAria(trigger, "expanded", true);
       content.hidden = false;
       setDataState("open");
       presence.enter();
@@ -411,6 +431,7 @@ export function createSelect(
       lastPointerY = 0;
       lastPointerType = "";
       setAria(trigger, "expanded", false);
+      trigger.removeAttribute("aria-controls");
       setDataState("closed");
       clearHighlight();
       typeahead.reset();
@@ -668,6 +689,7 @@ export function createSelect(
       typeahead.destroy();
       isOpen = false;
       setAria(trigger, "expanded", false);
+      trigger.removeAttribute("aria-controls");
       setDataState("closed");
       content.hidden = true;
       formField?.destroy();
@@ -685,6 +707,7 @@ export function createSelect(
   setRootBinding(root, ROOT_BINDING_KEY, controller);
 
   if (defaultOpen) updateOpenState(true);
+  if (!isOpen) mounting.unmount();
 
   return controller;
 }

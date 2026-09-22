@@ -176,6 +176,7 @@ Placement attributes (`position`, `side`, `align`, `sideOffset`, `alignOffset`, 
 |--------|---------------|------|---------|-------------|
 | `defaultValue` | `data-default-value` | `string` | `null` | Initial selected value |
 | `defaultOpen` | `data-default-open` | `boolean` | `false` | Initial popup open state |
+| `mountStrategy` | Root `data-mount-strategy` | `"lazy" \| "eager"` | `"lazy"` | Detach closed content, or keep it connected and hidden |
 | `placeholder` | `data-placeholder` | `string` | `""` | Text when no value selected |
 | `disabled` | `data-disabled` | `boolean` | `false` | Disable interaction |
 | `required` | `data-required` | `boolean` | `false` | Form validation required |
@@ -217,6 +218,40 @@ Consumers can style against these attributes directly and do not need to author 
 |----------|------|-------------|
 | `onValueChange` | `(value: string \| null) => void` | Called when selection changes |
 | `onOpenChange` | `(open: boolean) => void` | Called when popup opens/closes |
+
+### Content mounting and server rendering
+
+Closed popup content and its descendants are detached from the document after
+initialization by default. Opening reconnects the same nodes before ARIA linking,
+measurement, positioning, and focus. Authored portal/positioner wrappers move with
+the content. Dismissal waits for the exit animation before detaching; reopening
+cancels pending removal. Selecting an item retains the existing immediate-close
+behavior, including focus restoration, and detaches immediately.
+
+Use `createSelect(root, { mountStrategy: "eager" })` or put
+`data-mount-strategy="eager"` on the select root to retain hidden content in the
+document. JavaScript takes precedence. Default-open selects stay mounted unless
+disabled; disabled selects cannot open.
+
+The trigger, displayed value, and generated form control remain connected while
+the popup is detached. Programmatic selection, required validation, submission,
+and native form reset continue to work while closed. Item nodes and listeners are
+preserved across openings. `aria-controls` is present on the trigger only while
+open, when the referenced listbox is connected.
+
+Document/root queries no longer find lazy popup content while closed. Retain a
+reference before initialization to access it later. The library's `create(scope)`
+can discover nested selects in retained content, including inside closed hover
+cards. `destroy()` restores authored placement and removes the mounting placeholder,
+allowing rebinding; it does not reconnect a root removed from the document.
+
+This reduces live DOM after initialization, **not initial HTML bytes**. Authored
+options remain in server-rendered HTML and are still downloaded and parsed. Keep
+initial popup markup hidden to avoid a flash before initialization. For a form
+that must work without JavaScript, author a native `<select>` fallback and enhance
+it deliberately; the generated form control is created by JavaScript and is not
+a no-JavaScript fallback. Template content and deferred fetching are not supported
+by this mounting option.
 
 ### Controller
 
@@ -286,7 +321,7 @@ root.dispatchEvent(new CustomEvent('select:set', {
 
 ### Accessibility
 
-- Trigger: `role="combobox"`, `aria-haspopup="listbox"`, `aria-expanded`, `aria-controls`
+- Trigger: `role="combobox"`, `aria-haspopup="listbox"`, `aria-expanded`, and `aria-controls` while open
 - Content: `role="listbox"`, `aria-labelledby`
 - Item: `role="option"`, `aria-selected`, `aria-disabled`
 - Group: `role="group"`, `aria-labelledby`
