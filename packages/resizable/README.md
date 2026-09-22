@@ -74,14 +74,6 @@ const resizable = createResizable(element, {
 A group needs at least one `resizable-panel`, and exactly one
 `resizable-handle` between each adjacent pair of panes.
 
-### Options
-
-| Option             | Type                         | Default        | Description                      |
-| ------------------ | ---------------------------- | -------------- | -------------------------------- |
-| `direction`        | `"horizontal" \| "vertical"` | `"horizontal"` | Layout axis                      |
-| `keyboardResizeBy` | `number`                     | `10`           | Percent moved per arrow keypress |
-| `onLayoutChange`   | `(layout: number[]) => void` | `undefined`    | Called when the layout changes   |
-
 ### Data Attributes
 
 Options can also be set via data attributes. JS options take precedence.
@@ -102,6 +94,14 @@ On each `resizable-panel`:
 | `data-max-size`       | number  | `100`      | Maximum size (%)        |
 | `data-collapsible`    | boolean | `false`    | Pane can collapse       |
 | `data-collapsed-size` | number  | `0`        | Size (%) when collapsed |
+
+### Options
+
+| Option             | Type                         | Default        | Description                      |
+| ------------------ | ---------------------------- | -------------- | -------------------------------- |
+| `direction`        | `"horizontal" \| "vertical"` | `"horizontal"` | Layout axis                      |
+| `keyboardResizeBy` | `number`                     | `10`           | Percent moved per arrow keypress |
+| `onLayoutChange`   | `(layout: number[]) => void` | `undefined`    | Called when the layout changes   |
 
 ### Controller
 
