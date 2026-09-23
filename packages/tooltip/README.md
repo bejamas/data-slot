@@ -210,32 +210,42 @@ itself is suspended while its content is detached and restored on destruction.
 
 ### Content mounting and server rendering
 
-Closed content is detached from the document after initialization by default.
-Opening reconnects it before positioning and exposure; closing detaches it after
-its exit animation. Reopening during an exit cancels the pending removal. The
-same nodes are reused, preserving attached listeners, DOM references, and local
-state. Authored portal/positioner wrappers are detached with their content.
-This also applies with `portal: false`.
+By default, Tooltip removes its hidden message from the page’s DOM. This keeps
+pages with many tooltips smaller after initialization. The button or other element
+that opens the tooltip stays in the page.
 
-To retain hidden content in the document, use `createTooltip(root, { mountStrategy: "eager" })`
-or set `data-mount-strategy="eager"` on the `tooltip` root. JavaScript takes precedence.
-Document/root DOM queries no longer find lazy content while closed; retain a
-reference before initialization if you need to change it later. The library's
-`create(scope)` discovery includes nested roots in retained content, so nested
-components can still be initialized after their parent. Ordinary DOM queries do
-not search retained content.
+Showing the tooltip puts the same message back into the page. Its state and event
+listeners are preserved. Hiding it waits for any exit animation to finish before
+removing it. If the tooltip opens again during that animation, it stays in the
+page.
 
-`destroy()` restores content to its authored position, removes the mounting
-placeholder, and leaves content hidden for a subsequent rebind. If the authored
-root was removed, cleanup does not reconnect it to the document.
+Most applications can use this default without any changes.
 
-This is a **live-DOM optimization after JavaScript initialization**. Authored
-content remains in server-rendered HTML and is still downloaded and parsed;
-there is no initial HTML-size or retained-memory reduction claim. A `<template>`
-would also still transmit its contents; template authoring and deferred fetching
-are not supported by this mounting option. Keep initial overlay markup hidden to
-avoid a pre-initialization flash. The trigger must have its own accessible name;
-tooltip content should provide supplemental information, not an essential label.
+If your code needs to find or update the message while the tooltip is hidden—for
+example, using `querySelector`—use `eager` mode to keep it in the DOM:
+
+```js
+createTooltip(root, { mountStrategy: "eager" });
+```
+
+You can also add `data-mount-strategy="eager"` to the Tooltip root. A JavaScript
+option takes precedence over the HTML attribute.
+
+With the default `lazy` mode, DOM queries won’t find the hidden message. If you
+only need to change its text, you can also keep a reference to the message element
+before initializing Tooltip and use that reference later.
+
+**Server rendering and pages without JavaScript**
+
+Lazy mounting does **not** reduce the HTML sent to the browser. The message is
+still included in your HTML; Tooltip removes it from the DOM after JavaScript
+initializes.
+
+Keep the tooltip’s initial markup hidden to prevent it briefly appearing before
+initialization. The button or element that opens it must have a clear accessible
+name of its own. Use the tooltip for extra information, and keep anything essential
+available without opening it. Neither `lazy` nor `eager` mode makes a tooltip work
+without JavaScript.
 
 ### Events
 
