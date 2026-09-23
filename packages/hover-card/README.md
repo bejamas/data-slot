@@ -163,33 +163,41 @@ old controller become no-ops. Create a new controller on the same root to rebind
 
 ### Content mounting and server rendering
 
-Closed content is detached from the document after initialization by default.
-Opening reconnects it before positioning and exposure; closing detaches it after
-its exit animation. Reopening during an exit cancels the pending removal. The
-same nodes are reused, preserving attached listeners, DOM references, and local
-state. Authored portal/positioner wrappers are detached with their content.
-This also applies with `portal: false`.
+By default, Hover Card removes its closed preview from the page’s DOM. This keeps
+pages with many hover cards smaller after initialization. The link or button that
+opens the card stays in the page.
 
-To retain hidden content in the document, use `createHoverCard(root, { mountStrategy: "eager" })`
-or set `data-mount-strategy="eager"` on the `hover-card` root. JavaScript takes precedence.
-Document/root DOM queries no longer find lazy content while closed; retain a
-reference before initialization if you need to change it later. The library's
-`create(scope)` discovery includes nested roots in retained content, so nested
-components can still be initialized after their parent. Ordinary DOM queries do
-not search retained content.
+Opening the card puts the same preview back into the page. Its state and event
+listeners are preserved. Closing waits for any exit animation to finish before
+removing it. If the card opens again during that animation, it stays in the page.
+Cards configured to start open stay in the page from initialization.
 
-`destroy()` restores content to its authored position, removes the mounting
-placeholder, and leaves content hidden for a subsequent rebind. If the authored
-root was removed, cleanup does not reconnect it to the document.
+Most applications can use this default without any changes.
 
-This is a **live-DOM optimization after JavaScript initialization**. Authored
-content remains in server-rendered HTML and is still downloaded and parsed;
-there is no initial HTML-size or retained-memory reduction claim. A `<template>`
-would also still transmit its contents; template authoring and deferred fetching
-are not supported by this mounting option. Keep initial overlay markup hidden to
-avoid a pre-initialization flash. Keep essential information and working links
-available outside the card for users without JavaScript. Default-open and
-controlled-open cards remain mounted.
+If your code needs to find or update content while the card is closed—for example,
+using `querySelector`—use `eager` mode to keep it in the DOM:
+
+```js
+createHoverCard(root, { mountStrategy: "eager" });
+```
+
+You can also add `data-mount-strategy="eager"` to the Hover Card root. A JavaScript
+option takes precedence over the HTML attribute.
+
+With the default `lazy` mode, DOM queries won’t find the closed preview. You can
+also keep a reference to its content element before initializing Hover Card and
+use that reference later.
+
+**Server rendering and pages without JavaScript**
+
+Lazy mounting does **not** reduce the HTML sent to the browser. The preview is
+still included in your HTML; Hover Card removes it from the DOM after JavaScript
+initializes if the card is closed.
+
+Keep the preview’s initial markup hidden to prevent it briefly appearing before
+initialization. Make essential information and links available outside the card
+so people can still use the page without JavaScript. Neither `lazy` nor `eager`
+mode provides that fallback automatically.
 
 ### Events
 

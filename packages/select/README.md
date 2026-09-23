@@ -221,37 +221,40 @@ Consumers can style against these attributes directly and do not need to author 
 
 ### Content mounting and server rendering
 
-Closed popup content and its descendants are detached from the document after
-initialization by default. Opening reconnects the same nodes before ARIA linking,
-measurement, positioning, and focus. Authored portal/positioner wrappers move with
-the content. Dismissal waits for the exit animation before detaching; reopening
-cancels pending removal. Selecting an item retains the existing immediate-close
-behavior, including focus restoration, and detaches immediately.
+By default, Select removes its closed dropdown from the page’s DOM. This keeps
+pages with many selects smaller after initialization. The select button and
+selected value remain visible, and forms continue to work normally.
 
-Use `createSelect(root, { mountStrategy: "eager" })` or put
-`data-mount-strategy="eager"` on the select root to retain hidden content in the
-document. JavaScript takes precedence. Default-open selects stay mounted unless
-disabled; disabled selects cannot open.
+Opening the dropdown puts the same options back into the page. Their state and
+event listeners are preserved. Closing waits for any exit animation to finish,
+except when choosing an option, which closes the dropdown immediately.
 
-The trigger, displayed value, and generated form control remain connected while
-the popup is detached. Programmatic selection, required validation, submission,
-and native form reset continue to work while closed. Item nodes and listeners are
-preserved across openings. `aria-controls` is present on the trigger only while
-open, when the referenced listbox is connected.
+Most applications can use this default without any changes.
 
-Document/root queries no longer find lazy popup content while closed. Retain a
-reference before initialization to access it later. The library's `create(scope)`
-can discover nested selects in retained content, including inside closed hover
-cards. `destroy()` restores authored placement and removes the mounting placeholder,
-allowing rebinding; it does not reconnect a root removed from the document.
+If your code needs to find or update options while the dropdown is closed—for
+example, using `querySelector`—use `eager` mode to keep them in the DOM:
 
-This reduces live DOM after initialization, **not initial HTML bytes**. Authored
-options remain in server-rendered HTML and are still downloaded and parsed. Keep
-initial popup markup hidden to avoid a flash before initialization. For a form
-that must work without JavaScript, author a native `<select>` fallback and enhance
-it deliberately; the generated form control is created by JavaScript and is not
-a no-JavaScript fallback. Template content and deferred fetching are not supported
-by this mounting option.
+```js
+createSelect(root, { mountStrategy: "eager" });
+```
+
+You can also add `data-mount-strategy="eager"` to the Select root. A JavaScript
+option takes precedence over the HTML attribute.
+
+With the default `lazy` mode, DOM queries won’t find closed options. You can still
+use the Select controller to change the selected value while closed; the displayed
+label and form value will update as usual.
+
+**Server rendering and pages without JavaScript**
+
+Lazy mounting does **not** reduce the HTML sent to the browser. Options are still
+included in your HTML; Select removes them from the DOM after JavaScript
+initializes.
+
+Keep the dropdown’s initial markup hidden to prevent it briefly appearing before
+initialization. If the form must work without JavaScript, provide a native
+`<select>` fallback. Neither `lazy` nor `eager` mode provides that fallback
+automatically.
 
 ### Controller
 

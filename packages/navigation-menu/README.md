@@ -208,33 +208,44 @@ A full close is intentionally non-directional.
 
 ### Content mounting and server rendering
 
-Inactive panels and their descendants are detached from the document after
-initialization by default. Opening reconnects the same panel before ARIA linking,
-measurement, and focus. Switching mounts the incoming panel while the outgoing
-panel finishes its exit animation; only the active panel remains after that exit.
-Closing waits for panel exits, and the shared popup/viewport shell waits for all
-panel and shell exits before being restored. Reopening cancels pending removal
-for the reopened panel. Nodes, listeners, and local form state survive reopening.
+By default, Navigation Menu removes its closed panels from the page’s DOM. This
+keeps pages with large menus smaller after initialization. The menu buttons and
+links outside those panels stay in the page.
 
-Use `createNavigationMenu(root, { mountStrategy: "eager" })` or root
-`data-mount-strategy="eager"` to retain inactive panels in the document. JavaScript
-takes precedence. Triggers, plain navigation links, and empty authored viewport or
-wrapper elements remain connected when closed. `aria-controls` is present on an
-active trigger only while its panel is connected and open.
+Opening a panel puts the same content back into the page. Its state and event
+listeners are preserved. When switching panels, the new panel appears while the
+previous one finishes its exit animation. After that animation, the previous
+panel is removed.
 
-Document/root queries no longer find lazy panels while closed; retain references
-before initialization if needed. Component `create(scope)` discovery includes
-nested roots in retained panels. `destroy()` restores panels to their authored
-positions and removes mounting placeholders for rebinding, including when the
-root has been removed from the document.
+Closing the menu waits for the panels and their surrounding popup to finish their
+exit animations. Reopening a panel during its exit animation keeps it in the page.
 
-This reduces live DOM after initialization, **not initial HTML bytes**. Panel
-markup remains in server-rendered HTML and is still downloaded and parsed; this
-option does not add templates or deferred fetching. Choose progressive enhancement
-deliberately for navigation: leave essential links accessible in authored HTML
-until JavaScript initializes, or provide accessible fallback navigation if panels
-are initially hidden. The `eager` option controls post-initialization mounting and
-does not itself provide a no-JavaScript fallback.
+Most applications can use this default without any changes.
+
+If your code needs to find or update links inside a closed panel—for example,
+using `querySelector`—use `eager` mode to keep the panels in the DOM:
+
+```js
+createNavigationMenu(root, { mountStrategy: "eager" });
+```
+
+You can also add `data-mount-strategy="eager"` to the Navigation Menu root. A
+JavaScript option takes precedence over the HTML attribute.
+
+With the default `lazy` mode, DOM queries won’t find closed panels or their links.
+You can also keep a reference to a panel before initializing Navigation Menu and
+use that reference later.
+
+**Server rendering and pages without JavaScript**
+
+Lazy mounting does **not** reduce the HTML sent to the browser. Panel content is
+still included in your HTML; Navigation Menu removes closed panels from the DOM
+after JavaScript initializes.
+
+Make sure essential navigation works before JavaScript loads or if it never runs.
+You can leave the links visible until initialization, or provide separate fallback
+navigation if your panels start hidden. Neither `lazy` nor `eager` mode provides
+that fallback automatically.
 
 ### Controller
 
