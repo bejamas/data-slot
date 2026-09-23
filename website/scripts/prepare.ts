@@ -49,6 +49,11 @@ for (const component of components) {
     if (filename === 'AccordionMultiple') {
       source = source.replaceAll('data-slot="accordion"', 'data-slot="accordion" data-multiple');
     }
+    if (filename === 'NavigationMenu') {
+      // Distinguish the two navigation landmarks rendered on the same docs page.
+      const label = variant === 'basic' ? 'Shared viewport navigation' : 'Fixed positioning navigation';
+      source = source.replaceAll('aria-label="Main navigation"', `aria-label="${label}"`);
+    }
     // Several original demos use fixed IDs. Each example gets its own namespace.
     source = source.replace(/\b(id|for|aria-labelledby|aria-describedby|aria-controls)="([^"]+)"/g,
       (_, attr, value) => `${attr}="${value.split(' ').map((id: string) => `${component.slug}-${variant}-${id}`).join(' ')}"`);

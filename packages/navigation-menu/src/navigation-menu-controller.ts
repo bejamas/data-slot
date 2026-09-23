@@ -4,6 +4,9 @@ import {
   getRoots,
   getDataBool,
   getDataNumber,
+  getDataEnum,
+  createContentMount,
+  type MountStrategy,
   containsWithPortals,
   reuseRootBinding,
   hasRootBinding,
@@ -33,6 +36,8 @@ export type { Align, PositionMethod } from "./navigation-menu-layout";
 import type { TopLevelNavigable } from "./navigation-menu-items";
 
 export interface NavigationMenuOptions {
+  /** Detach inactive panels by default; eager keeps them connected and hidden. */
+  mountStrategy?: MountStrategy;
   /** Delay before opening on hover (ms) */
   delayOpen?: number;
   /** Delay before closing on mouse leave (ms) */
@@ -84,7 +89,7 @@ const DUPLICATE_BINDING_WARNING =
  *       <div data-slot="navigation-menu-content">...</div>
  *     </li>
  *     <!-- Optional hover indicator -->
- *     <div data-slot="navigation-menu-indicator"></div>
+ *     <li data-slot="navigation-menu-indicator" role="presentation" aria-hidden="true"></li>
  *   </ul>
  *   <div data-slot="navigation-menu-portal">
  *     <div data-slot="navigation-menu-positioner">
@@ -117,6 +122,8 @@ export function createNavigationMenu(
   const openOnFocus =
     options.openOnFocus ?? getDataBool(root, "openOnFocus") ?? false;
   const onValueChange = options.onValueChange;
+  const mountStrategy = options.mountStrategy ??
+    getDataEnum(root, "mountStrategy", ["lazy", "eager"] as const) ?? "lazy";
 
   // Safe inert setter (fallback for older browsers)
   const setInert = (el: HTMLElement, inert: boolean) => {
@@ -190,6 +197,7 @@ export function createNavigationMenu(
     viewport,
     isDestroyed: () => terminalLifecycle.isDestroyed,
     beforeRestore: () => resetLayout(),
+    hasExitingContent: () => [...presences.values()].some((presence) => presence.isExiting),
   });
   const getCurrentPopup = () => popupStackController.popup;
   const getCurrentPositioner = () => popupStackController.positioner;
@@ -201,7 +209,9 @@ export function createNavigationMenu(
     navigables: topLevelNavigables,
     navigableByTarget,
   } = discoveredItems;
+  const mounts = new Map<HTMLElement, ReturnType<typeof createContentMount>>();
   for (const { content } of allItems) {
+    mounts.set(content, createContentMount({ root, target: content, strategy: mountStrategy }));
     presences.set(
       content,
       createPresenceLifecycle({
@@ -215,6 +225,8 @@ export function createNavigationMenu(
           layout.restore(content);
           content.hidden = true;
           content.style.pointerEvents = "none";
+          mounts.get(content)?.unmount();
+          popupStackController.checkExitComplete();
         },
       }),
     );
@@ -484,6 +496,8 @@ export function createNavigationMenu(
     presences.clear();
     layout.destroy();
     popupStackController.destroy();
+    mounts.forEach((mount) => mount.cleanup());
+    mounts.clear();
   });
 
   const updateState = (value: string | null, immediate = false) => {
@@ -537,7 +551,10 @@ export function createNavigationMenu(
         const isActive = key === value;
         const wasActive = key === prevValue;
 
-        setAria(trigger, "expanded", isActive);
+        if (!isActive) {
+          setAria(trigger, "expanded", false);
+          trigger.removeAttribute("aria-controls");
+        }
         trigger.setAttribute("data-state", isActive ? "open" : "closed");
         item.setAttribute("data-state", isActive ? "open" : "closed");
 
@@ -574,6 +591,7 @@ export function createNavigationMenu(
             layout.setAbsolute(content, false);
             layout.restore(content);
             content.hidden = true;
+            mounts.get(content)?.unmount();
           } else {
             // Preserve current exit motion while this panel is finishing an exit animation.
           }
@@ -582,6 +600,7 @@ export function createNavigationMenu(
 
       // Update new active content
       if (newData) {
+        mounts.get(newData.content)?.mount();
         popupStackController.prepareOpen();
         if (viewport && isInitialOpen) {
           setOpenSurfaceState(root, true);
@@ -593,6 +612,8 @@ export function createNavigationMenu(
         }
         popupStackController.reveal(prevValue === null);
         layout.mount(newData.content);
+        newData.trigger.setAttribute("aria-controls", newData.content.id);
+        setAria(newData.trigger, "expanded", true);
         const presence = presences.get(newData.content);
         presence?.enter();
         layout.start();
@@ -729,6 +750,7 @@ export function createNavigationMenu(
     setInert(content, true);
     content.hidden = true;
     content.style.pointerEvents = "none";
+    mounts.get(content)?.unmount();
   });
 
   // Pointer handlers for items
@@ -1202,6 +1224,7 @@ export function createNavigationMenu(
       updateIndicator(null);
       itemMap.forEach(({ trigger, content, item }) => {
         setAria(trigger, "expanded", false);
+        trigger.removeAttribute("aria-controls");
         trigger.setAttribute("data-state", "closed");
         item.setAttribute("data-state", "closed");
         setContentSurfaceState(content, false);

@@ -12,6 +12,7 @@ export interface NavigationMenuPopupStackOptions {
   viewport: HTMLElement | null;
   isDestroyed(): boolean;
   beforeRestore(): void;
+  hasExitingContent?(): boolean;
 }
 
 interface PopupPositionState {
@@ -65,6 +66,8 @@ export interface NavigationMenuPopupStack {
   prepareOpen(): void;
   reveal(initial: boolean): void;
   close(baseline: Size): void;
+  /** Recheck shared-shell teardown after an outgoing panel finishes exiting. */
+  checkExitComplete(): void;
   baseline(): Size;
   isSizeTransitioning(): boolean;
   measure(mode: ViewportLayoutMode, fallback: Size): Size;
@@ -331,7 +334,8 @@ export function createNavigationMenuPopupStack(
       popupStack !== stack ||
       !stack.isClosing ||
       !stack.popupExitComplete ||
-      !stack.viewportExitComplete
+      !stack.viewportExitComplete ||
+      options.hasExitingContent?.()
     )
       return;
     teardown(false);
@@ -352,7 +356,16 @@ export function createNavigationMenuPopupStack(
     viewport.style.pointerEvents = "none";
     stack.popup.hidden = true;
     stack.popup.style.pointerEvents = "none";
+    const { originalParent, originalNextSibling } = stack.popupPortal.state;
     stack.popupPortal.restore();
+    // Portal restoration removes orphaned body portals. Retain authored markup
+    // inside a detached root as well, so it can be reinserted and rebound.
+    if (originalParent && !originalParent.isConnected) {
+      originalParent.insertBefore(
+        stack.portal,
+        originalNextSibling?.parentNode === originalParent ? originalNextSibling : null,
+      );
+    }
     if (stack.generatedPopup) unwrap(stack.popup);
     if (stack.generatedPositioner) unwrap(stack.positioner);
     if (stack.generatedPortal) unwrap(stack.portal);
@@ -551,6 +564,7 @@ export function createNavigationMenuPopupStack(
     prepareOpen,
     reveal,
     close,
+    checkExitComplete: () => { if (popupStack) maybeTeardown(popupStack); },
     baseline,
     isSizeTransitioning,
     measure,
