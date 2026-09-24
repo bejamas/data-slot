@@ -36,7 +36,21 @@ jobs:
       - name: Build packages
         run: bun run build
 
+      - name: Plan release packages
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            RELEASE_VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            RELEASE_VERSION=$(jq -r .version packages/core/package.json)
+          fi
+          PUBLISH_PLAN="$RUNNER_TEMP/publish-packages.txt"
+          echo "PUBLISH_PLAN=$PUBLISH_PLAN" >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
+          bun run scripts/publish-packages.ts "$RELEASE_VERSION" > "$PUBLISH_PLAN"
+
       - name: Setup npm auth
+        if: ${{ !inputs.dry_run }}
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -57,12 +71,6 @@ jobs:
           PUBLISH_VERIFY_ATTEMPTS="${PUBLISH_VERIFY_ATTEMPTS:-30}"
           PUBLISH_VERIFY_SLEEP_SECONDS="${PUBLISH_VERIFY_SLEEP_SECONDS:-10}"
 
-          # Resolve release version: from tag (e.g. v0.2.10 -> 0.2.10) or from core's package.json
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            RELEASE_VERSION="${GITHUB_REF#refs/tags/v}"
-          else
-            RELEASE_VERSION=$(jq -r .version packages/core/package.json)
-          fi
           echo "Using release version: $RELEASE_VERSION"
           echo "Using npm registry: $NPM_REGISTRY"
 
@@ -141,6 +149,26 @@ jobs:
           # Helper function: pack with bun, rewrite workspace deps, validate packed manifest, then publish extracted contents.
           publish_pkg() {
             local dir="$1"
+            local pkg_name
+            local pkg_version
+            local pkg_encoded
+            local status_code
+            pkg_name="$(jq -r .name "$dir/package.json")"
+            pkg_version="$(jq -r .version "$dir/package.json")"
+            pkg_encoded="$(jq -nr --arg v "$pkg_name" '$v|@uri')"
+            status_code="$(curl -sS -o /dev/null -w "%{http_code}" "${NPM_REGISTRY}/${pkg_encoded}/${pkg_version}")"
+            case "$status_code" in
+              200)
+                echo "Skipping ${pkg_name}@${pkg_version}: already published"
+                return 0
+                ;;
+              404) ;;
+              *)
+                echo "ERROR: Could not check ${pkg_name}@${pkg_version} (HTTP ${status_code})"
+                return 1
+                ;;
+            esac
+
             pushd "$dir" >/dev/null
 
             rm -f ./*.tgz
@@ -161,8 +189,6 @@ jobs:
             # Replace internal workspace:* deps with the release version.
             rewrite_workspace_data_slot_deps "$tmp/package/package.json"
 
-            local pkg_name
-            local pkg_version
             pkg_name="$(jq -r .name "$tmp/package/package.json")"
             pkg_version="$(jq -r .version "$tmp/package/package.json")"
 
@@ -181,39 +207,20 @@ jobs:
             popd >/dev/null
           }
 
-          # Publish in dependency order (core first)
-          publish_pkg packages/core
-          publish_pkg packages/accordion
-          publish_pkg packages/dialog
-          publish_pkg packages/drawer
-          publish_pkg packages/alert-dialog
-          publish_pkg packages/collapsible
-          publish_pkg packages/navigation-menu
-          publish_pkg packages/popover
-          publish_pkg packages/tabs
-          publish_pkg packages/tooltip
-          publish_pkg packages/dropdown-menu
-          publish_pkg packages/slider
-          publish_pkg packages/toggle
-          publish_pkg packages/toggle-group
-          publish_pkg packages/select
-          publish_pkg packages/combobox
-          publish_pkg packages/hover-card
-          publish_pkg packages/command
-          publish_pkg packages/switch
-          publish_pkg packages/radio-group
-
-          publish_pkg packages/ui
+          while IFS= read -r dir; do
+            publish_pkg "$dir"
+          done < "$PUBLISH_PLAN"
 
       - name: Dry run - show what would be published
         if: ${{ inputs.dry_run }}
         run: |
+          set -euo pipefail
           echo "Would publish the following packages:"
-          for pkg in packages/*/; do
+          while IFS= read -r pkg; do
             name=$(jq -r .name "$pkg/package.json")
             version=$(jq -r .version "$pkg/package.json")
             echo "  $name@$version"
-          done
+          done < "$PUBLISH_PLAN"
 
       - name: Generate Release Notes
         if: ${{ !inputs.dry_run && startsWith(github.ref, 'refs/tags/') }}
