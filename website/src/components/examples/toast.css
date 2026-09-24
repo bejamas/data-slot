@@ -33,10 +33,10 @@
   opacity: 0;
   transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
   transition:
-    transform 400ms ease,
-    opacity 400ms ease,
-    height 400ms ease,
-    box-shadow 200ms ease;
+    transform 320ms ease,
+    opacity 320ms ease,
+    height 320ms ease,
+    box-shadow 160ms ease;
 }
 
 .toast-demo-viewport[data-position^="top"] [data-slot="toast-item"] {
@@ -46,7 +46,7 @@
 }
 
 .toast-demo-viewport [data-slot="toast-item"] > * {
-  transition: opacity 400ms;
+  transition: opacity 320ms;
 }
 
 .toast-demo-viewport [data-slot="toast-item"][data-front="true"] {
@@ -145,8 +145,8 @@
   transform: translate3d(0, 40%, 0);
   opacity: 0;
   transition:
-    transform 500ms ease,
-    opacity 200ms ease;
+    transform 400ms ease,
+    opacity 160ms ease;
 }
 
 .toast-demo-viewport [data-slot="toast-item"][data-swiping="true"] {

@@ -255,10 +255,10 @@ root.dispatchEvent(new CustomEvent("toast:clear"));
   opacity: 0;
   transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
   transition:
-    transform 400ms ease,
-    opacity 400ms ease,
-    height 400ms ease,
-    box-shadow 200ms ease;
+    transform 320ms ease,
+    opacity 320ms ease,
+    height 320ms ease,
+    box-shadow 160ms ease;
 }
 
 [data-slot="toast-item"][data-mounted="true"] {
@@ -352,8 +352,8 @@ root.dispatchEvent(new CustomEvent("toast:clear"));
   transform: translate3d(0, 40%, 0);
   opacity: 0;
   transition:
-    transform 500ms ease,
-    opacity 200ms ease;
+    transform 400ms ease,
+    opacity 160ms ease;
 }
 
 [data-slot="toast-item"][data-swiping="true"] {
