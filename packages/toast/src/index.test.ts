@@ -1749,7 +1749,7 @@ describe("Toast", () => {
     controller.destroy();
   });
 
-  it("measures toast height in place so ancestor-scoped styles apply", () => {
+  it("measures toast height inside the viewport so ancestor-scoped styles apply", () => {
     const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
 
     HTMLElement.prototype.getBoundingClientRect = function () {
@@ -1768,8 +1768,8 @@ describe("Toast", () => {
       }
 
       if (this.matches('[data-slot="toast-item"]')) {
-        // The natural height is only visible while the controller overrides the
-        // pinned height inline, and only if the item is still inside .scoped.
+        // The measurement copy must keep ancestor-scoped styles while
+        // overriding the pinned height.
         const height =
           this.style.height === "auto" && this.closest(".scoped") ? 120 : 56;
 
@@ -1902,39 +1902,54 @@ describe("Toast", () => {
     }
   });
 
-  it("measures natural height through a temporary inline override and restores it", () => {
+  it("measures mixed heights without changing the live toast's animated height", () => {
     const { root, viewport, controller } = setup({ duration: 0 });
-
     const firstId = controller.show({ title: "Tall older" });
     const secondId = controller.show({ title: "Short front" });
-
     const first = root.querySelector(`[data-id="${firstId}"]`) as HTMLElement;
     const second = root.querySelector(`[data-id="${secondId}"]`) as HTMLElement;
-
-    // Author CSS pins the rendered height to controller tokens, so the natural
-    // size is only observable while the controller has overridden it inline.
-    const rect = (natural: number, pinned: number) =>
-      function (this: HTMLElement) {
-        const height = this.style.height === "auto" ? natural : pinned;
-        return { x: 0, y: 0, top: 0, left: 0, width: 200, height, right: 200, bottom: height, toJSON: () => ({}) } as DOMRect;
-      };
-    first.getBoundingClientRect = rect(140, 60);
-    second.getBoundingClientRect = rect(60, 60);
     first.style.height = "60px";
+    first.style.width = "200px";
+    first.style.transform = "scale(0.95)";
+    first.style.transition = "height 400ms ease";
 
-    controller.update(secondId, { title: "Short front!" });
+    const originalRect = HTMLElement.prototype.getBoundingClientRect;
+    let measurements = 0;
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      if (this.matches('[data-slot="toast-item"]') && this !== first && this !== second) {
+        measurements++;
+        // A layout read on the live item with height: auto would cancel its
+        // transition. The measurement must leave that element untouched.
+        expect(first.style.height).toBe("60px");
+        expect(first.style.transition).toBe("height 400ms ease");
+        expect(second.style.height).toBe("");
+        expect(this.parentElement).toBe(viewport);
+        expect(this.style.height).toBe("auto");
+        expect(this.style.visibility).toBe("hidden");
+        expect(this.hasAttribute("inert")).toBe(true);
+        const isTall = this.dataset.id === firstId;
+        if (isTall) expect(this.style.width).toBe("200px");
+        const height = isTall ? 140 : 60;
+        return { x: 0, y: 0, top: 0, left: 0, width: 200, height, right: 200, bottom: height, toJSON: () => ({}) } as DOMRect;
+      }
+      return originalRect.call(this);
+    };
 
-    expect(first.style.height).toBe("60px");
-    expect(second.style.height).toBe("");
-    expect(first.style.getPropertyValue("--toast-initial-height")).toBe("140px");
-    expect(second.style.getPropertyValue("--toast-initial-height")).toBe("60px");
-    expect(first.style.getPropertyValue("--toast-offset")).toBe("68px");
-    expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("14px");
-    expect(viewport.style.getPropertyValue("--toast-expanded-stack-size")).toBe("208px");
-    expect(viewport.style.getPropertyValue("--toast-collapsed-stack-size")).toBe("74px");
-    expect(viewport.style.getPropertyValue("--toast-stack-size")).toBe("74px");
-
-    controller.destroy();
+    try {
+      controller.update(secondId, { title: "Short front!" });
+      expect(measurements).toBe(2);
+      expect(viewport.children.length).toBe(2);
+      expect(first.style.getPropertyValue("--toast-initial-height")).toBe("140px");
+      expect(second.style.getPropertyValue("--toast-initial-height")).toBe("60px");
+      expect(first.style.getPropertyValue("--toast-offset")).toBe("68px");
+      expect(first.style.getPropertyValue("--toast-collapsed-offset-y")).toBe("14px");
+      expect(viewport.style.getPropertyValue("--toast-expanded-stack-size")).toBe("208px");
+      expect(viewport.style.getPropertyValue("--toast-collapsed-stack-size")).toBe("74px");
+      expect(viewport.style.getPropertyValue("--toast-stack-size")).toBe("74px");
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = originalRect;
+      controller.destroy();
+    }
   });
 
   it("keeps the last measured height for an item that measures zero", () => {

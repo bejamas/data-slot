@@ -15,49 +15,69 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  --toast-gap: 12px;
-  --toast-collapsed-peek: 12px;
+  --toast-gap: 14px;
+  --toast-collapsed-peek: 14px;
 }
 
+/* Preserve the original stack motion: enter from a full toast height,
+   and keep front, expanded, collapsed, and swipe exits distinct. */
 .toast-demo-viewport [data-slot="toast-item"] {
   position: absolute;
   inset-inline: 0;
   bottom: 0;
-  box-sizing: border-box;
-  overflow-wrap: anywhere;
   transform-origin: bottom center;
   touch-action: none;
+  overflow-wrap: anywhere;
+  will-change: transform, opacity;
+  box-sizing: border-box;
   opacity: 0;
-  transform: translateY(1rem);
-  transition: transform 250ms ease, opacity 250ms ease, height 250ms ease;
+  transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
+  transition:
+    transform 400ms ease,
+    opacity 400ms ease,
+    height 400ms ease,
+    box-shadow 200ms ease;
+}
+
+.toast-demo-viewport[data-position^="top"] [data-slot="toast-item"] {
+  top: 0;
+  bottom: auto;
+  transform-origin: top center;
+}
+
+.toast-demo-viewport [data-slot="toast-item"] > * {
+  transition: opacity 400ms;
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-front="true"] {
+  box-shadow: 0 14px 34px rgb(0 0 0 / 0.3);
 }
 
 .toast-demo-viewport [data-slot="toast-item"][data-mounted="true"] {
+  transform: translate3d(0, 0, 0);
   opacity: 1;
-  transform: translateY(0);
 }
 
-.toast-demo-viewport [data-slot="toast-item"][data-expanded="false"][data-front="false"] {
-  transform: translateY(calc(-1 * var(--toast-collapsed-offset-y, 0px)))
+.toast-demo-viewport [data-slot="toast-item"][data-mounted="true"][data-expanded="false"][data-front="false"] {
+  transform: translate3d(
+      0,
+      calc(var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1)),
+      0
+    )
     scale(calc(1 - var(--toast-index, 0) * 0.05));
   height: var(--toast-front-height);
 }
 
-.toast-demo-viewport [data-slot="toast-item"][data-expanded="true"] {
-  transform: translateY(calc(-1 * var(--toast-offset, 0px)));
+.toast-demo-viewport [data-slot="toast-item"][data-mounted="true"][data-expanded="true"] {
+  transform: translate3d(
+    0,
+    calc(var(--toast-offset, 0px) * var(--toast-lift, -1)),
+    0
+  );
   height: var(--toast-initial-height);
 }
 
-/* Bridge the gaps so hovering between notifications keeps the stack open. */
-.toast-demo-viewport [data-slot="toast-item"][data-expanded="true"]::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  bottom: 100%;
-  height: calc(var(--toast-gap) + 1px);
-}
-
-.toast-demo-viewport [data-slot="toast-item"][data-expanded="false"][data-front="false"] > * {
+.toast-demo-viewport [data-slot="toast-item"][data-expanded="false"][data-front="false"][data-state="open"] > * {
   opacity: 0;
 }
 
@@ -66,25 +86,109 @@
   pointer-events: none;
 }
 
-.toast-demo-viewport [data-slot="toast-item"][data-removed="true"] {
+.toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="true"] {
+  transform: translate3d(
+    var(--toast-swipe-end-x, 0px),
+    var(--toast-swipe-end-y, 0px),
+    0
+  );
   opacity: 0;
-  transform: translateY(1rem);
-  pointer-events: none;
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="true"] {
+  transform: translate3d(
+    var(--toast-swipe-end-x, 0px),
+    calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-swipe-end-y, 0px)),
+    0
+  );
+  opacity: 0;
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-swipe-out="true"][data-front="false"][data-expanded="false"] {
+  transform: translate3d(
+      var(--toast-swipe-end-x, 0px),
+      calc(
+        var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+          var(--toast-swipe-end-y, 0px)
+      ),
+      0
+    )
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
+  opacity: 0;
+}
+
+/* Bridge the gaps so hovering between notifications keeps the stack open. */
+.toast-demo-viewport [data-slot="toast-item"][data-expanded="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: calc(var(--toast-gap, 0px) + 1px);
+  bottom: 100%;
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-front="true"] {
+  transform: translate3d(0, calc(var(--toast-lift, -1) * -100%), 0);
+  opacity: 0;
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-front="false"][data-expanded="true"] {
+  transform: translate3d(
+    0,
+    calc(var(--toast-lift, -1) * var(--toast-offset, 0px) + var(--toast-lift, -1) * -100%),
+    0
+  );
+  opacity: 0;
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-removed="true"][data-front="false"][data-expanded="false"] {
+  transform: translate3d(0, 40%, 0);
+  opacity: 0;
+  transition:
+    transform 500ms ease,
+    opacity 200ms ease;
 }
 
 .toast-demo-viewport [data-slot="toast-item"][data-swiping="true"] {
   transition: none;
-  transform: translate(
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-swiping="true"][data-front="true"] {
+  transform: translate3d(
     var(--toast-swipe-amount-x, 0px),
-    calc(-1 * var(--toast-offset, 0px) + var(--toast-swipe-amount-y, 0px))
+    var(--toast-swipe-amount-y, 0px),
+    0
   );
 }
 
-.toast-demo-viewport [data-slot="toast-item"][data-swipe-out="true"] {
-  transform: translate(
-    var(--toast-swipe-end-x, 0px),
-    calc(-1 * var(--toast-offset, 0px) + var(--toast-swipe-end-y, 0px))
+.toast-demo-viewport [data-slot="toast-item"][data-swiping="true"][data-expanded="false"][data-front="false"] {
+  transform: translate3d(
+      var(--toast-swipe-amount-x, 0px),
+      calc(
+        var(--toast-collapsed-offset-y, 0px) * var(--toast-lift, -1) +
+          var(--toast-swipe-amount-y, 0px)
+      ),
+      0
+    )
+    scale(calc(1 - var(--toast-index, 0) * 0.05));
+}
+
+.toast-demo-viewport [data-slot="toast-item"][data-swiping="true"][data-expanded="true"] {
+  transform: translate3d(
+    var(--toast-swipe-amount-x, 0px),
+    calc(var(--toast-offset, 0px) * var(--toast-lift, -1) + var(--toast-swipe-amount-y, 0px)),
+    0
   );
+}
+
+.toast-demo-viewport[data-position^="top"] {
+  top: 0;
+  bottom: auto;
+}
+
+.toast-demo-viewport[data-position^="top"] [data-slot="toast-item"][data-expanded="true"]::after {
+  top: 100%;
+  bottom: auto;
 }
 
 .toast-demo :is(button, [data-slot="toast-item"]):focus-visible {
@@ -137,5 +241,7 @@
 .toast-demo-viewport [hidden] { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .toast-demo-viewport [data-slot="toast-item"] { transition: none; }
+  /* Match the state selectors so exit overrides cannot re-enable motion. */
+  .toast-demo-viewport [data-slot="toast-item"][data-mounted][data-expanded][data-front],
+  .toast-demo-viewport [data-slot="toast-item"] > * { transition: none; }
 }

@@ -20,18 +20,32 @@ const getCssCollapsedPeek = (viewport: HTMLElement): number => {
 };
 
 /**
- * Author CSS pins each item's height to tokens this module writes, so the
- * rendered box never reflects the item's natural size. Override the height
- * inline for the duration of one synchronous read, then put it back. The
- * write and restore land in the same task, so no transition or resize fires.
+ * Measure a hidden copy in the same viewport so ancestor styles still apply.
+ * Reading layout after setting height: auto on the live item flushes that
+ * style and cancels its height transition, even if restored in the same task.
  */
 const measureNaturalHeight = (item: HTMLElement): number => {
-  const pinnedHeight = item.style.height;
-  item.style.height = "auto";
-  // offsetHeight ignores transforms such as the collapsed-stack scale.
-  const height = item.offsetHeight || item.getBoundingClientRect().height;
-  item.style.height = pinnedHeight;
-  return height;
+  const clone = item.cloneNode(true) as HTMLElement;
+  clone.setAttribute("aria-hidden", "true");
+  clone.setAttribute("inert", "");
+  // Computed width is unscaled and respects the author's box-sizing mode.
+  clone.style.width = getComputedStyle(item).width;
+  clone.style.height = "auto";
+  clone.style.maxHeight = "none";
+  clone.style.position = "absolute";
+  clone.style.inset = "0 auto auto 0";
+  clone.style.visibility = "hidden";
+  clone.style.pointerEvents = "none";
+  clone.style.transform = "none";
+  clone.style.transition = "none";
+  clone.style.animation = "none";
+  item.parentElement!.append(clone);
+  try {
+    return clone.offsetHeight || clone.getBoundingClientRect().height
+      || item.offsetHeight || item.getBoundingClientRect().height;
+  } finally {
+    clone.remove();
+  }
 };
 
 export const getToastFocusableNodes = (item: HTMLElement): HTMLElement[] => {
