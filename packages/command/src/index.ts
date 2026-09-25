@@ -75,16 +75,6 @@ const DUPLICATE_BINDING_WARNING =
 const ITEM_SELECTOR = '[data-slot="command-item"]';
 const GROUP_SELECTOR = '[data-slot="command-group"]';
 const SEPARATOR_SELECTOR = '[data-slot="command-separator"]';
-const DIRECT_MUTATION_ATTRIBUTES = [
-  "data-slot",
-  "data-value",
-  "data-label",
-  "data-keywords",
-  "data-disabled",
-  "disabled",
-  "data-force-mount",
-  "data-always-render",
-] as const;
 const INTERACTIVE_DESCENDANT_SELECTOR = [
   'input:not([type="hidden"])',
   "textarea",
@@ -200,27 +190,6 @@ export function createCommand(
   const setListHeightVar = () => {
     list.style.setProperty("--command-list-height", `${list.scrollHeight.toFixed(1)}px`);
   };
-  const syncResizeObserver = () => {
-    if (typeof ResizeObserver === "undefined") {
-      setListHeightVar();
-      return;
-    }
-    if (!resizeObserver) {
-      resizeObserver = new ResizeObserver(() => {
-        setListHeightVar();
-      });
-    }
-    resizeObserver.disconnect();
-    resizeObserver.observe(list);
-    for (const el of getOwnedElements<HTMLElement>(
-      rootEl,
-      list,
-      `${ITEM_SELECTOR}, ${GROUP_SELECTOR}, ${SEPARATOR_SELECTOR}, [data-slot="command-empty"]`
-    )) {
-      resizeObserver.observe(el);
-    }
-    setListHeightVar();
-  };
   const mergeChildOrder = (snapshot: HTMLElement[], currentChildren: HTMLElement[]): HTMLElement[] => {
     const next = snapshot.filter((child) => currentChildren.includes(child));
     for (const child of currentChildren) {
@@ -261,47 +230,29 @@ export function createCommand(
     );
   };
   const mergeAuthoredStructure = () => {
-    const currentListChildren = getElementChildren(list);
-    authoredListChildren =
-      authoredListChildren.length === 0
-        ? currentListChildren
-        : mergeChildOrder(authoredListChildren, currentListChildren);
-    const nextGroupChildren = new Map<HTMLElement, HTMLElement[]>();
-    for (const group of groupMetas) {
-      const currentChildren = getElementChildren(group.el);
-      const existingSnapshot = authoredGroupChildren.get(group.el) ?? [];
-      nextGroupChildren.set(
+    authoredListChildren = mergeChildOrder(authoredListChildren, getElementChildren(list));
+    authoredGroupChildren = new Map(
+      groupMetas.map((group) => [
         group.el,
-        existingSnapshot.length === 0
-          ? currentChildren
-          : mergeChildOrder(existingSnapshot, currentChildren)
-      );
-    }
-    authoredGroupChildren = nextGroupChildren;
+        mergeChildOrder(authoredGroupChildren.get(group.el) ?? [], getElementChildren(group.el)),
+      ])
+    );
   };
   const applyChildOrder = (container: HTMLElement, orderedChildren: HTMLElement[]) => {
-    const currentChildren = getElementChildren(container);
-    const placedChildren = new Set<HTMLElement>();
-    for (const child of orderedChildren) {
-      if (child.parentElement !== container || placedChildren.has(child)) continue;
-      placedChildren.add(child);
-      container.appendChild(child);
-    }
-    for (const child of currentChildren) {
-      if (placedChildren.has(child) || child.parentElement !== container) continue;
-      container.appendChild(child);
+    const placed = new Set(orderedChildren.filter((child) => child.parentElement === container));
+    let current = container.firstElementChild;
+    for (const child of [...placed, ...getElementChildren(container).filter((child) => !placed.has(child))]) {
+      if (child === current) current = current.nextElementSibling;
+      else container.insertBefore(child, current);
     }
   };
   const getOrderIndexMap = (snapshot: HTMLElement[]) =>
     new Map(snapshot.map((el, index) => [el, index]));
   const restoreAuthoredOrder = () => {
     for (const group of groupMetas) {
-      const groupChildren =
-        authoredGroupChildren.get(group.el)?.filter((child) => child.parentElement === group.el) ?? [];
-      applyChildOrder(group.el, groupChildren);
+      applyChildOrder(group.el, authoredGroupChildren.get(group.el) ?? []);
     }
-    const listChildren = authoredListChildren.filter((child) => child.parentElement === list);
-    applyChildOrder(list, listChildren);
+    applyChildOrder(list, authoredListChildren);
   };
   const getSelectedVisibleItem = (): HTMLElement | null => {
     if (currentValue === null) return null;
@@ -510,7 +461,7 @@ export function createCommand(
       return (listOrderIndex.get(a.el) ?? Number.MAX_SAFE_INTEGER) - (listOrderIndex.get(b.el) ?? Number.MAX_SAFE_INTEGER);
     });
     const visibleTopLevelSet = new Set(visibleTopLevelBlocks.map((block) => block.el));
-    const hiddenTopLevelBlocks = authoredListSnapshot.filter(
+    const hiddenTopLevelBlocks = getElementChildren(list).filter(
       (child) => allTopLevelBlocks.has(child) && !visibleTopLevelSet.has(child)
     );
     const rankedTopLevelBlocks = [
@@ -544,7 +495,7 @@ export function createCommand(
         }
       );
       const visibleGroupSet = new Set(rankedVisibleGroupBlocks.map((block) => block.el));
-      const hiddenGroupBlocks = authoredGroupSnapshot.filter(
+      const hiddenGroupBlocks = getElementChildren(group.el).filter(
         (child) => allGroupItemBlocks.has(child) && !visibleGroupSet.has(child)
       );
       const rankedGroupBlocks = [
@@ -560,9 +511,7 @@ export function createCommand(
   };
   const refreshDisplay = () => {
     pauseMutationObserver(() => {
-      rescanStructure();
       if (shouldFilter && currentSearch) {
-        mergeAuthoredStructure();
         applyVisibilityState();
         sortVisibleBlocks();
         layoutIsRanked = true;
@@ -570,15 +519,32 @@ export function createCommand(
         if (layoutIsRanked) {
           restoreAuthoredOrder();
         }
-        captureAuthoredStructure();
         applyVisibilityState();
         layoutIsRanked = false;
       }
       syncSelectionState();
       syncRootState();
     });
-    observeMutations();
-    syncResizeObserver();
+    setListHeightVar();
+  };
+  const refreshStructure = () => {
+    pauseMutationObserver(rescanStructure);
+    if (layoutIsRanked) mergeAuthoredStructure();
+    else captureAuthoredStructure();
+    refreshDisplay();
+    if (typeof ResizeObserver === "undefined") return;
+    resizeObserver ??= new ResizeObserver(setListHeightVar);
+    resizeObserver.disconnect();
+    for (const el of [
+      list,
+      ...getOwnedElements<HTMLElement>(
+        rootEl,
+        list,
+        `${ITEM_SELECTOR}, ${GROUP_SELECTOR}, ${SEPARATOR_SELECTOR}, [data-slot="command-empty"]`
+      ),
+    ]) {
+      resizeObserver.observe(el);
+    }
   };
   const selectFirstVisibleItem = (shouldEmit = true, ensureVisible = false) => {
     const nextValue = getEnabledVisibleItemsInDomOrder()[0]?.value ?? null;
@@ -606,7 +572,7 @@ export function createCommand(
   const getLiveItemMeta = (item: HTMLElement): ItemMeta | null => {
     let meta = itemMetaByElement.get(item) ?? null;
     if (meta) return meta;
-    refreshDisplay();
+    refreshStructure();
     meta = itemMetaByElement.get(item) ?? null;
     return meta;
   };
@@ -730,7 +696,7 @@ export function createCommand(
       mutationQueued = false;
       if (isDestroyed) return;
       const selectedBefore = getSelectedVisibleItem();
-      refreshDisplay();
+      refreshStructure();
       const nextSelectedMeta = selectedBefore ? itemMetaByElement.get(selectedBefore) ?? null : null;
       if (
         nextSelectedMeta &&
@@ -759,7 +725,17 @@ export function createCommand(
       childList: true,
       characterData: true,
       attributes: true,
-      attributeFilter: [...DIRECT_MUTATION_ATTRIBUTES],
+      attributeFilter: [
+        "data-slot",
+        "data-value",
+        "data-label",
+        "data-keywords",
+        "data-disabled",
+        "disabled",
+        "aria-disabled",
+        "data-force-mount",
+        "data-always-render",
+      ],
     });
   };
   if (typeof MutationObserver !== "undefined") {
@@ -769,7 +745,7 @@ export function createCommand(
     observeMutations();
   }
   input.value = currentSearch;
-  refreshDisplay();
+  refreshStructure();
   if (currentSearch || currentValue === null) {
     selectFirstVisibleItem(false);
   }
