@@ -1594,8 +1594,60 @@ describe("NavigationMenu", () => {
     controller.destroy();
   });
 
+  for (const placement of [
+    { side: "bottom", x: 100, y: 152 },
+    { side: "top", x: 100, y: -92 },
+    { side: "left", x: -212, y: 100 },
+    { side: "right", x: 252, y: 100 },
+  ] satisfies Array<{ side: "bottom" | "top" | "left" | "right"; x: number; y: number }>) {
+    it(`keeps the ${placement.side} hover bridge outside the trigger during scale animations`, async () => {
+      const { root, triggers, contents, viewport, controller } = setup({
+        side: placement.side,
+        sideOffset: 12,
+      });
+      try {
+        const trigger = triggers.item(0);
+        const content = contents.item(0);
+        root.getBoundingClientRect = () => new DOMRect(100, 100, 140, 40);
+        trigger.getBoundingClientRect = () => new DOMRect(100, 100, 140, 40);
+        content.getBoundingClientRect = () => new DOMRect(0, 0, 300, 180);
+        // A 0.9 scale around the center changes painted bounds but not layout.
+        viewport.getBoundingClientRect = () =>
+          new DOMRect(placement.x + 15, placement.y + 9, 270, 162);
+
+        controller.open("products");
+        await waitForPresenceExit();
+
+        const positioner = getViewportPositioner(viewport);
+        const bridge = positioner.querySelector('[data-slot="navigation-menu-bridge"]');
+        if (!(bridge instanceof HTMLElement)) throw new Error("Expected hover bridge");
+        const left = placement.x + parseFloat(bridge.style.left);
+        const top = placement.y + parseFloat(bridge.style.top);
+        const width = parseFloat(bridge.style.width);
+        const height = parseFloat(bridge.style.height);
+        if (placement.side === "bottom" || placement.side === "top") {
+          expect(height).toBe(12);
+          expect(width).toBe(300);
+          expect(placement.side === "bottom" ? top : top + height).toBe(
+            placement.side === "bottom" ? 140 : 100,
+          );
+        } else {
+          expect(width).toBe(12);
+          expect(height).toBe(180);
+          expect(placement.side === "right" ? left : left + width).toBe(
+            placement.side === "right" ? 240 : 100,
+          );
+        }
+        expect(bridge.style.display).toBe("block");
+        expect(bridge.style.pointerEvents).toBe("auto");
+      } finally {
+        controller.destroy();
+      }
+    });
+  }
+
   it("bridges side-offset gap between root and viewport", async () => {
-    const { root, triggers, contents, viewport, controller } = setup({ delayClose: 30 });
+    const { root, triggers, contents, viewport, controller } = setup({ delayClose: 30, sideOffset: 12 });
     const trigger = triggers[0]!;
     const content = contents[0]!;
 
