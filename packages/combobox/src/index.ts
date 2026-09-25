@@ -317,23 +317,11 @@ export function createCombobox(
   });
 
   const setDataState = (state: "open" | "closed") => {
-    root.setAttribute("data-state", state);
-    content.setAttribute("data-state", state);
-    if (trigger) trigger.setAttribute("data-state", state);
-    if (state === "open") {
-      root.setAttribute("data-open", "");
-      content.setAttribute("data-open", "");
-      if (trigger) trigger.setAttribute("data-open", "");
-      root.removeAttribute("data-closed");
-      content.removeAttribute("data-closed");
-      if (trigger) trigger.removeAttribute("data-closed");
-    } else {
-      root.setAttribute("data-closed", "");
-      content.setAttribute("data-closed", "");
-      if (trigger) trigger.setAttribute("data-closed", "");
-      root.removeAttribute("data-open");
-      content.removeAttribute("data-open");
-      if (trigger) trigger.removeAttribute("data-open");
+    for (const el of [root, content, trigger]) {
+      if (!el) continue;
+      el.setAttribute("data-state", state);
+      el.toggleAttribute("data-open", state === "open");
+      el.toggleAttribute("data-closed", state === "closed");
     }
   };
 
@@ -354,12 +342,7 @@ export function createCombobox(
       input.value = "";
     }
     collection.filter(input.value);
-    const selectedIndex = collection.enabled.findIndex((item) => collection.valueOf(item) === currentValue);
-    if (selectedIndex >= 0) {
-      collection.highlight(selectedIndex);
-    } else {
-      collection.clearHighlight();
-    }
+    collection.highlight(collection.enabled.findIndex((item) => collection.valueOf(item) === currentValue));
   };
 
   const updateOpenState = (open: boolean, skipFocusRestore = false) => {
@@ -507,9 +490,7 @@ export function createCombobox(
         e.preventDefault();
         if (!isOpen) {
           updateOpenState(true);
-          if (autoHighlight && collection.enabled.length > 0) {
-            collection.highlight(0);
-          }
+          if (autoHighlight) collection.highlight(0);
           return;
         }
         keyboardMode = true;
@@ -522,9 +503,7 @@ export function createCombobox(
         e.preventDefault();
         if (!isOpen) {
           updateOpenState(true);
-          if (autoHighlight && collection.enabled.length > 0) {
-            collection.highlight(collection.enabled.length - 1);
-          }
+          if (autoHighlight) collection.highlight(collection.enabled.length - 1);
           return;
         }
         keyboardMode = true;
@@ -537,21 +516,21 @@ export function createCombobox(
         if (!isOpen) return;
         e.preventDefault();
         keyboardMode = true;
-        if (collection.enabled.length > 0) collection.highlight(0);
+        collection.highlight(0);
         break;
       case "End":
         if (!isOpen) return;
         e.preventDefault();
         keyboardMode = true;
-        if (collection.enabled.length > 0) collection.highlight(collection.enabled.length - 1);
+        collection.highlight(collection.enabled.length - 1);
         break;
-      case "Enter":
+      case "Enter": {
         if (!isOpen) return;
         e.preventDefault();
-        if (collection.highlightedIndex >= 0 && collection.highlightedIndex < collection.enabled.length) {
-          selectItem(collection.enabled[collection.highlightedIndex]!);
-        }
+        const item = collection.enabled[collection.highlightedIndex];
+        if (item) selectItem(item);
         break;
+      }
       case "Escape":
         if (isOpen) {
           e.preventDefault();
@@ -578,28 +557,15 @@ export function createCombobox(
     emit(root, "combobox:input-change", { inputValue: val });
     onInputValueChange?.(val);
 
-    // Open if not already open
     if (!isOpen) {
       updateOpenState(true);
-      if (autoHighlight && hasTypedQuery && collection.enabled.length > 0) {
-        collection.highlight(0);
-      } else if (collection.highlightedIndex !== -1) {
-        collection.clearHighlight();
-      }
     } else {
-      // Re-filter
       collection.filter(val);
-
-      // Auto-highlight only after non-whitespace query input.
-      if (autoHighlight && hasTypedQuery && collection.enabled.length > 0) {
-        collection.highlight(0);
-      } else {
-        collection.clearHighlight();
-      }
-
       // Update position after filter changes content size
       positionSync.update();
     }
+    // Auto-highlight only after non-whitespace query input.
+    collection.highlight(autoHighlight && hasTypedQuery ? 0 : -1);
   };
 
   // Focus handling

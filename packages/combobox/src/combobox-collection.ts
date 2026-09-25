@@ -19,7 +19,6 @@ export interface ComboboxCollection {
   highlight(index: number): void;
   clearHighlight(): void;
   setItemToStringValue(itemToStringValue: ComboboxItemToStringValue | null): void;
-  readonly items: readonly HTMLElement[];
   readonly enabled: readonly HTMLElement[];
   readonly highlightedIndex: number;
   indexOf(item: HTMLElement): number | undefined;
@@ -38,10 +37,18 @@ export function createComboboxCollection({
 }: ComboboxCollectionOptions): ComboboxCollection {
   const content = getPart<HTMLElement>(root, "combobox-content") ?? container;
   let allItems: HTMLElement[] = [];
+  let labels: string[] = [];
+  let groups: HTMLElement[] = [];
+  let separators: HTMLElement[] = [];
   let enabledVisibleItems: HTMLElement[] = [];
   let itemToEnabledIndex = new Map<HTMLElement, number>();
   let highlightedIndex = -1;
   let itemToStringValue = initialItemToStringValue;
+
+  // Same-value writes still run attribute-changed and style invalidation in Blink.
+  const setHidden = (el: HTMLElement, hidden: boolean) => {
+    if (el.hidden !== hidden) el.hidden = hidden;
+  };
 
   const isItemDisabled = (item: HTMLElement) =>
     item.hasAttribute("disabled") || item.hasAttribute("data-disabled") || item.getAttribute("aria-disabled") === "true";
@@ -68,21 +75,33 @@ export function createComboboxCollection({
     return itemToStringValue ? itemToStringValue(item, value) : item ? getItemLabel(item) : "";
   };
 
-  const syncItemSelectedState = (item: HTMLElement, selected: boolean) => {
-    setAria(item, "selected", selected);
-    item.toggleAttribute("data-selected", selected);
-    for (const indicator of getOwnedElements<HTMLElement>(root, item, '[data-slot="combobox-item-indicator"]')) {
-      indicator.hidden = !selected;
+  const syncSelectedState = (items: HTMLElement[], value: string | null) => {
+    for (const item of items) {
+      const selected = valueOf(item) === value;
+      setAria(item, "selected", selected);
+      item.toggleAttribute("data-selected", selected);
+    }
+    for (const indicator of getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-item-indicator"]')) {
+      const item = indicator.closest<HTMLElement>('[data-slot="combobox-item"]');
+      if (item) indicator.hidden = !item.hasAttribute("data-selected");
     }
   };
 
+  const clearHighlight = () => {
+    enabledVisibleItems[highlightedIndex]?.removeAttribute("data-highlighted");
+    highlightedIndex = -1;
+    input.removeAttribute("aria-activedescendant");
+  };
+
   const rebuildVisibleItems = () => {
+    clearHighlight();
     enabledVisibleItems = allItems.filter((item) => !item.hidden && !isItemDisabled(item));
     itemToEnabledIndex = new Map(enabledVisibleItems.map((item, index) => [item, index]));
   };
 
   const normalizeVisibleSeparators = () => {
-    for (const separator of getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-separator"]')) separator.hidden = true;
+    if (separators.length === 0) return;
+    for (const separator of separators) separator.hidden = true;
     const children = Array.from(container.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
     for (let index = 0; index < children.length; index++) {
       const current = children[index]!;
@@ -100,53 +119,47 @@ export function createComboboxCollection({
     }
   };
 
-  const clearHighlight = () => {
-    for (const item of allItems) item.removeAttribute("data-highlighted");
-    highlightedIndex = -1;
-    input.removeAttribute("aria-activedescendant");
-  };
-
   return {
     cache(selectedValue) {
       allItems = getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-item"]');
+      labels = allItems.map(getItemLabel);
+      groups = getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-group"]');
+      separators = getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-separator"]');
       for (const item of allItems) {
         item.setAttribute("role", "option");
         ensureId(item, "combobox-item");
-        item.toggleAttribute("aria-disabled", isItemDisabled(item));
-        if (isItemDisabled(item)) item.setAttribute("aria-disabled", "true");
-        syncItemSelectedState(item, valueOf(item) === selectedValue);
+        setAria(item, "disabled", isItemDisabled(item) || null);
       }
-      for (const group of getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-group"]')) {
+      syncSelectedState(allItems, selectedValue);
+      for (const group of groups) {
         group.setAttribute("role", "group");
-        const label = getOwnedElements<HTMLElement>(root, group, '[data-slot="combobox-label"]')[0] ?? null;
+        const label = getOwnedElements<HTMLElement>(root, group, '[data-slot="combobox-label"]')[0];
         if (label) group.setAttribute("aria-labelledby", ensureId(label, "combobox-label"));
       }
-      rebuildVisibleItems();
     },
     filter(query) {
       const trimmed = query.trim();
       let visibleCount = 0;
-      for (const item of allItems) {
-        const matches = trimmed === "" || filter(trimmed, valueOf(item) ?? "", getItemLabel(item));
-        item.hidden = !matches;
+      allItems.forEach((item, index) => {
+        const matches = trimmed === "" || filter(trimmed, valueOf(item) ?? "", labels[index]!);
+        setHidden(item, !matches);
         if (matches) visibleCount++;
-      }
-      for (const group of getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-group"]')) {
-        group.hidden = getOwnedElements<HTMLElement>(root, group, '[data-slot="combobox-item"]').every((item) => item.hidden);
+      });
+      for (const group of groups) {
+        setHidden(group, getOwnedElements<HTMLElement>(root, group, '[data-slot="combobox-item"]').every((item) => item.hidden));
       }
       normalizeVisibleSeparators();
-      if (emptySlot) emptySlot.hidden = visibleCount > 0;
+      if (emptySlot) setHidden(emptySlot, visibleCount > 0);
       content.toggleAttribute("data-empty", visibleCount === 0);
       rebuildVisibleItems();
     },
     select(value) {
-      const items = allItems.length > 0 ? allItems : getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-item"]');
-      for (const item of items) syncItemSelectedState(item, valueOf(item) === value);
+      syncSelectedState(allItems.length > 0 ? allItems : getOwnedElements<HTMLElement>(root, container, '[data-slot="combobox-item"]'), value);
     },
     highlight(index) {
-      for (const item of allItems) item.removeAttribute("data-highlighted");
       const item = enabledVisibleItems[index];
-      if (!item) return clearHighlight();
+      clearHighlight();
+      if (!item) return;
       item.setAttribute("data-highlighted", "");
       input.setAttribute("aria-activedescendant", item.id);
       const scrollContainer = container.contains(item) && container.scrollHeight > container.clientHeight
@@ -159,7 +172,6 @@ export function createComboboxCollection({
     setItemToStringValue(nextItemToStringValue) {
       itemToStringValue = nextItemToStringValue;
     },
-    get items() { return allItems; },
     get enabled() { return enabledVisibleItems; },
     get highlightedIndex() { return highlightedIndex; },
     indexOf(item) { return itemToEnabledIndex.get(item); },
