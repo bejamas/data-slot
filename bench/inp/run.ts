@@ -2,7 +2,7 @@
 /**
  * Interaction benchmark for the built packages (packages/<name>/dist).
  *
- *   bun run bench:inp [--rounds 5] [--cpu 4] [--only select,tabs] [--save base] [--compare base | --ab base]
+ *   bun run bench:inp [--rounds 5] [--cpu 20] [--only select,tabs] [--save base] [--compare base | --ab base]
  *
  * Every step is one user interaction sent through Chrome's real input pipeline
  * while a performance trace records. Per interaction, the trace's EventTiming
@@ -30,7 +30,7 @@ const flag = (name: string) => {
   return index === -1 ? undefined : args[index + 1];
 };
 const rounds = Number(flag("rounds") ?? 5);
-const cpu = Number(flag("cpu") ?? 4);
+const cpu = Number(flag("cpu") ?? 20);
 const only = flag("only")?.split(",");
 const resultsDir = join(import.meta.dir, "results");
 
@@ -158,7 +158,7 @@ try {
         if ("focus" in step) await tab.focus(step.focus);
         else if ("click" in step) await tab.click(step.click);
         else if ("press" in step) await tab.keyboard.press(step.press);
-        await tab.waitForTimeout(150);
+        await tab.evaluate(() => new Promise((done) => requestAnimationFrame(() => setTimeout(done, 100))));
       }
       const trace = JSON.parse((await browser.stopTracing()).toString()) as { traceEvents: TraceEvent[] };
       await context.close();
