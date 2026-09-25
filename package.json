@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "build": "bun run --filter './packages/*' build",
     "check:sizes": "bun run build && bun run scripts/check-sizes.ts",
+    "bench:inp": "bun run build && bun bench/inp/run.ts",
     "build:website": "npm ci --prefix website --workspaces=false && bun run build:docs",
     "preview:website": "bun run build:website && wrangler dev",
     "deploy:website": "bun run build:website && wrangler deploy",
@@ -26,6 +27,7 @@
     "@happy-dom/global-registrator": "^16.8.1",
     "@types/bun": "latest",
     "ai": "^4.3.19",
+    "playwright-core": "^1.63.0",
     "tsdown": "^0.12.9",
     "typescript": "^5.9.3",
     "wrangler": "4.127.1"

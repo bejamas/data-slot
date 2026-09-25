@@ -44,3 +44,4 @@ tmp
 website/.generated/
 website/content/_generated/
 website/public/fonts/
+bench/inp/results/
