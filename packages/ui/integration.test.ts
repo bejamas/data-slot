@@ -59,8 +59,15 @@ test("root exports every component factory and every component has a complete su
   expect(buildConfig).toContain('"src/core.ts"');
 });
 
-async function productionBundle(specifier: string, factory: string) {
+type ComponentImport = { specifier: string; factory: string };
+
+async function productionBundle(imports: ComponentImport[]) {
   const entryId = "\0ui-integration-entry";
+  const entrySource = [
+    ...imports.map(({ specifier, factory }, index) =>
+      `import { ${factory} as component${index} } from "${specifier}";`),
+    `globalThis.components = [${imports.map((_, index) => `component${index}`).join(", ")}];`,
+  ].join("\n");
   const bundle = await rolldown({
     input: entryId,
     // Every package in this workspace declares sideEffects: false. Apply that
@@ -74,7 +81,7 @@ async function productionBundle(specifier: string, factory: string) {
         if (match) return join(packagesDir, match[1]!, "src", `${match[2] ?? "index"}.ts`);
       },
       load(id) {
-        if (id === entryId) return `import { ${factory} } from "${specifier}"; globalThis.component = ${factory};`;
+        if (id === entryId) return entrySource;
       },
     }],
   });
@@ -84,24 +91,53 @@ async function productionBundle(specifier: string, factory: string) {
     const chunk = generated.output.find((output) => output.type === "chunk");
     if (!chunk || chunk.type !== "chunk") throw new Error("No JavaScript output from Rolldown");
     const renderedPackages = new Set<string>();
+    const renderedModuleLengths: Record<string, number> = {};
     for (const [id, module] of Object.entries(chunk.modules)) {
       if (module.renderedLength === 0) continue;
       const relative = id.split(`${packagesDir}${sep}`)[1];
-      if (relative) renderedPackages.add(relative.split(sep)[0]!);
+      if (relative) {
+        renderedPackages.add(relative.split(sep)[0]!);
+        renderedModuleLengths[relative] = module.renderedLength;
+      }
     }
-    return { code: chunk.code, renderedPackages: [...renderedPackages].sort() };
+    return { code: chunk.code, renderedPackages: [...renderedPackages].sort(), renderedModuleLengths };
   } finally {
     await bundle.close();
   }
 }
 
-test.each(["accordion", "slider"])("a root import of %s bundles only that component and core", async (component) => {
+test.each(components)("a root import of %s bundles only that component and core", async (component) => {
   const factory = factoryName(component);
-  const root = await productionBundle("@data-slot/ui", factory);
-  const subpath = await productionBundle(`@data-slot/ui/${component}`, factory);
-  const direct = await productionBundle(`@data-slot/${component}`, factory);
+  const root = await productionBundle([{ specifier: "@data-slot/ui", factory }]);
+  const subpath = await productionBundle([{ specifier: `@data-slot/ui/${component}`, factory }]);
+  const direct = await productionBundle([{ specifier: `@data-slot/${component}`, factory }]);
 
   expect(root.renderedPackages).toEqual([component, "core"].sort());
   expect(root.code).toBe(direct.code);
   expect(subpath.code).toBe(direct.code);
 });
+
+const combinations = [
+  { name: "modal components", components: ["dialog", "alert-dialog", "drawer"] },
+  { name: "popup components", components: ["popover", "tooltip", "hover-card", "dropdown-menu"] },
+  { name: "form components", components: ["select", "combobox", "command"] },
+  { name: "interaction components", components: ["slider", "resizable", "carousel"] },
+] as const;
+
+for (const { name, components: combination } of combinations) {
+  test(`root imports of ${name} match direct imports`, async () => {
+    const root = await productionBundle(combination.map((component) => ({
+      specifier: "@data-slot/ui",
+      factory: factoryName(component),
+    })));
+    const direct = await productionBundle(combination.map((component) => ({
+      specifier: `@data-slot/${component}`,
+      factory: factoryName(component),
+    })));
+
+    expect(root.renderedPackages).toEqual(["core", ...combination].sort());
+    expect(Object.keys(root.renderedModuleLengths).sort()).toEqual(Object.keys(direct.renderedModuleLengths).sort());
+    // Shared helpers can receive different local names when import order changes.
+    expect(Math.abs(root.code.length - direct.code.length)).toBeLessThanOrEqual(64);
+  });
+}
