@@ -4,6 +4,8 @@ export type MountStrategy = "lazy" | "eager";
 // Root-owned storage avoids retaining removed roots and works across separately
 // bundled copies of core, like the root binding and portal ownership symbols.
 const RETAINED_CONTENT = Symbol.for("data-slot.retained-content");
+// Marks owners so getRoots can query them instead of checking every element.
+export const RETAINED_CONTENT_ATTR = "data-retained-content";
 type ContentOwner = Element & { [RETAINED_CONTENT]?: Set<Element> };
 const EMPTY_CONTENT: readonly Element[] = [];
 
@@ -31,10 +33,18 @@ export function createContentMount(options: ContentMountOptions) {
   let detached = false;
   if (anchor) target.before(anchor);
 
+  const release = () => {
+    const retained = owner[RETAINED_CONTENT];
+    retained?.delete(target);
+    if (retained?.size) return;
+    delete owner[RETAINED_CONTENT];
+    owner.removeAttribute(RETAINED_CONTENT_ATTR);
+  };
+
   const mount = () => {
     if (destroyed || !detached) return;
     anchor?.parentNode?.insertBefore(target, anchor.nextSibling);
-    owner[RETAINED_CONTENT]?.delete(target);
+    release();
     detached = false;
   };
 
@@ -45,14 +55,14 @@ export function createContentMount(options: ContentMountOptions) {
       target.remove();
       detached = true;
       (owner[RETAINED_CONTENT] ??= new Set()).add(target);
+      owner.setAttribute(RETAINED_CONTENT_ATTR, "");
     },
     cleanup() {
       if (destroyed) return;
       // Restore into detached authored roots too, so destroy/rebind works.
       if (anchor?.parentNode) anchor.parentNode.insertBefore(target, anchor.nextSibling);
       anchor?.remove();
-      owner[RETAINED_CONTENT]?.delete(target);
-      if (!owner[RETAINED_CONTENT]?.size) delete owner[RETAINED_CONTENT];
+      release();
       destroyed = true;
     },
   };
