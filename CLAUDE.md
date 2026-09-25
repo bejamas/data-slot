@@ -442,6 +442,9 @@ Create `packages/ui/src/{component}.ts`:
 export * from "@data-slot/component";
 ```
 
+Add the uniquely named `createComponent` function and its public types to
+`packages/ui/src/index.ts`. Keep the generic `create` function on the subpath.
+
 ### 2. Update Build Config
 Edit `packages/ui/tsdown.config.ts`:
 ```typescript
@@ -461,21 +464,20 @@ Edit `packages/ui/package.json`:
 {
   "exports": {
     "./component": {
-      "import": {
-        "types": "./dist/component.d.ts",
-        "default": "./dist/component.js"
-      },
-      "require": {
-        "types": "./dist/component.d.cts",
-        "default": "./dist/component.cjs"
-      }
+      "types": "./dist/component.d.ts",
+      "import": "./dist/component.js",
+      "require": "./dist/component.cjs",
+      "default": "./dist/component.js"
     }
   },
-  "devDependencies": {
+  "dependencies": {
     "@data-slot/component": "workspace:*"
   }
 }
 ```
+
+Update `packages/ui/README.md` and run `bun run build`. The UI build verifies
+that root JavaScript and type exports and all published subpaths exist.
 
 ## Key Implementation Notes
 
