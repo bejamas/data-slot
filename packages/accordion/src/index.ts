@@ -518,10 +518,10 @@ export function createAccordion(
     setTriggerStateAttrs(item, open);
     item.content.removeAttribute("data-starting-style");
     item.content.removeAttribute("data-ending-style");
-    const motionStrategy = getMotionStrategy(item);
 
     if (open) {
       applyOpenVisibility(item);
+      const motionStrategy = getMotionStrategy(item);
       if (motionStrategy === "css-animation") {
         measurePanelWithAnimationSuppressed(item, () => {
           syncPanelSizePx(item, { resetVarsToAuto: true });
@@ -539,12 +539,10 @@ export function createAccordion(
     const open = expandedValues.has(item.value);
     const wasOpen = item.trigger.getAttribute("aria-expanded") === "true";
 
-    applyStaticItemAttrs(item);
     setAria(item.trigger, "expanded", open);
     setOpenClosedAttrs(item.el, open);
     setOpenClosedAttrs(item.content, open);
     setTriggerStateAttrs(item, open);
-    const motionStrategy = getMotionStrategy(item);
 
     if (open) {
       clearClosePhaseTracking(item);
@@ -552,6 +550,7 @@ export function createAccordion(
       if (wasOpen && !item.presence.isExiting && hasAutoPanelSize(item)) {
         return;
       }
+      const motionStrategy = getMotionStrategy(item);
       if (motionStrategy === "css-animation") {
         measurePanelWithAnimationSuppressed(item, () => {
           syncPanelSizePx(item, { resetVarsToAuto: true });
@@ -571,6 +570,7 @@ export function createAccordion(
 
     if (wasOpen) {
       clearOpenSettleTracking(item);
+      const motionStrategy = getMotionStrategy(item);
       if (motionStrategy === "css-animation") {
         measurePanelWithAnimationSuppressed(item, () => {
           syncPanelSizePx(item, { resetVarsToAuto: true });
