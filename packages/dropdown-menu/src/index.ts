@@ -209,9 +209,6 @@ export function createDropdownMenu(
     emit(root, "dropdown-menu:change", detail);
     onOpenChange?.(detail.open);
   };
-  const emitHighlightChange = (detail: DropdownMenuHighlightChangeDetail) => {
-    emit(root, "dropdown-menu:highlight-change", detail);
-  };
   const emitValueChange = (detail: DropdownMenuValueChangeDetail) => {
     emit(root, "dropdown-menu:value-change", detail);
     onValueChange?.(detail.value);
@@ -296,18 +293,10 @@ export function createDropdownMenu(
     },
   });
   const setDataState = (state: "open" | "closed") => {
-    root.setAttribute("data-state", state);
-    content.setAttribute("data-state", state);
-    if (state === "open") {
-      root.setAttribute("data-open", "");
-      content.setAttribute("data-open", "");
-      root.removeAttribute("data-closed");
-      content.removeAttribute("data-closed");
-    } else {
-      root.setAttribute("data-closed", "");
-      content.setAttribute("data-closed", "");
-      root.removeAttribute("data-open");
-      content.removeAttribute("data-open");
+    for (const el of [root, content]) {
+      el.setAttribute("data-state", state);
+      el.toggleAttribute("data-open", state === "open");
+      el.toggleAttribute("data-closed", state === "closed");
     }
   };
   const updateHighlight = (
@@ -328,7 +317,7 @@ export function createDropdownMenu(
       return false;
     }
     highlightedItem = nextItem;
-    itemCollection.highlight(highlightedItem);
+    itemCollection.highlight(previousItem, nextItem);
     if (nextItem) {
       ensureItemVisibleInContainer(nextItem, content);
       if (focus) {
@@ -337,7 +326,7 @@ export function createDropdownMenu(
     } else if (focusContentOnClear) {
       focusElement(content);
     }
-    emitHighlightChange({
+    emit<DropdownMenuHighlightChangeDetail>(root, "dropdown-menu:highlight-change", {
       value: itemCollection.valueFor(itemCollection.recordFor(nextItem)),
       previousValue: itemCollection.valueFor(itemCollection.recordFor(previousItem)),
       item: nextItem,
@@ -453,13 +442,10 @@ export function createDropdownMenu(
       isOpen = false;
       setAria(trigger, "expanded", false);
       setDataState("closed");
-      if (highlightedItem) {
-        updateHighlight(null, {
-          source: source === "init" ? "programmatic" : source,
-          focus: false,
-          focusContentOnClear: false,
-        });
-      }
+      updateHighlight(null, {
+        source: source === "init" ? "programmatic" : source,
+        focus: false,
+      });
       typeahead.reset();
       keyboardMode = false;
       if (didLockScroll) {
@@ -551,7 +537,7 @@ export function createDropdownMenu(
     if (detail.open !== undefined) {
       updateOpenState(detail.open, {
         source,
-        reason: source === "restore" ? "programmatic" : "programmatic",
+        reason: "programmatic",
       });
     }
     if (detail.highlightedValue !== undefined) {
