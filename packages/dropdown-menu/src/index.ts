@@ -24,7 +24,6 @@ import {
   createTerminalLifecycle,
   registerFloatingTerminalResources,
   createDismissLayer,
-  containsWithPortals,
   createTypeahead,
 } from "@data-slot/core";
 import { resolveDropdownMenuOptions } from "./dropdown-menu-options";
@@ -35,7 +34,6 @@ import type {
   DropdownMenuHighlightChangeDetail,
   DropdownMenuItemRecord,
   DropdownMenuOpenChangeDetail,
-  DropdownMenuOpenChangeSource,
   DropdownMenuOptions,
   DropdownMenuSelectDetail,
   DropdownMenuSelectionSource,
@@ -147,7 +145,6 @@ export function createDropdownMenu(
       didLockScroll = false;
     }
   });
-  let pendingDismissMeta: Pick<DropdownMenuOpenChangeDetail, "source" | "reason"> | null = null;
   const cleanups: Array<() => void> = [];
   const portal = createPortalLifecycle({
     content,
@@ -415,7 +412,6 @@ export function createDropdownMenu(
   const updateOpenState = (open: boolean, { source, reason }: OpenTransitionOptions) => {
     if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
-    pendingDismissMeta = null;
     const previousOpen = isOpen;
     if (open) {
       previousActiveElement = document.activeElement as HTMLElement | null;
@@ -460,15 +456,6 @@ export function createDropdownMenu(
       previousOpen,
       source,
       reason,
-    });
-  };
-  const setPendingDismissReason = (source: DropdownMenuUserSource, reason: "outside" | "escape") => {
-    const nextMeta: Pick<DropdownMenuOpenChangeDetail, "source" | "reason"> = { source, reason };
-    pendingDismissMeta = nextMeta;
-    queueMicrotask(() => {
-      if (pendingDismissMeta === nextMeta) {
-        pendingDismissMeta = null;
-      }
     });
   };
   const activateItem = (item: DropdownMenuItemRecord, source: DropdownMenuUserSource) => {
@@ -690,60 +677,17 @@ export function createDropdownMenu(
       });
     }),
   );
-  const doc = root.ownerDocument ?? document;
-  cleanups.push(
-    on(
-      doc,
-      "pointerdown",
-      (event) => {
-        if (!isOpen || !closeOnClickOutside) return;
-        const pointerEvent = event as PointerEvent;
-        if (pointerEvent.pointerType === "touch") return;
-        const target = event.target as Node | null;
-        if (containsWithPortals(root, target)) return;
-        setPendingDismissReason("pointer", "outside");
-      },
-      { capture: true },
-    ),
-    on(
-      doc,
-      "click",
-      (event) => {
-        if (!isOpen || !closeOnClickOutside) return;
-        const target = event.target as Node | null;
-        if (containsWithPortals(root, target)) return;
-        setPendingDismissReason("pointer", "outside");
-      },
-      { capture: true },
-    ),
-    on(
-      doc,
-      "keydown",
-      (event) => {
-        if (!isOpen || !closeOnEscape || event.key !== "Escape" || event.defaultPrevented) return;
-        setPendingDismissReason("keyboard", "escape");
-      },
-      { capture: true },
-    ),
-  );
   cleanups.push(
     createDismissLayer({
       root,
       isOpen: () => isOpen,
-      onDismiss: () => {
-        const meta = pendingDismissMeta;
-        pendingDismissMeta = null;
-        if (meta?.reason === "escape") {
-          updateOpenState(false, {
-            source: meta.source as DropdownMenuOpenChangeSource,
-            reason: "escape",
-          });
-          return;
-        }
-        updateOpenState(false, {
-          source: meta?.source ?? "pointer",
-          reason: meta?.reason ?? "outside",
-        });
+      onDismiss: ({ reason }) => {
+        updateOpenState(
+          false,
+          reason === "escape-key"
+            ? { source: "keyboard", reason: "escape" }
+            : { source: "pointer", reason: "outside" },
+        );
       },
       closeOnClickOutside,
       closeOnEscape,
