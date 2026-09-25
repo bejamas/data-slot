@@ -411,7 +411,6 @@ export function createHoverCard(
       presence.enter();
       updatePosition();
       positionSync.start();
-      positionSync.update();
     } else {
       trigger.removeAttribute("aria-controls");
       setDataState("closed");
@@ -510,7 +509,6 @@ export function createHoverCard(
     content.hidden = false;
     updatePosition();
     positionSync.start();
-    positionSync.update();
   }
 
   // Pointer interaction on trigger

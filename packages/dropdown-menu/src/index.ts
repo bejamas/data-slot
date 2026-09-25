@@ -448,7 +448,6 @@ export function createDropdownMenu(
       typeahead.reset();
       positionSync.start();
       updatePosition();
-      positionSync.update();
       focusElement(content);
     } else {
       isOpen = false;
