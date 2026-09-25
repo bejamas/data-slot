@@ -245,34 +245,34 @@ export function createRadioGroup(
   ).trim();
   let currentItem = itemByValue.get(requestedValue) ?? null;
 
+  let focusTarget: RadioItem | null = null;
+
   const isItemDisabled = (item: RadioItem) => disabled || item.authoredDisabled;
   const getEnabledItems = () => items.filter((item) => !isItemDisabled(item));
   const getCurrentValue = () => currentItem?.value ?? null;
 
-  const syncGeneratedInputs = () => {
-    const inputRequired = Boolean(required && name);
-
-    for (const item of items) {
-      const checked = item === currentItem;
-      item.hiddenInput.checked = checked;
-      item.hiddenInput.disabled = isItemDisabled(item);
-      item.hiddenInput.required = inputRequired;
-      item.hiddenInput.value = item.value;
-
-      if (name) {
-        item.hiddenInput.name = name;
-      } else {
-        item.hiddenInput.removeAttribute("name");
-      }
+  const setChecked = (item: RadioItem, checked: boolean) => {
+    item.hiddenInput.checked = checked;
+    setAria(item.el, "checked", checked);
+    setCheckedStateAttrs(item.el, checked);
+    for (const indicator of item.indicators) {
+      setCheckedStateAttrs(indicator, checked);
     }
   };
 
-  const syncRoot = () => {
-    rootElement.setAttribute("role", "radiogroup");
-    setAria(rootElement, "disabled", disabled ? true : null);
-    setAria(rootElement, "readonly", readOnly ? true : null);
-    setAria(rootElement, "required", required ? true : null);
+  const updateTabOrder = () => {
+    const next =
+      (currentItem && !isItemDisabled(currentItem) ? currentItem : null) ??
+      getEnabledItems()[0] ??
+      null;
+    if (next === focusTarget) return;
+    if (focusTarget) focusTarget.el.tabIndex = -1;
+    if (next) next.el.tabIndex = 0;
+    focusTarget = next;
+  };
 
+  const syncRoot = () => {
+    updateTabOrder();
     const currentValue = getCurrentValue();
     if (currentValue) {
       rootElement.setAttribute("data-value", currentValue);
@@ -281,62 +281,13 @@ export function createRadioGroup(
     }
   };
 
-  const updateTabOrder = () => {
-    const enabledItems = getEnabledItems();
-    const checkedEnabled =
-      currentItem && enabledItems.includes(currentItem) ? currentItem : null;
-    const focusTarget = checkedEnabled ?? enabledItems[0] ?? null;
-
-    for (const item of items) {
-      if (isItemDisabled(item)) {
-        item.el.tabIndex = -1;
-      } else {
-        item.el.tabIndex = item === focusTarget ? 0 : -1;
-      }
-    }
-  };
-
-  const syncItems = () => {
-    for (const item of items) {
-      const checked = item === currentItem;
-      const itemDisabled = isItemDisabled(item);
-
-      if (isNativeButton(item.el) && !item.el.hasAttribute("type")) {
-        item.el.type = "button";
-      }
-      if (isNativeButton(item.el)) {
-        item.el.disabled = itemDisabled;
-      }
-
-      item.el.setAttribute("role", "radio");
-      setAria(item.el, "checked", checked);
-      setAria(item.el, "disabled", itemDisabled ? true : null);
-      setAria(item.el, "readonly", readOnly ? true : null);
-      setAria(item.el, "required", required ? true : null);
-      setCheckedStateAttrs(item.el, checked);
-      setFlagStateAttrs(item.el, itemDisabled, readOnly, required);
-
-      for (const indicator of item.indicators) {
-        setCheckedStateAttrs(indicator, checked);
-        setFlagStateAttrs(indicator, itemDisabled, readOnly, required);
-      }
-    }
-
-    updateTabOrder();
-  };
-
   const applyState = (item: RadioItem | null, emitChange = true) => {
-    if (currentItem === item) {
-      syncGeneratedInputs();
-      syncRoot();
-      syncItems();
-      return;
-    }
+    if (currentItem === item) return;
 
+    if (currentItem) setChecked(currentItem, false);
     currentItem = item;
-    syncGeneratedInputs();
+    if (item) setChecked(item, true);
     syncRoot();
-    syncItems();
 
     if (!emitChange) return;
     emit(rootElement, "radio-group:change", { value: getCurrentValue() });
@@ -370,7 +321,37 @@ export function createRadioGroup(
       : enabledItems[enabledItems.length - 1] ?? null;
   };
 
+  rootElement.setAttribute("role", "radiogroup");
+  setAria(rootElement, "disabled", disabled ? true : null);
+  setAria(rootElement, "readonly", readOnly ? true : null);
+  setAria(rootElement, "required", required ? true : null);
+
   for (const item of items) {
+    const itemDisabled = isItemDisabled(item);
+    const checked = item === currentItem;
+
+    if (isNativeButton(item.el)) {
+      if (!item.el.hasAttribute("type")) item.el.type = "button";
+      item.el.disabled = itemDisabled;
+    }
+
+    item.el.setAttribute("role", "radio");
+    item.el.tabIndex = -1;
+    setAria(item.el, "disabled", itemDisabled ? true : null);
+    setAria(item.el, "readonly", readOnly ? true : null);
+    setAria(item.el, "required", required ? true : null);
+    setFlagStateAttrs(item.el, itemDisabled, readOnly, required);
+    for (const indicator of item.indicators) {
+      setFlagStateAttrs(indicator, itemDisabled, readOnly, required);
+    }
+
+    item.hiddenInput.disabled = itemDisabled;
+    item.hiddenInput.required = Boolean(required && name);
+    item.hiddenInput.value = item.value;
+    if (name) item.hiddenInput.name = name;
+    item.hiddenInput.defaultChecked = checked;
+    setChecked(item, checked);
+
     const labels = getRootLabels(item.el);
     if (labels.length > 0) {
       const labelIds = labels.map((label) => ensureId(label, "radio-group-label"));
@@ -494,13 +475,7 @@ export function createRadioGroup(
     }
   }
 
-  for (const item of items) {
-    item.hiddenInput.defaultChecked = item === currentItem;
-  }
-
-  syncGeneratedInputs();
   syncRoot();
-  syncItems();
 
   const resetObserver = observeFormReset({
     root: rootElement,
