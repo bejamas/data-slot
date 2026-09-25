@@ -166,7 +166,7 @@ export const scenarios: Scenario[] = [
   {
     name: "slider",
     html: slider("l"),
-    steps: [{ focus: "#l-a" }, ...repeat(8, [{ press: "ArrowRight" }]), { press: "End" }, { focus: "#l-b" }, ...repeat(4, [{ press: "ArrowLeft" }])],
+    steps: [{ focus: "#l-a" }, ...repeat(8, [{ press: "ArrowRight" }]), { press: "Home" }, { focus: "#l-b" }, ...repeat(4, [{ press: "ArrowLeft" }])],
   },
   {
     name: "navigation-menu",
