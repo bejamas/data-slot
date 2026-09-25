@@ -170,32 +170,42 @@ export function createSelect(
   }
 
 
+  let selectedItem: HTMLElement | null = null;
+  const syncSelectedItem = () => {
+    const next = items.find((item) => item.dataset["value"] === currentValue) ?? null;
+    if (next === selectedItem) return;
+    if (selectedItem) {
+      setAria(selectedItem, "selected", false);
+      selectedItem.removeAttribute("data-selected");
+    }
+    if (next) {
+      setAria(next, "selected", true);
+      next.setAttribute("data-selected", "");
+    }
+    selectedItem = next;
+  };
+
   // Cache items on open
   const cacheItems = () => {
+    const known = new Set(items);
     items = getOwnedElements<HTMLElement>(root, content, '[data-slot="select-item"]');
 
     for (const item of items) {
-      item.setAttribute("role", "option");
       if (item.hasAttribute("data-disabled") || item.hasAttribute("disabled")) {
         item.setAttribute("aria-disabled", "true");
       } else {
         item.removeAttribute("aria-disabled");
       }
+      if (known.has(item)) continue;
+      item.setAttribute("role", "option");
       item.tabIndex = -1;
-
-      // Mark selected item
-      const itemValue = item.dataset["value"];
-      if (itemValue === currentValue) {
-        setAria(item, "selected", true);
-        item.setAttribute("data-selected", "");
-      } else {
-        setAria(item, "selected", false);
-        item.removeAttribute("data-selected");
-      }
+      setAria(item, "selected", false);
+      item.removeAttribute("data-selected");
     }
 
     enabledItems = items.filter((el) => !isItemDisabled(el));
     itemToIndex = new Map(enabledItems.map((el, i) => [el, i]));
+    syncSelectedItem();
 
     // Set groups' ARIA
     const groups = getOwnedElements<HTMLElement>(root, content, '[data-slot="select-group"]');
@@ -209,11 +219,9 @@ export function createSelect(
     }
   };
 
-  const getViewport = () =>
+  const viewport =
     getOwnedElements<HTMLElement>(root, content, '[data-slot="select-viewport"]')[0] ?? null;
-
-  const getScrollContainer = () =>
-    getViewport() ?? content;
+  const scrollContainer = viewport ?? content;
 
   const getItemText = (item: HTMLElement) =>
     getOwnedElements<HTMLElement>(root, item, '[data-slot="select-item-text"]')[0] ?? null;
@@ -239,42 +247,28 @@ export function createSelect(
   const positioning = createSelectPositioning({
     root, trigger, content, valueSlot,
     getPositioner: () => portal.container as HTMLElement,
-    getViewport,
+    viewport,
     isOpen: () => isOpen,
-    getCollection: () => ({ items, enabledItems, highlightedIndex, value: currentValue }),
+    getCollection: () => ({ enabledItems, highlightedIndex, selectedItem }),
     position, preferredSide, preferredAlign, sideOffset, alignOffset, avoidCollisions,
     collisionPadding, lockScroll: lockScrollOption,
   });
 
   const updateHighlight = (index: number, focus = true, ensureVisible = true) => {
-    const scrollContainer = getScrollContainer();
-    for (let i = 0; i < enabledItems.length; i++) {
-      const el = enabledItems[i]!;
-      if (i === index) {
-        el.setAttribute("data-highlighted", "");
-        if (ensureVisible) {
-          ensureItemVisibleInContainer(el, scrollContainer);
-        }
-        if (focus) el.focus();
-      } else {
-        el.removeAttribute("data-highlighted");
-      }
+    if (index !== highlightedIndex) {
+      enabledItems[highlightedIndex]?.removeAttribute("data-highlighted");
+      enabledItems[index]?.setAttribute("data-highlighted", "");
+      highlightedIndex = index;
     }
-    highlightedIndex = index;
+    const el = enabledItems[index];
+    if (!el) return;
+    if (ensureVisible) ensureItemVisibleInContainer(el, scrollContainer);
+    if (focus) el.focus();
   };
 
-  const clearHighlight = () => {
-    for (const el of items) el.removeAttribute("data-highlighted");
-    highlightedIndex = -1;
-  };
-  const highlightSelectedItem = () => {
-    const selectedIndex = enabledItems.findIndex((el) => el.dataset["value"] === currentValue);
-    if (selectedIndex >= 0) {
-      updateHighlight(selectedIndex, false, false);
-    } else {
-      clearHighlight();
-    }
-  };
+  const clearHighlight = () => updateHighlight(-1);
+  const highlightSelectedItem = () =>
+    updateHighlight(selectedItem ? enabledItems.indexOf(selectedItem) : -1, false, false);
   const clearHighlightAndFocusContent = () => {
     clearHighlight();
     focusElement(content);
@@ -345,9 +339,7 @@ export function createSelect(
       valueSlot.textContent = placeholder;
       trigger.setAttribute("data-placeholder", "");
     } else {
-      const selectedItem = items.find((item) => item.dataset["value"] === currentValue);
-      const label = getItemLabelText(selectedItem, currentValue);
-      valueSlot.textContent = label;
+      valueSlot.textContent = getItemLabelText(selectedItem, currentValue);
       trigger.removeAttribute("data-placeholder");
     }
   };
@@ -376,6 +368,9 @@ export function createSelect(
       focusRestoreRaf = null;
       pendingFocusRestore = false;
       isOpen = true;
+      // Constrain the width while the content is still detached so the
+      // first measurement below lays out once.
+      positioning.measureTrigger();
       mounting.mount();
       portal.mount();
       trigger.setAttribute("aria-controls", contentId);
@@ -396,14 +391,12 @@ export function createSelect(
 
       positioning.start();
       positioning.update();
-      positioning.sync();
 
       // Use rAF to refine position after browser has fully rendered content,
       // and to highlight item under cursor if pointer opened the select
       terminalLifecycle.trackRaf(() => {
         if (terminalLifecycle.isDestroyed || !isOpen) return;
         positioning.update();
-        positioning.sync();
 
         // Highlight item under cursor if pointer opened the select
         if (
@@ -473,18 +466,7 @@ export function createSelect(
       root.removeAttribute("data-value");
     }
 
-    // Update selected state on items
-    for (const item of items) {
-      const itemValue = item.dataset["value"];
-      if (itemValue === value) {
-        setAria(item, "selected", true);
-        item.setAttribute("data-selected", "");
-      } else {
-        setAria(item, "selected", false);
-        item.removeAttribute("data-selected");
-      }
-    }
-
+    syncSelectedItem();
     updateValueDisplay();
 
     if (!init && oldValue !== value) {

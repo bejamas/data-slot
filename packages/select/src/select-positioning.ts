@@ -19,10 +19,9 @@ type AnchorRect = Pick<
 type Axis = "top" | "left";
 
 type CollectionSnapshot = {
-  items: HTMLElement[];
   enabledItems: HTMLElement[];
   highlightedIndex: number;
-  value: string | null;
+  selectedItem: HTMLElement | null;
 };
 
 type SelectPositioningOptions = {
@@ -31,7 +30,7 @@ type SelectPositioningOptions = {
   content: HTMLElement;
   valueSlot: HTMLElement | null;
   getPositioner: () => HTMLElement;
-  getViewport: () => HTMLElement | null;
+  viewport: HTMLElement | null;
   isOpen: () => boolean;
   getCollection: () => CollectionSnapshot;
   position: Position;
@@ -52,7 +51,7 @@ export function createSelectPositioning(options: SelectPositioningOptions) {
     content,
     valueSlot,
     getPositioner,
-    getViewport,
+    viewport,
     isOpen,
     getCollection,
     position,
@@ -64,7 +63,7 @@ export function createSelectPositioning(options: SelectPositioningOptions) {
     collisionPadding,
     lockScroll,
   } = options;
-  const getScrollContainer = () => getViewport() ?? content;
+  const scrollContainer = viewport ?? content;
   const getItemText = (item: HTMLElement) =>
     item.querySelector<HTMLElement>('[data-slot="select-item-text"]');
   const getMeasuredRect = (element: HTMLElement | null) => {
@@ -80,7 +79,12 @@ export function createSelectPositioning(options: SelectPositioningOptions) {
       "data-align-trigger",
       alignTriggerActive ? "true" : "false",
     );
-    getViewport()?.setAttribute("data-position", position);
+    viewport?.setAttribute("data-position", position);
+  };
+  const measureTrigger = () => {
+    const tr = trigger.getBoundingClientRect();
+    content.style.minWidth = `${tr.width}px`;
+    return tr;
   };
   const getTriggerAlignmentRect = (triggerRect: DOMRect): AnchorRect =>
     getMeasuredRect(valueSlot) ?? triggerRect;
@@ -115,11 +119,7 @@ export function createSelectPositioning(options: SelectPositioningOptions) {
       scrollOffset
     );
   };
-  const getItemTopInContent = (
-    item: HTMLElement,
-    cr: ContentRect,
-    scrollContainer: HTMLElement,
-  ) =>
+  const getItemTopInContent = (item: HTMLElement, cr: ContentRect) =>
     getOffsetInAncestorPaddingBox(
       item,
       content,
@@ -131,16 +131,10 @@ export function createSelectPositioning(options: SelectPositioningOptions) {
     const itemText = getItemText(item);
     return getMeasuredRect(itemText) ? itemText! : item;
   };
-  const computeItemAlignedPos = (
-    tr: DOMRect,
-    cr: ContentRect,
-    scrollContainer: HTMLElement,
-  ) => {
-    const { items, enabledItems, highlightedIndex, value } = getCollection();
-    const highlightedItem =
-      highlightedIndex >= 0 ? enabledItems[highlightedIndex] : undefined;
-    const selectedItem = items.find((item) => item.dataset["value"] === value);
-    const alignItem = selectedItem ?? highlightedItem ?? enabledItems[0];
+  const computeItemAlignedPos = (tr: DOMRect, cr: ContentRect) => {
+    const { enabledItems, highlightedIndex, selectedItem } = getCollection();
+    const alignItem =
+      selectedItem ?? enabledItems[highlightedIndex] ?? enabledItems[0];
     const triggerAlignmentRect = getTriggerAlignmentRect(tr);
     const valueRect = getMeasuredRect(valueSlot);
     let x = tr.left;
@@ -158,11 +152,7 @@ export function createSelectPositioning(options: SelectPositioningOptions) {
           : getItemAlignmentAnchor(alignItem);
       const alignAnchorRect =
         getMeasuredRect(alignAnchor) ?? alignAnchor.getBoundingClientRect();
-      anchorTopInContent = getItemTopInContent(
-        alignAnchor,
-        cr,
-        scrollContainer,
-      );
+      anchorTopInContent = getItemTopInContent(alignAnchor, cr);
       anchorHeight =
         alignAnchorRect.height ||
         alignAnchor.offsetHeight ||
@@ -189,9 +179,7 @@ export function createSelectPositioning(options: SelectPositioningOptions) {
   const update = () => {
     const positioner = getPositioner();
     const win = root.ownerDocument.defaultView ?? window;
-    const tr = trigger.getBoundingClientRect();
-    const scrollContainer = getScrollContainer();
-    content.style.minWidth = `${tr.width}px`;
+    const tr = measureTrigger();
     const cr = measurePopupContentRect(content);
     let pos: { x: number; y: number };
     let side: Side = "bottom";
@@ -239,7 +227,7 @@ export function createSelectPositioning(options: SelectPositioningOptions) {
           popupY: pos.y,
         });
       } else {
-        const aligned = computeItemAlignedPos(tr, cr, scrollContainer);
+        const aligned = computeItemAlignedPos(tr, cr);
         pos = { x: aligned.x, y: aligned.y };
         const triggerCenterX =
           aligned.triggerAlignmentRect.left +
@@ -344,13 +332,8 @@ export function createSelectPositioning(options: SelectPositioningOptions) {
       position === "item-aligned" && alignTriggerActive
         ? "center"
         : preferredAlign;
-    positioner.style.position = lockScroll ? "fixed" : "absolute";
-    positioner.style.top = "0px";
-    positioner.style.left = "0px";
     positioner.style.transform = `translate3d(${pos.x + (lockScroll ? 0 : win.scrollX)}px, ${pos.y + (lockScroll ? 0 : win.scrollY)}px, 0)`;
     positioner.style.setProperty("--transform-origin", transformOrigin);
-    positioner.style.willChange = "transform";
-    positioner.style.margin = "0";
     syncResolvedPositionAttributes(alignTriggerActive);
     content.setAttribute("data-side", side);
     content.setAttribute("data-align", resolvedAlign);
@@ -369,9 +352,17 @@ export function createSelectPositioning(options: SelectPositioningOptions) {
   });
   return {
     update,
-    start: () => sync.start(),
+    measureTrigger,
+    start: () => {
+      const style = getPositioner().style;
+      style.position = lockScroll ? "fixed" : "absolute";
+      style.top = "0px";
+      style.left = "0px";
+      style.willChange = "transform";
+      style.margin = "0";
+      sync.start();
+    },
     stop: () => sync.stop(),
-    sync: () => sync.update(),
     syncResolvedPositionAttributes,
   };
 }
