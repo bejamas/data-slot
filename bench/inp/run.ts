@@ -2,7 +2,7 @@
 /**
  * Interaction benchmark for the built packages (packages/<name>/dist).
  *
- *   bun run bench:inp [--rounds 5] [--cpu 4] [--only select,tabs] [--save base] [--compare base]
+ *   bun run bench:inp [--rounds 5] [--cpu 4] [--only select,tabs] [--save base] [--compare base | --ab base]
  *
  * Every step is one user interaction sent through Chrome's real input pipeline
  * while a performance trace records. Per interaction, the trace's EventTiming
@@ -11,7 +11,9 @@
  *   work  main-thread busy time inside those event windows: handlers, style,
  *         layout and paint. Unlike inp it is not rounded up to the next vsync,
  *         so it is the number that moves when component code gets cheaper.
- * Results can be saved to and compared against bench/inp/results/<name>.json.
+ * --save writes bench/inp/results/<name>.json and the bundle as <name>.js.
+ * --compare diffs against a saved result. --ab reruns the saved bundle
+ * interleaved with the current one, so both see the same machine load.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -38,19 +40,22 @@ const build = await Bun.build({
 if (!build.success) throw new AggregateError(build.logs, "bundle failed");
 const bundle = await build.outputs[0]!.text();
 const bundleGzip = gzipSync(bundle).length;
+const abName = flag("ab");
+const bundles: Record<string, string> = { current: bundle };
+if (abName) bundles.base = readFileSync(join(resultsDir, `${abName}.js`), "utf8");
 
 const css = readFileSync(join(import.meta.dir, "page.css"), "utf8");
-const page = (html: string) =>
-  `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body>${html}${filler}<script>${bundle}</script></body></html>`;
+const page = (html: string, script: string) =>
+  `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body>${html}${filler}<script>${script}</script></body></html>`;
 
 const selected = scenarios.filter((s) => !only || only.includes(s.name));
 const server = Bun.serve({
   port: 0,
   fetch(request) {
-    const name = decodeURIComponent(new URL(request.url).pathname.slice(1));
+    const [variant, name] = decodeURIComponent(new URL(request.url).pathname.slice(1)).split("/");
     const scenario = scenarios.find((s) => s.name === name);
-    return scenario
-      ? new Response(page(scenario.html), { headers: { "content-type": "text/html" } })
+    return scenario && bundles[variant!]
+      ? new Response(page(scenario.html, bundles[variant!]!), { headers: { "content-type": "text/html" } })
       : new Response("not found", { status: 404 });
   },
 });
@@ -105,21 +110,25 @@ function readInteractions(events: TraceEvent[]): Interaction[] {
 const expand = (steps: Step[]) =>
   steps.flatMap((step) => ("type" in step ? [...step.type].map((key) => ({ press: key })) : [step]));
 
-const samples = new Map<string, { init: number[]; steps: Interaction[][] }>();
+const samples = new Map<string, Map<string, { init: number[]; steps: Interaction[][] }>>();
 const browser = await chromium.launch({ channel: process.env.BENCH_CHROME_CHANNEL ?? "chrome", headless: true });
 
 try {
   for (let round = 0; round < rounds; round++) {
-    for (const scenario of selected) {
+    const variants = Object.keys(bundles);
+    if (round % 2) variants.reverse();
+    for (const [scenario, variant] of selected.flatMap((s) => variants.map((v) => [s, v] as const))) {
       const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
       const tab = await context.newPage();
       const cdp = await context.newCDPSession(tab);
       await cdp.send("Emulation.setCPUThrottlingRate", { rate: cpu });
-      await tab.goto(`${server.url}${encodeURIComponent(scenario.name)}`);
+      await tab.goto(`${server.url}${variant}/${encodeURIComponent(scenario.name)}`);
       await tab.waitForTimeout(300);
 
-      const entry = samples.get(scenario.name) ?? { init: [], steps: [] };
-      samples.set(scenario.name, entry);
+      const variantSamples = samples.get(variant) ?? new Map();
+      samples.set(variant, variantSamples);
+      const entry = variantSamples.get(scenario.name) ?? { init: [], steps: [] };
+      variantSamples.set(scenario.name, entry);
       entry.init.push(await tab.evaluate(() => (window as unknown as { __initMs: number }).__initMs));
 
       const steps = expand(scenario.steps);
@@ -157,35 +166,44 @@ const median = (values: number[]) => {
 const sumOf = (values: number[]) => values.reduce((a, b) => a + b, 0);
 
 type ScenarioResult = { init: number; work: number; inp: number; steps: Interaction[] };
-const results: Record<string, ScenarioResult> = {};
-for (const [name, { init, steps }] of samples) {
-  const perStep = steps.map((step) => ({
-    inp: median(step.map((s) => s.inp)),
-    work: median(step.map((s) => s.work)),
-  }));
-  results[name] = {
-    init: median(init),
-    work: sumOf(perStep.map((s) => s.work)),
-    inp: Math.max(...perStep.map((s) => s.inp)),
-    steps: perStep,
+const summarize = (variant: string, script: string) => {
+  const results: Record<string, ScenarioResult> = {};
+  for (const [name, { init, steps }] of samples.get(variant)!) {
+    const perStep = steps.map((step) => ({
+      inp: median(step.map((s) => s.inp)),
+      work: median(step.map((s) => s.work)),
+    }));
+    results[name] = {
+      init: median(init),
+      work: sumOf(perStep.map((s) => s.work)),
+      inp: Math.max(...perStep.map((s) => s.inp)),
+      steps: perStep,
+    };
+  }
+  const totals = {
+    work: sumOf(Object.values(results).map((s) => s.work)),
+    inp: sumOf(Object.values(results).map((s) => s.inp)),
+    init: sumOf(Object.values(results).map((s) => s.init)),
   };
-}
-const totals = {
-  work: sumOf(Object.values(results).map((s) => s.work)),
-  inp: sumOf(Object.values(results).map((s) => s.inp)),
-  init: sumOf(Object.values(results).map((s) => s.init)),
+  return { cpu, rounds, bundleBytes: script.length, bundleGzip: gzipSync(script).length, totals, scenarios: results };
 };
-const report = { cpu, rounds, bundleBytes: bundle.length, bundleGzip, totals, scenarios: results };
+const report = summarize("current", bundle);
+const results = report.scenarios;
+const totals = report.totals;
 
 const baseName = flag("compare");
 const basePath = baseName && join(resultsDir, `${baseName}.json`);
-const base = basePath && existsSync(basePath) ? (JSON.parse(readFileSync(basePath, "utf8")) as typeof report) : undefined;
+const base = abName
+  ? summarize("base", bundles.base!)
+  : basePath && existsSync(basePath)
+    ? (JSON.parse(readFileSync(basePath, "utf8")) as typeof report)
+    : undefined;
 
 const delta = (now: number, before?: number) =>
   before === undefined ? "" : `${now >= before ? "+" : ""}${(((now - before) / before) * 100).toFixed(0)}%`;
 const cell = (now: number, before?: number) => `${now.toFixed(1)} ${delta(now, before)}`.trim().padStart(16);
 
-console.log(`\nCPU ${cpu}x slowdown, ${rounds} rounds, per-step medians in ms.`);
+console.log(`\nCPU ${cpu}x slowdown, ${rounds} rounds, per-step medians in ms.${abName ? ` Interleaved A/B against ${abName}.js.` : ""}`);
 console.log(`Bundle (all components): ${bundle.length} B, ${bundleGzip} B gzip ${delta(bundleGzip, base?.bundleGzip)}\n`);
 console.log(`${"scenario".padEnd(22)}${"steps".padStart(6)}${"work".padStart(16)}${"inp".padStart(16)}${"init".padStart(16)}`);
 for (const [name, s] of Object.entries(results)) {
@@ -203,4 +221,5 @@ const saveName = flag("save");
 if (saveName) {
   mkdirSync(resultsDir, { recursive: true });
   writeFileSync(join(resultsDir, `${saveName}.json`), JSON.stringify(report, null, 2));
+  writeFileSync(join(resultsDir, `${saveName}.js`), bundle);
 }
