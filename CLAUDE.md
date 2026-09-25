@@ -477,7 +477,9 @@ Edit `packages/ui/package.json`:
 ```
 
 Update `packages/ui/README.md` and run `bun run build`. The UI build verifies
-that root JavaScript and type exports and all published subpaths exist.
+that root JavaScript and type exports and all published subpaths exist. Run
+`bun run test:ui:published` to check the built ESM, CommonJS, and declaration
+APIs through the package export map.
 Run `bun run install:docs` followed by `bun run test:ui:astro` to compare Astro
 production bundles for every component and the shared-helper combinations.
 

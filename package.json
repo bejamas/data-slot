@@ -6,6 +6,7 @@
   ],
   "scripts": {
     "test": "bun test",
+    "test:ui:published": "node packages/ui/check-published.mjs",
     "test:ui:astro": "bun run build && bun run packages/ui/check-astro-tree-shaking.ts",
     "test:parity": "bun test packages/dialog/src/index.test.ts packages/drawer/src packages/select/src/index.test.ts packages/tooltip/src/index.test.ts packages/hover-card/src/index.test.ts packages/combobox/src/index.test.ts",
     "typecheck": "tsc --noEmit",
