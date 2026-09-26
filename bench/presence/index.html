@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Presence exit regression suite</title>
+<style>
+  body { font: 16px system-ui; margin: 32px; }
+  [hidden] { display: none !important; }
+  [data-slot="dialog-overlay"] { position: fixed; inset: 0; background: #0003; }
+  [data-slot="dialog-content"] { position: fixed; top: 30%; left: 35%; padding: 32px; background: white; border: 1px solid; }
+  [data-slot="dialog-content"][data-closed], [data-slot="dialog-overlay"][data-closed] { animation: exit 100ms; }
+  [data-slot="accordion-content"] { overflow: hidden; }
+  [data-slot="accordion-content"] > div { height: var(--accordion-panel-height); }
+  [data-slot="accordion-content"][data-open] { animation: down 200ms ease-out; }
+  [data-slot="accordion-content"][data-closed] { animation: up 200ms ease-out; }
+  @keyframes exit { to { opacity: 0; } }
+  @keyframes up { from { height: var(--accordion-panel-height); } to { height: 0; } }
+  @keyframes down { from { height: 0; } to { height: var(--accordion-panel-height); } }
+</style>
+<h1>Presence exit regression suite</h1>
+<p>Runs 12 closes per component, including frame-offset starts. No animation fill mode is applied.</p>
+<button id="run">Run checks</button>
+<pre id="results">Ready</pre>
+<div id="fixtures"></div>
+<!-- script -->

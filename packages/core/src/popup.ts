@@ -906,9 +906,16 @@ export function createPresenceLifecycle(options: PresenceLifecycleOptions): Pres
       if (maxDuration > 0) {
         const onEnd = (event: Event) => {
           if (event.target !== options.element) return;
-          // A shorter transition can end before the rest of the exit. The
-          // timeout also covers canceled/missing events and reduced motion.
-          if (win.performance.now() - exitStartedAt < maxDuration - 1) return;
+          // CSS animations use the document timeline, which can start before
+          // exitStartedAt. Trust their actual state instead of rejecting a
+          // completed animation because our wall clock is a frame behind.
+          if (typeof options.element.getAnimations === "function") {
+            if (options.element.getAnimations().some(
+              (animation) => animation.playState === "running" || animation.pending
+            )) return;
+          } else if (win.performance.now() - exitStartedAt < maxDuration - 1) {
+            return;
+          }
           finishExit();
         };
         options.element.addEventListener("transitionend", onEnd);
