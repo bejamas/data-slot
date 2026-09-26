@@ -133,6 +133,7 @@ export function createCommand(
   let currentSearch = options.defaultSearch ?? getDataString(rootEl, "defaultSearch") ?? "";
   let itemMetas: ItemMeta[] = [];
   let groupMetas: GroupMeta[] = [];
+  let separators: HTMLElement[] = [];
   let itemMetaByElement = new Map<HTMLElement, ItemMeta>();
   let groupMetaByElement = new Map<HTMLElement, GroupMeta>();
   let filteredCount = 0;
@@ -254,19 +255,16 @@ export function createCommand(
     }
     applyChildOrder(list, authoredListChildren);
   };
-  const getSelectedVisibleItem = (): HTMLElement | null => {
-    if (currentValue === null) return null;
-    const items = getOwnedElements<HTMLElement>(rootEl, list, ITEM_SELECTOR);
-    return (
-      items.find((item) => {
-        const meta = itemMetaByElement.get(item);
-        return meta?.value === currentValue && !item.hidden && !(meta.group?.el.hidden ?? false);
-      }) ?? null
-    );
-  };
+  const getSelectedVisibleItem = (): HTMLElement | null =>
+    currentValue === null
+      ? null
+      : itemMetas.find(
+          (meta) => meta.value === currentValue && !meta.el.hidden && !(meta.group?.el.hidden ?? false)
+        )?.el ?? null;
   const syncSelectionState = () => {
     for (const meta of itemMetas) {
       const selected = meta.value === currentValue && currentValue !== null;
+      if (meta.el.hasAttribute("data-selected") === selected) continue;
       setAria(meta.el, "selected", selected);
       if (selected) {
         meta.el.setAttribute("data-selected", "true");
@@ -296,7 +294,7 @@ export function createCommand(
     }
   };
   const getAllVisibleItemsInDomOrder = (): ItemMeta[] =>
-    getOwnedElements<HTMLElement>(rootEl, list, ITEM_SELECTOR)
+    [...list.querySelectorAll<HTMLElement>(ITEM_SELECTOR)]
       .map((el) => itemMetaByElement.get(el) ?? null)
       .filter(
         (meta): meta is ItemMeta =>
@@ -382,51 +380,37 @@ export function createCommand(
       itemMetas.push(meta);
       ensureId(itemEl, "command-item");
       itemEl.setAttribute("role", "option");
-      if (meta.disabled) {
-        itemEl.setAttribute("aria-disabled", "true");
-      } else {
-        itemEl.removeAttribute("aria-disabled");
-      }
+      setAria(itemEl, "selected", false);
+      setAria(itemEl, "disabled", meta.disabled || null);
+      itemEl.removeAttribute("data-selected");
+    }
+    separators = getOwnedElements<HTMLElement>(rootEl, list, SEPARATOR_SELECTOR);
+    for (const separator of separators) {
+      separator.setAttribute("role", "separator");
     }
   };
   const applyVisibilityState = () => {
     const hasSearch = currentSearch.length > 0;
+    const filtering = shouldFilter && hasSearch;
     filteredCount = 0;
     for (const group of groupMetas) {
       group.maxRank = 0;
     }
     for (const meta of itemMetas) {
-      meta.rank =
-        shouldFilter && hasSearch && meta.value !== null ? filter(meta.value, currentSearch, meta.keywords) : 1;
-      if (shouldFilter && hasSearch && meta.rank > 0) {
+      meta.rank = filtering && meta.value !== null ? filter(meta.value, currentSearch, meta.keywords) : 1;
+      if (meta.rank > 0) {
         filteredCount += 1;
       }
-      const visible =
-        !hasSearch ||
-        !shouldFilter ||
-        meta.forceMount ||
-        meta.group?.forceMount ||
-        meta.rank > 0;
-      meta.el.hidden = !visible;
+      meta.el.hidden = !(meta.forceMount || meta.group?.forceMount || meta.rank > 0);
       if (meta.group && meta.rank > meta.group.maxRank) {
         meta.group.maxRank = meta.rank;
       }
     }
-    if (!shouldFilter || !hasSearch) {
-      filteredCount = itemMetas.length;
-    }
     for (const group of groupMetas) {
-      const visible =
-        !hasSearch ||
-        !shouldFilter ||
-        group.forceMount ||
-        itemMetas.some((meta) => meta.group === group && meta.rank > 0);
-      group.el.hidden = !visible;
+      group.el.hidden = filtering && !group.forceMount && group.maxRank <= 0;
     }
-    for (const separator of getOwnedElements<HTMLElement>(rootEl, list, SEPARATOR_SELECTOR)) {
-      const alwaysRender = getDataBool(separator, "alwaysRender") ?? false;
-      separator.hidden = hasSearch && !alwaysRender;
-      separator.setAttribute("role", "separator");
+    for (const separator of separators) {
+      separator.hidden = hasSearch && !(getDataBool(separator, "alwaysRender") ?? false);
     }
     if (empty) {
       empty.hidden = filteredCount > 0;
@@ -525,7 +509,7 @@ export function createCommand(
       syncSelectionState();
       syncRootState();
     });
-    setListHeightVar();
+    if (!resizeObserver) setListHeightVar();
   };
   const refreshStructure = () => {
     pauseMutationObserver(rescanStructure);
@@ -614,7 +598,7 @@ export function createCommand(
         sibling = change > 0 ? sibling.nextElementSibling : sibling.previousElementSibling;
       }
       if (!nextGroup) break;
-      const nextMeta = getOwnedElements<HTMLElement>(rootEl, nextGroup, ITEM_SELECTOR)
+      const nextMeta = [...nextGroup.querySelectorAll<HTMLElement>(ITEM_SELECTOR)]
         .map((el) => itemMetaByElement.get(el) ?? null)
         .find((meta): meta is ItemMeta => meta !== null && !meta.disabled && !meta.el.hidden);
       if (nextMeta) {
