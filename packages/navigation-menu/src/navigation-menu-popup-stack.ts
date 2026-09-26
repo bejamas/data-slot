@@ -122,10 +122,13 @@ export function createNavigationMenuPopupStack(
       mountTarget: portal,
     });
     let stack: Stack;
+    // A part whose exit finishes first keeps its ending style until the whole
+    // stack tears down, so it cannot transition back into view meanwhile.
     const viewportPresence = createPresenceLifecycle({
       element: viewport,
       onExitComplete: () => {
         stack.viewportExitComplete = true;
+        viewport.setAttribute("data-ending-style", "");
         maybeTeardown(stack);
       },
     });
@@ -133,6 +136,7 @@ export function createNavigationMenuPopupStack(
       element: popup,
       onExitComplete: () => {
         stack.popupExitComplete = true;
+        popup.setAttribute("data-ending-style", "");
         maybeTeardown(stack);
       },
     });

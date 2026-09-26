@@ -1134,7 +1134,9 @@ describe("NavigationMenu", () => {
         viewportPopup.dispatchEvent(
           new TransitionEvent("transitionend", { bubbles: true }),
         );
-        expect(viewportPopup.hasAttribute("data-ending-style")).toBe(false);
+        // The finished popup keeps its ending style so it cannot transition
+        // back into view while the viewport is still exiting inside it.
+        expect(viewportPopup.hasAttribute("data-ending-style")).toBe(true);
         expect(viewport.hasAttribute("data-ending-style")).toBe(true);
         expect(viewport.hidden).toBe(false);
         expect(viewport.closest('[data-slot="navigation-menu-popup"]')).toBe(
@@ -1148,6 +1150,45 @@ describe("NavigationMenu", () => {
         expect(viewport.hasAttribute("data-ending-style")).toBe(false);
         expect(viewport.hidden).toBe(true);
         expect(viewport.closest('[data-slot="navigation-menu-popup"]')).toBeNull();
+
+        controller.destroy();
+      },
+    );
+  });
+
+  it("keeps a finished viewport in its ending style until the popup exit completes", async () => {
+    await withMockTransitionDurations(
+      (el) => {
+        const slot = (el as HTMLElement).getAttribute("data-slot");
+        if (slot === "navigation-menu-popup") return "120ms";
+        if (slot === "navigation-menu-viewport") return "50ms";
+        return "0s";
+      },
+      async () => {
+        const { viewport, controller } = setup();
+
+        controller.open("products");
+        const viewportPopup = getViewportPopup(viewport);
+
+        controller.close();
+        await new Promise(resolve => setTimeout(resolve, 50));
+        viewport.dispatchEvent(
+          new TransitionEvent("transitionend", { bubbles: true }),
+        );
+        expect(viewport.hasAttribute("data-ending-style")).toBe(true);
+        expect(viewport.hidden).toBe(false);
+
+        await new Promise(resolve => setTimeout(resolve, 70));
+        viewportPopup.dispatchEvent(
+          new TransitionEvent("transitionend", { bubbles: true }),
+        );
+        expect(viewport.hidden).toBe(true);
+        expect(viewport.hasAttribute("data-ending-style")).toBe(false);
+        expect(viewport.closest('[data-slot="navigation-menu-popup"]')).toBeNull();
+
+        controller.open("products");
+        expect(getViewportPopup(viewport).hasAttribute("data-ending-style")).toBe(false);
+        expect(viewport.hasAttribute("data-ending-style")).toBe(false);
 
         controller.destroy();
       },
