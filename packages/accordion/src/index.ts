@@ -336,10 +336,8 @@ export function createAccordion(
     const hasSizeTransition = getMaxSizeTransitionMs(item.content) > 0;
     const hasAnimation = hasActiveAnimation(style);
 
-    if (hasAnimation && !hasSizeTransition) return "css-animation";
     if (hasSizeTransition) return "css-transition";
-    if (hasAnimation) return "css-animation";
-    return "none";
+    return hasAnimation ? "css-animation" : "none";
   };
 
   const measurePanelWithAnimationSuppressed = (
@@ -538,6 +536,8 @@ export function createAccordion(
   const syncItemState = (item: AccordionItemRecord) => {
     const open = expandedValues.has(item.value);
     const wasOpen = item.trigger.getAttribute("aria-expanded") === "true";
+    // A settled item has nothing to write; only mid-motion items need re-syncing
+    if (open === wasOpen && (open ? hasAutoPanelSize(item) : !item.presence.isExiting)) return;
 
     setAria(item.trigger, "expanded", open);
     setOpenClosedAttrs(item.el, open);
@@ -547,9 +547,6 @@ export function createAccordion(
     if (open) {
       clearClosePhaseTracking(item);
       applyOpenVisibility(item);
-      if (wasOpen && !item.presence.isExiting && hasAutoPanelSize(item)) {
-        return;
-      }
       const motionStrategy = getMotionStrategy(item);
       if (motionStrategy === "css-animation") {
         measurePanelWithAnimationSuppressed(item, () => {
