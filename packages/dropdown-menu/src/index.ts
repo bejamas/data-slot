@@ -236,17 +236,12 @@ export function createDropdownMenu(
       popupX: position.x,
       popupY: position.y,
     });
-    if (lockScrollOption) {
-      positioner.style.position = "fixed";
-      positioner.style.top = "0px";
-      positioner.style.left = "0px";
-      positioner.style.transform = `translate3d(${position.x}px, ${position.y}px, 0)`;
-    } else {
-      positioner.style.position = "absolute";
-      positioner.style.top = "0px";
-      positioner.style.left = "0px";
-      positioner.style.transform = `translate3d(${position.x + win.scrollX}px, ${position.y + win.scrollY}px, 0)`;
-    }
+    positioner.style.transform = lockScrollOption
+      ? `translate3d(${position.x}px, ${position.y}px, 0)`
+      : `translate3d(${position.x + win.scrollX}px, ${position.y + win.scrollY}px, 0)`;
+    positioner.style.position = lockScrollOption ? "fixed" : "absolute";
+    positioner.style.top = "0px";
+    positioner.style.left = "0px";
     positioner.style.setProperty("--transform-origin", transformOrigin);
     positioner.style.willChange = "transform";
     positioner.style.margin = "0";
