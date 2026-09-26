@@ -416,7 +416,7 @@ export function createSelect(
         }
       });
 
-      content.focus();
+      focusElement(content);
     } else {
       isOpen = false;
       pendingPointerOpen = false;

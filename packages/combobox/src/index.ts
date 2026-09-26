@@ -134,19 +134,11 @@ export function createCombobox(
   });
   const terminalLifecycle = createTerminalLifecycle();
 
-  const matchesMediaQuery = (query: string): boolean => {
-    if (typeof win.matchMedia !== "function") return false;
-    return win.matchMedia(query).matches;
-  };
+  const matchesMediaQuery = (query: string): boolean => !!win.matchMedia?.(query).matches;
 
-  const isLikelyMobileTouchEnvironment = (): boolean => {
-    const touchPoints = typeof win.navigator.maxTouchPoints === "number" ? win.navigator.maxTouchPoints : 0;
-    const coarsePointer = matchesMediaQuery("(pointer: coarse)");
-    const noHover = matchesMediaQuery("(hover: none)");
-    return coarsePointer || (touchPoints > 0 && noHover);
-  };
-
-  const isMobileTouchEnvironment = isLikelyMobileTouchEnvironment();
+  const isMobileTouchEnvironment =
+    matchesMediaQuery("(pointer: coarse)") ||
+    (win.navigator.maxTouchPoints > 0 && matchesMediaQuery("(hover: none)"));
 
   // ARIA setup
   const inputId = ensureId(input, "combobox-input");
@@ -158,11 +150,7 @@ export function createCombobox(
   input.setAttribute("autocomplete", "off");
   input.setAttribute("aria-controls", listId);
 
-  if (list) {
-    list.setAttribute("role", "listbox");
-  } else {
-    content.setAttribute("role", "listbox");
-  }
+  listEl.setAttribute("role", "listbox");
 
   if (trigger) {
     if (!trigger.hasAttribute("type")) {
@@ -262,13 +250,17 @@ export function createCombobox(
     }
   };
 
-  const updatePosition = () => {
+  // Anchor to root element (contains both input and trigger)
+  const measureAnchor = () => {
+    const anchorRect = rootElement.getBoundingClientRect();
+    content.style.minWidth = `${anchorRect.width}px`;
+    return anchorRect;
+  };
+
+  const updatePosition = (anchorRect = measureAnchor()) => {
     const positioner = portal.container as HTMLElement;
     const effectiveSide: Side = isMobileTouchEnvironment ? "bottom" : (openRenderedSide ?? preferredSide);
     const effectiveAvoidCollisions = isMobileTouchEnvironment ? false : avoidCollisions;
-    // Anchor to root element (contains both input and trigger)
-    const anchorRect = rootElement.getBoundingClientRect();
-    content.style.minWidth = `${anchorRect.width}px`;
     const cr = measurePopupContentRect(content);
     const pos = computeFloatingPosition({
       anchorRect,
@@ -289,13 +281,8 @@ export function createCombobox(
       popupY: pos.y,
     });
 
-    positioner.style.position = "absolute";
-    positioner.style.top = "0px";
-    positioner.style.left = "0px";
     positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
     positioner.style.setProperty("--transform-origin", transformOrigin);
-    positioner.style.willChange = "transform";
-    positioner.style.margin = "0";
     syncPositionCssVars(positioner, anchorRect, pos.side as Side);
     if (!isMobileTouchEnvironment && effectiveAvoidCollisions) {
       openRenderedSide = pos.side as Side;
@@ -345,16 +332,26 @@ export function createCombobox(
     collection.highlight(collection.enabled.findIndex((item) => collection.valueOf(item) === currentValue));
   };
 
-  const updateOpenState = (open: boolean, skipFocusRestore = false) => {
+  const updateOpenState = (open: boolean) => {
     if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
     if (disabled && open) return;
 
     if (open) {
+      // Measure the anchor while style and layout are still clean, and make
+      // the positioner absolute before the mounted content is laid out, so
+      // the first measurement lays out once.
+      const anchorRect = measureAnchor();
       isOpen = true;
       openRenderedSide = null;
       setAria(input, "expanded", true);
       portal.mount();
+      const style = (portal.container as HTMLElement).style;
+      style.position = "absolute";
+      style.top = "0px";
+      style.left = "0px";
+      style.willChange = "transform";
+      style.margin = "0";
       content.hidden = false;
       setDataState("open");
       presence.enter();
@@ -363,12 +360,11 @@ export function createCombobox(
       syncOpenResults();
 
       positionSync.start();
-      updatePosition();
-      positionSync.update();
+      updatePosition(anchorRect);
 
       terminalLifecycle.trackRaf(() => {
         if (terminalLifecycle.isDestroyed || !isOpen) return;
-        positionSync.update();
+        updatePosition();
       });
     } else {
       isOpen = false;
@@ -387,10 +383,6 @@ export function createCombobox(
         // Restore input text to committed value's label
         const committedLabel = collection.labelFor(currentValue);
         input.value = committedLabel;
-      }
-
-      if (!skipFocusRestore) {
-        // Keep focus on input
       }
     }
 
@@ -542,7 +534,7 @@ export function createCombobox(
         break;
       case "Tab":
         if (isOpen) {
-          updateOpenState(false, true);
+          updateOpenState(false);
         }
         break;
     }
@@ -648,9 +640,7 @@ export function createCombobox(
       on(clearButton, "mousedown", (e) => {
         e.preventDefault();
       }),
-      on(clearButton, "click", () => {
-        clearFromButton();
-      })
+      on(clearButton, "click", clearFromButton)
     );
   }
 
