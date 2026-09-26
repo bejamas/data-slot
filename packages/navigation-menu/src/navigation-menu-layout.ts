@@ -381,7 +381,9 @@ export function createNavigationMenuLayout(
     onLayout({
       rootRect,
       triggerRect,
-      viewportRect: viewport.getBoundingClientRect(),
+      // The bridge shares these layout coordinates. Animated viewport bounds
+      // include scale insets that would extend the bridge over the trigger.
+      viewportRect: new DOMRect(pos.x, pos.y, size.width, size.height),
       offset: { ...offset },
       contentSize: size,
       viewportMarginTop: parseFloat(getComputedStyle(viewport).marginTop) || 0,
