@@ -83,8 +83,7 @@ const getMaxTimingMs = (durationsValue: string, delaysValue: string): number => 
   return max;
 };
 
-const getMaxPresenceDurationMs = (element: HTMLElement): number => {
-  const style = getComputedStyle(element);
+const getMaxPresenceDurationMs = (style: CSSStyleDeclaration): number => {
   const transitionMs = getMaxTimingMs(style.transitionDuration, style.transitionDelay);
   const animationMs = getMaxTimingMs(style.animationDuration, style.animationDelay);
   return Math.max(transitionMs, animationMs);
@@ -101,10 +100,9 @@ const hasActiveAnimation = (style: CSSStyleDeclaration): boolean => {
 };
 
 const getMaxTransitionTimingMsForProperties = (
-  element: HTMLElement,
+  style: CSSStyleDeclaration,
   shouldIncludeProperty: (property: string) => boolean
 ): number => {
-  const style = getComputedStyle(element);
   const properties = style.transitionProperty.split(",").map((property) => property.trim());
   const durations = style.transitionDuration.split(",");
   const delays = style.transitionDelay.split(",");
@@ -123,8 +121,8 @@ const getMaxTransitionTimingMsForProperties = (
   return max;
 };
 
-const getMaxSizeTransitionMs = (element: HTMLElement): number =>
-  getMaxTransitionTimingMsForProperties(element, (property) =>
+const getMaxSizeTransitionMs = (style: CSSStyleDeclaration): number =>
+  getMaxTransitionTimingMsForProperties(style, (property) =>
     SIZE_TRANSITION_PROPERTIES.has(property)
   );
 
@@ -280,13 +278,7 @@ export function createAccordion(
     setPanelSizePx(item, 0, 0);
   };
 
-  const syncPanelSizePx = (
-    item: AccordionItemRecord,
-    { resetVarsToAuto = false }: { resetVarsToAuto?: boolean } = {}
-  ) => {
-    if (resetVarsToAuto) {
-      setPanelSizeAuto(item);
-    }
+  const syncPanelSizePx = (item: AccordionItemRecord) => {
     setPanelSizePx(item, item.content.scrollHeight, item.content.scrollWidth);
   };
 
@@ -331,24 +323,22 @@ export function createAccordion(
     clearClosePhaseTracking(item);
   };
 
-  const getMotionStrategy = (item: AccordionItemRecord): AccordionMotionStrategy => {
-    const style = getComputedStyle(item.content);
-    const hasSizeTransition = getMaxSizeTransitionMs(item.content) > 0;
-    const hasAnimation = hasActiveAnimation(style);
-
-    if (hasSizeTransition) return "css-transition";
-    return hasAnimation ? "css-animation" : "none";
+  const getMotionStrategy = (style: CSSStyleDeclaration): AccordionMotionStrategy => {
+    if (getMaxSizeTransitionMs(style) > 0) return "css-transition";
+    return hasActiveAnimation(style) ? "css-animation" : "none";
   };
 
   const measurePanelWithAnimationSuppressed = (
     item: AccordionItemRecord,
-    work: () => void
+    work?: () => void
   ) => {
     const inlineAnimationName = item.content.style.getPropertyValue("animation-name");
     item.content.style.setProperty("animation-name", "none");
 
     try {
-      work();
+      setPanelSizeAuto(item);
+      syncPanelSizePx(item);
+      work?.();
     } finally {
       if (inlineAnimationName) {
         item.content.style.setProperty("animation-name", inlineAnimationName);
@@ -406,12 +396,13 @@ export function createAccordion(
 
   const scheduleOpenSettle = (
     item: AccordionItemRecord,
-    motionStrategy: AccordionMotionStrategy
+    motionStrategy: AccordionMotionStrategy,
+    style: CSSStyleDeclaration
   ) => {
     clearOpenSettleTracking(item);
 
-    const maxDuration = getMaxPresenceDurationMs(item.content);
-    const maxSizeTransitionMs = getMaxSizeTransitionMs(item.content);
+    const maxDuration = getMaxPresenceDurationMs(style);
+    const maxSizeTransitionMs = getMaxSizeTransitionMs(style);
     const settleDuration = maxSizeTransitionMs || maxDuration;
 
     if (settleDuration > 0) {
@@ -519,21 +510,20 @@ export function createAccordion(
 
     if (open) {
       applyOpenVisibility(item);
-      const motionStrategy = getMotionStrategy(item);
+      const style = getComputedStyle(item.content);
+      const motionStrategy = getMotionStrategy(style);
       if (motionStrategy === "css-animation") {
-        measurePanelWithAnimationSuppressed(item, () => {
-          syncPanelSizePx(item, { resetVarsToAuto: true });
-        });
+        measurePanelWithAnimationSuppressed(item);
       } else {
         syncPanelSizePx(item);
       }
-      scheduleOpenSettle(item, motionStrategy);
+      scheduleOpenSettle(item, motionStrategy, style);
     } else {
       applyClosedVisibility(item);
     }
   };
 
-  const syncItemState = (item: AccordionItemRecord) => {
+  const syncItemState = (item: AccordionItemRecord, closeSize?: [number, number]) => {
     const open = expandedValues.has(item.value);
     const wasOpen = item.trigger.getAttribute("aria-expanded") === "true";
     // A settled item has nothing to write; only mid-motion items need re-syncing
@@ -547,10 +537,10 @@ export function createAccordion(
     if (open) {
       clearClosePhaseTracking(item);
       applyOpenVisibility(item);
-      const motionStrategy = getMotionStrategy(item);
+      const style = getComputedStyle(item.content);
+      const motionStrategy = getMotionStrategy(style);
       if (motionStrategy === "css-animation") {
         measurePanelWithAnimationSuppressed(item, () => {
-          syncPanelSizePx(item, { resetVarsToAuto: true });
           if (!wasOpen) {
             item.presence.enter();
           }
@@ -561,20 +551,16 @@ export function createAccordion(
           item.presence.enter();
         }
       }
-      scheduleOpenSettle(item, motionStrategy);
+      scheduleOpenSettle(item, motionStrategy, style);
       return;
     }
 
     if (wasOpen) {
       clearOpenSettleTracking(item);
-      const motionStrategy = getMotionStrategy(item);
-      if (motionStrategy === "css-animation") {
-        measurePanelWithAnimationSuppressed(item, () => {
-          syncPanelSizePx(item, { resetVarsToAuto: true });
-          item.presence.exit();
-        });
+      if (getMotionStrategy(getComputedStyle(item.content)) === "css-animation") {
+        measurePanelWithAnimationSuppressed(item, () => item.presence.exit());
       } else {
-        syncPanelSizePx(item);
+        setPanelSizePx(item, ...closeSize!);
         item.presence.exit();
         scheduleCloseToZero(item);
       }
@@ -612,10 +598,6 @@ export function createAccordion(
     return [...nextExpanded].some((value) => !expandedValues.has(value));
   };
 
-  const syncAllItems = () => {
-    itemRecords.forEach(syncItemState);
-  };
-
   const emitValueChange = () => {
     const value = [...expandedValues];
     emit(root, "accordion:change", { value });
@@ -634,16 +616,20 @@ export function createAccordion(
       return false;
     }
 
-    itemRecords.forEach((item) => {
-      const isOpen = expandedValues.has(item.value);
-      const willBeOpen = nextExpanded.has(item.value);
-      if (isOpen !== willBeOpen) {
-        enablePanelAnimation(item);
+    const changing = itemRecords.filter(
+      (item) => expandedValues.has(item.value) !== nextExpanded.has(item.value)
+    );
+    // Measure closing panels before any write dirties the tree
+    const closeSizes = new Map<AccordionItemRecord, [number, number]>();
+    for (const item of changing) {
+      if (expandedValues.has(item.value)) {
+        closeSizes.set(item, [item.content.scrollHeight, item.content.scrollWidth]);
       }
-    });
+    }
+    changing.forEach(enablePanelAnimation);
 
     expandedValues = nextExpanded;
-    syncAllItems();
+    itemRecords.forEach((item) => syncItemState(item, closeSizes.get(item)));
     emitValueChange();
     return true;
   };
