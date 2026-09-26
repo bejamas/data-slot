@@ -1,218 +1,81 @@
 # @data-slot/ui
 
-Headless UI components for vanilla JavaScript. Tiny, accessible, unstyled.
+One package for the Data Slot headless components. The components are accessible, unstyled, and work with vanilla JavaScript and Astro.
 
-**Convenience subpaths stay tiny and tree-shake cleanly.** Zero dependencies.
-
-## Installation
+## Install
 
 ```bash
 npm install @data-slot/ui
 ```
 
-## Packages
+The package installs its `@data-slot/*` component and core dependencies. You do not need to install those packages separately.
 
-This is a convenience package that re-exports all `@data-slot/*` packages:
+## Use in Astro
 
-| Package | Size | Description |
-|---------|------|-------------|
-| `@data-slot/navigation-menu` | 7.2 KB | Dropdown navigation menus |
-| `@data-slot/core` | 5.5 KB | Shared utilities |
-| `@data-slot/command` | 4.7 KB | Command palette with ranked search |
-| `@data-slot/combobox` | 4.5 KB | Autocomplete input with filtering |
-| `@data-slot/select` | 4.0 KB | Select input with keyboard navigation |
-| `@data-slot/dropdown-menu` | 2.7 KB | Action and selection menus with keyboard navigation |
-| `@data-slot/hover-card` | 2.6 KB | Hover/focus preview cards |
-| `@data-slot/tabs` | 2.3 KB | Tabbed interfaces with keyboard nav |
-| `@data-slot/tooltip` | 2.2 KB | Hover/focus tooltips |
-| `@data-slot/popover` | 2.0 KB | Anchored floating content |
-| `@data-slot/dialog` | 1.9 KB | Modal dialogs with focus management |
-| `@data-slot/drawer` | 6.7 KB | Swipeable drawers with nested dialogs |
-| `@data-slot/alert-dialog` | 1.8 KB | Blocking confirmation dialogs |
-| `@data-slot/switch` | 1.8 KB | Form-ready on/off switch |
-| `@data-slot/toggle-group` | 1.7 KB | Single/multi toggle groups |
-| `@data-slot/collapsible` | 1.6 KB | Simple show/hide toggle |
-| `@data-slot/accordion` | 1.4 KB | Collapsible content sections |
-| `@data-slot/toggle` | 740 B | Pressed-state toggle button |
-| `@data-slot/toast` | 2.9 KB | Imperative notifications |
-| `@data-slot/carousel` | 1.8 KB | Scroll-snap carousels |
+Render the component markup in an `.astro` file and initialize it in a client-side `<script>`:
 
-## Usage
-
-### Subpath Imports (Recommended)
-
-For tree-shaking, use subpath imports:
-
-```typescript
-import { create } from "@data-slot/ui/tabs";
-import { createDialog } from "@data-slot/ui/dialog";
-```
-
-Available subpaths:
-- `@data-slot/ui/core`
-- `@data-slot/ui/tabs`
-- `@data-slot/ui/dialog`
-- `@data-slot/ui/drawer`
-- `@data-slot/ui/alert-dialog`
-- `@data-slot/ui/accordion`
-- `@data-slot/ui/popover`
-- `@data-slot/ui/hover-card`
-- `@data-slot/ui/tooltip`
-- `@data-slot/ui/collapsible`
-- `@data-slot/ui/navigation-menu`
-- `@data-slot/ui/dropdown-menu`
-- `@data-slot/ui/switch`
-- `@data-slot/ui/toggle`
-- `@data-slot/ui/toggle-group`
-- `@data-slot/ui/select`
-- `@data-slot/ui/combobox`
-- `@data-slot/ui/command`
-- `@data-slot/ui/toast`
-- `@data-slot/ui/carousel`
-
-### Direct Package Imports
-
-For the smallest bundle, install and import specific packages:
-
-```bash
-npm install @data-slot/tabs @data-slot/dialog @data-slot/alert-dialog @data-slot/drawer
-```
-
-```typescript
-import { create } from "@data-slot/tabs";
-import { createDialog } from "@data-slot/dialog";
-import { createAlertDialog } from "@data-slot/alert-dialog";
-import { createDrawer } from "@data-slot/drawer";
-```
-
-### Barrel Import
-
-Import everything (larger bundle):
-
-```typescript
-import { createTabs, createDialog, createAlertDialog, createDrawer } from "@data-slot/ui";
-```
-
-## Quick Start
-
-```html
-<div data-slot="tabs" data-default-value="one">
-  <div data-slot="tabs-list">
-    <button data-slot="tabs-trigger" data-value="one">Tab One</button>
-    <button data-slot="tabs-trigger" data-value="two">Tab Two</button>
+```astro
+<div data-slot="accordion" data-default-value="first">
+  <div data-slot="accordion-item" data-value="first">
+    <button data-slot="accordion-trigger">First section</button>
+    <div data-slot="accordion-content">First section content</div>
   </div>
-  <div data-slot="tabs-content" data-value="one">Content One</div>
-  <div data-slot="tabs-content" data-value="two">Content Two</div>
 </div>
 
-<script type="module">
-  import { create } from "@data-slot/ui/tabs";
-  
-  const controllers = create();
-  controllers[0]?.select("two");
+<script>
+  import { createAccordion } from '@data-slot/ui';
+
+  const root = document.querySelector('[data-slot="accordion"]');
+  if (root) createAccordion(root);
 </script>
 ```
 
-## API Pattern
+Astro bundles the `<script>` for the browser. A named ESM import such as `createAccordion` lets Astro's bundler keep that component and its shared core code while removing unused component exports. Astro frontmatter runs during server rendering, where `document` is unavailable; use a client-side `<script>` to initialize DOM components.
 
-All components follow the same pattern:
+You can also import from a component subpath. Each subpath exports its named constructor, types, and `create(scope?)` function for discovering matching roots:
 
-```typescript
-// Auto-discover and bind all instances in the DOM
-import { create } from "@data-slot/ui/tabs";
-const controllers = create(); // Returns Controller[]
+```astro
+<script>
+  import { create } from '@data-slot/ui/accordion';
 
-// Or create for a specific element
-import { createTabs } from "@data-slot/ui/tabs";
-const tabs = createTabs(document.querySelector('[data-slot="tabs"]'));
-
-tabs.select("news");  // Programmatic control
-tabs.destroy();       // Cleanup
+  create(); // Initializes accordion roots in document
+</script>
 ```
 
-## Styling
+Tree shaking applies to ESM builds. The package declares `sideEffects: false` and publishes ESM entries for the root and every subpath. CommonJS entries are also available for environments that require them; use ESM for Astro's client bundle.
 
-Components are unstyled. Use `data-state`, switch-specific state hooks, and ARIA attributes for CSS:
+## Components
 
-```css
-/* Active tab trigger */
-[data-slot="tabs-trigger"][aria-selected="true"] {
-  font-weight: bold;
-}
+All named constructors below are available from `@data-slot/ui`. Each row also has a dedicated subpath. Import options and controller types by their component-prefixed names from the root or by their original names from the subpath.
 
-/* Checked switch */
-[data-slot="switch"][data-checked] {
-  background: black;
-}
+| Component | Root export | Subpath |
+| --- | --- | --- |
+| Accordion | `createAccordion` | `@data-slot/ui/accordion` |
+| Alert dialog | `createAlertDialog` | `@data-slot/ui/alert-dialog` |
+| Carousel | `createCarousel` | `@data-slot/ui/carousel` |
+| Collapsible | `createCollapsible` | `@data-slot/ui/collapsible` |
+| Combobox | `createCombobox` | `@data-slot/ui/combobox` |
+| Command | `createCommand` | `@data-slot/ui/command` |
+| Dialog | `createDialog` | `@data-slot/ui/dialog` |
+| Drawer | `createDrawer` | `@data-slot/ui/drawer` |
+| Dropdown menu | `createDropdownMenu` | `@data-slot/ui/dropdown-menu` |
+| Hover card | `createHoverCard` | `@data-slot/ui/hover-card` |
+| Navigation menu | `createNavigationMenu` | `@data-slot/ui/navigation-menu` |
+| Popover | `createPopover` | `@data-slot/ui/popover` |
+| Radio group | `createRadioGroup` | `@data-slot/ui/radio-group` |
+| Resizable panels | `createResizable` | `@data-slot/ui/resizable` |
+| Select | `createSelect` | `@data-slot/ui/select` |
+| Slider | `createSlider` | `@data-slot/ui/slider` |
+| Switch | `createSwitch` | `@data-slot/ui/switch` |
+| Tabs | `createTabs` | `@data-slot/ui/tabs` |
+| Toast | `createToast` | `@data-slot/ui/toast` |
+| Toggle group | `createToggleGroup` | `@data-slot/ui/toggle-group` |
+| Toggle | `createToggle` | `@data-slot/ui/toggle` |
+| Tooltip | `createTooltip` | `@data-slot/ui/tooltip` |
 
-/* Open dialog */
-[data-slot="dialog"][data-state="open"] [data-slot="dialog-content"] {
-  display: flex;
-}
-```
+Shared helpers and types from `@data-slot/core` are available from `@data-slot/ui` and `@data-slot/ui/core`.
 
-With Tailwind:
-
-```html
-<button
-  data-slot="tabs-trigger"
-  class="aria-selected:font-bold aria-selected:border-b-2"
->
-  Tab
-</button>
-```
-
-## Exports
-
-### Functions
-
-| Export | Package |
-|--------|---------|
-| `createTabs` | @data-slot/tabs |
-| `createDialog` | @data-slot/dialog |
-| `createDrawer` | @data-slot/drawer |
-| `createAlertDialog` | @data-slot/alert-dialog |
-| `createAccordion` | @data-slot/accordion |
-| `createPopover` | @data-slot/popover |
-| `createHoverCard` | @data-slot/hover-card |
-| `createTooltip` | @data-slot/tooltip |
-| `createCollapsible` | @data-slot/collapsible |
-| `createNavigationMenu` | @data-slot/navigation-menu |
-| `createDropdownMenu` | @data-slot/dropdown-menu |
-| `createSwitch` | @data-slot/switch |
-| `createCombobox` | @data-slot/combobox |
-| `createCommand` | @data-slot/command |
-| `createToast` | @data-slot/toast |
-| `createCarousel` | @data-slot/carousel |
-
-### Types
-
-| Export | Package |
-|--------|---------|
-| `TabsOptions`, `TabsController` | @data-slot/tabs |
-| `DialogOptions`, `DialogController` | @data-slot/dialog |
-| `DrawerOptions`, `DrawerController`, `DrawerSnapPoint` | @data-slot/drawer |
-| `AlertDialogOptions`, `AlertDialogController` | @data-slot/alert-dialog |
-| `AccordionOptions`, `AccordionController` | @data-slot/accordion |
-| `PopoverOptions`, `PopoverController` | @data-slot/popover |
-| `HoverCardOptions`, `HoverCardController` | @data-slot/hover-card |
-| `TooltipOptions`, `TooltipController` | @data-slot/tooltip |
-| `CollapsibleOptions`, `CollapsibleController` | @data-slot/collapsible |
-| `NavigationMenuOptions`, `NavigationMenuController` | @data-slot/navigation-menu |
-| `DropdownMenuOptions`, `DropdownMenuController` | @data-slot/dropdown-menu |
-| `SwitchOptions`, `SwitchController` | @data-slot/switch |
-| `ComboboxOptions`, `ComboboxController` | @data-slot/combobox |
-| `CommandOptions`, `CommandController`, `CommandFilter` | @data-slot/command |
-| `ToastPosition`, `ToastAction`, `ToastShowOptions`, `ToastOptions`, `ToastController` | @data-slot/toast |
-| `CarouselOptions`, `CarouselController` | @data-slot/carousel |
-
-### Core Utilities
-
-From `@data-slot/core`:
-
-- `getPart`, `getParts`, `getRoots` - DOM queries
-- `setAria`, `ensureId`, `linkLabelledBy` - ARIA helpers
-- `on`, `emit`, `composeHandlers` - Event utilities
+Each component package also remains available directly, for example `@data-slot/accordion`. See its README for markup, options, events, and styling hooks.
 
 ## License
 
