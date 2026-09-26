@@ -148,10 +148,6 @@ export function createCollapsible(
     setPanelSizeVars(`${height}px`, `${width}px`);
   };
 
-  const setPanelSizeAuto = () => {
-    setPanelSizeVars("auto", "auto");
-  };
-
   const setPanelSizeZero = () => {
     setPanelSizePx(0, 0);
   };
@@ -188,11 +184,6 @@ export function createCollapsible(
     }
   };
 
-  const clearSizePhaseTracking = () => {
-    clearOpenSettleTracking();
-    clearClosePhaseTracking();
-  };
-
   const applyOpenVisibility = () => {
     content.removeAttribute("hidden");
   };
@@ -209,7 +200,7 @@ export function createCollapsible(
   const finishOpenSettle = () => {
     clearOpenSettleTracking();
     if (!isOpen || presence.isExiting) return;
-    setPanelSizeAuto();
+    setPanelSizeVars("auto", "auto");
   };
 
   const scheduleOpenSettle = () => {
@@ -265,6 +256,8 @@ export function createCollapsible(
     if (isOpen === open) return;
 
     isOpen = open;
+    // Measure before the state attrs dirty the tree so the read does not force a layout
+    if (!isOpen) syncPanelSizePx();
     setAria(trigger, "expanded", isOpen);
     setDataState(isOpen ? "open" : "closed");
 
@@ -276,7 +269,6 @@ export function createCollapsible(
       scheduleOpenSettle();
     } else {
       clearOpenSettleTracking();
-      syncPanelSizePx();
       presence.exit();
       scheduleCloseToZero();
     }
@@ -355,7 +347,8 @@ export function createCollapsible(
     },
     destroy: () => {
       presence.cleanup();
-      clearSizePhaseTracking();
+      clearOpenSettleTracking();
+      clearClosePhaseTracking();
       sizeObserver?.disconnect();
       sizeObserver = null;
       cleanups.forEach((fn) => fn());

@@ -294,24 +294,17 @@ export function createNavigationMenu(
   ): boolean => {
     const doc = root.ownerDocument;
     const preserveOpenOnPlain = options.preserveOpenOnPlain ?? false;
+    const element =
+      navigable.kind === "submenu" ? navigable.trigger : navigable.element;
 
-    if (navigable.kind === "submenu") {
-      navigable.trigger.focus();
-      if (doc.activeElement !== navigable.trigger) return false;
-      syncIndicator(navigable.trigger);
-      return true;
-    }
-
-    if (currentValue !== null && !preserveOpenOnPlain) {
+    if (navigable.kind === "plain" && currentValue !== null && !preserveOpenOnPlain) {
       closeMenuAndUnlock();
     }
-    navigable.element.focus();
-    if (doc.activeElement !== navigable.element) return false;
-    if (currentValue !== null && preserveOpenOnPlain) {
-      syncIndicator();
-    } else {
-      updateIndicator(navigable.element);
-    }
+    // A focus change syncs the indicator through the focus handlers.
+    const wasFocused = doc.activeElement === element;
+    element.focus();
+    if (doc.activeElement !== element) return false;
+    if (wasFocused) syncIndicator(element);
     return true;
   };
 
@@ -525,8 +518,9 @@ export function createNavigationMenu(
     const doUpdate = () => {
       const prevValue = currentValue;
       const newData = value ? itemMap.get(value) : null;
-      const popupSizeBaseline = popupStackController.baseline();
       const isOpen = value !== null;
+      // Measured before any write below shrinks the outgoing panel.
+      const popupSizeBaseline = newData ? null : popupStackController.baseline();
       const isInitialOpen = prevValue === null && isOpen;
 
       // Only animate direction when switching between different items
@@ -546,60 +540,36 @@ export function createNavigationMenu(
         }
       }
 
-      // Update all items
-      itemMap.forEach(({ trigger, content, item }, key) => {
-        const isActive = key === value;
-        const wasActive = key === prevValue;
-
-        if (!isActive) {
-          setAria(trigger, "expanded", false);
-          trigger.removeAttribute("aria-controls");
+      // Every other item is already closed or finishing its exit.
+      const prevData = prevValue ? itemMap.get(prevValue) : null;
+      if (prevData) {
+        const { trigger, content, item } = prevData;
+        setAria(trigger, "expanded", false);
+        trigger.removeAttribute("aria-controls");
+        trigger.setAttribute("data-state", "closed");
+        item.setAttribute("data-state", "closed");
+        setContentSurfaceState(content, false);
+        content.setAttribute("aria-hidden", "true");
+        setInert(content, true);
+        content.style.pointerEvents = "none";
+        setContentActivationDirection(content, direction);
+        // TODO(next-major): remove legacy `data-motion` switching output.
+        if (direction) {
+          content.setAttribute(
+            "data-motion",
+            direction === "right" ? "to-left" : "to-right",
+          );
+        } else {
+          content.removeAttribute("data-motion");
         }
-        trigger.setAttribute("data-state", isActive ? "open" : "closed");
-        item.setAttribute("data-state", isActive ? "open" : "closed");
-
-        if (!isActive) {
-          const presence = presences.get(content);
-          setContentSurfaceState(content, false);
-          content.setAttribute("aria-hidden", "true");
-          setInert(content, true);
-          content.style.pointerEvents = "none";
-
-          if (value === null) {
-            if (wasActive) {
-              setContentActivationDirection(content, null);
-              content.removeAttribute("data-motion");
-            }
-          } else if (wasActive && direction) {
-            // Set exit motion on the previous content only while switching panels.
-            setContentActivationDirection(content, direction);
-            // TODO(next-major): remove legacy `data-motion` switching output.
-            const exitDirection =
-              direction === "right" ? "to-left" : "to-right";
-            content.setAttribute("data-motion", exitDirection);
-          } else if (wasActive) {
-            setContentActivationDirection(content, null);
-            content.removeAttribute("data-motion");
-          }
-
-          if (wasActive) {
-            layout.setAbsolute(content, true);
-            presence?.exit();
-          } else if (!presence?.isExiting) {
-            setContentActivationDirection(content, null);
-            content.removeAttribute("data-motion");
-            layout.setAbsolute(content, false);
-            layout.restore(content);
-            content.hidden = true;
-            mounts.get(content)?.unmount();
-          } else {
-            // Preserve current exit motion while this panel is finishing an exit animation.
-          }
-        }
-      });
+        layout.setAbsolute(content, true);
+        presences.get(content)?.exit();
+      }
 
       // Update new active content
       if (newData) {
+        newData.trigger.setAttribute("data-state", "open");
+        newData.item.setAttribute("data-state", "open");
         mounts.get(newData.content)?.mount();
         popupStackController.prepareOpen();
         if (viewport && isInitialOpen) {
@@ -652,7 +622,7 @@ export function createNavigationMenu(
         layout.stop();
         safety.hideBridge();
         safety.clear();
-        popupStackController.close(popupSizeBaseline);
+        popupStackController.close(popupSizeBaseline!);
         layout.observe(null);
       }
 
@@ -846,7 +816,6 @@ export function createNavigationMenu(
           // Opening a new/different item -> switch and lock
           clickLocked = true;
           updateState(value, true);
-          updateIndicator(trigger);
           if (!isPointerActivation) {
             focusContentForValue(value);
           }
@@ -1063,6 +1032,7 @@ export function createNavigationMenu(
   itemMap.forEach(({ content, trigger }) => {
     cleanups.push(
       on(content, "keydown", (e) => {
+        if (!/^(Tab|Arrow(Up|Down|Left|Right)|Escape)$/.test(e.key)) return;
         const target = e.target as HTMLElement;
         const focusables = getFocusableElements(content);
         const currentIndex = focusables.indexOf(target);

@@ -11,21 +11,21 @@ interface DropdownItemState {
 }
 
 const getType = (el: HTMLElement): DropdownMenuItemType => {
-  if (el.getAttribute("data-slot") === "dropdown-menu-radio-item") return "radio";
-  if (el.getAttribute("data-slot") === "dropdown-menu-checkbox-item") return "checkbox";
-  return "item";
+  const slot = el.getAttribute("data-slot");
+  return slot === "dropdown-menu-radio-item" ? "radio" : slot === "dropdown-menu-checkbox-item" ? "checkbox" : "item";
 };
 
 const isDisabled = (item: DropdownMenuItemRecord): boolean =>
   item.el.hasAttribute("disabled") || item.el.hasAttribute("data-disabled") ||
   item.el.getAttribute("aria-disabled") === "true" ||
-  ((item.type === "radio" || item.type === "checkbox") && item.value === null);
+  (item.type !== "item" && item.value === null);
 
 /** Owns menu item discovery, lookup, selection reconciliation, and item ARIA. */
 export const createDropdownItemCollection = (root: Element, content: HTMLElement) => {
   let items: DropdownMenuItemRecord[] = [];
   let enabled: DropdownMenuItemRecord[] = [];
   let index = new Map<HTMLElement, number>();
+  const prepared = new WeakSet<HTMLElement>();
 
   const radios = () => items.filter((item) => item.type === "radio");
   const checkboxes = () => items.filter((item) => item.type === "checkbox");
@@ -79,27 +79,20 @@ export const createDropdownItemCollection = (root: Element, content: HTMLElement
 
   const synchronizeSelection = (value: string | null, values: readonly string[]): void => {
     for (const item of items) {
-      item.el.setAttribute(
-        "role",
-        item.type === "radio" ? "menuitemradio" : item.type === "checkbox" ? "menuitemcheckbox" : "menuitem",
-      );
-      item.el.tabIndex = -1;
-      setAria(item.el, "disabled", isDisabled(item) || null);
-      if (item.type === "radio" || item.type === "checkbox") {
-        const checked = item.value !== null && (item.type === "radio" ? value === item.value : values.includes(item.value));
-        item.el.toggleAttribute("data-checked", checked);
-        setAria(item.el, "checked", item.value === null ? null : checked);
-      } else {
-        item.el.removeAttribute("data-checked");
-        item.el.removeAttribute("aria-checked");
-      }
+      if (item.type === "item") continue;
+      const checked = item.value !== null && (item.type === "radio" ? value === item.value : values.includes(item.value));
+      if (item.el.hasAttribute("data-checked") === checked) continue;
+      item.el.toggleAttribute("data-checked", checked);
+      setAria(item.el, "checked", checked);
     }
     if (value !== null && radios().length > 0) root.setAttribute("data-value", value);
     else root.removeAttribute("data-value");
   };
 
-  const highlight = (highlightedItem: HTMLElement | null): void => {
-    for (const item of items) item.el.toggleAttribute("data-highlighted", item.el === highlightedItem);
+  const highlight = (previousItem: HTMLElement | null, nextItem: HTMLElement | null): void => {
+    if (previousItem === nextItem) return;
+    previousItem?.removeAttribute("data-highlighted");
+    nextItem?.setAttribute("data-highlighted", "");
   };
 
   const refresh = (state: DropdownItemState) => {
@@ -109,13 +102,28 @@ export const createDropdownItemCollection = (root: Element, content: HTMLElement
       type: getType(el),
       value: el.dataset.value?.trim() || null,
     }));
-    enabled = items.filter((item) => !isDisabled(item));
-    index = new Map(enabled.map((item, position) => [item.el, position]));
+    enabled = [];
+    index = new Map();
+    for (const item of items) {
+      if (!prepared.has(item.el)) {
+        prepared.add(item.el);
+        item.el.setAttribute(
+          "role",
+          item.type === "radio" ? "menuitemradio" : item.type === "checkbox" ? "menuitemcheckbox" : "menuitem",
+        );
+        item.el.tabIndex = -1;
+        item.el.removeAttribute("data-checked");
+        setAria(item.el, "checked", item.type !== "item" && item.value !== null ? false : null);
+      }
+      const disabled = isDisabled(item);
+      setAria(item.el, "disabled", disabled || null);
+      if (!disabled) index.set(item.el, enabled.push(item) - 1);
+    }
     const value = state.value !== null && radioFor(state.value) ? state.value : null;
     const values = state.values.length ? checkboxValues(state.values, "init") ?? [] : [];
     const highlightedItem = state.highlightedItem && index.has(state.highlightedItem) ? state.highlightedItem : null;
     synchronizeSelection(value, values);
-    highlight(highlightedItem);
+    highlight(state.highlightedItem, highlightedItem);
     return { value, values, highlightedItem, previousItems };
   };
 

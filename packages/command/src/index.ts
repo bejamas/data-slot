@@ -75,16 +75,6 @@ const DUPLICATE_BINDING_WARNING =
 const ITEM_SELECTOR = '[data-slot="command-item"]';
 const GROUP_SELECTOR = '[data-slot="command-group"]';
 const SEPARATOR_SELECTOR = '[data-slot="command-separator"]';
-const DIRECT_MUTATION_ATTRIBUTES = [
-  "data-slot",
-  "data-value",
-  "data-label",
-  "data-keywords",
-  "data-disabled",
-  "disabled",
-  "data-force-mount",
-  "data-always-render",
-] as const;
 const INTERACTIVE_DESCENDANT_SELECTOR = [
   'input:not([type="hidden"])',
   "textarea",
@@ -143,6 +133,7 @@ export function createCommand(
   let currentSearch = options.defaultSearch ?? getDataString(rootEl, "defaultSearch") ?? "";
   let itemMetas: ItemMeta[] = [];
   let groupMetas: GroupMeta[] = [];
+  let separators: HTMLElement[] = [];
   let itemMetaByElement = new Map<HTMLElement, ItemMeta>();
   let groupMetaByElement = new Map<HTMLElement, GroupMeta>();
   let filteredCount = 0;
@@ -200,27 +191,6 @@ export function createCommand(
   const setListHeightVar = () => {
     list.style.setProperty("--command-list-height", `${list.scrollHeight.toFixed(1)}px`);
   };
-  const syncResizeObserver = () => {
-    if (typeof ResizeObserver === "undefined") {
-      setListHeightVar();
-      return;
-    }
-    if (!resizeObserver) {
-      resizeObserver = new ResizeObserver(() => {
-        setListHeightVar();
-      });
-    }
-    resizeObserver.disconnect();
-    resizeObserver.observe(list);
-    for (const el of getOwnedElements<HTMLElement>(
-      rootEl,
-      list,
-      `${ITEM_SELECTOR}, ${GROUP_SELECTOR}, ${SEPARATOR_SELECTOR}, [data-slot="command-empty"]`
-    )) {
-      resizeObserver.observe(el);
-    }
-    setListHeightVar();
-  };
   const mergeChildOrder = (snapshot: HTMLElement[], currentChildren: HTMLElement[]): HTMLElement[] => {
     const next = snapshot.filter((child) => currentChildren.includes(child));
     for (const child of currentChildren) {
@@ -261,61 +231,40 @@ export function createCommand(
     );
   };
   const mergeAuthoredStructure = () => {
-    const currentListChildren = getElementChildren(list);
-    authoredListChildren =
-      authoredListChildren.length === 0
-        ? currentListChildren
-        : mergeChildOrder(authoredListChildren, currentListChildren);
-    const nextGroupChildren = new Map<HTMLElement, HTMLElement[]>();
-    for (const group of groupMetas) {
-      const currentChildren = getElementChildren(group.el);
-      const existingSnapshot = authoredGroupChildren.get(group.el) ?? [];
-      nextGroupChildren.set(
+    authoredListChildren = mergeChildOrder(authoredListChildren, getElementChildren(list));
+    authoredGroupChildren = new Map(
+      groupMetas.map((group) => [
         group.el,
-        existingSnapshot.length === 0
-          ? currentChildren
-          : mergeChildOrder(existingSnapshot, currentChildren)
-      );
-    }
-    authoredGroupChildren = nextGroupChildren;
+        mergeChildOrder(authoredGroupChildren.get(group.el) ?? [], getElementChildren(group.el)),
+      ])
+    );
   };
   const applyChildOrder = (container: HTMLElement, orderedChildren: HTMLElement[]) => {
-    const currentChildren = getElementChildren(container);
-    const placedChildren = new Set<HTMLElement>();
-    for (const child of orderedChildren) {
-      if (child.parentElement !== container || placedChildren.has(child)) continue;
-      placedChildren.add(child);
-      container.appendChild(child);
-    }
-    for (const child of currentChildren) {
-      if (placedChildren.has(child) || child.parentElement !== container) continue;
-      container.appendChild(child);
+    const placed = new Set(orderedChildren.filter((child) => child.parentElement === container));
+    let current = container.firstElementChild;
+    for (const child of [...placed, ...getElementChildren(container).filter((child) => !placed.has(child))]) {
+      if (child === current) current = current.nextElementSibling;
+      else container.insertBefore(child, current);
     }
   };
   const getOrderIndexMap = (snapshot: HTMLElement[]) =>
     new Map(snapshot.map((el, index) => [el, index]));
   const restoreAuthoredOrder = () => {
     for (const group of groupMetas) {
-      const groupChildren =
-        authoredGroupChildren.get(group.el)?.filter((child) => child.parentElement === group.el) ?? [];
-      applyChildOrder(group.el, groupChildren);
+      applyChildOrder(group.el, authoredGroupChildren.get(group.el) ?? []);
     }
-    const listChildren = authoredListChildren.filter((child) => child.parentElement === list);
-    applyChildOrder(list, listChildren);
+    applyChildOrder(list, authoredListChildren);
   };
-  const getSelectedVisibleItem = (): HTMLElement | null => {
-    if (currentValue === null) return null;
-    const items = getOwnedElements<HTMLElement>(rootEl, list, ITEM_SELECTOR);
-    return (
-      items.find((item) => {
-        const meta = itemMetaByElement.get(item);
-        return meta?.value === currentValue && !item.hidden && !(meta.group?.el.hidden ?? false);
-      }) ?? null
-    );
-  };
+  const getSelectedVisibleItem = (): HTMLElement | null =>
+    currentValue === null
+      ? null
+      : itemMetas.find(
+          (meta) => meta.value === currentValue && !meta.el.hidden && !(meta.group?.el.hidden ?? false)
+        )?.el ?? null;
   const syncSelectionState = () => {
     for (const meta of itemMetas) {
       const selected = meta.value === currentValue && currentValue !== null;
+      if (meta.el.hasAttribute("data-selected") === selected) continue;
       setAria(meta.el, "selected", selected);
       if (selected) {
         meta.el.setAttribute("data-selected", "true");
@@ -345,7 +294,7 @@ export function createCommand(
     }
   };
   const getAllVisibleItemsInDomOrder = (): ItemMeta[] =>
-    getOwnedElements<HTMLElement>(rootEl, list, ITEM_SELECTOR)
+    [...list.querySelectorAll<HTMLElement>(ITEM_SELECTOR)]
       .map((el) => itemMetaByElement.get(el) ?? null)
       .filter(
         (meta): meta is ItemMeta =>
@@ -431,51 +380,37 @@ export function createCommand(
       itemMetas.push(meta);
       ensureId(itemEl, "command-item");
       itemEl.setAttribute("role", "option");
-      if (meta.disabled) {
-        itemEl.setAttribute("aria-disabled", "true");
-      } else {
-        itemEl.removeAttribute("aria-disabled");
-      }
+      setAria(itemEl, "selected", false);
+      setAria(itemEl, "disabled", meta.disabled || null);
+      itemEl.removeAttribute("data-selected");
+    }
+    separators = getOwnedElements<HTMLElement>(rootEl, list, SEPARATOR_SELECTOR);
+    for (const separator of separators) {
+      separator.setAttribute("role", "separator");
     }
   };
   const applyVisibilityState = () => {
     const hasSearch = currentSearch.length > 0;
+    const filtering = shouldFilter && hasSearch;
     filteredCount = 0;
     for (const group of groupMetas) {
       group.maxRank = 0;
     }
     for (const meta of itemMetas) {
-      meta.rank =
-        shouldFilter && hasSearch && meta.value !== null ? filter(meta.value, currentSearch, meta.keywords) : 1;
-      if (shouldFilter && hasSearch && meta.rank > 0) {
+      meta.rank = filtering && meta.value !== null ? filter(meta.value, currentSearch, meta.keywords) : 1;
+      if (meta.rank > 0) {
         filteredCount += 1;
       }
-      const visible =
-        !hasSearch ||
-        !shouldFilter ||
-        meta.forceMount ||
-        meta.group?.forceMount ||
-        meta.rank > 0;
-      meta.el.hidden = !visible;
+      meta.el.hidden = !(meta.forceMount || meta.group?.forceMount || meta.rank > 0);
       if (meta.group && meta.rank > meta.group.maxRank) {
         meta.group.maxRank = meta.rank;
       }
     }
-    if (!shouldFilter || !hasSearch) {
-      filteredCount = itemMetas.length;
-    }
     for (const group of groupMetas) {
-      const visible =
-        !hasSearch ||
-        !shouldFilter ||
-        group.forceMount ||
-        itemMetas.some((meta) => meta.group === group && meta.rank > 0);
-      group.el.hidden = !visible;
+      group.el.hidden = filtering && !group.forceMount && group.maxRank <= 0;
     }
-    for (const separator of getOwnedElements<HTMLElement>(rootEl, list, SEPARATOR_SELECTOR)) {
-      const alwaysRender = getDataBool(separator, "alwaysRender") ?? false;
-      separator.hidden = hasSearch && !alwaysRender;
-      separator.setAttribute("role", "separator");
+    for (const separator of separators) {
+      separator.hidden = hasSearch && !(getDataBool(separator, "alwaysRender") ?? false);
     }
     if (empty) {
       empty.hidden = filteredCount > 0;
@@ -510,7 +445,7 @@ export function createCommand(
       return (listOrderIndex.get(a.el) ?? Number.MAX_SAFE_INTEGER) - (listOrderIndex.get(b.el) ?? Number.MAX_SAFE_INTEGER);
     });
     const visibleTopLevelSet = new Set(visibleTopLevelBlocks.map((block) => block.el));
-    const hiddenTopLevelBlocks = authoredListSnapshot.filter(
+    const hiddenTopLevelBlocks = getElementChildren(list).filter(
       (child) => allTopLevelBlocks.has(child) && !visibleTopLevelSet.has(child)
     );
     const rankedTopLevelBlocks = [
@@ -544,7 +479,7 @@ export function createCommand(
         }
       );
       const visibleGroupSet = new Set(rankedVisibleGroupBlocks.map((block) => block.el));
-      const hiddenGroupBlocks = authoredGroupSnapshot.filter(
+      const hiddenGroupBlocks = getElementChildren(group.el).filter(
         (child) => allGroupItemBlocks.has(child) && !visibleGroupSet.has(child)
       );
       const rankedGroupBlocks = [
@@ -560,9 +495,7 @@ export function createCommand(
   };
   const refreshDisplay = () => {
     pauseMutationObserver(() => {
-      rescanStructure();
       if (shouldFilter && currentSearch) {
-        mergeAuthoredStructure();
         applyVisibilityState();
         sortVisibleBlocks();
         layoutIsRanked = true;
@@ -570,15 +503,32 @@ export function createCommand(
         if (layoutIsRanked) {
           restoreAuthoredOrder();
         }
-        captureAuthoredStructure();
         applyVisibilityState();
         layoutIsRanked = false;
       }
       syncSelectionState();
       syncRootState();
     });
-    observeMutations();
-    syncResizeObserver();
+    if (!resizeObserver) setListHeightVar();
+  };
+  const refreshStructure = () => {
+    pauseMutationObserver(rescanStructure);
+    if (layoutIsRanked) mergeAuthoredStructure();
+    else captureAuthoredStructure();
+    refreshDisplay();
+    if (typeof ResizeObserver === "undefined") return;
+    resizeObserver ??= new ResizeObserver(setListHeightVar);
+    resizeObserver.disconnect();
+    for (const el of [
+      list,
+      ...getOwnedElements<HTMLElement>(
+        rootEl,
+        list,
+        `${ITEM_SELECTOR}, ${GROUP_SELECTOR}, ${SEPARATOR_SELECTOR}, [data-slot="command-empty"]`
+      ),
+    ]) {
+      resizeObserver.observe(el);
+    }
   };
   const selectFirstVisibleItem = (shouldEmit = true, ensureVisible = false) => {
     const nextValue = getEnabledVisibleItemsInDomOrder()[0]?.value ?? null;
@@ -606,7 +556,7 @@ export function createCommand(
   const getLiveItemMeta = (item: HTMLElement): ItemMeta | null => {
     let meta = itemMetaByElement.get(item) ?? null;
     if (meta) return meta;
-    refreshDisplay();
+    refreshStructure();
     meta = itemMetaByElement.get(item) ?? null;
     return meta;
   };
@@ -648,7 +598,7 @@ export function createCommand(
         sibling = change > 0 ? sibling.nextElementSibling : sibling.previousElementSibling;
       }
       if (!nextGroup) break;
-      const nextMeta = getOwnedElements<HTMLElement>(rootEl, nextGroup, ITEM_SELECTOR)
+      const nextMeta = [...nextGroup.querySelectorAll<HTMLElement>(ITEM_SELECTOR)]
         .map((el) => itemMetaByElement.get(el) ?? null)
         .find((meta): meta is ItemMeta => meta !== null && !meta.disabled && !meta.el.hidden);
       if (nextMeta) {
@@ -730,7 +680,7 @@ export function createCommand(
       mutationQueued = false;
       if (isDestroyed) return;
       const selectedBefore = getSelectedVisibleItem();
-      refreshDisplay();
+      refreshStructure();
       const nextSelectedMeta = selectedBefore ? itemMetaByElement.get(selectedBefore) ?? null : null;
       if (
         nextSelectedMeta &&
@@ -759,7 +709,17 @@ export function createCommand(
       childList: true,
       characterData: true,
       attributes: true,
-      attributeFilter: [...DIRECT_MUTATION_ATTRIBUTES],
+      attributeFilter: [
+        "data-slot",
+        "data-value",
+        "data-label",
+        "data-keywords",
+        "data-disabled",
+        "disabled",
+        "aria-disabled",
+        "data-force-mount",
+        "data-always-render",
+      ],
     });
   };
   if (typeof MutationObserver !== "undefined") {
@@ -769,7 +729,7 @@ export function createCommand(
     observeMutations();
   }
   input.value = currentSearch;
-  refreshDisplay();
+  refreshStructure();
   if (currentSearch || currentValue === null) {
     selectFirstVisibleItem(false);
   }

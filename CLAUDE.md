@@ -425,6 +425,18 @@ bun test                    # Run all tests
 bun test packages/tabs      # Run specific package tests
 ```
 
+### Interaction Benchmark (INP)
+`bench/inp/` drives every component through real Chrome input (system Chrome via playwright-core) at 20x CPU slowdown and reads each interaction from a performance trace. Scenarios live in `bench/inp/scenarios.ts`.
+
+```bash
+bun run bench:inp                                   # Build packages, run all scenarios
+bun bench/inp/run.ts --only select,combobox         # Subset, uses current dist/
+bun bench/inp/run.ts --save base                    # Save results and bundle to bench/inp/results/
+bun bench/inp/run.ts --ab base                      # Rerun the saved bundle interleaved with the current one
+```
+
+Columns per scenario: `script` is main-thread JS inside interaction windows, including style and layout it forces (the part component code controls); `work` adds the browser's own style, layout and paint; `inp` is the worst interaction's input-to-paint duration; `init` is the time for all `create()` calls. Use `--ab` to judge a change, since saved absolute numbers drift with machine load; per-scenario noise is about ±10%.
+
 ### Version Management
 ```bash
 bun run version             # Updates version across all packages

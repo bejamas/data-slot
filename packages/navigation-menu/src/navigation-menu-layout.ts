@@ -261,50 +261,6 @@ export function createNavigationMenuLayout(
     state.originalParent = null;
     state.originalNextSibling = null;
   };
-  const updatePositioner = () => {
-    const positioner = popup.positioner;
-    if (!positioner) return;
-    const win = root.ownerDocument.defaultView ?? window;
-    const rootRect = (root as HTMLElement).getBoundingClientRect();
-    const fixed = positionMethod === "fixed";
-    Object.assign(positioner.style, {
-      position: positionMethod,
-      top: `${rootRect.top + offset.y + (fixed ? 0 : win.scrollY)}px`,
-      left: `${rootRect.left + offset.x + (fixed ? 0 : win.scrollX)}px`,
-      margin: "0",
-      willChange: "top,left",
-      pointerEvents: "none",
-    });
-  };
-  const syncSizing = (
-    positioner: HTMLElement,
-    triggerRect: DOMRect,
-    side: Side,
-    sideOffset: number,
-    size: Size,
-  ) => {
-    const win = root.ownerDocument.defaultView ?? window;
-    const vv = win.visualViewport;
-    const x = vv?.offsetLeft ?? 0,
-      y = vv?.offsetTop ?? 0;
-    const width = vv?.width ?? win.innerWidth,
-      height = vv?.height ?? win.innerHeight;
-    const availableWidth =
-      side === "left"
-        ? Math.max(0, triggerRect.left - x - sideOffset)
-        : side === "right"
-          ? Math.max(0, x + width - triggerRect.right - sideOffset)
-          : Math.max(0, width);
-    const availableHeight =
-      side === "top"
-        ? Math.max(0, triggerRect.top - y - sideOffset)
-        : side === "bottom"
-          ? Math.max(0, y + height - triggerRect.bottom - sideOffset)
-          : Math.max(0, height);
-    popup.setPositionerSize(positioner, size);
-    positioner.style.setProperty("--available-width", `${availableWidth}px`);
-    positioner.style.setProperty("--available-height", `${availableHeight}px`);
-  };
   const apply = (panel: Panel, mode: ViewportLayoutMode) => {
     if (!viewport || !popup.ensure() || popup.closing) return;
     if (
@@ -370,8 +326,35 @@ export function createNavigationMenuLayout(
     const side = pos.side as Side;
     const align = pos.align as Align;
     const anchor = getTransformOriginAnchor(side, align, triggerRect);
-    const viewportOrigin = `${anchor.x - (rootRect.left + offset.x)}px ${anchor.y - (rootRect.top + offset.y)}px`;
+    const viewportOrigin = `${anchor.x - pos.x}px ${anchor.y - pos.y}px`;
     const positionerOrigin = `${anchor.x - rootRect.left}px ${anchor.y - rootRect.top}px`;
+    const win = root.ownerDocument.defaultView ?? window;
+    const fixed = positionMethod === "fixed";
+    const vv = win.visualViewport;
+    const x = vv?.offsetLeft ?? 0,
+      y = vv?.offsetTop ?? 0;
+    const width = vv?.width ?? win.innerWidth,
+      height = vv?.height ?? win.innerHeight;
+    const availableWidth =
+      side === "left"
+        ? Math.max(0, triggerRect.left - x - resolved.sideOffset)
+        : side === "right"
+          ? Math.max(0, x + width - triggerRect.right - resolved.sideOffset)
+          : Math.max(0, width);
+    const availableHeight =
+      side === "top"
+        ? Math.max(0, triggerRect.top - y - resolved.sideOffset)
+        : side === "bottom"
+          ? Math.max(0, y + height - triggerRect.bottom - resolved.sideOffset)
+          : Math.max(0, height);
+    Object.assign(positioner.style, {
+      position: positionMethod,
+      top: `${pos.y + (fixed ? 0 : win.scrollY)}px`,
+      left: `${pos.x + (fixed ? 0 : win.scrollX)}px`,
+      margin: "0",
+      willChange: "top,left",
+      pointerEvents: "none",
+    });
     currentPopup.style.willChange = "width,height";
     currentPopup.style.pointerEvents = "auto";
     popup.setRuntimePosition(
@@ -390,8 +373,9 @@ export function createNavigationMenuLayout(
       element.setAttribute("data-align", align);
     }
     positioner.style.setProperty("--transform-origin", positionerOrigin);
-    syncSizing(positioner, triggerRect, side, resolved.sideOffset, size);
-    updatePositioner();
+    popup.setPositionerSize(positioner, size);
+    positioner.style.setProperty("--available-width", `${availableWidth}px`);
+    positioner.style.setProperty("--available-height", `${availableHeight}px`);
     popup.setViewportSize(size.width, size.height);
     popup.commitSize(mode, size);
     onLayout({

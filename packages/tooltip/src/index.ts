@@ -469,7 +469,6 @@ export function createTooltip(
       presence.enter();
       updatePosition();
       positionSync.start();
-      positionSync.update();
     } else {
       setDataState("closed");
       removeDescription();

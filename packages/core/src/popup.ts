@@ -201,30 +201,11 @@ export function createPositionSync(options: PositionSyncOptions): PositionSyncCo
   };
 
   const getScrollTargets = (): EventTarget[] => {
-    const targets = new Set<EventTarget>();
-    const elements = observedElements.length ? observedElements : [];
-
-    if (elements.length === 0) {
-      targets.add(win);
-      if (win.visualViewport) targets.add(win.visualViewport);
-      return [...targets];
-    }
-
-    for (const el of elements) {
-      for (const target of collectOverflowAncestors(el, win)) {
-        targets.add(target);
-      }
-    }
-
-    return [...targets];
-  };
-
-  const getResizeTargets = (scrollTargets: readonly EventTarget[]): EventTarget[] => {
     const targets = new Set<EventTarget>([win]);
     if (win.visualViewport) targets.add(win.visualViewport);
 
-    for (const target of scrollTargets) {
-      if (target === win || target === win.visualViewport) {
+    for (const el of observedElements) {
+      for (const target of collectOverflowAncestors(el, win)) {
         targets.add(target);
       }
     }
@@ -236,11 +217,8 @@ export function createPositionSync(options: PositionSyncOptions): PositionSyncCo
     if (started) return;
     started = true;
 
-    const scrollTargets = getScrollTargets();
-    const resizeTargets = getResizeTargets(scrollTargets);
-
     if (ancestorScroll) {
-      for (const target of scrollTargets) {
+      for (const target of getScrollTargets()) {
         target.addEventListener("scroll", onScroll as EventListener, { passive: true });
         listenerCleanups.push(() =>
           target.removeEventListener("scroll", onScroll as EventListener)
@@ -249,6 +227,8 @@ export function createPositionSync(options: PositionSyncOptions): PositionSyncCo
     }
 
     if (ancestorResize) {
+      const resizeTargets: EventTarget[] = [win];
+      if (win.visualViewport) resizeTargets.push(win.visualViewport);
       for (const target of resizeTargets) {
         target.addEventListener("resize", onResize as EventListener);
         listenerCleanups.push(() =>

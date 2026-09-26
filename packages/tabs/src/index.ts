@@ -163,6 +163,7 @@ export function createTabs(
 
   const cleanups: Array<() => void> = [];
   let indicatorFrame: number | null = null;
+  let lastDirection: string | null = null;
 
   // Setup ARIA for list
   list.setAttribute("role", "tablist");
@@ -200,12 +201,10 @@ export function createTabs(
     }
   }
 
-  const resetIndicator = () => {
-    if (!indicator) return;
-    indicator.style.setProperty("--active-tab-left", "0px");
-    indicator.style.setProperty("--active-tab-width", "0px");
-    indicator.style.setProperty("--active-tab-top", "0px");
-    indicator.style.setProperty("--active-tab-height", "0px");
+  const setIndicatorPosition = (position: IndicatorPosition) => {
+    for (const [side, px] of Object.entries(position)) {
+      indicator!.style.setProperty(`--active-tab-${side}`, `${px}px`);
+    }
   };
 
   const getPositionWithinList = (
@@ -284,21 +283,8 @@ export function createTabs(
   const updateIndicator = () => {
     if (!indicator) return;
     const item = itemByValue.get(currentValue);
-    if (!item) {
-      resetIndicator();
-      return;
-    }
-
-    const position = getPositionWithinList(item.el) ?? getRectRelativeToList(item.el);
-    if (!position) {
-      resetIndicator();
-      return;
-    }
-
-    indicator.style.setProperty("--active-tab-left", `${position.left}px`);
-    indicator.style.setProperty("--active-tab-width", `${position.width}px`);
-    indicator.style.setProperty("--active-tab-top", `${position.top}px`);
-    indicator.style.setProperty("--active-tab-height", `${position.height}px`);
+    const position = item && (getPositionWithinList(item.el) ?? getRectRelativeToList(item.el));
+    setIndicatorPosition(position || { left: 0, top: 0, width: 0, height: 0 });
   };
 
   const scheduleIndicatorUpdate = () => {
@@ -337,15 +323,14 @@ export function createTabs(
     }
 
     const previousValue = currentValue;
-    const changed = previousValue !== value;
-    const activationDirection =
-      !init && changed
-        ? getActivationDirection(previousValue, value)
-        : null;
+    const activationDirection = init ? null : getActivationDirection(previousValue, value);
+    const directionChanged = init || activationDirection !== lastDirection;
+    lastDirection = activationDirection;
     currentValue = value;
 
     for (const item of items) {
       const isSelected = item.value === value;
+      if (!init && !isSelected && item.value !== previousValue) continue;
       setAria(item.el, "selected", isSelected);
       item.el.tabIndex = isSelected && !item.disabled ? 0 : -1;
       item.el.dataset["state"] = isSelected ? "active" : "inactive";
@@ -355,8 +340,11 @@ export function createTabs(
       const v = (panel.dataset["value"] || "").trim();
       if (!v) continue;
       const isSelected = v === value;
-      panel.hidden = !isSelected;
-      panel.dataset["state"] = isSelected ? "active" : "inactive";
+      if (init || isSelected || v === previousValue) {
+        panel.hidden = !isSelected;
+        panel.dataset["state"] = isSelected ? "active" : "inactive";
+      }
+      if (!directionChanged) continue;
       if (activationDirection) {
         panel.dataset["activationDirection"] = activationDirection;
       } else {
@@ -367,7 +355,7 @@ export function createTabs(
     root.setAttribute("data-value", value);
     scheduleIndicatorUpdate();
 
-    if (changed && !init) {
+    if (!init) {
       emit(root, "tabs:change", { value });
       onValueChange?.(value);
     }

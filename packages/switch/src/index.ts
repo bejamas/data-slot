@@ -209,21 +209,14 @@ export function createSwitch(
   let currentChecked = Boolean(defaultChecked);
   hiddenInput.defaultChecked = currentChecked;
 
-  const getThumbs = () => getParts<HTMLElement>(rootElement, "switch-thumb");
+  const thumbs = getParts<HTMLElement>(rootElement, "switch-thumb");
 
-  const syncGeneratedInputs = () => {
+  const syncChecked = () => {
     hiddenInput.checked = currentChecked;
-    hiddenInput.disabled = disabled;
-    hiddenInput.required = required;
-    if (name) {
-      hiddenInput.name = name;
-    } else {
-      hiddenInput.removeAttribute("name");
-    }
-    if (value !== undefined) {
-      hiddenInput.value = value;
-    } else {
-      hiddenInput.removeAttribute("value");
+    setAria(rootElement, "checked", currentChecked);
+    setCheckedStateAttrs(rootElement, currentChecked);
+    for (const thumb of thumbs) {
+      setCheckedStateAttrs(thumb, currentChecked);
     }
 
     const needsUncheckedInput =
@@ -235,59 +228,21 @@ export function createSwitch(
     if (!needsUncheckedInput) {
       uncheckedInput?.remove();
       uncheckedInput = null;
-      return;
-    }
-
-    if (!uncheckedInput) {
+    } else if (!uncheckedInput) {
       uncheckedInput = doc.createElement("input");
       uncheckedInput.type = "hidden";
       uncheckedInput.setAttribute("data-switch-generated", "unchecked");
+      uncheckedInput.name = name;
+      uncheckedInput.value = uncheckedValue;
       insertAfter(hiddenInput, uncheckedInput);
-    }
-
-    uncheckedInput.name = name;
-    uncheckedInput.value = uncheckedValue;
-    uncheckedInput.disabled = disabled;
-  };
-
-  const syncRoot = () => {
-    if (isNativeButton(rootElement)) {
-      if (!rootElement.hasAttribute("type")) {
-        rootElement.setAttribute("type", "button");
-      }
-      rootElement.disabled = disabled;
-    } else if (!isNaturallyFocusable(rootElement)) {
-      if (disabled) {
-        rootElement.tabIndex = -1;
-      } else if (!rootElement.hasAttribute("tabindex")) {
-        rootElement.tabIndex = 0;
-      }
-    }
-
-    rootElement.setAttribute("role", "switch");
-    setAria(rootElement, "checked", currentChecked);
-    setAria(rootElement, "disabled", disabled ? true : null);
-    setAria(rootElement, "readonly", readOnly ? true : null);
-    setAria(rootElement, "required", required ? true : null);
-    setCheckedStateAttrs(rootElement, currentChecked);
-    setFlagStateAttrs(rootElement, disabled, readOnly, required);
-
-    for (const thumb of getThumbs()) {
-      setCheckedStateAttrs(thumb, currentChecked);
-      setFlagStateAttrs(thumb, disabled, readOnly, required);
     }
   };
 
   const updateState = (checked: boolean, emitChange = true) => {
-    if (currentChecked === checked) {
-      syncGeneratedInputs();
-      syncRoot();
-      return;
-    }
+    if (currentChecked === checked) return;
 
     currentChecked = checked;
-    syncGeneratedInputs();
-    syncRoot();
+    syncChecked();
 
     if (!emitChange) return;
     emit(rootElement, "switch:change", { checked: currentChecked });
@@ -308,8 +263,33 @@ export function createSwitch(
     }
   }
 
-  syncGeneratedInputs();
-  syncRoot();
+  if (isNativeButton(rootElement)) {
+    if (!rootElement.hasAttribute("type")) {
+      rootElement.setAttribute("type", "button");
+    }
+    rootElement.disabled = disabled;
+  } else if (!isNaturallyFocusable(rootElement)) {
+    if (disabled) {
+      rootElement.tabIndex = -1;
+    } else if (!rootElement.hasAttribute("tabindex")) {
+      rootElement.tabIndex = 0;
+    }
+  }
+
+  rootElement.setAttribute("role", "switch");
+  setAria(rootElement, "disabled", disabled ? true : null);
+  setAria(rootElement, "readonly", readOnly ? true : null);
+  setAria(rootElement, "required", required ? true : null);
+  setFlagStateAttrs(rootElement, disabled, readOnly, required);
+  for (const thumb of thumbs) {
+    setFlagStateAttrs(thumb, disabled, readOnly, required);
+  }
+
+  hiddenInput.disabled = disabled;
+  hiddenInput.required = required;
+  if (name) hiddenInput.name = name;
+  if (value !== undefined) hiddenInput.value = value;
+  syncChecked();
 
   const resetObserver = observeFormReset({
     root: rootElement,

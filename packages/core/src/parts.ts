@@ -1,39 +1,22 @@
-import { getRetainedContent } from "./content-mount.ts";
-
-/**
- * Return whether a part belongs to this root rather than a nested instance of
- * the same component. Roots without a data-slot retain the usual descendant
- * query behavior for generic containers.
- */
-const isOwnedPart = (root: Element, part: Element, scope: ParentNode): boolean => {
-  const rootSlot = root.getAttribute("data-slot");
-  if (!rootSlot) return true;
-
-  let ancestor: ParentNode | null = part.parentNode;
-  while (ancestor) {
-    if (ancestor.nodeType === 1 && (ancestor as Element).getAttribute("data-slot") === rootSlot) {
-      return ancestor === root;
-    }
-    if (ancestor === scope) return true;
-    ancestor = ancestor.parentNode;
-  }
-
-  return false;
-};
+import { getRetainedContent, RETAINED_CONTENT_ATTR } from "./content-mount.ts";
 
 /**
  * Query elements in a scope that are owned by a component root. This supports
  * component content that has been portaled away from its root while excluding
- * nested instances of the same component.
+ * nested instances of the same component. Roots without a data-slot retain the
+ * usual descendant query behavior for generic containers.
  */
 export const getOwnedElements = <T extends Element = Element>(
   root: Element,
   scope: ParentNode,
   selector: string
-): T[] =>
-  [...scope.querySelectorAll<T>(selector)].filter((part) =>
-    isOwnedPart(root, part, scope)
-  );
+): T[] => {
+  const rootSlot = root.getAttribute("data-slot");
+  return [...scope.querySelectorAll<T>(selector)].filter((part) => {
+    const nearest = rootSlot && part.parentElement?.closest(`[data-slot="${rootSlot}"]`);
+    return !nearest || nearest === root || !scope.contains(nearest);
+  });
+};
 
 /**
  * Query a single part/slot owned by a component root.
@@ -65,12 +48,9 @@ export const getRoots = <T extends Element = Element>(
   const visit = (current: ParentNode) => {
     if (visited.has(current)) return;
     visited.add(current);
-    const elements = [...current.querySelectorAll<Element>("[data-slot]")];
-    for (const element of elements) {
-      if (element.getAttribute("data-slot") === slot) roots.add(element as T);
-    }
-    const owners = current instanceof Element ? [current, ...elements] : elements;
-    for (const owner of owners) {
+    for (const root of current.querySelectorAll<T>(`[data-slot="${slot}"]`)) roots.add(root);
+    const owners = current.querySelectorAll(`[${RETAINED_CONTENT_ATTR}]`);
+    for (const owner of current instanceof Element ? [current, ...owners] : owners) {
       for (const content of getRetainedContent(owner)) {
         if (owner.contains(content)) continue;
         if (content.getAttribute("data-slot") === slot) roots.add(content as T);
