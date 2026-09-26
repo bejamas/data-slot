@@ -241,67 +241,50 @@ export function createSelectPositioning(options: SelectPositioningOptions) {
               ? minimum
               : Math.min(Math.max(value, minimum), maximum)
             : value;
+        const maxY = win.innerHeight - cr.height - collisionPadding;
         pos.x = clamp(
           pos.x,
           collisionPadding,
           win.innerWidth - cr.width - collisionPadding,
         );
-        if (aligned.alignItem) {
-          const maxScrollTop = Math.max(
-            0,
-            scrollContainer.scrollHeight - scrollContainer.clientHeight,
+        const maxScrollTop = aligned.alignItem
+          ? Math.max(
+              0,
+              scrollContainer.scrollHeight - scrollContainer.clientHeight,
+            )
+          : 0;
+        if (maxScrollTop > 0) {
+          const scrollTopFor = (y: number) =>
+            Math.min(
+              Math.max(
+                aligned.anchorTopInContent +
+                  aligned.anchorHeight / 2 -
+                  (triggerCenterY - y),
+                0,
+              ),
+              maxScrollTop,
+            );
+          const yFor = (scrollTop: number) =>
+            clamp(
+              triggerCenterY -
+                (aligned.anchorTopInContent -
+                  scrollTop +
+                  aligned.anchorHeight / 2),
+              collisionPadding,
+              maxY,
+            );
+          const scrollTop = scrollTopFor(
+            yFor(
+              scrollTopFor(
+                clamp(triggerCenterY - cr.height / 2, collisionPadding, maxY),
+              ),
+            ),
           );
-          const desiredScrollTop = (currentY: number) =>
-            aligned.anchorTopInContent +
-            aligned.anchorHeight / 2 -
-            (triggerCenterY - currentY);
-          if (maxScrollTop > 0) {
-            pos.y = clamp(
-              triggerCenterY - cr.height / 2,
-              collisionPadding,
-              win.innerHeight - cr.height - collisionPadding,
-            );
-            let scrollTop = Math.min(
-              Math.max(desiredScrollTop(pos.y), 0),
-              maxScrollTop,
-            );
-            scrollContainer.scrollTop = scrollTop;
-            pos.y = clamp(
-              triggerCenterY -
-                (aligned.anchorTopInContent -
-                  scrollTop +
-                  aligned.anchorHeight / 2),
-              collisionPadding,
-              win.innerHeight - cr.height - collisionPadding,
-            );
-            scrollTop = Math.min(
-              Math.max(desiredScrollTop(pos.y), 0),
-              maxScrollTop,
-            );
-            scrollContainer.scrollTop = scrollTop;
-            pos.y = clamp(
-              triggerCenterY -
-                (aligned.anchorTopInContent -
-                  scrollTop +
-                  aligned.anchorHeight / 2),
-              collisionPadding,
-              win.innerHeight - cr.height - collisionPadding,
-            );
-          } else {
-            scrollContainer.scrollTop = 0;
-            pos.y = clamp(
-              aligned.y,
-              collisionPadding,
-              win.innerHeight - cr.height - collisionPadding,
-            );
-          }
+          scrollContainer.scrollTop = scrollTop;
+          pos.y = yFor(scrollTop);
         } else {
           scrollContainer.scrollTop = 0;
-          pos.y = clamp(
-            aligned.y,
-            collisionPadding,
-            win.innerHeight - cr.height - collisionPadding,
-          );
+          pos.y = clamp(aligned.y, collisionPadding, maxY);
         }
         side = pos.y < tr.top ? "top" : "bottom";
         transformOrigin = `${Math.min(Math.max(triggerCenterX - pos.x, 0), cr.width)}px ${Math.min(Math.max(triggerCenterY - pos.y, 0), cr.height)}px`;
