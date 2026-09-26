@@ -186,3 +186,37 @@ for (const previous of ['escape', 'right-click'] as const) {
     expect(document.activeElement).toBe(iframe);
   });
 }
+
+it('keeps a finished backdrop in its ending style until the popup exit completes', async () => {
+  const originalGetComputedStyle = window.getComputedStyle;
+  const durations: Record<string, string> = { 'drawer-backdrop': '50ms', 'drawer-popup': '120ms' };
+  Object.defineProperty(window, 'getComputedStyle', {
+    configurable: true,
+    value: ((el: Element) => Object.assign({}, originalGetComputedStyle.call(window, el), {
+      transitionDuration: durations[el.getAttribute('data-slot') ?? ''] ?? '0s',
+      transitionDelay: '0s',
+      animationDuration: '0s',
+      animationDelay: '0s',
+    })) as typeof window.getComputedStyle,
+  });
+  try {
+    const { drawer, popup, backdrop } = setup();
+    drawer.open();
+    await tick();
+    drawer.close();
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    backdrop.dispatchEvent(new TransitionEvent('transitionend'));
+    expect(backdrop.hasAttribute('data-ending-style')).toBe(true);
+    expect(backdrop.hidden).toBe(false);
+
+    await new Promise((resolve) => setTimeout(resolve, 70));
+    popup.dispatchEvent(new TransitionEvent('transitionend'));
+    expect(popup.hidden).toBe(true);
+    expect(backdrop.hidden).toBe(true);
+    expect(popup.hasAttribute('data-ending-style')).toBe(false);
+    expect(backdrop.hasAttribute('data-ending-style')).toBe(false);
+  } finally {
+    Object.defineProperty(window, 'getComputedStyle', { configurable: true, value: originalGetComputedStyle });
+  }
+});
