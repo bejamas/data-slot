@@ -45,3 +45,4 @@ website/.generated/
 website/content/_generated/
 website/public/fonts/
 bench/inp/results/
+bench/inp/*.local.ts
