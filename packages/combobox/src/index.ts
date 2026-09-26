@@ -134,19 +134,11 @@ export function createCombobox(
   });
   const terminalLifecycle = createTerminalLifecycle();
 
-  const matchesMediaQuery = (query: string): boolean => {
-    if (typeof win.matchMedia !== "function") return false;
-    return win.matchMedia(query).matches;
-  };
+  const matchesMediaQuery = (query: string): boolean => !!win.matchMedia?.(query).matches;
 
-  const isLikelyMobileTouchEnvironment = (): boolean => {
-    const touchPoints = typeof win.navigator.maxTouchPoints === "number" ? win.navigator.maxTouchPoints : 0;
-    const coarsePointer = matchesMediaQuery("(pointer: coarse)");
-    const noHover = matchesMediaQuery("(hover: none)");
-    return coarsePointer || (touchPoints > 0 && noHover);
-  };
-
-  const isMobileTouchEnvironment = isLikelyMobileTouchEnvironment();
+  const isMobileTouchEnvironment =
+    matchesMediaQuery("(pointer: coarse)") ||
+    (win.navigator.maxTouchPoints > 0 && matchesMediaQuery("(hover: none)"));
 
   // ARIA setup
   const inputId = ensureId(input, "combobox-input");
@@ -158,11 +150,7 @@ export function createCombobox(
   input.setAttribute("autocomplete", "off");
   input.setAttribute("aria-controls", listId);
 
-  if (list) {
-    list.setAttribute("role", "listbox");
-  } else {
-    content.setAttribute("role", "listbox");
-  }
+  listEl.setAttribute("role", "listbox");
 
   if (trigger) {
     if (!trigger.hasAttribute("type")) {
@@ -232,43 +220,17 @@ export function createCombobox(
     itemToStringValue,
   });
 
-  // Positioning
-  const syncPositionCssVars = (positioner: HTMLElement, anchorRect: DOMRectReadOnly, side: Side) => {
-    const visualViewport = win.visualViewport;
-    const viewportY = visualViewport?.offsetTop ?? 0;
-    const viewportWidth = visualViewport?.width ?? win.innerWidth;
-    const viewportHeight = visualViewport?.height ?? win.innerHeight;
-    const availableWidth = Math.max(0, viewportWidth - (collisionPadding * 2));
-    const availableHeight =
-      side === "top"
-        ? Math.max(0, anchorRect.top - viewportY - collisionPadding - sideOffset)
-        : Math.max(0, (viewportY + viewportHeight) - anchorRect.bottom - collisionPadding - sideOffset);
-
-    // Snap anchor dimensions to device pixels so popup sizing matches the anchor visually.
-    const dpr = win.devicePixelRatio || 1;
-    const anchorWidth = (Math.round((anchorRect.x + anchorRect.width) * dpr) - Math.round(anchorRect.x * dpr)) / dpr;
-    const anchorHeight = (Math.round((anchorRect.y + anchorRect.height) * dpr) - Math.round(anchorRect.y * dpr)) / dpr;
-
-    const applyVars = (element: HTMLElement) => {
-      element.style.setProperty("--available-width", `${availableWidth}px`);
-      element.style.setProperty("--available-height", `${availableHeight}px`);
-      element.style.setProperty("--anchor-width", `${anchorWidth}px`);
-      element.style.setProperty("--anchor-height", `${anchorHeight}px`);
-    };
-
-    applyVars(content);
-    if (positioner !== content) {
-      applyVars(positioner);
-    }
+  // Anchor to root element (contains both input and trigger)
+  const measureAnchor = () => {
+    const anchorRect = rootElement.getBoundingClientRect();
+    content.style.minWidth = `${anchorRect.width}px`;
+    return anchorRect;
   };
 
-  const updatePosition = () => {
+  const updatePosition = (anchorRect = measureAnchor()) => {
     const positioner = portal.container as HTMLElement;
     const effectiveSide: Side = isMobileTouchEnvironment ? "bottom" : (openRenderedSide ?? preferredSide);
     const effectiveAvoidCollisions = isMobileTouchEnvironment ? false : avoidCollisions;
-    // Anchor to root element (contains both input and trigger)
-    const anchorRect = rootElement.getBoundingClientRect();
-    content.style.minWidth = `${anchorRect.width}px`;
     const cr = measurePopupContentRect(content);
     const pos = computeFloatingPosition({
       anchorRect,
@@ -289,22 +251,34 @@ export function createCombobox(
       popupY: pos.y,
     });
 
-    positioner.style.position = "absolute";
-    positioner.style.top = "0px";
-    positioner.style.left = "0px";
-    positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+    const transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+    const visualViewport = win.visualViewport;
+    const viewportY = visualViewport?.offsetTop ?? 0;
+    const viewportWidth = visualViewport?.width ?? win.innerWidth;
+    const viewportHeight = visualViewport?.height ?? win.innerHeight;
+    const availableWidth = Math.max(0, viewportWidth - (collisionPadding * 2));
+    const availableHeight =
+      pos.side === "top"
+        ? Math.max(0, anchorRect.top - viewportY - collisionPadding - sideOffset)
+        : Math.max(0, (viewportY + viewportHeight) - anchorRect.bottom - collisionPadding - sideOffset);
+
+    // Snap anchor dimensions to device pixels so popup sizing matches the anchor visually.
+    const dpr = win.devicePixelRatio || 1;
+    const anchorWidth = (Math.round((anchorRect.x + anchorRect.width) * dpr) - Math.round(anchorRect.x * dpr)) / dpr;
+    const anchorHeight = (Math.round((anchorRect.y + anchorRect.height) * dpr) - Math.round(anchorRect.y * dpr)) / dpr;
+
+    positioner.style.transform = transform;
     positioner.style.setProperty("--transform-origin", transformOrigin);
-    positioner.style.willChange = "transform";
-    positioner.style.margin = "0";
-    syncPositionCssVars(positioner, anchorRect, pos.side as Side);
+    for (const element of positioner === content ? [content] : [content, positioner]) {
+      element.style.setProperty("--available-width", `${availableWidth}px`);
+      element.style.setProperty("--available-height", `${availableHeight}px`);
+      element.style.setProperty("--anchor-width", `${anchorWidth}px`);
+      element.style.setProperty("--anchor-height", `${anchorHeight}px`);
+      element.setAttribute("data-side", pos.side);
+      element.setAttribute("data-align", pos.align);
+    }
     if (!isMobileTouchEnvironment && effectiveAvoidCollisions) {
       openRenderedSide = pos.side as Side;
-    }
-    content.setAttribute("data-side", pos.side);
-    content.setAttribute("data-align", pos.align);
-    if (positioner !== content) {
-      positioner.setAttribute("data-side", pos.side);
-      positioner.setAttribute("data-align", pos.align);
     }
   };
 
@@ -317,23 +291,11 @@ export function createCombobox(
   });
 
   const setDataState = (state: "open" | "closed") => {
-    root.setAttribute("data-state", state);
-    content.setAttribute("data-state", state);
-    if (trigger) trigger.setAttribute("data-state", state);
-    if (state === "open") {
-      root.setAttribute("data-open", "");
-      content.setAttribute("data-open", "");
-      if (trigger) trigger.setAttribute("data-open", "");
-      root.removeAttribute("data-closed");
-      content.removeAttribute("data-closed");
-      if (trigger) trigger.removeAttribute("data-closed");
-    } else {
-      root.setAttribute("data-closed", "");
-      content.setAttribute("data-closed", "");
-      if (trigger) trigger.setAttribute("data-closed", "");
-      root.removeAttribute("data-open");
-      content.removeAttribute("data-open");
-      if (trigger) trigger.removeAttribute("data-open");
+    for (const el of [root, content, trigger]) {
+      if (!el) continue;
+      el.setAttribute("data-state", state);
+      el.toggleAttribute("data-open", state === "open");
+      el.toggleAttribute("data-closed", state === "closed");
     }
   };
 
@@ -354,24 +316,29 @@ export function createCombobox(
       input.value = "";
     }
     collection.filter(input.value);
-    const selectedIndex = collection.enabled.findIndex((item) => collection.valueOf(item) === currentValue);
-    if (selectedIndex >= 0) {
-      collection.highlight(selectedIndex);
-    } else {
-      collection.clearHighlight();
-    }
+    collection.highlight(collection.enabled.findIndex((item) => collection.valueOf(item) === currentValue));
   };
 
-  const updateOpenState = (open: boolean, skipFocusRestore = false) => {
+  const updateOpenState = (open: boolean) => {
     if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
     if (disabled && open) return;
 
     if (open) {
+      // Measure the anchor while style and layout are still clean, and make
+      // the positioner absolute before the mounted content is laid out, so
+      // the first measurement lays out once.
+      const anchorRect = measureAnchor();
       isOpen = true;
       openRenderedSide = null;
       setAria(input, "expanded", true);
       portal.mount();
+      const style = (portal.container as HTMLElement).style;
+      style.position = "absolute";
+      style.top = "0px";
+      style.left = "0px";
+      style.willChange = "transform";
+      style.margin = "0";
       content.hidden = false;
       setDataState("open");
       presence.enter();
@@ -380,12 +347,11 @@ export function createCombobox(
       syncOpenResults();
 
       positionSync.start();
-      updatePosition();
-      positionSync.update();
+      updatePosition(anchorRect);
 
       terminalLifecycle.trackRaf(() => {
         if (terminalLifecycle.isDestroyed || !isOpen) return;
-        positionSync.update();
+        updatePosition();
       });
     } else {
       isOpen = false;
@@ -404,10 +370,6 @@ export function createCombobox(
         // Restore input text to committed value's label
         const committedLabel = collection.labelFor(currentValue);
         input.value = committedLabel;
-      }
-
-      if (!skipFocusRestore) {
-        // Keep focus on input
       }
     }
 
@@ -507,9 +469,7 @@ export function createCombobox(
         e.preventDefault();
         if (!isOpen) {
           updateOpenState(true);
-          if (autoHighlight && collection.enabled.length > 0) {
-            collection.highlight(0);
-          }
+          if (autoHighlight) collection.highlight(0);
           return;
         }
         keyboardMode = true;
@@ -522,9 +482,7 @@ export function createCombobox(
         e.preventDefault();
         if (!isOpen) {
           updateOpenState(true);
-          if (autoHighlight && collection.enabled.length > 0) {
-            collection.highlight(collection.enabled.length - 1);
-          }
+          if (autoHighlight) collection.highlight(collection.enabled.length - 1);
           return;
         }
         keyboardMode = true;
@@ -537,21 +495,21 @@ export function createCombobox(
         if (!isOpen) return;
         e.preventDefault();
         keyboardMode = true;
-        if (collection.enabled.length > 0) collection.highlight(0);
+        collection.highlight(0);
         break;
       case "End":
         if (!isOpen) return;
         e.preventDefault();
         keyboardMode = true;
-        if (collection.enabled.length > 0) collection.highlight(collection.enabled.length - 1);
+        collection.highlight(collection.enabled.length - 1);
         break;
-      case "Enter":
+      case "Enter": {
         if (!isOpen) return;
         e.preventDefault();
-        if (collection.highlightedIndex >= 0 && collection.highlightedIndex < collection.enabled.length) {
-          selectItem(collection.enabled[collection.highlightedIndex]!);
-        }
+        const item = collection.enabled[collection.highlightedIndex];
+        if (item) selectItem(item);
         break;
+      }
       case "Escape":
         if (isOpen) {
           e.preventDefault();
@@ -563,7 +521,7 @@ export function createCombobox(
         break;
       case "Tab":
         if (isOpen) {
-          updateOpenState(false, true);
+          updateOpenState(false);
         }
         break;
     }
@@ -578,28 +536,15 @@ export function createCombobox(
     emit(root, "combobox:input-change", { inputValue: val });
     onInputValueChange?.(val);
 
-    // Open if not already open
     if (!isOpen) {
       updateOpenState(true);
-      if (autoHighlight && hasTypedQuery && collection.enabled.length > 0) {
-        collection.highlight(0);
-      } else if (collection.highlightedIndex !== -1) {
-        collection.clearHighlight();
-      }
     } else {
-      // Re-filter
       collection.filter(val);
-
-      // Auto-highlight only after non-whitespace query input.
-      if (autoHighlight && hasTypedQuery && collection.enabled.length > 0) {
-        collection.highlight(0);
-      } else {
-        collection.clearHighlight();
-      }
-
       // Update position after filter changes content size
       positionSync.update();
     }
+    // Auto-highlight only after non-whitespace query input.
+    collection.highlight(autoHighlight && hasTypedQuery ? 0 : -1);
   };
 
   // Focus handling
@@ -682,9 +627,7 @@ export function createCombobox(
       on(clearButton, "mousedown", (e) => {
         e.preventDefault();
       }),
-      on(clearButton, "click", () => {
-        clearFromButton();
-      })
+      on(clearButton, "click", clearFromButton)
     );
   }
 

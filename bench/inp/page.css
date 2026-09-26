@@ -1,0 +1,21 @@
+body { font: 14px/1.4 system-ui; margin: 0; padding: 16px; }
+[hidden] { display: none !important; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.card { display: flex; gap: 8px; }
+[data-slot="accordion-content"] { overflow: hidden; }
+[data-slot="tabs-list"] { display: flex; flex-wrap: wrap; position: relative; }
+[data-slot="tabs-indicator"] { position: absolute; bottom: 0; height: 2px; background: #00f; }
+[data-slot$="-content"], [data-slot="navigation-menu-popup"] { background: #fff; border: 1px solid #ccc; }
+[data-slot="select-content"], [data-slot="combobox-content"] { max-height: 300px; overflow: auto; }
+[data-slot="command-list"] { max-height: 400px; overflow: auto; }
+[data-slot="dialog-overlay"] { position: fixed; inset: 0; background: #0006; }
+[data-slot="dialog-content"] { position: fixed; top: 20%; left: 30%; padding: 16px; }
+[data-slot="slider"] { position: relative; width: 300px; height: 20px; }
+[data-slot="slider-track"] { position: absolute; inset: 8px 0; background: #ddd; }
+[data-slot="slider-range"] { position: absolute; height: 100%; background: #00f; }
+[data-slot="slider-thumb"] { position: absolute; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #00f; }
+[data-slot="switch"] { display: inline-block; width: 32px; height: 18px; background: #ccc; }
+[data-slot="switch"][data-state="checked"] { background: #00f; }
+[data-slot="radio-group-item"] { display: inline-block; width: 14px; height: 14px; border: 1px solid; border-radius: 50%; }
+[data-highlighted], [data-state="active"], [aria-selected="true"] { background: #eef; }
+[data-slot="navigation-menu-list"] { display: flex; gap: 8px; list-style: none; }

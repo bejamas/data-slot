@@ -356,7 +356,6 @@ export function createPopover(
       presence.enter();
       updatePosition();
       positionSync.start();
-      positionSync.update();
       terminalLifecycle.trackRaf(focusFirst);
     } else {
       setDataState("closed");
@@ -380,7 +379,6 @@ export function createPopover(
     content.hidden = false;
     updatePosition();
     positionSync.start();
-    positionSync.update();
     terminalLifecycle.trackRaf(focusFirst);
   }
 

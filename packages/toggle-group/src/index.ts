@@ -206,6 +206,7 @@ export function createToggleGroup(
     const { el, disabled } = item;
 
     ensureId(el, "toggle-group-item");
+    el.tabIndex = -1;
 
     // Set type="button" on button elements
     if (el.tagName === "BUTTON" && !el.hasAttribute("type")) {
@@ -221,57 +222,44 @@ export function createToggleGroup(
     }
   }
 
-  // Apply state to DOM
+  // Apply state to DOM, writing only items whose pressed state changed
   const applyState = (newValue: Set<string>, init = false) => {
-    const changed =
-      !init &&
-      (newValue.size !== currentValue.size ||
-        [...newValue].some((v) => !currentValue.has(v)));
+    let changed = false;
 
-    currentValue = newValue;
-
-    // Update all items
     for (const item of toggleItems) {
-      const isPressed = currentValue.has(item.value);
+      const isPressed = newValue.has(item.value);
+      if (!init && isPressed === currentValue.has(item.value)) continue;
+      changed = true;
       setAria(item.el, "pressed", isPressed);
       item.el.dataset["state"] = isPressed ? "on" : "off";
     }
 
-    // Update roving tabindex
+    currentValue = newValue;
     updateRovingTabindex();
 
     // Update root data-value attribute (space-separated)
     const valueArr = [...currentValue];
     root.setAttribute("data-value", valueArr.join(" "));
 
-    // Emit events
-    if (changed) {
+    if (changed && !init) {
       emit(root, "toggle-group:change", { value: valueArr });
       onValueChange?.(valueArr);
     }
   };
 
+  let focusTarget: ToggleItem | undefined;
+
+  const setFocusTarget = (next: ToggleItem | undefined) => {
+    if (next === focusTarget) return;
+    if (focusTarget) focusTarget.el.tabIndex = -1;
+    if (next) next.el.tabIndex = 0;
+    focusTarget = next;
+  };
+
   // Update roving tabindex: first enabled item that's pressed, or first enabled
   const updateRovingTabindex = () => {
     const enabled = getEnabled();
-
-    // Find first pressed enabled item, or first enabled item
-    let focusTarget: ToggleItem | undefined;
-
-    for (const item of enabled) {
-      if (currentValue.has(item.value)) {
-        focusTarget = item;
-        break;
-      }
-    }
-
-    if (!focusTarget && enabled.length > 0) {
-      focusTarget = enabled[0];
-    }
-
-    for (const item of toggleItems) {
-      item.el.tabIndex = item === focusTarget ? 0 : -1;
-    }
+    setFocusTarget(enabled.find((item) => currentValue.has(item.value)) ?? enabled[0]);
   };
 
   // Initialize state
@@ -401,10 +389,7 @@ export function createToggleGroup(
       e.preventDefault();
       const next = enabled[nextIdx];
       if (next) {
-        // Update tabindex before focus
-        for (const it of toggleItems) {
-          it.el.tabIndex = it === next ? 0 : -1;
-        }
+        setFocusTarget(next);
         next.el.focus();
       }
     })

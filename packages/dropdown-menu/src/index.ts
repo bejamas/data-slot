@@ -24,7 +24,6 @@ import {
   createTerminalLifecycle,
   registerFloatingTerminalResources,
   createDismissLayer,
-  containsWithPortals,
   createTypeahead,
 } from "@data-slot/core";
 import { resolveDropdownMenuOptions } from "./dropdown-menu-options";
@@ -35,7 +34,6 @@ import type {
   DropdownMenuHighlightChangeDetail,
   DropdownMenuItemRecord,
   DropdownMenuOpenChangeDetail,
-  DropdownMenuOpenChangeSource,
   DropdownMenuOptions,
   DropdownMenuSelectDetail,
   DropdownMenuSelectionSource,
@@ -147,7 +145,6 @@ export function createDropdownMenu(
       didLockScroll = false;
     }
   });
-  let pendingDismissMeta: Pick<DropdownMenuOpenChangeDetail, "source" | "reason"> | null = null;
   const cleanups: Array<() => void> = [];
   const portal = createPortalLifecycle({
     content,
@@ -209,9 +206,6 @@ export function createDropdownMenu(
     emit(root, "dropdown-menu:change", detail);
     onOpenChange?.(detail.open);
   };
-  const emitHighlightChange = (detail: DropdownMenuHighlightChangeDetail) => {
-    emit(root, "dropdown-menu:highlight-change", detail);
-  };
   const emitValueChange = (detail: DropdownMenuValueChangeDetail) => {
     emit(root, "dropdown-menu:value-change", detail);
     onValueChange?.(detail.value);
@@ -242,17 +236,12 @@ export function createDropdownMenu(
       popupX: position.x,
       popupY: position.y,
     });
-    if (lockScrollOption) {
-      positioner.style.position = "fixed";
-      positioner.style.top = "0px";
-      positioner.style.left = "0px";
-      positioner.style.transform = `translate3d(${position.x}px, ${position.y}px, 0)`;
-    } else {
-      positioner.style.position = "absolute";
-      positioner.style.top = "0px";
-      positioner.style.left = "0px";
-      positioner.style.transform = `translate3d(${position.x + win.scrollX}px, ${position.y + win.scrollY}px, 0)`;
-    }
+    positioner.style.transform = lockScrollOption
+      ? `translate3d(${position.x}px, ${position.y}px, 0)`
+      : `translate3d(${position.x + win.scrollX}px, ${position.y + win.scrollY}px, 0)`;
+    positioner.style.position = lockScrollOption ? "fixed" : "absolute";
+    positioner.style.top = "0px";
+    positioner.style.left = "0px";
     positioner.style.setProperty("--transform-origin", transformOrigin);
     positioner.style.willChange = "transform";
     positioner.style.margin = "0";
@@ -296,18 +285,10 @@ export function createDropdownMenu(
     },
   });
   const setDataState = (state: "open" | "closed") => {
-    root.setAttribute("data-state", state);
-    content.setAttribute("data-state", state);
-    if (state === "open") {
-      root.setAttribute("data-open", "");
-      content.setAttribute("data-open", "");
-      root.removeAttribute("data-closed");
-      content.removeAttribute("data-closed");
-    } else {
-      root.setAttribute("data-closed", "");
-      content.setAttribute("data-closed", "");
-      root.removeAttribute("data-open");
-      content.removeAttribute("data-open");
+    for (const el of [root, content]) {
+      el.setAttribute("data-state", state);
+      el.toggleAttribute("data-open", state === "open");
+      el.toggleAttribute("data-closed", state === "closed");
     }
   };
   const updateHighlight = (
@@ -328,7 +309,7 @@ export function createDropdownMenu(
       return false;
     }
     highlightedItem = nextItem;
-    itemCollection.highlight(highlightedItem);
+    itemCollection.highlight(previousItem, nextItem);
     if (nextItem) {
       ensureItemVisibleInContainer(nextItem, content);
       if (focus) {
@@ -337,7 +318,7 @@ export function createDropdownMenu(
     } else if (focusContentOnClear) {
       focusElement(content);
     }
-    emitHighlightChange({
+    emit<DropdownMenuHighlightChangeDetail>(root, "dropdown-menu:highlight-change", {
       value: itemCollection.valueFor(itemCollection.recordFor(nextItem)),
       previousValue: itemCollection.valueFor(itemCollection.recordFor(previousItem)),
       item: nextItem,
@@ -426,7 +407,6 @@ export function createDropdownMenu(
   const updateOpenState = (open: boolean, { source, reason }: OpenTransitionOptions) => {
     if (terminalLifecycle.isDestroyed) return;
     if (isOpen === open) return;
-    pendingDismissMeta = null;
     const previousOpen = isOpen;
     if (open) {
       previousActiveElement = document.activeElement as HTMLElement | null;
@@ -448,19 +428,15 @@ export function createDropdownMenu(
       typeahead.reset();
       positionSync.start();
       updatePosition();
-      positionSync.update();
       focusElement(content);
     } else {
       isOpen = false;
       setAria(trigger, "expanded", false);
       setDataState("closed");
-      if (highlightedItem) {
-        updateHighlight(null, {
-          source: source === "init" ? "programmatic" : source,
-          focus: false,
-          focusContentOnClear: false,
-        });
-      }
+      updateHighlight(null, {
+        source: source === "init" ? "programmatic" : source,
+        focus: false,
+      });
       typeahead.reset();
       keyboardMode = false;
       if (didLockScroll) {
@@ -475,15 +451,6 @@ export function createDropdownMenu(
       previousOpen,
       source,
       reason,
-    });
-  };
-  const setPendingDismissReason = (source: DropdownMenuUserSource, reason: "outside" | "escape") => {
-    const nextMeta: Pick<DropdownMenuOpenChangeDetail, "source" | "reason"> = { source, reason };
-    pendingDismissMeta = nextMeta;
-    queueMicrotask(() => {
-      if (pendingDismissMeta === nextMeta) {
-        pendingDismissMeta = null;
-      }
     });
   };
   const activateItem = (item: DropdownMenuItemRecord, source: DropdownMenuUserSource) => {
@@ -552,7 +519,7 @@ export function createDropdownMenu(
     if (detail.open !== undefined) {
       updateOpenState(detail.open, {
         source,
-        reason: source === "restore" ? "programmatic" : "programmatic",
+        reason: "programmatic",
       });
     }
     if (detail.highlightedValue !== undefined) {
@@ -705,60 +672,17 @@ export function createDropdownMenu(
       });
     }),
   );
-  const doc = root.ownerDocument ?? document;
-  cleanups.push(
-    on(
-      doc,
-      "pointerdown",
-      (event) => {
-        if (!isOpen || !closeOnClickOutside) return;
-        const pointerEvent = event as PointerEvent;
-        if (pointerEvent.pointerType === "touch") return;
-        const target = event.target as Node | null;
-        if (containsWithPortals(root, target)) return;
-        setPendingDismissReason("pointer", "outside");
-      },
-      { capture: true },
-    ),
-    on(
-      doc,
-      "click",
-      (event) => {
-        if (!isOpen || !closeOnClickOutside) return;
-        const target = event.target as Node | null;
-        if (containsWithPortals(root, target)) return;
-        setPendingDismissReason("pointer", "outside");
-      },
-      { capture: true },
-    ),
-    on(
-      doc,
-      "keydown",
-      (event) => {
-        if (!isOpen || !closeOnEscape || event.key !== "Escape" || event.defaultPrevented) return;
-        setPendingDismissReason("keyboard", "escape");
-      },
-      { capture: true },
-    ),
-  );
   cleanups.push(
     createDismissLayer({
       root,
       isOpen: () => isOpen,
-      onDismiss: () => {
-        const meta = pendingDismissMeta;
-        pendingDismissMeta = null;
-        if (meta?.reason === "escape") {
-          updateOpenState(false, {
-            source: meta.source as DropdownMenuOpenChangeSource,
-            reason: "escape",
-          });
-          return;
-        }
-        updateOpenState(false, {
-          source: meta?.source ?? "pointer",
-          reason: meta?.reason ?? "outside",
-        });
+      onDismiss: ({ reason }) => {
+        updateOpenState(
+          false,
+          reason === "escape-key"
+            ? { source: "keyboard", reason: "escape" }
+            : { source: "pointer", reason: "outside" },
+        );
       },
       closeOnClickOutside,
       closeOnEscape,
