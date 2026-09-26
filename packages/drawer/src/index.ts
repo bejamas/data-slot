@@ -303,6 +303,7 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     if (backdrop) backdrop.hidden = true;
     if (viewport) viewport.hidden = true;
     if (portal) portal.hidden = true;
+    for (const element of animated) element.removeAttribute('data-ending-style');
     if (!keepMounted) { portalLifecycle.restore(); mounted = false; }
   };
   const finishExit = () => {
@@ -311,7 +312,11 @@ export function createDrawer(root: Element, options: DrawerOptions = {}): Drawer
     complete(false);
   };
   const animated = [popup, backdrop].filter((element): element is HTMLElement => !!element);
-  const presence = animated.map((element) => createPresenceLifecycle({ element, win, onExitComplete: finishExit }));
+  // A part whose exit finishes first keeps its ending style until hide(), so
+  // it cannot transition back into view while the other part is still exiting.
+  const presence = animated.map((element) => createPresenceLifecycle({
+    element, win, onExitComplete: () => { element.setAttribute('data-ending-style', ''); finishExit(); },
+  }));
   const setSnap = (value: DrawerSnapPoint | null, reason: DrawerChangeReason = 'imperative-action', originalEvent?: Event) => {
     const point = parseSnapPoint(value);
     if (destroyed || (value !== null && point === null) || point === currentSnap) return;
