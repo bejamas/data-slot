@@ -220,36 +220,6 @@ export function createCombobox(
     itemToStringValue,
   });
 
-  // Positioning
-  const syncPositionCssVars = (positioner: HTMLElement, anchorRect: DOMRectReadOnly, side: Side) => {
-    const visualViewport = win.visualViewport;
-    const viewportY = visualViewport?.offsetTop ?? 0;
-    const viewportWidth = visualViewport?.width ?? win.innerWidth;
-    const viewportHeight = visualViewport?.height ?? win.innerHeight;
-    const availableWidth = Math.max(0, viewportWidth - (collisionPadding * 2));
-    const availableHeight =
-      side === "top"
-        ? Math.max(0, anchorRect.top - viewportY - collisionPadding - sideOffset)
-        : Math.max(0, (viewportY + viewportHeight) - anchorRect.bottom - collisionPadding - sideOffset);
-
-    // Snap anchor dimensions to device pixels so popup sizing matches the anchor visually.
-    const dpr = win.devicePixelRatio || 1;
-    const anchorWidth = (Math.round((anchorRect.x + anchorRect.width) * dpr) - Math.round(anchorRect.x * dpr)) / dpr;
-    const anchorHeight = (Math.round((anchorRect.y + anchorRect.height) * dpr) - Math.round(anchorRect.y * dpr)) / dpr;
-
-    const applyVars = (element: HTMLElement) => {
-      element.style.setProperty("--available-width", `${availableWidth}px`);
-      element.style.setProperty("--available-height", `${availableHeight}px`);
-      element.style.setProperty("--anchor-width", `${anchorWidth}px`);
-      element.style.setProperty("--anchor-height", `${anchorHeight}px`);
-    };
-
-    applyVars(content);
-    if (positioner !== content) {
-      applyVars(positioner);
-    }
-  };
-
   // Anchor to root element (contains both input and trigger)
   const measureAnchor = () => {
     const anchorRect = rootElement.getBoundingClientRect();
@@ -281,17 +251,34 @@ export function createCombobox(
       popupY: pos.y,
     });
 
-    positioner.style.transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+    const transform = `translate3d(${pos.x + win.scrollX}px, ${pos.y + win.scrollY}px, 0)`;
+    const visualViewport = win.visualViewport;
+    const viewportY = visualViewport?.offsetTop ?? 0;
+    const viewportWidth = visualViewport?.width ?? win.innerWidth;
+    const viewportHeight = visualViewport?.height ?? win.innerHeight;
+    const availableWidth = Math.max(0, viewportWidth - (collisionPadding * 2));
+    const availableHeight =
+      pos.side === "top"
+        ? Math.max(0, anchorRect.top - viewportY - collisionPadding - sideOffset)
+        : Math.max(0, (viewportY + viewportHeight) - anchorRect.bottom - collisionPadding - sideOffset);
+
+    // Snap anchor dimensions to device pixels so popup sizing matches the anchor visually.
+    const dpr = win.devicePixelRatio || 1;
+    const anchorWidth = (Math.round((anchorRect.x + anchorRect.width) * dpr) - Math.round(anchorRect.x * dpr)) / dpr;
+    const anchorHeight = (Math.round((anchorRect.y + anchorRect.height) * dpr) - Math.round(anchorRect.y * dpr)) / dpr;
+
+    positioner.style.transform = transform;
     positioner.style.setProperty("--transform-origin", transformOrigin);
-    syncPositionCssVars(positioner, anchorRect, pos.side as Side);
+    for (const element of positioner === content ? [content] : [content, positioner]) {
+      element.style.setProperty("--available-width", `${availableWidth}px`);
+      element.style.setProperty("--available-height", `${availableHeight}px`);
+      element.style.setProperty("--anchor-width", `${anchorWidth}px`);
+      element.style.setProperty("--anchor-height", `${anchorHeight}px`);
+      element.setAttribute("data-side", pos.side);
+      element.setAttribute("data-align", pos.align);
+    }
     if (!isMobileTouchEnvironment && effectiveAvoidCollisions) {
       openRenderedSide = pos.side as Side;
-    }
-    content.setAttribute("data-side", pos.side);
-    content.setAttribute("data-align", pos.align);
-    if (positioner !== content) {
-      positioner.setAttribute("data-side", pos.side);
-      positioner.setAttribute("data-align", pos.align);
     }
   };
 
