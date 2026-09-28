@@ -139,13 +139,25 @@
       "import": "./dist/carousel.js",
       "require": "./dist/carousel.cjs",
       "default": "./dist/carousel.js"
+    },
+    "./slider": {
+      "types": "./dist/slider.d.ts",
+      "import": "./dist/slider.js",
+      "require": "./dist/slider.cjs",
+      "default": "./dist/slider.js"
+    },
+    "./resizable": {
+      "types": "./dist/resizable.d.ts",
+      "import": "./dist/resizable.js",
+      "require": "./dist/resizable.cjs",
+      "default": "./dist/resizable.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsdown"
+    "build": "tsdown && bun run check-dist.ts"
   },
   "dependencies": {
     "@data-slot/core": "workspace:*",
@@ -168,7 +180,9 @@
     "@data-slot/combobox": "workspace:*",
     "@data-slot/command": "workspace:*",
     "@data-slot/toast": "workspace:*",
-    "@data-slot/carousel": "workspace:*"
+    "@data-slot/carousel": "workspace:*",
+    "@data-slot/slider": "workspace:*",
+    "@data-slot/resizable": "workspace:*"
   },
   "keywords": [
     "headless",
