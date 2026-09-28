@@ -77,6 +77,8 @@ export { createDropdownMenu } from "@data-slot/dropdown-menu";
 export type {
   DropdownMenuOptions,
   DropdownMenuController,
+  Side as DropdownMenuSide,
+  Align as DropdownMenuAlign,
   DropdownMenuHighlightChangeDetail,
   DropdownMenuItemType,
   DropdownMenuOpenChangeDetail,
