@@ -36,8 +36,8 @@ export const mockGeometry = (content: HTMLElement, orientation: Orientation, siz
     scrollHeight: { configurable: true, get: () => orientation === "vertical" ? content.children.length * (size + gap) - gap : 80 },
   });
   content.scrollTo = ((options: ScrollToOptions) => {
-    if (typeof options.left === "number") content.scrollLeft = options.left;
-    if (typeof options.top === "number") content.scrollTop = options.top;
+    if (typeof options.left === "number") content.scrollLeft = Math.max(0, Math.min(content.scrollWidth - content.clientWidth, options.left));
+    if (typeof options.top === "number") content.scrollTop = Math.max(0, Math.min(content.scrollHeight - content.clientHeight, options.top));
   }) as typeof content.scrollTo;
   const layout = () => {
     Array.from(content.children).forEach((child, index) => {

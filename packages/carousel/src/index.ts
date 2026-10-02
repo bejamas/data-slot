@@ -24,6 +24,8 @@ const AXES = {
   horizontal: {
     scroll: "scrollLeft",
     edge: "left",
+    extent: "scrollWidth",
+    viewport: "clientWidth",
     prevKey: "ArrowLeft",
     nextKey: "ArrowRight",
     touchAction: "pan-y",
@@ -32,6 +34,8 @@ const AXES = {
   vertical: {
     scroll: "scrollTop",
     edge: "top",
+    extent: "scrollHeight",
+    viewport: "clientHeight",
     prevKey: "ArrowUp",
     nextKey: "ArrowDown",
     touchAction: "pan-x",
@@ -77,7 +81,7 @@ export interface CarouselController {
   goTo(index: number): void;
   /** Current active index */
   readonly index: number;
-  /** Number of slides */
+  /** Number of distinct reachable scroll positions */
   readonly count: number;
   /** Whether navigating to previous slide is possible */
   readonly canScrollPrev: boolean;
@@ -176,6 +180,7 @@ export function createCarousel(
 
   let currentIndex = normalizeIndex(defaultIndex, items.length, loop);
   let snapPoints: number[] = [];
+  let snapItems: HTMLElement[] = [];
   let settleTimer: number | undefined;
   /** A drag has locked to the carousel axis and is driving the scroll position. */
   let dragging = false;
@@ -213,13 +218,13 @@ export function createCarousel(
   };
 
   const canScrollPrev = () => {
-    if (items.length <= 1) return false;
+    if (snapPoints.length <= 1) return false;
     return loop || currentIndex > 0;
   };
 
   const canScrollNext = () => {
-    if (items.length <= 1) return false;
-    return loop || currentIndex < items.length - 1;
+    if (snapPoints.length <= 1) return false;
+    return loop || currentIndex < snapPoints.length - 1;
   };
 
   const updateStaticA11y = () => {
@@ -262,7 +267,7 @@ export function createCarousel(
       const box = slides === "multiple" ? item.getBoundingClientRect() : null;
       const active = box
         ? box.right > left && box.left < right && box.bottom > top && box.top < bottom
-        : i === currentIndex;
+        : item === snapItems[currentIndex];
       if (!active && item.contains(root.ownerDocument.activeElement)) {
         // Keep keyboard navigation inside the carousel when its focused slide leaves the tab order.
         if (!content.hasAttribute("tabindex")) {
@@ -307,7 +312,16 @@ export function createCarousel(
   };
 
   const measureSnapPoints = () => {
-    snapPoints = items.map((item) => getSnapPointForItem(item));
+    const maxScroll = Math.max(0, content[axis.extent] - content[axis.viewport]);
+    snapPoints = [];
+    snapItems = [];
+    for (const item of items) {
+      const point = Math.min(maxScroll, Math.max(0, getSnapPointForItem(item)));
+      // Subpixel layout can produce near-identical offsets at the scroll boundary.
+      if (snapPoints.some(existing => Math.abs(existing - point) < 1)) continue;
+      snapPoints.push(point);
+      snapItems.push(item);
+    }
   };
 
   const rebindResizeObserver = () => {
@@ -315,9 +329,11 @@ export function createCarousel(
 
     resizeObserver?.disconnect();
     resizeObserver = new ResizeObserver(() => {
+      const position = content[axis.scroll];
       measureSnapPoints();
-      scrollToIndex(currentIndex);
-      updateStates(false);
+      const nextIndex = getNearestIndex(position);
+      scrollToIndex(nextIndex);
+      applyIndex(nextIndex);
     });
 
     resizeObserver.observe(content);
@@ -327,25 +343,26 @@ export function createCarousel(
   };
 
   const refreshItems = () => {
-    const activeItem = items[currentIndex] ?? null;
+    const activeItem = snapItems[currentIndex] ?? null;
     items = collectItems();
 
     // Every slide was removed: park at 0 without scrolling or emitting a change.
     if (items.length === 0) {
       snapPoints = [];
+      snapItems = [];
       currentIndex = 0;
       updateStates(false);
       return;
     }
 
-    const preservedIndex = activeItem ? items.indexOf(activeItem) : -1;
+    updateStaticA11y();
+    measureSnapPoints();
+    const preservedIndex = activeItem ? snapItems.indexOf(activeItem) : -1;
     const nextIndex =
       preservedIndex >= 0
         ? preservedIndex
-        : normalizeIndex(currentIndex, items.length, loop);
+        : normalizeIndex(currentIndex, snapPoints.length, loop);
 
-    updateStaticA11y();
-    measureSnapPoints();
     scrollToIndex(nextIndex);
     applyIndex(nextIndex);
     rebindResizeObserver();
@@ -353,7 +370,7 @@ export function createCarousel(
 
   /** Navigate to `index`: scroll there and make it active. */
   const setIndex = (requestedIndex: number, behavior: ScrollBehavior = navigationBehavior) => {
-    const nextIndex = normalizeIndex(requestedIndex, items.length, loop);
+    const nextIndex = normalizeIndex(requestedIndex, snapPoints.length, loop);
     scrollToIndex(nextIndex, behavior);
     applyIndex(nextIndex);
   };
@@ -397,7 +414,7 @@ export function createCarousel(
         setIndex(0);
         break;
       case "End":
-        setIndex(items.length - 1);
+        setIndex(snapPoints.length - 1);
         break;
       default:
         return;
@@ -487,6 +504,7 @@ export function createCarousel(
   };
 
   measureSnapPoints();
+  currentIndex = normalizeIndex(defaultIndex, snapPoints.length, loop);
   updateStaticA11y();
   scrollToIndex(currentIndex);
   applyIndex(currentIndex);
@@ -523,7 +541,7 @@ export function createCarousel(
       return currentIndex;
     },
     get count() {
-      return items.length;
+      return snapPoints.length;
     },
     get canScrollPrev() {
       return canScrollPrev();

@@ -66,6 +66,7 @@ describe("Carousel", () => {
           </div>
         </form>
       `;
+      mockGeometry(document.querySelector<HTMLElement>('[data-slot="carousel-content"]')!, "horizontal");
       const controller = createCarousel(document.getElementById("root")!);
 
       expect(document.getElementById("prev")!.getAttribute("type")).toBe("button");
@@ -144,6 +145,7 @@ describe("Carousel", () => {
           </div>
         </div>
       `;
+      mockGeometry(document.querySelector<HTMLElement>('[data-slot="carousel-content"]')!, "horizontal");
       const controller = createCarousel(document.getElementById("root")!);
 
       keydown(document.getElementById("field")!, "ArrowRight");
@@ -162,6 +164,7 @@ describe("Carousel", () => {
         </div>
       `;
       const nested = document.getElementById("nested")!;
+      mockGeometry(document.querySelector<HTMLElement>('[data-slot="carousel-content"]')!, "horizontal");
       const controller = createCarousel(document.getElementById("root")!);
       nested.addEventListener("keydown", (event) => {
         if (event.key === "ArrowRight") event.preventDefault();
@@ -343,6 +346,7 @@ describe("Carousel", () => {
       `;
       const slide1 = document.getElementById("slide-1")!;
       const slide2 = document.getElementById("slide-2")!;
+      mockGeometry(document.querySelector<HTMLElement>('[data-slot="carousel-content"]')!, "horizontal");
       const controller = createCarousel(document.getElementById("root")!);
 
       expect(slide1.getAttribute("aria-hidden")).toBe("false");
@@ -366,11 +370,12 @@ describe("Carousel", () => {
 
   describe("slide mutations", () => {
     it("updates slide count when carousel-item children are added", async () => {
-      const { content, controller } = render({ slideCount: 2 });
+      const { content, controller, layout } = render({ slideCount: 2 });
 
       const item = document.createElement("div");
       item.setAttribute("data-slot", "carousel-item");
       content.appendChild(item);
+      layout();
       await flushMutations();
 
       expect(controller.count).toBe(3);

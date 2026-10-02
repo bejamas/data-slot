@@ -88,9 +88,9 @@ JS options take precedence over data attributes.
 |-------------------|-------------|
 | `prev()` | Navigate to previous slide |
 | `next()` | Navigate to next slide |
-| `goTo(index)` | Navigate to specific slide |
-| `index` | Current active index |
-| `count` | Total number of slides |
+| `goTo(index)` | Navigate to a reachable position |
+| `index` | Current reachable position index |
+| `count` | Number of distinct reachable scroll positions |
 | `canScrollPrev` | Whether previous navigation is available |
 | `canScrollNext` | Whether next navigation is available |
 | `destroy()` | Cleanup listeners and observers |
@@ -214,3 +214,21 @@ The controller automatically sets:
 ## License
 
 MIT
+
+## Reachable positions
+
+`count`, `index`, `defaultIndex`, `goTo(index)`, keyboard navigation and
+`carousel:change` use **reachable position indices**, starting at zero. The runtime
+clamps slide starts to the content's scroll range and merges duplicate positions.
+For five 360px cards with 20px gaps in a 1280px viewport, positions are
+`[0, 380, 600]`, so `count` is 3 and `goTo(2)` reaches the end. Further `next()`
+calls do nothing and the next control is disabled (unless soft-wrap `loop` is on).
+A strip that fits entirely has one position and both controls are disabled.
+
+Each position is represented by the first slide at its clamped offset. In single
+mode that representative slide is active; use `slides: "multiple"` for narrow
+cards so every visible card stays accessible. Slide ARIA labels still describe
+physical slides (`1 of 5`), while a counter using the controller counts positions.
+Full-width slides keep their existing one-position-per-slide indices.
+Positions are remeasured on resize and slide mutations; resize selects the position
+nearest the previous scroll offset and emits a change if the index changes.
