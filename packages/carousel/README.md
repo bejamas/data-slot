@@ -68,6 +68,7 @@ JS options take precedence over data attributes.
 | `data-default-index` | number | `0` | Initial active index |
 | `data-orientation` | `horizontal \| vertical` | `horizontal` | Carousel orientation |
 | `data-drag` | boolean | `false` | Enable pointer drag/swipe navigation |
+| `data-slides` | `single \| multiple` | `single` | Keep intersecting slides active in multiple mode |
 | `data-loop` | boolean | `false` | Enable soft-wrap loop navigation |
 
 ### Options
@@ -77,6 +78,7 @@ JS options take precedence over data attributes.
 | `defaultIndex` | `number` | `0` | Initial active slide index |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Axis used for keyboard navigation and scrolling |
 | `drag` | `boolean` | `false` | Enable pointer drag/swipe navigation on the scroll container |
+| `slides` | `"single" \| "multiple"` | `"single"` | Choose index-based or visible-slide accessibility |
 | `loop` | `boolean` | `false` | Enable soft-wrap for `prev`/`next`/keyboard/API navigation |
 | `onIndexChange` | `(index: number) => void` | `undefined` | Called when active slide changes |
 
@@ -180,7 +182,26 @@ For vertical carousels, switch `scroll-snap-type` to `y mandatory` and use colum
 
 ## Accessibility
 
-The carousel shows one slide at a time. Inactive slides are marked `aria-hidden` and `inert`, which removes them and their content from the accessibility tree and the tab order until they become active. Size slides to fill the viewport, as in the styling example above; a layout that shows several slides at once would hide visible neighbours from assistive technology.
+The carousel shows one slide at a time. Inactive slides are marked `aria-hidden` and `inert`, which removes them and their content from the accessibility tree and the tab order until they become active. Size slides to fill the viewport, as in the styling example above.
+
+For a strip of narrow cards, set `data-slides="multiple"` on the root (or pass
+`slides: "multiple"`). Every slide whose box intersects the content viewport,
+including partially visible cards, stays `data-state="active"`, without `inert`
+or `aria-hidden`. Off-screen slides remain inactive, inert and hidden. Visibility
+updates during scrolling, after resize and after slide mutations. Links and buttons
+in visible neighbours remain clickable, focusable and available to screen readers.
+Focus moves to the content only when its containing slide leaves view. The current
+index still drives navigation and `carousel:change`; several active slides do not
+emit additional index changes.
+
+```html
+<div data-slot="carousel" data-slides="multiple">
+  <div data-slot="carousel-content" style="display:flex; overflow:auto; gap:20px">
+    <div data-slot="carousel-item" style="flex:0 0 360px"><a href="#one">Card 1</a></div>
+    <div data-slot="carousel-item" style="flex:0 0 360px"><a href="#two">Card 2</a></div>
+  </div>
+</div>
+```
 
 The controller automatically sets:
 

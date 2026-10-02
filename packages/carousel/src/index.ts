@@ -16,6 +16,7 @@ import {
   createSwipeGesture,
 } from "@data-slot/core";
 
+const SLIDE_MODES = ["single", "multiple"] as const;
 const ORIENTATIONS = ["horizontal", "vertical"] as const;
 
 /** Everything that differs between a horizontal and a vertical carousel, resolved once. */
@@ -61,6 +62,8 @@ export interface CarouselOptions {
   loop?: boolean;
   /** Enable pointer drag/swipe navigation */
   drag?: boolean;
+  /** Keep every visible slide interactive in multiple mode. */
+  slides?: "single" | "multiple";
   /** Callback when active index changes */
   onIndexChange?: (index: number) => void;
 }
@@ -156,6 +159,7 @@ export function createCarousel(
     getDataEnum(root, "orientation", ORIENTATIONS) ??
     "horizontal";
   const loop = options.loop ?? getDataBool(root, "loop") ?? false;
+  const slides = options.slides ?? getDataEnum(root, "slides", SLIDE_MODES) ?? "single";
   const drag = options.drag ?? getDataBool(root, "drag") ?? false;
   const defaultIndex =
     options.defaultIndex ?? getDataNumber(root, "defaultIndex") ?? 0;
@@ -245,13 +249,20 @@ export function createCarousel(
     }
   };
 
-  const updateStates = (emitChange: boolean) => {
-    root.setAttribute("data-index", String(currentIndex));
+  const updateSlides = () => {
+    const rect = content.getBoundingClientRect();
+    const left = rect.left + content.clientLeft;
+    const top = rect.top + content.clientTop;
+    const right = left + content.clientWidth;
+    const bottom = top + content.clientHeight;
 
     for (let i = 0; i < items.length; i += 1) {
       const item = items[i];
       if (!item) continue;
-      const active = i === currentIndex;
+      const box = slides === "multiple" ? item.getBoundingClientRect() : null;
+      const active = box
+        ? box.right > left && box.left < right && box.bottom > top && box.top < bottom
+        : i === currentIndex;
       if (!active && item.contains(root.ownerDocument.activeElement)) {
         // Keep keyboard navigation inside the carousel when its focused slide leaves the tab order.
         if (!content.hasAttribute("tabindex")) {
@@ -263,11 +274,17 @@ export function createCarousel(
         content.focus({ preventScroll: true });
       }
       item.setAttribute("data-state", active ? "active" : "inactive");
-      // One slide is in view at a time; the rest leave the tab order and the accessibility tree.
-      setAria(item, "hidden", !active);
+      // Off-screen slides leave the tab order and accessibility tree.
+      if (slides === "multiple" && active) item.removeAttribute("aria-hidden");
+      else setAria(item, "hidden", !active);
       item.toggleAttribute("inert", !active);
     }
 
+  };
+
+  const updateStates = (emitChange: boolean) => {
+    root.setAttribute("data-index", String(currentIndex));
+    updateSlides();
     updateControls();
 
     if (emitChange) {
@@ -300,6 +317,7 @@ export function createCarousel(
     resizeObserver = new ResizeObserver(() => {
       measureSnapPoints();
       scrollToIndex(currentIndex);
+      updateStates(false);
     });
 
     resizeObserver.observe(content);
@@ -359,6 +377,7 @@ export function createCarousel(
   };
 
   const onScroll = () => {
+    if (slides === "multiple") updateSlides();
     if (dragging) return;
     win.clearTimeout(settleTimer);
     settleTimer = win.setTimeout(syncIndexFromScroll, SCROLL_SETTLE_MS);

@@ -9,6 +9,7 @@ interface Fixture {
   /** Render previous/next control buttons. */
   controls?: boolean;
   options?: CarouselOptions;
+  geometry?: { size?: number; viewport?: number; gap?: number };
 }
 
 const rect = (start: number, size: number, orientation: Orientation): DOMRect => {
@@ -25,16 +26,22 @@ const rect = (start: number, size: number, orientation: Orientation): DOMRect =>
  * and make scrollTo take effect immediately. Returns a function that re-lays
  * the current children after they change.
  */
-export const mockGeometry = (content: HTMLElement, orientation: Orientation, size = 100) => {
+export const mockGeometry = (content: HTMLElement, orientation: Orientation, size = 100, viewport = size, gap = 0) => {
   const scrolled = () => (orientation === "horizontal" ? content.scrollLeft : content.scrollTop);
-  content.getBoundingClientRect = () => rect(0, size, orientation);
+  content.getBoundingClientRect = () => rect(0, viewport, orientation);
+  Object.defineProperties(content, {
+    clientWidth: { configurable: true, get: () => orientation === "horizontal" ? viewport : 120 },
+    clientHeight: { configurable: true, get: () => orientation === "vertical" ? viewport : 80 },
+    scrollWidth: { configurable: true, get: () => orientation === "horizontal" ? content.children.length * (size + gap) - gap : 120 },
+    scrollHeight: { configurable: true, get: () => orientation === "vertical" ? content.children.length * (size + gap) - gap : 80 },
+  });
   content.scrollTo = ((options: ScrollToOptions) => {
     if (typeof options.left === "number") content.scrollLeft = options.left;
     if (typeof options.top === "number") content.scrollTop = options.top;
   }) as typeof content.scrollTo;
   const layout = () => {
     Array.from(content.children).forEach((child, index) => {
-      (child as HTMLElement).getBoundingClientRect = () => rect(index * size - scrolled(), size, orientation);
+      (child as HTMLElement).getBoundingClientRect = () => rect(index * (size + gap) - scrolled(), size, orientation);
     });
   };
   layout();
@@ -42,7 +49,7 @@ export const mockGeometry = (content: HTMLElement, orientation: Orientation, siz
 };
 
 /** Render a carousel with mocked geometry and bind it. */
-export const render = ({ attrs = "", slideCount = 3, controls = true, options = {} }: Fixture = {}) => {
+export const render = ({ attrs = "", slideCount = 3, controls = true, options = {}, geometry = {} }: Fixture = {}) => {
   const slides = Array.from({ length: slideCount }, (_, i) => `<div data-slot="carousel-item">Slide ${i + 1}</div>`).join("");
   document.body.innerHTML = `
     <div data-slot="carousel" id="root" ${attrs}>
@@ -57,7 +64,7 @@ export const render = ({ attrs = "", slideCount = 3, controls = true, options = 
   const prev = document.getElementById("prev") as HTMLButtonElement | null;
   const next = document.getElementById("next") as HTMLButtonElement | null;
   const orientation = options.orientation ?? (attrs.includes('data-orientation="vertical"') ? "vertical" : "horizontal");
-  const layout = mockGeometry(content, orientation);
+  const layout = mockGeometry(content, orientation, geometry.size, geometry.viewport, geometry.gap);
   const controller = createCarousel(root, options);
   return { root, content, items, prev, next, controller, layout };
 };
