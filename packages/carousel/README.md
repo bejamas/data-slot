@@ -276,37 +276,3 @@ For snapping only on larger screens, omit `snap` / `data-snap` and use CSS:
 
 Tailwind's `max-md:snap-none` works the same way. Drag reads the computed CSS at
 the start of each gesture, so the runtime honours the current breakpoint.
-
-## Testing locally
-
-From the repository root:
-
-```sh
-bun install
-bun test packages/carousel
-bun run typecheck
-bun packages/carousel/examples/serve.ts
-```
-
-Open `http://127.0.0.1:4196` for four interactive cases: multiple visible cards,
-free scrolling, responsive free scrolling and the default full-width layout.
-The page bundles the current source directly, so no publishing or package linking
-is needed. Restart the server after source changes. Set `CAROUSEL_PORT=4197` if
-4196 is occupied.
-
-- At a wide desktop viewport, Tab through neighbouring links and click them;
-  partially visible cards should work too. Cards entirely out of view should be inert.
-- In the multiple-card case, click Next to the end. It should disable at the actual
-  scroll boundary, with one dot per reachable position. Previous, Home and End
-  should work symmetrically. Resize and check the dots and controls again.
-- Click or focus a dot and press Enter/Space. The current dot and position counter
-  should update together, keeping focus on the button.
-- Drag a card background in the free-scroll case and release between positions.
-  It should stay there; Previous/Next still move to reachable positions.
-- Resize below 768px and repeat dragging in the responsive example. Return above
-  768px and check that drag release snaps again.
-- In the full-width example, confirm five positions and one accessible slide at a time.
-
-For the documentation example, run `bun run dev:docs`, then open
-`http://localhost:4322/components/carousel`. Additional checks:
-`bun test`, `bun run build`, and `bun run check:docs`.
