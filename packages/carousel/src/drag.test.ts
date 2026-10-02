@@ -130,6 +130,29 @@ describe("Carousel drag", () => {
   });
 
   for (const orientation of ["horizontal", "vertical"] as const) {
+    it(`keeps ${orientation} navigation in snapping mode during a release animation`, () => {
+      const { content, controller, next } = render({ slideCount: 4, options: { drag: true, orientation } });
+      const horizontal = orientation === "horizontal";
+      content.style.scrollSnapType = horizontal ? "x mandatory" : "y mandatory";
+      const calls = deferSmoothScroll(content);
+
+      press(content, 130, 180, 180);
+      move(130, horizontal ? 20 : 180, horizontal ? 180 : 20);
+      lift(130, 20, 20);
+      expect(controller.index).toBe(2);
+      expect(content.style.scrollSnapType).toBe("none");
+
+      controller.next();
+      expect(controller.index).toBe(3);
+      expect(calls.at(-1)?.[horizontal ? "left" : "top"]).toBe(300);
+      expect(controller.canScrollNext).toBe(false);
+      expect(next!.disabled).toBe(true);
+      controller.prev();
+      expect(controller.index).toBe(2);
+      expect(calls.at(-1)?.[horizontal ? "left" : "top"]).toBe(200);
+      controller.destroy();
+    });
+
     it(`keeps snapping disabled throughout the ${orientation} release animation`, () => {
       const { content, controller } = render({ options: { drag: true, orientation } });
       const horizontal = orientation === "horizontal";

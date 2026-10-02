@@ -45,13 +45,13 @@ The content element is a native scroll container and every direct `carousel-item
 </div>
 ```
 
-The active slide is the one the scroll position rests on. Navigation scrolls smoothly, or instantly when the visitor prefers reduced motion, and the index follows once scrolling settles. Inactive slides are `inert` and `aria-hidden`, so the layout should show one slide at a time.
+The active slide is the one the scroll position rests on. Navigation scrolls smoothly, or instantly when the visitor prefers reduced motion, and the index follows once scrolling settles. By default, inactive slides are `inert` and `aria-hidden`. For narrow cards that show several slides at once, set `data-slides="multiple"`; every fully or partially visible slide then stays interactive and accessible. Indices and `count` represent distinct reachable scroll positions, with duplicate positions at the end merged.
 
 ## Examples
 
 ### Navigate with buttons and keys
 
-Arrow keys move between slides while focus is inside the carousel, and `Home` and `End` jump to the first and last slide. `data-loop` lets the controls wrap around. The dots below the slides are demo markup: each one dispatches `carousel:set` with its index, and they follow `carousel:change` to highlight the active slide.
+Arrow keys move between slides while focus is inside the carousel, and `Home` and `End` jump to the first and last slide. `data-loop` lets the controls wrap around. The dots use `carousel-indicator` buttons with zero-based `data-index` values. The runtime binds their clicks and keeps `aria-current` and `data-state` synchronized with navigation. An empty `carousel-indicators` container can generate one button per reachable position automatically.
 
 <Example name="carousel" />
 
@@ -60,6 +60,14 @@ Arrow keys move between slides while focus is inside the carousel, and `Home` an
 Add `data-drag` to let people drag or swipe the slides. Native scroll snapping pauses while a drag is in progress and the carousel settles on the nearest slide when the pointer lifts. Presses on links, buttons, and form controls inside a slide never start a drag.
 
 <Example name="carousel" variant="extra" />
+
+### Free scrolling
+
+Set `data-snap="none"` (or `snap: false`) to keep scroll and drag release between
+positions. Previous/Next and indicators still navigate to reachable positions.
+For free scrolling only at small breakpoints, omit that option and use CSS
+`scroll-snap-type: none` in a media query, or Tailwind's `max-md:snap-none`.
+The runtime reads the computed CSS at the start of each drag.
 
 ## API reference
 

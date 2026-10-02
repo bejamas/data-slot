@@ -68,6 +68,8 @@ JS options take precedence over data attributes.
 | `data-default-index` | number | `0` | Initial active index |
 | `data-orientation` | `horizontal \| vertical` | `horizontal` | Carousel orientation |
 | `data-drag` | boolean | `false` | Enable pointer drag/swipe navigation |
+| `data-snap` | `none` | CSS | Disable native and drag-release snapping |
+| `data-slides` | `single \| multiple` | `single` | Keep intersecting slides active in multiple mode |
 | `data-loop` | boolean | `false` | Enable soft-wrap loop navigation |
 
 ### Options
@@ -77,6 +79,8 @@ JS options take precedence over data attributes.
 | `defaultIndex` | `number` | `0` | Initial active slide index |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Axis used for keyboard navigation and scrolling |
 | `drag` | `boolean` | `false` | Enable pointer drag/swipe navigation on the scroll container |
+| `snap` | `boolean` | CSS | `true` enables mandatory snapping; `false` disables it; omitted honours CSS |
+| `slides` | `"single" \| "multiple"` | `"single"` | Choose index-based or visible-slide accessibility |
 | `loop` | `boolean` | `false` | Enable soft-wrap for `prev`/`next`/keyboard/API navigation |
 | `onIndexChange` | `(index: number) => void` | `undefined` | Called when active slide changes |
 
@@ -86,9 +90,9 @@ JS options take precedence over data attributes.
 |-------------------|-------------|
 | `prev()` | Navigate to previous slide |
 | `next()` | Navigate to next slide |
-| `goTo(index)` | Navigate to specific slide |
-| `index` | Current active index |
-| `count` | Total number of slides |
+| `goTo(index)` | Navigate to a reachable position |
+| `index` | Current reachable position index |
+| `count` | Number of distinct reachable scroll positions |
 | `canScrollPrev` | Whether previous navigation is available |
 | `canScrollNext` | Whether next navigation is available |
 | `destroy()` | Cleanup listeners and observers |
@@ -144,6 +148,8 @@ root.dispatchEvent(
 
 - `carousel-previous`
 - `carousel-next`
+- `carousel-indicators` (empty container; runtime creates one button per reachable position)
+- `carousel-indicator` (authored button with zero-based `data-index`)
 
 ## Styling
 
@@ -180,7 +186,26 @@ For vertical carousels, switch `scroll-snap-type` to `y mandatory` and use colum
 
 ## Accessibility
 
-The carousel shows one slide at a time. Inactive slides are marked `aria-hidden` and `inert`, which removes them and their content from the accessibility tree and the tab order until they become active. Size slides to fill the viewport, as in the styling example above; a layout that shows several slides at once would hide visible neighbours from assistive technology.
+The carousel shows one slide at a time. Inactive slides are marked `aria-hidden` and `inert`, which removes them and their content from the accessibility tree and the tab order until they become active. Size slides to fill the viewport, as in the styling example above.
+
+For a strip of narrow cards, set `data-slides="multiple"` on the root (or pass
+`slides: "multiple"`). Every slide whose box intersects the content viewport,
+including partially visible cards, stays `data-state="active"`, without `inert`
+or `aria-hidden`. Off-screen slides remain inactive, inert and hidden. Visibility
+updates during scrolling, after resize and after slide mutations. Links and buttons
+in visible neighbours remain clickable, focusable and available to screen readers.
+Focus moves to the content only when its containing slide leaves view. The current
+index still drives navigation and `carousel:change`; several active slides do not
+emit additional index changes.
+
+```html
+<div data-slot="carousel" data-slides="multiple">
+  <div data-slot="carousel-content" style="display:flex; overflow:auto; gap:20px">
+    <div data-slot="carousel-item" style="flex:0 0 360px"><a href="#one">Card 1</a></div>
+    <div data-slot="carousel-item" style="flex:0 0 360px"><a href="#two">Card 2</a></div>
+  </div>
+</div>
+```
 
 The controller automatically sets:
 
@@ -193,3 +218,61 @@ The controller automatically sets:
 ## License
 
 MIT
+
+## Reachable positions
+
+`count`, `index`, `defaultIndex`, `goTo(index)`, keyboard navigation and
+`carousel:change` use **reachable position indices**, starting at zero. The runtime
+clamps slide starts to the content's scroll range and merges duplicate positions.
+For five 360px cards with 20px gaps in a 1280px viewport, positions are
+`[0, 380, 600]`, so `count` is 3 and `goTo(2)` reaches the end. Further `next()`
+calls do nothing and the next control is disabled (unless soft-wrap `loop` is on).
+A strip that fits entirely has one position and both controls are disabled.
+
+Each position is represented by the first slide at its clamped offset. In single
+mode that representative slide is active; use `slides: "multiple"` for narrow
+cards so every visible card stays accessible. Slide ARIA labels still describe
+physical slides (`1 of 5`), while a counter using the controller counts positions.
+Full-width slides keep their existing one-position-per-slide indices.
+Positions are remeasured on resize and slide mutations; resize selects the position
+nearest the previous scroll offset and emits a change if the index changes.
+
+## Indicators and free scrolling
+
+```html
+<div data-slot="carousel" data-slides="multiple" data-snap="none" data-drag>
+  <div data-slot="carousel-content"><!-- carousel-item children --></div>
+  <div data-slot="carousel-indicators" aria-label="Choose a slide"></div>
+</div>
+```
+
+The runtime fills the empty `carousel-indicators` container with native
+`carousel-indicator` buttons, one per reachable position, and adjusts their count
+on resize or slide mutations. Alternatively author buttons directly:
+`<button data-slot="carousel-indicator" data-index="0">1</button>`.
+Invalid or out-of-range authored indicators are hidden and disabled. Style the
+buttons using `[data-slot="carousel-indicator"]` and `[data-state="active"]`.
+The active button has `aria-current="true"`; all buttons have `aria-controls`
+pointing to the scroll container and a default `aria-label="Go to slide N"`.
+Authored accessible labels are preserved. Native Tab, Enter and Space work as
+usual; activation keeps focus on the indicator. State is updated before
+`carousel:change` fires. Existing counter listeners continue to receive the same
+`{ index }` event; they can use `controller.count` for the reachable total.
+
+Set `data-snap="none"` or pass `snap: false` to disable CSS snapping and release
+snapping. Native scroll, pointer release and resize update the nearest position
+index without moving the scroll to it. Explicit prev/next, indicator and API
+navigation still scroll to reachable positions. The original inline snap style
+is restored on destroy.
+
+For snapping only on larger screens, omit `snap` / `data-snap` and use CSS:
+
+```css
+[data-slot="carousel-content"] { scroll-snap-type: x mandatory; }
+@media (width < 48rem) {
+  [data-slot="carousel-content"] { scroll-snap-type: none; }
+}
+```
+
+Tailwind's `max-md:snap-none` works the same way. Drag reads the computed CSS at
+the start of each gesture, so the runtime honours the current breakpoint.
