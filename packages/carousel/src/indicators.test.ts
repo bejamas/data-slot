@@ -57,6 +57,34 @@ describe("indicators", () => {
 
 describe("free scroll", () => {
   for (const orientation of ["horizontal", "vertical"] as const) {
+    for (const snap of [false, undefined]) {
+      for (const mutation of ["insert", "remove"] as const) {
+        it(`preserves ${orientation} free scrolling after ${mutation} (snap=${snap})`, async () => {
+          const { content, controller, layout } = render({ slideCount: 4, options: { orientation, snap } });
+          content.style.scrollSnapType = "none";
+          const scroll = orientation === "horizontal" ? "scrollLeft" : "scrollTop";
+          content[scroll] = 60;
+          content.dispatchEvent(new Event("scrollend"));
+          const calls = spyScrollTo(content);
+          if (mutation === "insert") {
+            const item = document.createElement("div");
+            item.dataset.slot = "carousel-item";
+            content.prepend(item);
+          } else {
+            content.firstElementChild!.remove();
+          }
+          layout();
+          await flushMutations();
+
+          expect(content[scroll]).toBe(60);
+          expect(controller.index).toBe(1);
+          expect(controller.count).toBe(mutation === "insert" ? 5 : 3);
+          expect(calls).toHaveLength(0);
+          controller.destroy();
+        });
+      }
+    }
+
     it(`keeps ${orientation} drag release between snaps and still navigates`, () => {
       const { root, content, controller } = render({ attrs: 'data-snap="none"',
         options: { drag: true, orientation } });

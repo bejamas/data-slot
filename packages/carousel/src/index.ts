@@ -189,11 +189,11 @@ export function createCarousel(
   /** A drag has locked to the carousel axis and is driving the scroll position. */
   let dragging = false;
   /** Keep snapping paused through release so it cannot preempt the smooth scroll. */
-  let authoredSnapType: string | undefined;
+  let suspendedSnap: { style: string; enabled: boolean } | undefined;
   const restoreScrollSnap = () => {
-    if (authoredSnapType === undefined) return;
-    content.style.scrollSnapType = authoredSnapType;
-    authoredSnapType = undefined;
+    if (!suspendedSnap) return;
+    content.style.scrollSnapType = suspendedSnap.style;
+    suspendedSnap = undefined;
   };
 
   const originalSnapType = content.style.scrollSnapType;
@@ -201,7 +201,12 @@ export function createCarousel(
     content.style.scrollSnapType = snap ? `${axis.swipe} mandatory` : "none";
   }
   // Read CSS at interaction time, so responsive snap-none rules also govern dragging.
-  const snappingEnabled = () => snap ?? (win.getComputedStyle(content).scrollSnapType !== "none");
+  const snappingEnabled = (): boolean =>
+    suspendedSnap?.enabled ?? snap ?? (win.getComputedStyle(content).scrollSnapType !== "none");
+  const suspendScrollSnap = () => {
+    suspendedSnap ??= { style: content.style.scrollSnapType, enabled: snappingEnabled() };
+    content.style.scrollSnapType = "none";
+  };
 
   let resizeObserver: ResizeObserver | null = null;
   let mutationObserver: MutationObserver | null = null;
@@ -365,18 +370,29 @@ export function createCarousel(
     }
   };
 
+  /** Share positioning policy across layout changes; free scrolling always follows its actual offset. */
+  const reconcileLayout = (selectSnappedIndex: (position: number) => number) => {
+    const position = content[axis.scroll];
+    measureSnapPoints();
+    // Every slide was removed: park at 0 without scrolling or emitting a change.
+    if (items.length === 0) {
+      currentIndex = 0;
+      updateStates(false);
+      return;
+    }
+
+    const snapping = snappingEnabled();
+    const nextIndex = snapping ? selectSnappedIndex(position) : getNearestIndex(position);
+
+    if (snapping && !dragging) scrollToIndex(nextIndex);
+    applyIndex(nextIndex);
+  };
+
   const rebindResizeObserver = () => {
     if (typeof ResizeObserver === "undefined") return;
 
     resizeObserver?.disconnect();
-    resizeObserver = new ResizeObserver(() => {
-      const position = content[axis.scroll];
-      measureSnapPoints();
-      const nextIndex = getNearestIndex(position);
-      if (snappingEnabled()) scrollToIndex(nextIndex);
-      applyIndex(nextIndex);
-    });
-
+    resizeObserver = new ResizeObserver(() => reconcileLayout(getNearestIndex));
     resizeObserver.observe(content);
     for (const item of items) {
       resizeObserver.observe(item);
@@ -386,26 +402,13 @@ export function createCarousel(
   const refreshItems = () => {
     const activeItem = snapItems[currentIndex] ?? null;
     items = collectItems();
-
-    // Every slide was removed: park at 0 without scrolling or emitting a change.
-    if (items.length === 0) {
-      snapPoints = [];
-      snapItems = [];
-      currentIndex = 0;
-      updateStates(false);
-      return;
-    }
-
     updateStaticA11y();
-    measureSnapPoints();
-    const preservedIndex = activeItem ? snapItems.indexOf(activeItem) : -1;
-    const nextIndex =
-      preservedIndex >= 0
+    reconcileLayout(() => {
+      const preservedIndex = activeItem ? snapItems.indexOf(activeItem) : -1;
+      return preservedIndex >= 0
         ? preservedIndex
         : normalizeIndex(currentIndex, snapPoints.length, loop);
-
-    scrollToIndex(nextIndex);
-    applyIndex(nextIndex);
+    });
     rebindResizeObserver();
   };
 
@@ -496,7 +499,6 @@ export function createCarousel(
     const authoredTouchAction = content.style.touchAction;
     /** Read at axis lock so a new drag takes over from the current visual position. */
     let origin = 0;
-    let dragSnaps = true;
     content.style.touchAction = axis.touchAction;
 
     const end = () => {
@@ -505,7 +507,7 @@ export function createCarousel(
       root.removeAttribute("data-dragging");
     };
     const settle = () => {
-      if (!dragSnaps) {
+      if (!snappingEnabled()) {
         restoreScrollSnap();
         applyIndex(getNearestIndex(content[axis.scroll]));
         return;
@@ -530,9 +532,7 @@ export function createCarousel(
         dragging = true;
         root.setAttribute("data-dragging", "true");
         win.clearTimeout(settleTimer);
-        if (authoredSnapType === undefined) dragSnaps = snappingEnabled();
-        authoredSnapType ??= content.style.scrollSnapType;
-        content.style.scrollSnapType = "none";
+        suspendScrollSnap();
         // Cancel any native smooth scroll before the pointer takes over.
         content.scrollTo({ [axis.edge]: origin, behavior: "instant" });
         return true;
