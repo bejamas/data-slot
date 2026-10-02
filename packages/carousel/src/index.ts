@@ -1,4 +1,5 @@
 import {
+  ensureId,
   getPart,
   getParts,
   getRoots,
@@ -66,6 +67,8 @@ export interface CarouselOptions {
   loop?: boolean;
   /** Enable pointer drag/swipe navigation */
   drag?: boolean;
+  /** Enable mandatory snapping, disable snapping, or omit to honour CSS. */
+  snap?: boolean;
   /** Keep every visible slide interactive in multiple mode. */
   slides?: "single" | "multiple";
   /** Callback when active index changes */
@@ -164,6 +167,7 @@ export function createCarousel(
     "horizontal";
   const loop = options.loop ?? getDataBool(root, "loop") ?? false;
   const slides = options.slides ?? getDataEnum(root, "slides", SLIDE_MODES) ?? "single";
+  const snap = options.snap ?? (root.getAttribute("data-snap") === "none" ? false : undefined);
   const drag = options.drag ?? getDataBool(root, "drag") ?? false;
   const defaultIndex =
     options.defaultIndex ?? getDataNumber(root, "defaultIndex") ?? 0;
@@ -192,6 +196,13 @@ export function createCarousel(
     authoredSnapType = undefined;
   };
 
+  const originalSnapType = content.style.scrollSnapType;
+  if (snap !== undefined) {
+    content.style.scrollSnapType = snap ? `${axis.swipe} mandatory` : "none";
+  }
+  // Read CSS at interaction time, so responsive snap-none rules also govern dragging.
+  const snappingEnabled = () => snap ?? (win.getComputedStyle(content).scrollSnapType !== "none");
+
   let resizeObserver: ResizeObserver | null = null;
   let mutationObserver: MutationObserver | null = null;
 
@@ -219,12 +230,12 @@ export function createCarousel(
 
   const canScrollPrev = () => {
     if (snapPoints.length <= 1) return false;
-    return loop || currentIndex > 0;
+    return loop || (snappingEnabled() ? currentIndex > 0 : content[axis.scroll] > (snapPoints[0] ?? 0) + 1);
   };
 
   const canScrollNext = () => {
     if (snapPoints.length <= 1) return false;
-    return loop || currentIndex < snapPoints.length - 1;
+    return loop || (snappingEnabled() ? currentIndex < snapPoints.length - 1 : content[axis.scroll] < (snapPoints.at(-1) ?? 0) - 1);
   };
 
   const updateStaticA11y = () => {
@@ -284,13 +295,43 @@ export function createCarousel(
       else setAria(item, "hidden", !active);
       item.toggleAttribute("inert", !active);
     }
+  };
 
+  const updateIndicators = () => {
+    for (const container of getParts<HTMLElement>(root, "carousel-indicators")) {
+      while (container.children.length > snapPoints.length) container.lastElementChild?.remove();
+      while (container.children.length < snapPoints.length) {
+        const button = root.ownerDocument.createElement("button");
+        button.type = "button";
+        button.setAttribute("data-slot", "carousel-indicator");
+        container.append(button);
+      }
+      Array.from(container.children).forEach((child, index) => child.setAttribute("data-index", String(index)));
+    }
+    for (const indicator of getParts<HTMLElement>(root, "carousel-indicator")) {
+      const index = getDataNumber(indicator, "index");
+      const valid = index !== undefined && Number.isInteger(index) && index >= 0 && index < snapPoints.length;
+      const active = valid && index === currentIndex;
+      indicator.hidden = !valid;
+      setControlDisabled(indicator, !valid);
+      indicator.setAttribute("data-state", active ? "active" : "inactive");
+      if (active) indicator.setAttribute("aria-current", "true");
+      else indicator.removeAttribute("aria-current");
+      indicator.setAttribute("aria-controls", ensureId(content, "carousel-content"));
+      if (valid && !indicator.hasAttribute("aria-label") && !indicator.hasAttribute("aria-labelledby")) {
+        indicator.setAttribute("aria-label", `Go to slide ${index + 1}`);
+      }
+      if (indicator.tagName === "BUTTON" && !indicator.hasAttribute("type")) {
+        (indicator as HTMLButtonElement).type = "button";
+      }
+    }
   };
 
   const updateStates = (emitChange: boolean) => {
     root.setAttribute("data-index", String(currentIndex));
     updateSlides();
     updateControls();
+    updateIndicators();
 
     if (emitChange) {
       emit(root, "carousel:change", { index: currentIndex });
@@ -332,7 +373,7 @@ export function createCarousel(
       const position = content[axis.scroll];
       measureSnapPoints();
       const nextIndex = getNearestIndex(position);
-      scrollToIndex(nextIndex);
+      if (snappingEnabled()) scrollToIndex(nextIndex);
       applyIndex(nextIndex);
     });
 
@@ -376,11 +417,17 @@ export function createCarousel(
   };
 
   const prev = () => {
-    if (canScrollPrev()) setIndex(currentIndex - 1);
+    if (!canScrollPrev()) return;
+    const index = snappingEnabled() ? currentIndex - 1
+      : snapPoints.findLastIndex(point => point < content[axis.scroll] - 1);
+    setIndex(index);
   };
 
   const next = () => {
-    if (canScrollNext()) setIndex(currentIndex + 1);
+    if (!canScrollNext()) return;
+    const index = snappingEnabled() ? currentIndex + 1
+      : snapPoints.findIndex(point => point > content[axis.scroll] + 1);
+    setIndex(index < 0 ? snapPoints.length : index);
   };
 
   // The index follows the scroll position only once scrolling has settled, so a
@@ -395,6 +442,7 @@ export function createCarousel(
 
   const onScroll = () => {
     if (slides === "multiple") updateSlides();
+    if (!snappingEnabled()) updateControls();
     if (dragging) return;
     win.clearTimeout(settleTimer);
     settleTimer = win.setTimeout(syncIndexFromScroll, SCROLL_SETTLE_MS);
@@ -448,6 +496,7 @@ export function createCarousel(
     const authoredTouchAction = content.style.touchAction;
     /** Read at axis lock so a new drag takes over from the current visual position. */
     let origin = 0;
+    let dragSnaps = true;
     content.style.touchAction = axis.touchAction;
 
     const end = () => {
@@ -456,6 +505,11 @@ export function createCarousel(
       root.removeAttribute("data-dragging");
     };
     const settle = () => {
+      if (!dragSnaps) {
+        restoreScrollSnap();
+        applyIndex(getNearestIndex(content[axis.scroll]));
+        return;
+      }
       const index = getNearestIndex(content[axis.scroll]);
       setIndex(index);
       // Instant or zero-distance scrolls may not emit scroll/scrollend.
@@ -476,6 +530,7 @@ export function createCarousel(
         dragging = true;
         root.setAttribute("data-dragging", "true");
         win.clearTimeout(settleTimer);
+        if (authoredSnapType === undefined) dragSnaps = snappingEnabled();
         authoredSnapType ??= content.style.scrollSnapType;
         content.style.scrollSnapType = "none";
         // Cancel any native smooth scroll before the pointer takes over.
@@ -513,6 +568,14 @@ export function createCarousel(
   cleanups.push(on(content, "scrollend", syncIndexFromScroll));
   cleanups.push(on(root, "keydown", onKeyDown));
   cleanups.push(on(root, "carousel:set", onSet));
+  cleanups.push(on(root, "click", (event) => {
+    const indicator = event.target instanceof Element
+      ? event.target.closest<HTMLElement>('[data-slot="carousel-indicator"]') : null;
+    if (!indicator || indicator.closest('[data-slot="carousel"]') !== root) return;
+    const index = getDataNumber(indicator, "index");
+    if (index === undefined || !Number.isInteger(index) || index < 0 || index >= snapPoints.length) return;
+    setIndex(index);
+  }));
   if (drag) cleanups.push(bindDrag());
 
   for (const [controls, navigate] of [[previousControls, prev], [nextControls, next]] as const) {
@@ -554,6 +617,7 @@ export function createCarousel(
       resizeObserver?.disconnect();
       mutationObserver?.disconnect();
       drainCleanups(cleanups);
+      if (snap !== undefined) content.style.scrollSnapType = originalSnapType;
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
     },
   };

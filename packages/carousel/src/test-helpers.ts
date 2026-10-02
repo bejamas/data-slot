@@ -99,8 +99,8 @@ export const scrollContent = (content: HTMLElement, position: number, settled = 
   if (settled) content.dispatchEvent(new Event("scrollend"));
 };
 
-/** Wait for queued MutationObserver callbacks. */
-export const flushMutations = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+/** Use the DOM timer queue, which also schedules Happy DOM mutation observers. */
+export const flushMutations = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
 
 const pointer = (type: string, init: PointerEventInit) =>
   new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, ...init });

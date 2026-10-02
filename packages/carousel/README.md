@@ -68,6 +68,7 @@ JS options take precedence over data attributes.
 | `data-default-index` | number | `0` | Initial active index |
 | `data-orientation` | `horizontal \| vertical` | `horizontal` | Carousel orientation |
 | `data-drag` | boolean | `false` | Enable pointer drag/swipe navigation |
+| `data-snap` | `none` | CSS | Disable native and drag-release snapping |
 | `data-slides` | `single \| multiple` | `single` | Keep intersecting slides active in multiple mode |
 | `data-loop` | boolean | `false` | Enable soft-wrap loop navigation |
 
@@ -78,6 +79,7 @@ JS options take precedence over data attributes.
 | `defaultIndex` | `number` | `0` | Initial active slide index |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Axis used for keyboard navigation and scrolling |
 | `drag` | `boolean` | `false` | Enable pointer drag/swipe navigation on the scroll container |
+| `snap` | `boolean` | CSS | `true` enables mandatory snapping; `false` disables it; omitted honours CSS |
 | `slides` | `"single" \| "multiple"` | `"single"` | Choose index-based or visible-slide accessibility |
 | `loop` | `boolean` | `false` | Enable soft-wrap for `prev`/`next`/keyboard/API navigation |
 | `onIndexChange` | `(index: number) => void` | `undefined` | Called when active slide changes |
@@ -146,6 +148,8 @@ root.dispatchEvent(
 
 - `carousel-previous`
 - `carousel-next`
+- `carousel-indicators` (empty container; runtime creates one button per reachable position)
+- `carousel-indicator` (authored button with zero-based `data-index`)
 
 ## Styling
 
@@ -232,3 +236,77 @@ physical slides (`1 of 5`), while a counter using the controller counts position
 Full-width slides keep their existing one-position-per-slide indices.
 Positions are remeasured on resize and slide mutations; resize selects the position
 nearest the previous scroll offset and emits a change if the index changes.
+
+## Indicators and free scrolling
+
+```html
+<div data-slot="carousel" data-slides="multiple" data-snap="none" data-drag>
+  <div data-slot="carousel-content"><!-- carousel-item children --></div>
+  <div data-slot="carousel-indicators" aria-label="Choose a slide"></div>
+</div>
+```
+
+The runtime fills the empty `carousel-indicators` container with native
+`carousel-indicator` buttons, one per reachable position, and adjusts their count
+on resize or slide mutations. Alternatively author buttons directly:
+`<button data-slot="carousel-indicator" data-index="0">1</button>`.
+Invalid or out-of-range authored indicators are hidden and disabled. Style the
+buttons using `[data-slot="carousel-indicator"]` and `[data-state="active"]`.
+The active button has `aria-current="true"`; all buttons have `aria-controls`
+pointing to the scroll container and a default `aria-label="Go to slide N"`.
+Authored accessible labels are preserved. Native Tab, Enter and Space work as
+usual; activation keeps focus on the indicator. State is updated before
+`carousel:change` fires. Existing counter listeners continue to receive the same
+`{ index }` event; they can use `controller.count` for the reachable total.
+
+Set `data-snap="none"` or pass `snap: false` to disable CSS snapping and release
+snapping. Native scroll, pointer release and resize update the nearest position
+index without moving the scroll to it. Explicit prev/next, indicator and API
+navigation still scroll to reachable positions. The original inline snap style
+is restored on destroy.
+
+For snapping only on larger screens, omit `snap` / `data-snap` and use CSS:
+
+```css
+[data-slot="carousel-content"] { scroll-snap-type: x mandatory; }
+@media (width < 48rem) {
+  [data-slot="carousel-content"] { scroll-snap-type: none; }
+}
+```
+
+Tailwind's `max-md:snap-none` works the same way. Drag reads the computed CSS at
+the start of each gesture, so the runtime honours the current breakpoint.
+
+## Testing locally
+
+From the repository root:
+
+```sh
+bun install
+bun test packages/carousel
+bun run typecheck
+bun packages/carousel/examples/serve.ts
+```
+
+Open `http://127.0.0.1:4196` for four interactive cases: multiple visible cards,
+free scrolling, responsive free scrolling and the default full-width layout.
+The page bundles the current source directly, so no publishing or package linking
+is needed. Restart the server after source changes. Set `CAROUSEL_PORT=4197` if
+4196 is occupied.
+
+- At a wide desktop viewport, Tab through neighbouring links and click them;
+  partially visible cards should work too. Cards entirely out of view should be inert.
+- In the multiple-card case, click Next to the end. It should disable at the actual
+  scroll boundary, with one dot per reachable position. Previous, Home and End
+  should work symmetrically. Resize and check the dots and controls again.
+- Click or focus a dot and press Enter/Space. The current dot and position counter
+  should update together, keeping focus on the button.
+- Drag a card background in the free-scroll case and release between positions.
+  It should stay there; Previous/Next still move to reachable positions.
+- Resize below 768px and repeat dragging in the responsive example. Return above
+  768px and check that drag release snaps again.
+- In the full-width example, confirm five positions and one accessible slide at a time.
+
+For the documentation example, run `bun run dev:docs`, then open
+`http://localhost:4322/components/carousel`. Additional checks:
+`bun test`, `bun run build`, and `bun run check:docs`.
