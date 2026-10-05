@@ -49,6 +49,8 @@ import { createCollapsible } from "@data-slot/collapsible";
 const collapsible = createCollapsible(element, {
   defaultOpen: false,
   hiddenUntilFound: false,
+  closeOnEscape: false,
+  closeOnClickOutside: false,
   onOpenChange: (open) => console.log(open),
 });
 ```
@@ -78,6 +80,8 @@ Options can also be set via data attributes on the root element. JS options take
 |-----------|------|---------|-------------|
 | `data-default-open` | boolean | `false` | Initial open state |
 | `data-hidden-until-found` | boolean | `false` | Use `hidden="until-found"` when closed |
+| `data-close-on-escape` | boolean | `false` | Close when pressing Escape |
+| `data-close-on-click-outside` | boolean | `false` | Close on a pointer press outside the collapsible |
 
 Boolean attributes: present or `"true"` = true, `"false"` = false, absent = default.
 
@@ -94,6 +98,8 @@ Boolean attributes: present or `"true"` = true, `"false"` = false, absent = defa
 |--------|------|---------|-------------|
 | `defaultOpen` | `boolean` | `false` | Initial open state |
 | `hiddenUntilFound` | `boolean` | `false` | Use `hidden="until-found"` when closed |
+| `closeOnEscape` | `boolean` | `false` | Close when pressing Escape |
+| `closeOnClickOutside` | `boolean` | `false` | Close on a pointer press outside the collapsible |
 | `onOpenChange` | `(open: boolean) => void` | `undefined` | Callback when open state changes (not called on init) |
 
 ### Controller
@@ -225,8 +231,29 @@ The component automatically handles:
 - `aria-labelledby` linking content back to trigger
 - Unique ID generation for trigger and content
 - Disabled trigger support (respects `disabled` attribute and `aria-disabled="true"`)
+- Focus returns to the trigger when Escape closes the collapsible while focus is inside it
 
 ### Behavior
+
+#### Dismissal
+
+Collapsibles stay open until toggled by default. Enable `closeOnEscape` and
+`closeOnClickOutside` (or `data-close-on-escape` and `data-close-on-click-outside`)
+for disclosures that behave like a light-dismiss layer, such as a mobile navigation panel.
+
+```html
+<div data-slot="collapsible" data-close-on-escape data-close-on-click-outside>
+  <button data-slot="collapsible-trigger">Menu</button>
+  <nav data-slot="collapsible-content" aria-label="Main">...</nav>
+</div>
+```
+
+Dismissal uses the same layer stack as popovers, dialogs and menus:
+
+- Escape closes only the most recently opened layer, so a popover inside the panel closes first.
+- Presses inside portaled descendants, such as a popover opened from the panel, count as inside.
+- On touch devices, an outside press closes the panel on `click`, so scrolling the page does not dismiss it.
+- Dismissal is blocked while the trigger is disabled.
 
 #### Find-in-Page Support
 

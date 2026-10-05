@@ -12,6 +12,9 @@ import {
   onRoot,
   emit,
   createPresenceLifecycle,
+  createDismissLayer,
+  containsWithPortals,
+  focusElement,
 } from "@data-slot/core";
 
 export interface CollapsibleOptions {
@@ -22,6 +25,16 @@ export interface CollapsibleOptions {
    * @default false
    */
   hiddenUntilFound?: boolean;
+  /**
+   * Close when pressing Escape. Focus returns to the trigger when it was inside the collapsible.
+   * @default false
+   */
+  closeOnEscape?: boolean;
+  /**
+   * Close on a pointer press outside the collapsible.
+   * @default false
+   */
+  closeOnClickOutside?: boolean;
   /**
    * Callback when open state changes.
    * Note: Not called on initial render, only on subsequent state changes.
@@ -109,6 +122,9 @@ export function createCollapsible(
   const defaultOpen = options.defaultOpen ?? getDataBool(root, "defaultOpen") ?? false;
   const hiddenUntilFound =
     options.hiddenUntilFound ?? getDataBool(root, "hiddenUntilFound") ?? false;
+  const closeOnEscape = options.closeOnEscape ?? getDataBool(root, "closeOnEscape") ?? false;
+  const closeOnClickOutside =
+    options.closeOnClickOutside ?? getDataBool(root, "closeOnClickOutside") ?? false;
   const onOpenChange = options.onOpenChange;
 
   const trigger = getPart<HTMLElement>(root, "collapsible-trigger");
@@ -297,17 +313,34 @@ export function createCollapsible(
     sizeObserver.observe(content);
   }
 
-  // Event handlers - guard against disabled trigger
+  // Interactions are blocked while the trigger is disabled
+  const isDisabled = () =>
+    trigger.hasAttribute("disabled") || trigger.getAttribute("aria-disabled") === "true";
+
   cleanups.push(
     on(trigger, "click", () => {
-      if (
-        trigger.hasAttribute("disabled") ||
-        trigger.getAttribute("aria-disabled") === "true"
-      )
-        return;
+      if (isDisabled()) return;
       updateState(!isOpen);
     })
   );
+
+  if (closeOnEscape || closeOnClickOutside) {
+    cleanups.push(
+      createDismissLayer({
+        root,
+        isOpen: () => isOpen,
+        onDismiss: ({ reason }) => {
+          if (isDisabled()) return;
+          const restoreFocus =
+            reason === "escape-key" && containsWithPortals(root, root.ownerDocument.activeElement);
+          updateState(false);
+          if (restoreFocus) focusElement(trigger);
+        },
+        closeOnEscape,
+        closeOnClickOutside,
+      })
+    );
+  }
 
   if (hiddenUntilFound) {
     cleanups.push(
@@ -320,11 +353,7 @@ export function createCollapsible(
   // Inbound event - blocked when trigger is disabled (consistent with click behavior)
   cleanups.push(
     onRoot(root, "collapsible:set", (e) => {
-      if (
-        trigger.hasAttribute("disabled") ||
-        trigger.getAttribute("aria-disabled") === "true"
-      )
-        return;
+      if (isDisabled()) return;
       const detail = (e as CustomEvent).detail;
       // Preferred: { open: boolean }
       // Deprecated: { value: boolean }

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'bun:test'
 import { createCollapsible, create } from './index'
-import { clearRootBinding, setRootBinding } from '../../core/src/index'
+import {
+  clearRootBinding,
+  createDismissLayer,
+  portalToBody,
+  restorePortal,
+  setRootBinding,
+} from '../../core/src/index'
 
 describe('Collapsible', () => {
   const ROOT_BINDING_KEY = '@data-slot/collapsible'
@@ -564,6 +570,188 @@ describe('Collapsible', () => {
       expect(content.getAttribute('hidden')).toBe('')
       expect(content.getAttribute('hidden')).not.toBe('until-found')
 
+      controller.destroy()
+    })
+  })
+
+  describe('dismiss', () => {
+    const setupDismiss = (
+      options: Parameters<typeof createCollapsible>[1] = {},
+      rootAttrs = ''
+    ) => {
+      document.body.innerHTML = `
+        <button id="outside">Outside</button>
+        <div data-slot="collapsible" id="root" ${rootAttrs}>
+          <button data-slot="collapsible-trigger">Toggle</button>
+          <div data-slot="collapsible-content">
+            <a href="#one" id="link">Link</a>
+            <div id="nested"></div>
+          </div>
+        </div>
+      `
+      const root = document.getElementById('root')!
+      const trigger = root.querySelector('[data-slot="collapsible-trigger"]') as HTMLElement
+      const link = document.getElementById('link') as HTMLElement
+      const nested = document.getElementById('nested') as HTMLElement
+      const outside = document.getElementById('outside') as HTMLElement
+      const controller = createCollapsible(root, options)
+
+      return { root, trigger, link, nested, outside, controller }
+    }
+
+    const pressEscape = (target: EventTarget = document) =>
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+
+    const pressOutside = (target: EventTarget = document.body) =>
+      target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+
+    it('ignores Escape and outside presses by default', () => {
+      const { controller, outside } = setupDismiss({ defaultOpen: true })
+
+      pressEscape()
+      pressOutside(outside)
+      expect(controller.isOpen).toBe(true)
+
+      controller.destroy()
+    })
+
+    it('closes on Escape and returns focus to the trigger from inside', () => {
+      const { controller, trigger, link } = setupDismiss({ closeOnEscape: true })
+      controller.open()
+      link.focus()
+
+      pressEscape(link)
+
+      expect(controller.isOpen).toBe(false)
+      expect(document.activeElement).toBe(trigger)
+      controller.destroy()
+    })
+
+    it('keeps outside focus when closed with Escape', () => {
+      const { controller, outside } = setupDismiss({ closeOnEscape: true, defaultOpen: true })
+      outside.focus()
+
+      pressEscape(outside)
+
+      expect(controller.isOpen).toBe(false)
+      expect(document.activeElement).toBe(outside)
+      controller.destroy()
+    })
+
+    it('closes on an outside press but not on presses inside', () => {
+      const { controller, link, outside } = setupDismiss({
+        closeOnClickOutside: true,
+        defaultOpen: true,
+      })
+
+      pressOutside(link)
+      expect(controller.isOpen).toBe(true)
+
+      pressOutside(outside)
+      expect(controller.isOpen).toBe(false)
+      controller.destroy()
+    })
+
+    it('still toggles closed from the trigger with closeOnClickOutside', () => {
+      const { controller, trigger } = setupDismiss({ closeOnClickOutside: true, defaultOpen: true })
+
+      pressOutside(trigger)
+      trigger.click()
+
+      expect(controller.isOpen).toBe(false)
+      controller.destroy()
+    })
+
+    it('treats portaled descendants as inside', () => {
+      const { root, controller } = setupDismiss({ closeOnClickOutside: true, defaultOpen: true })
+      const portaled = document.createElement('div')
+      root.querySelector('#nested')!.append(portaled)
+      const state = { originalParent: null, originalNextSibling: null, portaled: false }
+      portalToBody(portaled, root, state)
+
+      pressOutside(portaled)
+
+      expect(controller.isOpen).toBe(true)
+      restorePortal(portaled, state)
+      controller.destroy()
+    })
+
+    it('lets a nested layer opened later handle Escape first', () => {
+      const { controller, nested } = setupDismiss({ closeOnEscape: true, defaultOpen: true })
+      let nestedOpen = true
+      const cleanupNested = createDismissLayer({
+        root: nested,
+        isOpen: () => nestedOpen,
+        onDismiss: () => {
+          nestedOpen = false
+        },
+      })
+
+      pressEscape()
+      expect(nestedOpen).toBe(false)
+      expect(controller.isOpen).toBe(true)
+
+      pressEscape()
+      expect(controller.isOpen).toBe(false)
+
+      cleanupNested()
+      controller.destroy()
+    })
+
+    it('does not dismiss while the trigger is disabled', () => {
+      const { controller, trigger, outside } = setupDismiss({
+        closeOnEscape: true,
+        closeOnClickOutside: true,
+        defaultOpen: true,
+      })
+      trigger.setAttribute('aria-disabled', 'true')
+
+      pressEscape()
+      pressOutside(outside)
+
+      expect(controller.isOpen).toBe(true)
+      controller.destroy()
+    })
+
+    it('stops dismissing after destroy', () => {
+      const { controller, outside } = setupDismiss({
+        closeOnEscape: true,
+        closeOnClickOutside: true,
+        defaultOpen: true,
+      })
+      controller.destroy()
+
+      pressEscape()
+      pressOutside(outside)
+
+      expect(controller.isOpen).toBe(true)
+    })
+
+    it('reads data-close-on-escape and data-close-on-click-outside', () => {
+      const { controller, outside } = setupDismiss(
+        {},
+        'data-default-open data-close-on-escape data-close-on-click-outside'
+      )
+
+      pressOutside(outside)
+      expect(controller.isOpen).toBe(false)
+
+      controller.open()
+      pressEscape()
+      expect(controller.isOpen).toBe(false)
+      controller.destroy()
+    })
+
+    it('JS dismiss options override data attributes', () => {
+      const { controller, outside } = setupDismiss(
+        { closeOnEscape: false, closeOnClickOutside: false },
+        'data-default-open data-close-on-escape data-close-on-click-outside'
+      )
+
+      pressEscape()
+      pressOutside(outside)
+
+      expect(controller.isOpen).toBe(true)
       controller.destroy()
     })
   })
