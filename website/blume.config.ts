@@ -21,7 +21,7 @@ export default defineConfig({
   },
   navigation: {
     sidebar: [
-      { label: 'Overview', items: ['/'] },
+      { label: 'Overview', items: ['/', '/base-ui-parity'] },
       { label: 'Handbook', items: ['/handbook/styling'] },
       { label: 'Components', items: components.map(({ slug }) => `/components/${slug}`) },
     ],
