@@ -14,6 +14,9 @@
  *           timers, microtasks), including style and layout that JS forces.
  *           This is the share component code controls; the rest is the
  *           browser rendering what changed.
+ * A drag step is one interaction (its press and release share an interactionId).
+ * Its work and script cover the whole span from press to the paint after
+ * release, so the moves in between are counted too.
  * --save writes bench/inp/results/<name>.json and the bundle as <name>.js.
  * --compare diffs against a saved result. --ab reruns the saved bundle
  * interleaved with the current one, so both see the same machine load.
@@ -21,7 +24,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
-import { chromium } from "playwright-core";
+import { chromium, type Page } from "playwright-core";
 import { filler, scenarios, type Step } from "./scenarios";
 
 const args = process.argv.slice(2);
@@ -85,8 +88,11 @@ const overlap = (spans: TraceEvent[], windows: Array<[number, number]>) => {
   return total / 1000;
 };
 
-/** Group EventTiming entries by interaction and measure main-thread work inside their windows. */
-function readInteractions(events: TraceEvent[]): Interaction[] {
+/**
+ * Group EventTiming entries by interaction and measure main-thread work inside their windows.
+ * `spanned[i]` measures the i-th interaction over its whole span instead of its event windows.
+ */
+function readInteractions(events: TraceEvent[], spanned: boolean[]): Interaction[] {
   const timings = events.filter((e) => e.name === "EventTiming" && e.ph === "b" && e.args?.data?.interactionId);
   if (timings.length === 0) return [];
   const pid = timings[0]!.pid;
@@ -110,12 +116,12 @@ function readInteractions(events: TraceEvent[]): Interaction[] {
     byId.set(interactionId, windows);
   }
 
-  return [...byId.keys()].sort((a, b) => a - b).map((id) => {
+  return [...byId.keys()].sort((a, b) => a - b).map((id, index) => {
     const windows = byId.get(id)!.sort((a, b) => a[0] - b[0]);
     const merged: Array<[number, number]> = [];
     for (const [start, end] of windows) {
       const last = merged.at(-1);
-      if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+      if (last && (spanned[index] || start <= last[1])) last[1] = Math.max(last[1], end);
       else merged.push([start, end]);
     }
     return {
@@ -128,6 +134,21 @@ function readInteractions(events: TraceEvent[]): Interaction[] {
 
 const expand = (steps: Step[]) =>
   steps.flatMap((step) => ("type" in step ? [...step.type].map((key) => ({ press: key })) : [step]));
+
+const nextFrame = (tab: Page) => tab.evaluate(() => new Promise((done) => requestAnimationFrame(done)));
+
+async function drag(tab: Page, { drag: selector, by: [dx, dy], moves = 20 }: Extract<Step, { drag: string }>) {
+  const box = (await tab.locator(selector).boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await tab.mouse.move(x, y);
+  await tab.mouse.down();
+  for (let i = 1; i <= moves; i++) {
+    await tab.mouse.move(x + (dx * i) / moves, y + (dy * i) / moves);
+    await nextFrame(tab);
+  }
+  await tab.mouse.up();
+}
 
 const samples = new Map<string, Map<string, { init: number[]; steps: Interaction[][] }>>();
 const browser = await chromium.launch({ channel: process.env.BENCH_CHROME_CHANNEL ?? "chrome", headless: true });
@@ -158,13 +179,15 @@ try {
         if ("focus" in step) await tab.focus(step.focus);
         else if ("click" in step) await tab.click(step.click);
         else if ("press" in step) await tab.keyboard.press(step.press);
+        else if ("drag" in step) await drag(tab, step);
         await tab.evaluate(() => new Promise((done) => requestAnimationFrame(() => setTimeout(done, 100))));
       }
       const trace = JSON.parse((await browser.stopTracing()).toString()) as { traceEvents: TraceEvent[] };
       await context.close();
 
-      const interactions = readInteractions(trace.traceEvents);
-      const expected = steps.filter((s) => !("focus" in s)).length;
+      const measured = steps.filter((s) => !("focus" in s));
+      const interactions = readInteractions(trace.traceEvents, measured.map((s) => "drag" in s));
+      const expected = measured.length;
       if (interactions.length !== expected) {
         throw new Error(`${scenario.name}: expected ${expected} interactions, trace has ${interactions.length}`);
       }

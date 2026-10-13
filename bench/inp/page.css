@@ -14,6 +14,8 @@ body { font: 14px/1.4 system-ui; margin: 0; padding: 16px; }
 [data-slot="slider-track"] { position: absolute; inset: 8px 0; background: #ddd; }
 [data-slot="slider-range"] { position: absolute; height: 100%; background: #00f; }
 [data-slot="slider-thumb"] { position: absolute; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #00f; }
+[data-slot="resizable"] { height: 200px; border: 1px solid #ccc; }
+[data-slot="resizable-handle"] { flex: 0 0 8px; background: #ccc; }
 [data-slot="switch"] { display: inline-block; width: 32px; height: 18px; background: #ccc; }
 [data-slot="switch"][data-state="checked"] { background: #00f; }
 [data-slot="radio-group-item"] { display: inline-block; width: 14px; height: 14px; border: 1px solid; border-radius: 50%; }

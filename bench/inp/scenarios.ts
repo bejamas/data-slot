@@ -2,7 +2,9 @@ export type Step =
   | { click: string }
   | { press: string }
   | { type: string }
-  | { focus: string };
+  | { focus: string }
+  /** Press on the element's center, move by `by` pixels one frame at a time, release. */
+  | { drag: string; by: [number, number]; moves?: number };
 
 export interface Scenario {
   name: string;
@@ -83,6 +85,10 @@ const slider = (id: string) => `<div data-slot="slider" id="${id}" data-default-
 const switchEl = (id: string) => `<label><span data-slot="switch" id="${id}" data-name="${id}"><span data-slot="switch-thumb"></span></span>Switch</label>`;
 
 const collapsible = (id: string) => `<div data-slot="collapsible" id="${id}"><button data-slot="collapsible-trigger" id="${id}-trigger">Toggle</button><div data-slot="collapsible-content" hidden><p>${"Hidden content. ".repeat(20)}</p></div></div>`;
+
+const resizable = (id: string, n: number) => `<div data-slot="resizable" id="${id}">${range(n)
+  .map((i) => `${i ? `<div data-slot="resizable-handle" id="${id}-h${i - 1}"></div>` : ""}<div data-slot="resizable-panel" data-min-size="15"><p>Panel ${i}</p></div>`)
+  .join("")}</div>`;
 
 const navMenu = (id: string, n: number) => `<nav data-slot="navigation-menu" id="${id}"><ul data-slot="navigation-menu-list">${range(n)
   .map(
@@ -167,6 +173,16 @@ export const scenarios: Scenario[] = [
     name: "slider",
     html: slider("l"),
     steps: [{ focus: "#l-a" }, ...repeat(8, [{ press: "ArrowRight" }]), { press: "Home" }, { focus: "#l-b" }, ...repeat(4, [{ press: "ArrowLeft" }])],
+  },
+  {
+    name: "resizable",
+    html: resizable("z", 3),
+    steps: [
+      { drag: "#z-h0", by: [500, 0] },
+      { drag: "#z-h1", by: [-700, 0] },
+      { focus: "#z-h0" },
+      ...repeat(4, [{ press: "ArrowRight" }]),
+    ],
   },
   {
     name: "navigation-menu",

@@ -64,6 +64,25 @@ describe('Resizable drag ownership', () => {
     expect(cursor?.isConnected).toBe(false);
   });
 
+  it('rewrites the drag cursor only when it changes', () => {
+    const { handle } = setup(['data-min-size="20"', 'data-min-size="20"']);
+    press(handle);
+    const cursor = document.head.querySelector('style')!;
+    const writes: string[] = [];
+    Object.defineProperty(cursor, 'textContent', { set: (value: string) => writes.push(value) });
+    move(260);
+    move(270);
+    move(280);
+    expect(writes).toEqual([]);
+    move(400);
+    move(410);
+    move(420);
+    expect(writes).toEqual(['*{cursor: w-resize!important;}']);
+    move(300);
+    move(310);
+    expect(writes).toEqual(['*{cursor: w-resize!important;}', '*{cursor: ew-resize!important;}']);
+  });
+
   it('ends the previous session when another group starts dragging', () => {
     const first = setup();
     const second = setup();

@@ -15,6 +15,7 @@ interface DragSession {
   initialLayout: number[];
   previousDelta: number;
   cursor: HTMLStyleElement;
+  cursorValue: string;
   cleanups: Array<() => void>;
 }
 
@@ -56,6 +57,9 @@ export function createResizeDrag(options: ResizeDragOptions) {
     if (session !== current || current.previousDelta === delta) return;
     current.previousDelta = delta;
     const cursor = changed ? cursors.resizing : delta < 0 ? cursors.minimum : cursors.maximum;
+    // Rewriting a global style restyles the whole page, so skip unchanged cursors.
+    if (current.cursorValue === cursor) return;
+    current.cursorValue = cursor;
     current.cursor.textContent = `*{cursor: ${cursor}!important;}`;
   };
 
@@ -65,7 +69,7 @@ export function createResizeDrag(options: ResizeDragOptions) {
     cursor.textContent = `*{cursor: ${cursors.resizing}!important;}`;
     doc.head.appendChild(cursor);
     const cleanups: Array<() => void> = [];
-    session = { handleIndex, initialPosition: position, initialLayout: options.getLayout(), previousDelta: 0, cursor, cleanups };
+    session = { handleIndex, initialPosition: position, initialLayout: options.getLayout(), previousDelta: 0, cursor, cursorValue: cursors.resizing, cleanups };
     activeDrags.set(doc, stop);
     handles[handleIndex]!.setAttribute("data-active", "pointer");
 
