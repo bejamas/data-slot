@@ -76,7 +76,6 @@ body { font-size: 14px; }
 .prose :is(h2,h3,h4) { scroll-margin-top: 96px; }
 .prose :is(p,li) { text-wrap: pretty; }
 .prose :is(pre,table) { font-size: 12px; }
-.prose table { display: block; overflow-x: auto; max-width: 100%; }
 .prose th { font-weight: 500; white-space: nowrap; }
 .prose td { min-width: 110px; }
 .prose :not(pre)>code { font-size: .88em; }
