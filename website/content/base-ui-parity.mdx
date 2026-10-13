@@ -1,0 +1,528 @@
+---
+title: Base UI parity
+description: How data-slot compares with Base UI, and what changes when you move from React components to your own HTML.
+---
+
+data-slot follows [Base UI](https://base-ui.com) wherever it can: the same keyboard behavior, the same ARIA patterns, and many of the same state attributes and CSS variables. The difference is the runtime. Base UI is a set of React components. data-slot adds behavior to HTML you write yourself, so it works with server-rendered pages in Astro or any other framework, or with no framework at all.
+
+For a quick answer, start with the [component status](#component-status) table. Each component section then maps Base UI parts to data-slot parts and lists what matches, what is missing, what only data-slot has, and what to change when porting. In the parts tables, a data-slot name such as `accordion-item` is a `data-slot` attribute value: `data-slot="accordion-item"`.
+
+## Different by design
+
+This table maps Base UI’s React APIs to their data-slot equivalents.
+
+| Base UI | data-slot |
+|---|---|
+| Compound components such as `<Dialog.Popup>` | `data-slot="dialog-content"` on an element you write |
+| `render` prop | You choose the element. Use a `<button>` for triggers and other pressable parts. |
+| `className` and `style` as functions of state | Style the state attributes the component sets, such as `[data-open]` or `data-[state=active]:` in Tailwind |
+| Controlled props (`value`, `open`) | Controller methods (`select()`, `open()`, `setValue()`) or an inbound `<name>:set` event on the root |
+| `onValueChange(value, eventDetails)` | `onValueChange(value)` option and a bubbling `<name>:change` event. Drawer can cancel open and snap changes with `details.cancel()` or a `drawer:beforechange` listener. Dropdown menu can cancel an item selection with `preventDefault()` on `dropdown-menu:select`. |
+| `defaultValue`, `defaultOpen` | The same options in JavaScript, or `data-default-value` and `data-default-open` attributes. JavaScript options win over attributes. |
+| `<Portal>` | Popover, tooltip, hover card, select, combobox, dropdown menu, navigation menu and drawer move their popup to `document.body` while open. An optional `*-portal` slot sets the element that moves. Popover, tooltip and hover card accept `portal: false`. Dialog and alert dialog move only when you add a `dialog-portal` or `alert-dialog-portal` slot. |
+| `keepMounted` | Closed content stays in the document with `hidden`. Tooltip, hover card, select and navigation menu take a `mountStrategy` option: the default, `"lazy"`, removes closed content from the document, and `"eager"` keeps it. Drawer has its own `keepMounted` option. |
+| `items` arrays, object values | Items in your markup, each with a string `data-value` |
+| `Field`, `Fieldset`, `Form` | Native `<label>`, `<fieldset>` and constraint validation. Select, combobox, radio group and switch take `name` and `required`. |
+| `DirectionProvider` | The `dir` attribute. Accordion and tooltip read it, and tooltip accepts `inline-start` and `inline-end` sides. Resizable reverses arrow keys when the document is `rtl`. |
+| `Tooltip.Provider` | One shared warm-up window for every tooltip on the page |
+| `CSPProvider` | Not needed: data-slot sets styles through the CSSOM. Resizable is the exception and adds a `<style>` element while dragging. |
+| Unmounting the component | Call `destroy()` on the controller |
+
+## Porting from Base UI
+
+A Base UI dialog:
+
+```tsx
+<Dialog.Root>
+  <Dialog.Trigger>Open</Dialog.Trigger>
+  <Dialog.Portal>
+    <Dialog.Backdrop className="backdrop" />
+    <Dialog.Popup className="popup">
+      <Dialog.Title>Notifications</Dialog.Title>
+      <Dialog.Description>You are all caught up.</Dialog.Description>
+      <Dialog.Close>Close</Dialog.Close>
+    </Dialog.Popup>
+  </Dialog.Portal>
+</Dialog.Root>
+```
+
+The same dialog in an Astro component. The markup is rendered on the server and the script adds the behavior in the browser:
+
+```astro
+<div data-slot="dialog">
+  <button data-slot="dialog-trigger">Open</button>
+  <div data-slot="dialog-portal">
+    <div data-slot="dialog-overlay" class="backdrop" hidden></div>
+    <div data-slot="dialog-content" class="popup" hidden>
+      <h2 data-slot="dialog-title">Notifications</h2>
+      <p data-slot="dialog-description">You are all caught up.</p>
+      <button data-slot="dialog-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { create } from '@data-slot/dialog';
+
+  create();
+</script>
+```
+
+Add `hidden` to closed content in the markup. Until the script runs, the page shows exactly what the server rendered.
+
+Instead of a controlled `open` prop, call the controller or dispatch an event, and listen for changes:
+
+```javascript
+import { createDialog } from '@data-slot/dialog';
+
+const root = document.querySelector('[data-slot="dialog"]');
+const dialog = createDialog(root);
+
+dialog.open();
+root.dispatchEvent(new CustomEvent('dialog:set', { detail: { open: false } }));
+
+root.addEventListener('dialog:change', (event) => {
+  console.log(event.detail.open);
+});
+```
+
+With Astro view transitions, bound elements are replaced on every navigation. Create controllers on `astro:page-load` and destroy them before the swap:
+
+```astro
+<script>
+  import { create } from '@data-slot/dialog';
+
+  let controllers = [];
+
+  document.addEventListener('astro:page-load', () => {
+    controllers = create();
+  });
+
+  document.addEventListener('astro:before-swap', () => {
+    controllers.forEach((controller) => controller.destroy());
+  });
+</script>
+```
+
+## Styling hooks
+
+Popups and panels use Base UI’s presence attributes, `data-starting-style` and `data-ending-style`, and wait for your CSS transitions or animations before hiding. Most components also set `data-state`, so styles written for Radix or shadcn/ui keep working. Switch and radio group are the exceptions: they set `data-checked` and `data-unchecked` instead of `data-state="checked"`.
+
+| Meaning | Base UI | data-slot |
+|---|---|---|
+| Open or closed | `data-open`, `data-closed` | Same, plus `data-state="open"` or `"closed"`. Collapsible sets only `data-state`. |
+| Trigger of an open popup | `data-popup-open` | `aria-expanded="true"`. Select and combobox triggers also get `data-open`, and drawer triggers get `data-popup-open`. Tooltip triggers get no open-state attribute. |
+| Accordion trigger of an open panel | `data-panel-open` | Same |
+| Highlighted item | `data-highlighted` | Same. Command uses `data-selected`, as in cmdk. |
+| Selected option | `data-selected` | Same |
+| Checked | `data-checked`, `data-unchecked` | Same on switch and radio group. Dropdown menu items set only `data-checked`. |
+| Pressed toggle | `data-pressed` | `data-state="on"` or `"off"` |
+| Active tab | `data-active` | `data-state="active"` on the trigger and panel |
+| Disabled | `data-disabled` | Accordion, slider, switch, radio group and the select and combobox triggers set `data-disabled`. Tabs, toggles, and menu, select, combobox and command items set `aria-disabled`. |
+| Placement | `data-side`, `data-align` | Same |
+| Opened without delay | `data-instant` | Tooltip uses Base UI’s values. Hover card and navigation menu set it without a value. |
+| Field validity | `data-valid`, `data-invalid`, `data-dirty`, `data-touched` | `aria-invalid` on select and combobox when they have `name` and `required` |
+
+| CSS variable | Base UI | data-slot |
+|---|---|---|
+| `--transform-origin` | All positioned popups | Popover, tooltip, hover card, select, combobox, dropdown menu, navigation menu |
+| `--anchor-width`, `--available-height` and related | All positioners | Combobox. Navigation menu sets `--available-*`. |
+| `--accordion-panel-height`, `--collapsible-panel-height` and their `-width` pairs | Accordion, collapsible | Same. Accordion also sets `--radix-accordion-content-height` and `-width`. |
+| `--active-tab-left`, `--active-tab-width` and related | Tabs indicator | Same, without `-right` and `-bottom` |
+| `--popup-width`, `--positioner-height` and related | All positioners and popups | Navigation menu only, plus `--viewport-width` and `--viewport-height` |
+| `--position` | Slider thumb with `thumbAlignment="edge"` | Every slider thumb. The range also gets `--start-position` and `--relative-size`. |
+
+Popover, tooltip, hover card, select, combobox and dropdown menu default to `sideOffset` 4 and `collisionPadding` 8, where Base UI uses 0 and 5. data-slot keeps popups inside the viewport, where Base UI checks collisions against clipping ancestors by default. Neither library uses the browser’s top layer.
+
+## Component status
+
+<Badge variant="success">Near parity</Badge> means the core behavior and API are covered and the gaps are secondary options, parts or naming. <Badge variant="warning">Partial</Badge> means a major feature or accessibility behavior you may rely on is missing. <Badge>None</Badge> means Base UI has no matching component.
+
+| data-slot | Base UI | Status | Main gaps |
+|---|---|---|---|
+| [Accordion](#accordion) | Accordion | <Badge variant="success">Near parity</Badge> | No `Header` part, per-item `onOpenChange` or object values |
+| [Alert dialog](#alert-dialog) | Alert Dialog | <Badge variant="warning">Partial</Badge> | Outside content is not made inert; no `initialFocus`, `finalFocus`, detached triggers or nesting attributes |
+| [Carousel](#carousel) | — | <Badge>None</Badge> | Base UI has no carousel |
+| [Collapsible](#collapsible) | Collapsible | <Badge variant="success">Near parity</Badge> | Uses `data-state`; no root `disabled` |
+| [Combobox](#combobox) | Combobox | <Badge variant="warning">Partial</Badge> | No `multiple`, chips, object values, `limit` or virtualization |
+| [Command](#command) | — | <Badge>None</Badge> | Base UI has no command menu. The closest is an `Autocomplete` inside a `Dialog`. |
+| [Dialog](#dialog) | Dialog | <Badge variant="warning">Partial</Badge> | Outside content is not made inert; no non-modal modes, `initialFocus` or `finalFocus` |
+| [Drawer](#drawer) | Drawer | <Badge variant="warning">Partial</Badge> | One snap point; no `SwipeArea` |
+| [Dropdown menu](#dropdown-menu) | Menu | <Badge variant="warning">Partial</Badge> | No submenus, hover open or multiple radio groups |
+| [Hover card](#hover-card) | Preview Card | <Badge variant="success">Near parity</Badge> | No `Arrow` part, safe-polygon hover or detached triggers |
+| [Navigation menu](#navigation-menu) | Navigation Menu | <Badge variant="warning">Partial</Badge> | No vertical orientation, nested menus, `Link` or collision avoidance |
+| [Popover](#popover) | Popover | <Badge variant="warning">Partial</Badge> | No `role="dialog"`, modal mode, hover open, `Arrow` or `Title` parts |
+| [Radio group](#radio-group) | Radio Group, Radio | <Badge variant="success">Near parity</Badge> | No `form` prop, Field integration or RTL arrow keys |
+| [Resizable](#resizable) | — | <Badge>None</Badge> | Base UI has no resizable panels |
+| [Select](#select) | Select | <Badge variant="warning">Partial</Badge> | No `multiple`, scroll arrows or typeahead on the closed trigger |
+| [Slider](#slider) | Slider | <Badge variant="warning">Partial</Badge> | At most two thumbs; no form `name`, `Value` part or formatting |
+| [Switch](#switch) | Switch | <Badge variant="success">Near parity</Badge> | No `form` prop or Field integration |
+| [Tabs](#tabs) | Tabs | <Badge variant="success">Near parity</Badge> | No focusable disabled tabs, `null` value or RTL arrow keys; arrow keys select by default |
+| [Toast](#toast) | Toast | <Badge variant="warning">Partial</Badge> | No anchored toasts, F6 shortcut, Escape to close or custom content |
+| [Toggle](#toggle) | Toggle | <Badge variant="success">Near parity</Badge> | Uses `data-state="on"` instead of `data-pressed` |
+| [Toggle group](#toggle-group) | Toggle Group | <Badge variant="success">Near parity</Badge> | Uses `data-state="on"`; group `disabled` keeps items focusable; no RTL arrow keys |
+| [Tooltip](#tooltip) | Tooltip | <Badge variant="success">Near parity</Badge> | No `Provider` scoping, `closeDelay` or safe-polygon hover |
+
+### Base UI components without a package
+
+| Base UI | Use instead |
+|---|---|
+| Autocomplete | [Combobox](#combobox) without `name`, listening for `combobox:input-change`, or [Command](#command) for a list of actions |
+| Avatar | `<img>` with an error handler that shows a fallback |
+| Button | `<button>`. Use `aria-disabled` to keep a disabled button focusable. |
+| Checkbox | `<input type="checkbox">`. Set `indeterminate` in JavaScript. |
+| Checkbox Group | `<fieldset>` with checkboxes |
+| Context Menu | No equivalent |
+| Field, Fieldset, Form, Input | `<label>`, `<fieldset>`, `<form>`, `<input>` and the Constraint Validation API |
+| Menubar | No equivalent |
+| Meter | `<meter>` |
+| Number Field | `<input type="number">` |
+| OTP Field | `<input autocomplete="one-time-code" inputmode="numeric">` |
+| Progress | `<progress>` |
+| Scroll Area | `overflow: auto` with `scrollbar-width` and `scrollbar-color` |
+| Separator | `<hr>` or `role="separator"` |
+| Toolbar | `role="toolbar"` with your own arrow-key roving `tabindex`. Toggle group covers rows of toggles. |
+| `mergeProps`, `useRender` | Not needed: you write the markup |
+
+## Disclosure
+
+### Accordion
+
+| Base UI | data-slot |
+|---|---|
+| `Accordion.Root` | `accordion` |
+| `Accordion.Item` | `accordion-item` with a required `data-value` |
+| `Accordion.Header` | — (wrap the trigger in your own heading) |
+| `Accordion.Trigger` | `accordion-trigger` |
+| `Accordion.Panel` | `accordion-content` |
+
+- **Matches:** `multiple`, `defaultValue`, `onValueChange`, `disabled` on the root or an item, `hiddenUntilFound`, the open and presence attributes, and `--accordion-panel-height`.
+- **Missing:** the `Header` part, per-item `onOpenChange`, canceling a change, and non-string values.
+- **Only in data-slot:** arrow keys, Home and End move between triggers, controlled by `orientation` and `loopFocus`. Base UI has deprecated both props and no longer handles arrow keys. `--radix-accordion-content-height` is set for shadcn/ui keyframes.
+- **Porting:** closed panels stay in the document with `hidden`, as if `keepMounted` were always on.
+
+### Collapsible
+
+| Base UI | data-slot |
+|---|---|
+| `Collapsible.Root` | `collapsible` |
+| `Collapsible.Trigger` | `collapsible-trigger` |
+| `Collapsible.Panel` | `collapsible-content` |
+
+- **Matches:** `defaultOpen`, `onOpenChange`, `hiddenUntilFound`, presence attributes and `--collapsible-panel-height`.
+- **Missing:** a root `disabled` option, canceling a change, and `data-open`, `data-closed` and `data-panel-open`.
+- **Only in data-slot:** `closeOnEscape` and `closeOnClickOutside`. The content gets `role="region"`.
+- **Porting:** replace `[data-open]` with `[data-state="open"]` on the root and content, and `[data-panel-open]` with `[aria-expanded="true"]` on the trigger.
+
+## Selection and toggles
+
+### Tabs
+
+| Base UI | data-slot |
+|---|---|
+| `Tabs.Root` | `tabs` |
+| `Tabs.List` | `tabs-list` |
+| `Tabs.Tab` | `tabs-trigger` |
+| `Tabs.Panel` | `tabs-content` |
+| `Tabs.Indicator` | `tabs-indicator` |
+
+- **Matches:** ARIA roles and roving focus, `orientation`, Home and End, manual activation, and the `--active-tab-*` position variables.
+- **Missing:** `loopFocus` (focus always wraps), a `null` value, focusable disabled tabs, RTL arrow keys, `data-active`, `data-orientation` and `data-disabled` on tabs, and `data-index` and `data-hidden` on panels. `data-activation-direction` is set only on panels.
+- **Only in data-slot:** in horizontal tabs, ArrowDown moves focus into the active panel.
+- **Porting:** data-slot defaults to `activationMode: "auto"`, where arrow keys select a tab. Base UI defaults to `activateOnFocus={false}`. Set `data-activation-mode="manual"` to match. Style the active tab with `[data-state="active"]`. Inactive panels stay in the document with `hidden`, as if `keepMounted` were always on.
+
+### Toggle
+
+| Base UI | data-slot |
+|---|---|
+| `Toggle` | `toggle` on a `<button>` |
+
+- **Matches:** `defaultPressed`, `disabled`, `onPressedChange` and `aria-pressed`.
+- **Missing:** `data-pressed` and `data-disabled`.
+- **Porting:** replace `[data-pressed]` with `[data-state="on"]`. Use `toggle-group-item` inside a group instead of a `value` prop.
+
+### Toggle group
+
+| Base UI | data-slot |
+|---|---|
+| `ToggleGroup` | `toggle-group` |
+| `Toggle` inside the group | `toggle-group-item` with `data-value` |
+
+- **Matches:** an array value in both modes, `multiple`, `orientation`, looping arrow keys with Home and End, and `role="group"`.
+- **Missing:** `data-pressed` and `data-disabled` on items, `data-disabled` and `data-orientation` on the group, RTL arrow keys, and Toolbar integration. Group `disabled` sets `aria-disabled` and blocks input, but items stay focusable.
+- **Porting:** the option is `loop` (`data-loop`), not `loopFocus`. `defaultValue` also accepts a space-separated string.
+
+### Radio group
+
+| Base UI | data-slot |
+|---|---|
+| `RadioGroup` | `radio-group` |
+| `Radio.Root` | `radio-group-item` with `data-value` |
+| `Radio.Indicator` | `radio-group-indicator` |
+
+- **Matches:** hidden native inputs, `name`, `required`, `disabled`, `readOnly`, form reset, arrow keys on both axes, and `data-checked` and `data-unchecked`.
+- **Missing:** the `form` prop, `inputRef`, per-radio `readOnly` and `required`, non-string values, Field and Fieldset integration, and RTL arrow keys. The indicator stays mounted and has no presence attributes.
+- **Porting:** Home, End and Enter select a radio in data-slot. Base UI ignores them.
+
+### Switch
+
+| Base UI | data-slot |
+|---|---|
+| `Switch.Root` | `switch` |
+| `Switch.Thumb` | `switch-thumb` |
+
+- **Matches:** `name`, `value`, `uncheckedValue`, `disabled`, `readOnly`, `required`, form reset, and the same checked, disabled, read-only and required attributes on the root and thumb.
+- **Missing:** the `form` prop, `inputRef`, and Field integration.
+
+### Slider
+
+| Base UI | data-slot |
+|---|---|
+| `Slider.Root` | `slider` |
+| `Slider.Label` | — (use `aria-label` or `data-label` on each thumb) |
+| `Slider.Value` | — (read `data-value` on the root or listen for `slider:change`) |
+| `Slider.Control` | `slider-control` |
+| `Slider.Track` | `slider-track` |
+| `Slider.Indicator` | `slider-range` |
+| `Slider.Thumb` | `slider-thumb` |
+
+- **Matches:** one value or a two-thumb range, `step`, `largeStep`, `orientation`, `thumbAlignment`, change and commit callbacks, `data-dragging` and `--position`.
+- **Missing:** more than two thumbs, `thumbCollisionBehavior`, `minStepsBetweenValues`, per-thumb `disabled`, form `name`, `form` and hidden inputs, the `Label` and `Value` parts, `format` and `locale`, `aria-valuetext`, and RTL. `data-index` is set only on range thumbs.
+- **Porting:** the commit callback is `onValueCommit`, not `onValueCommitted`. Arrow keys only work along the slider’s axis. Thumbs that meet stop at each other, like `thumbCollisionBehavior="none"`; Base UI defaults to `"push"`. `largeStep` defaults to ten steps, not 10.
+
+## Overlays
+
+### Dialog
+
+| Base UI | data-slot |
+|---|---|
+| `Dialog.Root` | `dialog` |
+| `Dialog.Trigger` | `dialog-trigger` |
+| `Dialog.Portal` | `dialog-portal` |
+| `Dialog.Backdrop` | `dialog-overlay` (required) |
+| `Dialog.Viewport` | — |
+| `Dialog.Popup` | `dialog-content` |
+| `Dialog.Title` | `dialog-title` |
+| `Dialog.Description` | `dialog-description` |
+| `Dialog.Close` | `dialog-close` |
+
+- **Matches:** focus trap and return, scroll lock, closing on a primary-button backdrop click, Escape with nested dialogs, and presence attributes.
+- **Missing:** `modal={false}` and `modal="trap-focus"`, making outside content inert, `initialFocus` and `finalFocus` (data-slot uses `[autofocus]`), detached triggers, `onOpenChangeComplete`, and `data-nested`, `data-nested-dialog-open` and `--nested-dialogs`.
+- **Only in data-slot:** `closeOnEscape` and `lockScroll` options, an `alertDialog` option that sets `role="alertdialog"`, and `--dialog-stack-index` for stacking.
+- **Porting:** `closeOnClickOutside: false` replaces `disablePointerDismissal`.
+
+### Alert dialog
+
+| Base UI | data-slot |
+|---|---|
+| `AlertDialog.Root` | `alert-dialog` |
+| `AlertDialog.Trigger` | `alert-dialog-trigger` |
+| `AlertDialog.Portal` | `alert-dialog-portal` |
+| `AlertDialog.Backdrop` | `alert-dialog-overlay` (required) |
+| `AlertDialog.Viewport` | — |
+| `AlertDialog.Popup` | `alert-dialog-content` |
+| `AlertDialog.Title` | `alert-dialog-title` |
+| `AlertDialog.Description` | `alert-dialog-description` |
+| `AlertDialog.Close` | `alert-dialog-cancel` |
+| — | `alert-dialog-action` |
+
+- **Matches:** always modal, `role="alertdialog"`, no backdrop dismissal by default, and Escape closes.
+- **Missing:** the same as dialog, apart from the modal modes.
+- **Only in data-slot:** `closeOnClickOutside` can turn on backdrop dismissal, which Base UI never allows for alert dialogs.
+- **Porting:** `alert-dialog-action` does not close the dialog. Call `close()` from your confirm handler.
+
+### Drawer
+
+The drawer is a port of Base UI’s Drawer. It shares its modal modes, `initialFocus` and `finalFocus`, cancelable change details with Base UI’s reasons except `close-watcher`, `onOpenChangeComplete`, nested drawers, indent and the virtual keyboard inset.
+
+| Base UI | data-slot |
+|---|---|
+| `Drawer.Root`, `Provider` | `drawer`, `drawer-provider` |
+| `Drawer.Trigger` | `drawer-trigger` |
+| `Drawer.Portal`, `Backdrop`, `Viewport` | `drawer-portal`, `drawer-backdrop`, `drawer-viewport` |
+| `Drawer.Popup`, `Content` | `drawer-popup`, `drawer-content` |
+| `Drawer.Title`, `Description`, `Close` | `drawer-title`, `drawer-description`, `drawer-close` |
+| `Drawer.Indent`, `IndentBackground` | `drawer-indent`, `drawer-indent-background` |
+| `Drawer.VirtualKeyboardProvider` | `drawer-virtual-keyboard-provider` |
+| `Drawer.Handle`, `createHandle` | `data-drawer-target="<root id>"` on the trigger |
+| `Drawer.SwipeArea` | — |
+
+- **Missing:** more than one snap point (`snapPoints` and `snapToSequentialPoints`), `SwipeArea`, `data-expanded` and `data-swipe-dismiss`. `drawer-content` is a plain wrapper and does not stop mouse drags inside it from starting a swipe.
+- **Porting:** a few CSS variables and attributes have different names:
+
+| Base UI name | data-slot name |
+|---|---|
+| `--drawer-swipe-movement-x`, `-y` | `--drawer-swipe-amount-x`, `-y` |
+| `--drawer-frontmost-height` | `--drawer-front-height` |
+| `data-nested-drawer-swiping` | `data-nested-swiping` |
+| `data-nested` on the viewport | `data-nested` on the popup |
+| `data-base-ui-swipe-ignore` | `data-swipe-ignore` (no `x` or `y` axis values) |
+
+### Popover
+
+| Base UI | data-slot |
+|---|---|
+| `Popover.Root` | `popover` |
+| `Popover.Trigger` | `popover-trigger` |
+| `Popover.Portal` | `popover-portal` |
+| `Popover.Positioner` | `popover-positioner` |
+| `Popover.Popup` | `popover-content` |
+| `Popover.Close` | `popover-close` |
+| `Popover.Arrow`, `Backdrop`, `Title`, `Description`, `Viewport` | — |
+
+- **Matches:** click to toggle, side and align with collision handling, Escape and outside dismissal, and focus return.
+- **Missing:** `role="dialog"` on the popup, `modal`, `openOnHover`, closing when focus leaves, `initialFocus` and `finalFocus`, `onOpenChangeComplete`, logical sides, and detached triggers.
+- **Only in data-slot:** `closeOnEscape`, `closeOnClickOutside`, and `portal: false` to position in place.
+
+### Tooltip
+
+| Base UI | data-slot |
+|---|---|
+| `Tooltip.Provider` | — |
+| `Tooltip.Root` | `tooltip` |
+| `Tooltip.Trigger` | `tooltip-trigger` |
+| `Tooltip.Portal` | `tooltip-portal` |
+| `Tooltip.Positioner` | `tooltip-positioner` |
+| `Tooltip.Popup` | `tooltip-content` |
+| `Tooltip.Arrow` | `tooltip-arrow` |
+| `Tooltip.Viewport` | — |
+
+- **Matches:** hover and focus open after a delay, warm-up between tooltips, `data-instant`, closing on click, the arrow with `data-uncentered`, and logical sides.
+- **Missing:** `Provider` scoping, `closeDelay`, `defaultOpen` and `disabled` options, safe-polygon hover between trigger and popup, `trackCursorAxis`, `disableHoverablePopup` and detached triggers.
+- **Porting:** the delay defaults to 300 ms (Base UI: 600 ms). data-slot opens on any focus after the delay; Base UI opens at once on keyboard focus only. data-slot sets `role="tooltip"` and `aria-describedby`; Base UI treats tooltips as visual only. The controller uses `show()` and `hide()`.
+
+### Hover card
+
+| Base UI | data-slot |
+|---|---|
+| `PreviewCard.Root` | `hover-card` |
+| `PreviewCard.Trigger` | `hover-card-trigger` |
+| `PreviewCard.Portal` | `hover-card-portal` |
+| `PreviewCard.Positioner` | `hover-card-positioner` |
+| `PreviewCard.Popup` | `hover-card-content` |
+| `PreviewCard.Arrow`, `Backdrop`, `Viewport` | — |
+
+- **Matches:** delayed open on hover and keyboard focus, `closeDelay`, Escape and outside dismissal, and a controlled `open` option.
+- **Missing:** the `Arrow` part, safe-polygon hover, detached triggers, per-trigger delays and logical sides.
+- **Porting:** the delay defaults to 700 ms (Base UI: 600 ms). Hover opens the card only after real pointer movement, and focus only after a Tab press, so content appearing under a still cursor does not open it.
+
+### Toast
+
+| Base UI | data-slot |
+|---|---|
+| `Toast.Provider`, `useToastManager()` | `toast` root and the `createToast()` controller |
+| `Toast.Portal` | `portal` option, off by default |
+| `Toast.Viewport` | `toast-viewport` |
+| `Toast.Root` | `toast-item`, cloned from `toast-template` or a built-in default |
+| `Toast.Content` | — |
+| `Toast.Title` | `toast-title` |
+| `Toast.Description` | `toast-description` |
+| `Toast.Action` | `toast-action` |
+| `Toast.Close` | `toast-close` |
+| `Toast.Positioner`, `Toast.Arrow` | — |
+
+- **Matches:** limit, timeouts, pausing on hover, focus and window blur, swipe to dismiss, updating by id and promise toasts.
+- **Missing:** anchored toasts, F6 to focus the viewport, Escape to close a toast, a `priority` option (error and warning toasts are announced assertively), per-toast `swipeDirection`, `onClose` and `onRemove`, and custom data or rich content.
+- **Porting:** the API and attributes follow Sonner. Rename these CSS variables and attributes:
+
+| Base UI name | data-slot name |
+|---|---|
+| `--toast-swipe-movement-x`, `-y` | `--toast-swipe-amount-x`, `-y` |
+| `--toast-frontmost-height` | `--toast-front-height` |
+| `--toast-offset-y` | `--toast-offset` |
+| `--toast-height` | `--toast-initial-height` |
+| `data-limited` | `data-visible="false"` |
+| `data-behind` on the content | `data-front="false"` on the item |
+
+## Lists and menus
+
+### Select
+
+| Base UI | data-slot |
+|---|---|
+| `Select.Root` | `select` |
+| `Select.Label` | — (use `<label for>`) |
+| `Select.Trigger` | `select-trigger` |
+| `Select.Value` | `select-value` |
+| `Select.Portal` | `select-portal` |
+| `Select.Positioner` | `select-positioner` |
+| `Select.Popup` | `select-content` |
+| `Select.List` | `select-viewport` |
+| `Select.Item`, `ItemText` | `select-item`, `select-item-text` |
+| `Select.Group`, `GroupLabel` | `select-group`, `select-label` |
+| `Select.Separator` | `select-separator` |
+| `ItemIndicator`, `ScrollUpArrow`, `ScrollDownArrow`, `Icon`, `Arrow`, `Backdrop` | — |
+
+- **Matches:** listbox ARIA, aligning the selected item with the trigger, keyboard navigation and typeahead while open, `highlightItemOnHover`, scroll lock, and form `name` and `required`.
+- **Missing:** `multiple`, object values, scroll arrows, typeahead on the closed trigger, press-drag-release selection, and `--anchor-width`.
+- **Porting:** `select-label` labels a group, not the field. `select-separator` is for styling and gets no `role="separator"`. Replace `[data-popup-open]` on the trigger with `[data-open]`.
+
+### Combobox
+
+| Base UI | data-slot |
+|---|---|
+| `Combobox.Root` | `combobox` |
+| `Combobox.Label` | — (use `<label for>` on the input) |
+| `Combobox.Input` | `combobox-input` |
+| `Combobox.Trigger` | `combobox-trigger` |
+| `Combobox.Value` | `combobox-value` |
+| `Combobox.Clear` | `combobox-clear` |
+| `Combobox.Portal`, `Positioner`, `Popup` | `combobox-portal`, `combobox-positioner`, `combobox-content` |
+| `Combobox.List`, `Empty` | `combobox-list`, `combobox-empty` |
+| `Combobox.Item`, `ItemIndicator` | `combobox-item`, `combobox-item-indicator` |
+| `Combobox.Group`, `GroupLabel`, `Separator` | `combobox-group`, `combobox-label`, `combobox-separator` |
+| `Chips`, `Chip`, `ChipRemove`, `InputGroup`, `Collection`, `Status`, `Row`, `Icon`, `Arrow`, `Backdrop` | — |
+
+- **Matches:** `aria-activedescendant` focus, `autoHighlight`, filtering with an empty state, Escape, Tab and clear behavior, an input inside the popup, and form `name` and `required`. Most of this is checked by test scenarios adapted from Base UI’s Autocomplete and Combobox tests.
+- **Missing:** `multiple` with chips, object values, `limit`, virtualization, grid layout, `inline`, `Status`, and a locale-aware filter.
+- **Porting:** data-slot only keeps a selected value, and the input reverts to the selected label when the list closes. For free text like Base UI’s Autocomplete, leave `name` off and mirror `combobox:input-change` into your own state. The list opens when the input is focused by a click or Tab; Base UI opens on click. `combobox-label` labels a group, not the field.
+
+### Dropdown menu
+
+| Base UI | data-slot |
+|---|---|
+| `Menu.Root` | `dropdown-menu` |
+| `Menu.Trigger` | `dropdown-menu-trigger` |
+| `Menu.Portal`, `Positioner`, `Popup` | `dropdown-menu-portal`, `dropdown-menu-positioner`, `dropdown-menu-content` |
+| `Menu.Item` | `dropdown-menu-item` |
+| `Menu.CheckboxItem`, `RadioItem` | `dropdown-menu-checkbox-item`, `dropdown-menu-radio-item` |
+| `Menu.Group`, `GroupLabel`, `Separator` | `dropdown-menu-group`, `dropdown-menu-label`, `dropdown-menu-separator` |
+| `RadioGroup`, `SubmenuRoot`, `SubmenuTrigger`, `LinkItem`, item indicators | — |
+| `Arrow`, `Backdrop`, `Viewport`, `Handle` | — |
+| Filter parts: `Input`, `List`, `Empty`, `Clear`, `FilterProvider` | — |
+
+- **Matches:** menu ARIA, looping arrow keys, typeahead, checkbox and radio items, `highlightItemOnHover`, dismissal, scroll lock, and canceling an item selection.
+- **Missing:** submenus, `openOnHover`, several radio groups in one menu, per-item `closeOnClick`, `LinkItem`, detached triggers, and filtering. Opening from the keyboard does not highlight the first item.
+- **Porting:** cancel a selection with `preventDefault()` on the `dropdown-menu:select` event instead of `eventDetails.cancel()`. `closeOnSelect` also closes the menu after checkbox and radio items; Base UI keeps it open. The trigger has `aria-expanded` but no `data-popup-open`. Group, label and separator slots are for styling and get no ARIA roles, and `dropdown-menu-label` labels a group. Plain items without `data-value` use their text as the value.
+
+### Navigation menu
+
+| Base UI | data-slot |
+|---|---|
+| `NavigationMenu.Root`, `List`, `Item` | `navigation-menu`, `navigation-menu-list`, `navigation-menu-item` |
+| `NavigationMenu.Trigger`, `Content` | `navigation-menu-trigger`, `navigation-menu-content` |
+| `NavigationMenu.Portal`, `Positioner`, `Popup`, `Viewport` | `navigation-menu-portal`, `navigation-menu-positioner`, `navigation-menu-popup`, `navigation-menu-viewport` |
+| `NavigationMenu.Link`, `Icon`, `Arrow`, `Backdrop` | — |
+| — | `navigation-menu-indicator` |
+
+- **Matches:** hover open, staying open after a click, switching between triggers, a shared popup that resizes between panels, `data-activation-direction` and the popup size variables.
+- **Missing:** `orientation="vertical"`, nested menus, `Link` with `active`, and collision avoidance.
+- **Only in data-slot:** `navigation-menu-indicator`.
+- **Porting:** the options are `delayOpen` and `delayClose` and default to 0 ms (Base UI: `delay` and `closeDelay`, 50 ms). Base UI always uses a safe polygon for hover. data-slot bridges the gap between trigger and popup and makes the safe triangle opt-in with `safeTriangle`. Content panels get `data-state="active"` or `"inactive"`.
+
+## Without a Base UI equivalent
+
+### Command
+
+A command menu modeled on cmdk. Base UI has no command menu. Its closest pattern is an inline `Autocomplete` inside a `Dialog`, shown as a command palette in its docs.
+
+- **Only in data-slot:** cmdk ranking and sorting, `data-keywords`, vim key bindings and `--command-list-height`.
+- **Porting:** the highlighted item uses `data-selected`, as in cmdk. `loop` is off by default.
+
+### Carousel
+
+A carousel built on native scroll snapping. Base UI has no carousel.
+
+### Resizable
+
+Resizable panels modeled on react-resizable-panels. Base UI has no resizable component.
