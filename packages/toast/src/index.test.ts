@@ -1821,6 +1821,32 @@ describe("Toast", () => {
     }
   });
 
+  it("reads the stack spacing from CSS only once a toast shows", () => {
+    const originalGetComputedStyle = window.getComputedStyle;
+    const styleReads: Element[] = [];
+    window.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+      styleReads.push(element);
+      return originalGetComputedStyle.call(window, element, pseudo);
+    }) as typeof window.getComputedStyle;
+
+    try {
+      const { viewport, controller } = setup({ duration: 0 });
+      expect(styleReads.includes(viewport)).toBe(false);
+      expect(viewport.style.getPropertyValue("--toast-stack-size")).toBe("0px");
+
+      viewport.style.setProperty("--toast-gap", "20px");
+      controller.show({ title: "One" });
+      controller.show({ title: "Two" });
+      const items = viewport.querySelectorAll<HTMLElement>('[data-slot="toast-item"]');
+      const offsets = [...items].map((item) => item.style.getPropertyValue("--toast-offset"));
+      expect(offsets.sort()).toEqual(["0px", "20px"]);
+
+      controller.destroy();
+    } finally {
+      window.getComputedStyle = originalGetComputedStyle;
+    }
+  });
+
   it("reindexes on ResizeObserver callback", () => {
     const OriginalResizeObserver = globalThis.ResizeObserver;
     let resizeCb: ResizeObserverCallback | null = null;
