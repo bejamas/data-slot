@@ -110,9 +110,64 @@ describe("Command", () => {
     expect(secondItem.hasAttribute("data-selected")).toBe(false);
     expect(controller.value).toBe("A");
     expect(root.getAttribute("data-value")).toBe("A");
-    expect(list.style.getPropertyValue("--command-list-height")).toEndWith("px");
 
     controller.destroy();
+  });
+
+  it("does not read layout on init when ResizeObserver exists", () => {
+    const OriginalResizeObserver = globalThis.ResizeObserver;
+    let reportSize = () => {};
+    class MockResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        reportSize = () => callback([], this as unknown as ResizeObserver);
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+    try {
+      document.body.innerHTML = `
+        <div data-slot="command" id="root">
+          <input data-slot="command-input" />
+          <div data-slot="command-list"><div data-slot="command-item">A</div></div>
+        </div>
+      `;
+      const root = document.getElementById("root") as HTMLElement;
+      const list = root.querySelector('[data-slot="command-list"]') as HTMLElement;
+      let heightReads = 0;
+      Object.defineProperty(list, "scrollHeight", {
+        configurable: true,
+        get: () => {
+          heightReads += 1;
+          return 120;
+        },
+      });
+
+      const controller = createCommand(root);
+      expect(heightReads).toBe(0);
+
+      reportSize();
+      expect(list.style.getPropertyValue("--command-list-height")).toBe("120.0px");
+
+      controller.destroy();
+    } finally {
+      globalThis.ResizeObserver = OriginalResizeObserver;
+    }
+  });
+
+  it("sets the list height on init when ResizeObserver is unavailable", () => {
+    const OriginalResizeObserver = globalThis.ResizeObserver;
+    (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver = undefined;
+
+    try {
+      const { list, controller } = setup();
+      expect(list.style.getPropertyValue("--command-list-height")).toEndWith("px");
+      controller.destroy();
+    } finally {
+      globalThis.ResizeObserver = OriginalResizeObserver;
+    }
   });
 
   it("uses a native label when present", () => {
