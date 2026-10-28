@@ -509,7 +509,8 @@ export function createCommand(
       syncSelectionState();
       syncRootState();
     });
-    if (!resizeObserver) setListHeightVar();
+    // The ResizeObserver from refreshStructure() reports the first size after layout.
+    if (typeof ResizeObserver === "undefined") setListHeightVar();
   };
   const refreshStructure = () => {
     pauseMutationObserver(rescanStructure);

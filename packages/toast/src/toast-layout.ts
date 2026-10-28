@@ -134,9 +134,10 @@ export function createToastLayout({ viewport, limit, stackDirection, getItems, o
   const update = () => {
     if (destroyed) return;
     const newestFirst = getItems();
-    const gap = getCssGap(viewport);
-    const collapsedPeek = getCssCollapsedPeek(viewport);
     const count = newestFirst.length;
+    // An empty stack uses neither value, and reading them forces a style recalculation.
+    const gap = count > 0 ? getCssGap(viewport) : 0;
+    const collapsedPeek = count > 0 ? getCssCollapsedPeek(viewport) : 0;
     let expandedOffset = 0;
     let visibleExpandedOffset = 0;
     let visibleCount = 0;
