@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "data-slot-monorepo",
@@ -16,165 +17,165 @@
     },
     "packages/accordion": {
       "name": "@data-slot/accordion",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/alert-dialog": {
       "name": "@data-slot/alert-dialog",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/carousel": {
       "name": "@data-slot/carousel",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/collapsible": {
       "name": "@data-slot/collapsible",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/combobox": {
       "name": "@data-slot/combobox",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/command": {
       "name": "@data-slot/command",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/core": {
       "name": "@data-slot/core",
-      "version": "1.0.0",
+      "version": "1.1.3",
     },
     "packages/dialog": {
       "name": "@data-slot/dialog",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/drawer": {
       "name": "@data-slot/drawer",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/dropdown-menu": {
       "name": "@data-slot/dropdown-menu",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/hover-card": {
       "name": "@data-slot/hover-card",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/navigation-menu": {
       "name": "@data-slot/navigation-menu",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/popover": {
       "name": "@data-slot/popover",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/radio-group": {
       "name": "@data-slot/radio-group",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/resizable": {
       "name": "@data-slot/resizable",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/select": {
       "name": "@data-slot/select",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/slider": {
       "name": "@data-slot/slider",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/switch": {
       "name": "@data-slot/switch",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/tabs": {
       "name": "@data-slot/tabs",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/toast": {
       "name": "@data-slot/toast",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/toggle": {
       "name": "@data-slot/toggle",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/toggle-group": {
       "name": "@data-slot/toggle-group",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/tooltip": {
       "name": "@data-slot/tooltip",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/core": "workspace:*",
       },
     },
     "packages/ui": {
       "name": "@data-slot/ui",
-      "version": "1.0.0",
+      "version": "1.1.3",
       "dependencies": {
         "@data-slot/accordion": "workspace:*",
         "@data-slot/alert-dialog": "workspace:*",
