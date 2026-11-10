@@ -97,6 +97,12 @@ describe('Tooltip', () => {
     return { x: Number(match[1]), y: Number(match[2]) }
   }
 
+  // Default closeDelay grace period after the pointer leaves the trigger or content
+  const CLOSE_GRACE = 100
+
+  const pressKey = (key: string) =>
+    document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))
+
   const pointer = (type: string, pointerType: string, relatedTarget?: EventTarget | null) => {
     const event = new PointerEvent(type, { bubbles: true, pointerType })
     if (relatedTarget !== undefined) {
@@ -210,6 +216,7 @@ describe('Tooltip', () => {
   it('controller.hide() while focused stays closed until a fresh focus', () => {
     const { trigger, controller } = setup({ delay: 0 })
 
+    pressKey('Tab')
     trigger.dispatchEvent(new FocusEvent('focus', { bubbles: true }))
     expect(controller.isOpen).toBe(true)
 
@@ -219,6 +226,7 @@ describe('Tooltip', () => {
     trigger.dispatchEvent(new FocusEvent('blur', { bubbles: true }))
     expect(controller.isOpen).toBe(false)
 
+    pressKey('Tab')
     trigger.dispatchEvent(new FocusEvent('focus', { bubbles: true }))
     expect(controller.isOpen).toBe(true)
 
@@ -345,7 +353,7 @@ describe('Tooltip', () => {
     expect(firstController.isOpen).toBe(true)
 
     triggerA.dispatchEvent(pointer('pointerleave', 'mouse'))
-    await waitForClose()
+    await wait(CLOSE_GRACE + 10)
     expect(firstController.isOpen).toBe(false)
 
     triggerB.dispatchEvent(pointer('pointerenter', 'mouse'))
@@ -356,7 +364,7 @@ describe('Tooltip', () => {
     expect(getPositioner(contentB).getAttribute('data-instant')).toBe('delay')
 
     triggerB.dispatchEvent(pointer('pointerleave', 'mouse'))
-    await waitForClose()
+    await wait(CLOSE_GRACE + 10)
     expect(secondController.isOpen).toBe(false)
     expect(rootB.hasAttribute('data-instant')).toBe(false)
     expect(contentB.hasAttribute('data-instant')).toBe(false)
@@ -412,6 +420,7 @@ describe('Tooltip', () => {
     const { root, trigger, content, controller } = setup({ delay: 0 })
 
     await wait(130)
+    pressKey('Tab')
     trigger.dispatchEvent(new FocusEvent('focus', { bubbles: true }))
     await wait(5)
 
@@ -1032,7 +1041,7 @@ describe('Tooltip', () => {
     controller.destroy()
   })
 
-  it('hides on pointerleave (non-touch)', () => {
+  it('hides on pointerleave (non-touch) after the close grace period', async () => {
     const { trigger, controller } = setup({ delay: 0 })
 
     controller.show()
@@ -1040,6 +1049,7 @@ describe('Tooltip', () => {
 
     // Simulate mouse pointer leave
     trigger.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true, pointerType: 'mouse' }))
+    await wait(CLOSE_GRACE + 10)
     expect(controller.isOpen).toBe(false)
 
     controller.destroy()
@@ -1392,7 +1402,7 @@ describe('Tooltip', () => {
       controller.destroy()
     })
 
-    it('closes when pointer leaves content to outside', () => {
+    it('closes when pointer leaves content to outside', async () => {
       const { content, controller } = setup()
 
       controller.show()
@@ -1405,16 +1415,18 @@ describe('Tooltip', () => {
         relatedTarget: document.body
       }))
       
-      // Should close
+      // Should close after the grace period
+      await wait(CLOSE_GRACE + 10)
       expect(controller.isOpen).toBe(false)
 
       controller.destroy()
     })
 
-    it('stays open on pointerleave when trigger has focus', () => {
+    it('stays open on pointerleave when trigger has keyboard focus', async () => {
       const { trigger, controller } = setup()
 
-      // Focus trigger to open
+      // Keyboard-focus trigger to open
+      pressKey('Tab')
       trigger.dispatchEvent(new FocusEvent('focus', { bubbles: true }))
       controller.show() // Open immediately for test
       expect(controller.isOpen).toBe(true)
@@ -1426,7 +1438,8 @@ describe('Tooltip', () => {
         relatedTarget: document.body
       }))
       
-      // Should stay open because trigger has focus
+      // Should stay open because trigger has keyboard focus
+      await wait(CLOSE_GRACE + 10)
       expect(controller.isOpen).toBe(true)
 
       // Blur should close
@@ -1436,10 +1449,11 @@ describe('Tooltip', () => {
       controller.destroy()
     })
 
-    it('stays open on content pointerleave when trigger has focus', () => {
+    it('stays open on content pointerleave when trigger has keyboard focus', async () => {
       const { trigger, content, controller } = setup()
 
-      // Focus trigger
+      // Keyboard-focus trigger
+      pressKey('Tab')
       trigger.dispatchEvent(new FocusEvent('focus', { bubbles: true }))
       controller.show()
       expect(controller.isOpen).toBe(true)
@@ -1452,9 +1466,195 @@ describe('Tooltip', () => {
       }))
       
       // Should stay open
+      await wait(CLOSE_GRACE + 10)
       expect(controller.isOpen).toBe(true)
 
       controller.destroy()
+    })
+  })
+
+  describe('click, focus, and hover regressions', () => {
+    const WARM_EXPIRY = 320
+
+    const mouseDown = () =>
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' }))
+
+    it('mouse click (focus then click) dismisses a hover-opened tooltip and it stays closed', async () => {
+      const { trigger, controller } = setup({ delay: 10 })
+      // Let any warm-up window from earlier closes expire so focus takes the delayed path
+      await wait(WARM_EXPIRY)
+
+      trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+      await wait(20)
+      expect(controller.isOpen).toBe(true)
+
+      // Real browser order: pointerdown -> mousedown -> focus -> pointerup -> click
+      mouseDown()
+      trigger.focus()
+      trigger.click()
+      expect(controller.isOpen).toBe(false)
+
+      await wait(30)
+      expect(controller.isOpen).toBe(false)
+
+      trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+      await wait(CLOSE_GRACE + 30)
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('click dismisses even when a focus event fired while already open', async () => {
+      const { trigger, controller } = setup({ delay: 10 })
+      // Let any warm-up window from earlier closes expire so focus takes the delayed path
+      await wait(WARM_EXPIRY)
+
+      trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+      await wait(20)
+      expect(controller.isOpen).toBe(true)
+
+      // Focus with keyboard intent while already open must not arm a new show timer
+      pressKey('Tab')
+      trigger.dispatchEvent(new FocusEvent('focus'))
+      trigger.click()
+      expect(controller.isOpen).toBe(false)
+
+      await wait(30)
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('a hover-opened tooltip closes on pointerleave after a mouse click focused the trigger', async () => {
+      const { trigger, controller } = setup({ delay: 10 })
+
+      mouseDown()
+      trigger.focus()
+      trigger.click()
+      expect(controller.isOpen).toBe(false)
+
+      trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+      trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+      await wait(20)
+      expect(controller.isOpen).toBe(true)
+
+      trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+      await wait(CLOSE_GRACE + 30)
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('does not open on programmatic focus without keyboard intent', async () => {
+      const { trigger, controller } = setup({ delay: 0 })
+
+      trigger.focus()
+      await wait(20)
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('does not open when focus is restored after an Escape keypress', async () => {
+      const { trigger, controller } = setup({ delay: 0 })
+
+      // e.g. a dialog closed with Escape restores focus to its trigger,
+      // even if the user tabbed inside the dialog just before
+      pressKey('Tab')
+      pressKey('Escape')
+      trigger.focus()
+      await wait(20)
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('opens on keyboard Tab focus', async () => {
+      const { trigger, controller } = setup({ delay: 0 })
+
+      pressKey('Tab')
+      trigger.focus()
+      await wait(20)
+      expect(controller.isOpen).toBe(true)
+
+      controller.destroy()
+    })
+
+    it('stays open when the pointer crosses the gap from trigger to content', async () => {
+      const { trigger, content, controller } = setup({ delay: 0 })
+
+      controller.show()
+      trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+      expect(controller.isOpen).toBe(true)
+
+      await wait(30)
+      content.dispatchEvent(pointer('pointerenter', 'mouse', document.body))
+      await wait(CLOSE_GRACE + 30)
+      expect(controller.isOpen).toBe(true)
+
+      content.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+      expect(controller.isOpen).toBe(true)
+      await wait(CLOSE_GRACE + 30)
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('stays open when the pointer returns to the trigger within the grace period', async () => {
+      const { trigger, controller } = setup({ delay: 10 })
+
+      controller.show()
+      trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+      await wait(30)
+      trigger.dispatchEvent(pointer('pointerenter', 'mouse'))
+      await wait(CLOSE_GRACE + 30)
+      expect(controller.isOpen).toBe(true)
+
+      controller.destroy()
+    })
+
+    it('closes after the grace period when the pointer leaves the trigger', async () => {
+      const { trigger, controller } = setup({ delay: 0 })
+
+      controller.show()
+      trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+      expect(controller.isOpen).toBe(true)
+      await wait(CLOSE_GRACE + 30)
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('closeDelay: 0 hides immediately on pointerleave', () => {
+      const { trigger, controller } = setup({ delay: 0, closeDelay: 0 })
+
+      controller.show()
+      trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+      expect(controller.isOpen).toBe(false)
+
+      controller.destroy()
+    })
+
+    it('reads data-close-delay, with the JS option taking precedence', async () => {
+      const html = `
+        <div data-slot="tooltip" id="root" data-close-delay="0">
+          <button data-slot="tooltip-trigger">Hover me</button>
+          <div data-slot="tooltip-content">Tooltip text</div>
+        </div>
+      `
+      const first = setup({}, html)
+      first.controller.show()
+      first.trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+      expect(first.controller.isOpen).toBe(false)
+      first.controller.destroy()
+
+      const second = setup({ closeDelay: 40 }, html)
+      second.controller.show()
+      second.trigger.dispatchEvent(pointer('pointerleave', 'mouse', document.body))
+      expect(second.controller.isOpen).toBe(true)
+      await wait(60)
+      expect(second.controller.isOpen).toBe(false)
+      second.controller.destroy()
     })
   })
 

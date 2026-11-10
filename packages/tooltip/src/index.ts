@@ -25,6 +25,17 @@ import { ensureId } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
 
 const ROOT_BINDING_KEY = "@data-slot/tooltip";
+// Focus opens the tooltip only shortly after a keyboard navigation key.
+const FOCUS_OPEN_INTENT_WINDOW_MS = 750;
+const FOCUS_NAVIGATION_KEYS = new Set([
+  "Tab",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Home",
+  "End",
+]);
 const DUPLICATE_BINDING_WARNING =
   "[@data-slot/tooltip] createTooltip() called more than once for the same root. Returning the existing controller. Destroy it before rebinding with new options.";
 
@@ -78,6 +89,8 @@ export interface TooltipOptions {
   delay?: number;
   /** Duration to skip delay after closing (ms). Set to 0 to disable warm-up. Default: 300 */
   skipDelayDuration?: number;
+  /** Grace period before closing after the pointer leaves the trigger or content (ms). Default: 100 */
+  closeDelay?: number;
   /** Preferred side of tooltip relative to trigger. Default: 'top'. */
   side?: TooltipSide;
   /** Preferred alignment along the side. Default: 'center'. */
@@ -131,10 +144,11 @@ export interface TooltipController {
  * - `data-collision-padding`: number (px)
  * - `data-delay`: number (ms)
  * - `data-skip-delay-duration`: number (ms)
+ * - `data-close-delay`: number (ms)
  *
- * Opens on hover (non-touch) and focus. Touch devices: focus-only.
- * Content is hoverable: moving pointer from trigger to content keeps it open.
- * Tooltip stays open while trigger has focus, even if pointer leaves.
+ * Opens on hover (non-touch) and on keyboard focus. Touch devices: focus-only.
+ * Content is hoverable: the pointer can cross from trigger to content within `closeDelay`.
+ * Tooltip stays open while trigger has keyboard focus, even if pointer leaves.
  */
 export function createTooltip(
   root: Element,
@@ -176,6 +190,7 @@ export function createTooltip(
   const delay = options.delay ?? getDataNumber(root, "delay") ?? 300;
   const skipDelayDuration =
     options.skipDelayDuration ?? getDataNumber(root, "skipDelayDuration") ?? 300;
+  const closeDelay = options.closeDelay ?? getDataNumber(root, "closeDelay") ?? 100;
   const onOpenChange = options.onOpenChange;
   const portalOption =
     options.portal ?? getDataBool(content, "portal") ?? getDataBool(root, "portal") ?? true;
@@ -222,9 +237,12 @@ export function createTooltip(
 
   let isOpen = false;
   let instantType: TooltipInstantType = null;
+  // True only while the trigger holds focus that came from keyboard navigation.
   let hasFocus = false;
+  let lastNavigationKeyAt = -Infinity;
   const terminalLifecycle = createTerminalLifecycle();
   let showTimeout: ReturnType<typeof setTimeout> | null = null;
+  let closeTimeout: ReturnType<typeof setTimeout> | null = null;
   const cleanups: Array<() => void> = [];
 
   const portal = createPortalLifecycle({
@@ -481,12 +499,28 @@ export function createTooltip(
     onOpenChange?.(isOpen);
   };
 
+  const clearShowTimeout = () => {
+    if (!showTimeout) return;
+    terminalLifecycle.cancelTimeout(showTimeout);
+    showTimeout = null;
+  };
+
+  const clearCloseTimeout = () => {
+    if (!closeTimeout) return;
+    terminalLifecycle.cancelTimeout(closeTimeout);
+    closeTimeout = null;
+  };
+
   const showWithDelay = (reason: TooltipReason) => {
-    // Always reset timer on re-enter for predictable behavior
-    if (showTimeout) {
-      terminalLifecycle.cancelTimeout(showTimeout);
-      showTimeout = null;
+    clearCloseTimeout();
+    // Already open: nothing to schedule (a new timer would make a click cancel instead of dismiss)
+    if (isOpen) {
+      clearShowTimeout();
+      return;
     }
+
+    // Always reset timer on re-enter for predictable behavior
+    clearShowTimeout();
 
     // Skip delay if we're within the "warm" window (recently closed a tooltip)
     if (Date.now() < globalWarmUntil) {
@@ -505,12 +539,26 @@ export function createTooltip(
     reason: TooltipReason,
     nextInstantType: TooltipInstantType = null
   ) => {
-    if (showTimeout) {
-      terminalLifecycle.cancelTimeout(showTimeout);
-      showTimeout = null;
-    }
+    clearShowTimeout();
+    clearCloseTimeout();
 
     updateState(false, reason, nextInstantType);
+  };
+
+  // Close after a short grace period so the pointer can cross the gap to the content
+  const hideAfterGrace = (reason: TooltipReason) => {
+    clearShowTimeout();
+    if (closeDelay <= 0) {
+      hideImmediately(reason);
+      return;
+    }
+    clearCloseTimeout();
+    if (!isOpen) return;
+    closeTimeout = terminalLifecycle.trackTimeout(() => {
+      closeTimeout = null;
+      if (terminalLifecycle.isDestroyed) return;
+      updateState(false, reason);
+    }, closeDelay);
   };
 
   const closeForWarmHandoff = (sourceTrigger: HTMLElement, reason: TooltipReason) => {
@@ -534,6 +582,15 @@ export function createTooltip(
 
   // Pointer events on trigger
   cleanups.push(
+    on(root.ownerDocument, "keydown", (e) => {
+      // Other keys (e.g. Enter or Escape opening/closing a dialog) clear the intent.
+      lastNavigationKeyAt = FOCUS_NAVIGATION_KEYS.has((e as KeyboardEvent).key)
+        ? Date.now()
+        : -Infinity;
+    }, { capture: true }),
+    on(root.ownerDocument, "pointerdown", () => {
+      lastNavigationKeyAt = -Infinity;
+    }, { capture: true }),
     on(trigger, "pointerenter", (e) => {
       // Touch: focus-only, don't open on hover
       if (e.pointerType === "touch") return;
@@ -552,25 +609,22 @@ export function createTooltip(
         hideImmediately("pointer", "delay");
         return;
       }
-      hideImmediately("pointer");
+      hideAfterGrace("pointer");
     }),
     on(trigger, "click", () => {
       if (isTriggerDisabled()) return;
 
-      // If a delayed open is pending and user clicks first, cancel opening.
-      if (showTimeout) {
-        terminalLifecycle.cancelTimeout(showTimeout);
-        showTimeout = null;
-        return;
-      }
-
-      // Clicking an already-open tooltip trigger dismisses it.
+      // A click cancels a pending delayed open, and dismisses an already-open tooltip.
+      clearShowTimeout();
+      clearCloseTimeout();
       if (isOpen) {
         hideImmediately("pointer", "dismiss");
       }
     }),
     // Focus events
     on(trigger, "focus", () => {
+      // Ignore pointer and programmatic focus (e.g. dialog autofocus or focus restore).
+      if (Date.now() - lastNavigationKeyAt > FOCUS_OPEN_INTENT_WINDOW_MS) return;
       hasFocus = true;
       if (isTriggerDisabled()) return;
       notifyWarmHandoff(trigger, "focus");
@@ -589,6 +643,10 @@ export function createTooltip(
 
   // Pointer events on content (hoverable content support)
   cleanups.push(
+    on(content, "pointerenter", (e) => {
+      if (e.pointerType === "touch") return;
+      clearCloseTimeout();
+    }),
     on(content, "pointerleave", (e) => {
       if (e.pointerType === "touch") return;
       // Keep open while trigger has focus
@@ -600,7 +658,7 @@ export function createTooltip(
         hideImmediately("pointer", "delay");
         return;
       }
-      hideImmediately("pointer");
+      hideAfterGrace("pointer");
     })
   );
 
@@ -621,10 +679,8 @@ export function createTooltip(
 
       if (open) {
         if (isTriggerDisabled()) return; // Opening respects disabled
-        if (showTimeout) {
-          terminalLifecycle.cancelTimeout(showTimeout);
-          showTimeout = null;
-        }
+        clearShowTimeout();
+        clearCloseTimeout();
         updateState(true, "api");
       } else {
         hideImmediately("api"); // Closing always allowed
@@ -648,10 +704,8 @@ export function createTooltip(
       if (terminalLifecycle.isDestroyed) return;
       // Respect disabled state even for programmatic calls
       if (isTriggerDisabled()) return;
-      if (showTimeout) {
-        terminalLifecycle.cancelTimeout(showTimeout);
-        showTimeout = null;
-      }
+      clearShowTimeout();
+      clearCloseTimeout();
       updateState(true, "api");
     },
     hide: () => { if (!terminalLifecycle.isDestroyed) hideImmediately("api"); },
@@ -662,6 +716,8 @@ export function createTooltip(
       if (!terminalLifecycle.destroy()) return;
       if (showTimeout) terminalLifecycle.cancelTimeout(showTimeout);
       showTimeout = null;
+      if (closeTimeout) terminalLifecycle.cancelTimeout(closeTimeout);
+      closeTimeout = null;
       isOpen = false;
       setDataState("closed");
       removeDescription();
