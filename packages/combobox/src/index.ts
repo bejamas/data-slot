@@ -156,10 +156,30 @@ export function createCombobox(
     if (!trigger.hasAttribute("type")) {
       trigger.setAttribute("type", "button");
     }
-    if (!trigger.hasAttribute("tabindex")) {
-      trigger.tabIndex = -1;
+    if (isPopupInputMode) {
+      // The trigger is the only visible control, so it stays a tab stop and
+      // its visible text (the committed value) is its accessible name.
+      trigger.setAttribute("aria-haspopup", "listbox");
+      setAria(trigger, "expanded", false);
+      cleanups.push(() => {
+        trigger.removeAttribute("aria-haspopup");
+        trigger.removeAttribute("aria-expanded");
+        trigger.removeAttribute("aria-controls");
+      });
+    } else {
+      if (!trigger.hasAttribute("tabindex")) {
+        trigger.setAttribute("tabindex", "-1");
+        cleanups.push(() => trigger.removeAttribute("tabindex"));
+      }
+      if (
+        !trigger.hasAttribute("aria-label") &&
+        !trigger.hasAttribute("aria-labelledby") &&
+        !trigger.textContent?.trim()
+      ) {
+        trigger.setAttribute("aria-label", "Toggle");
+        cleanups.push(() => trigger.removeAttribute("aria-label"));
+      }
     }
-    trigger.setAttribute("aria-label", "Toggle");
   }
 
   if (clearButton instanceof HTMLButtonElement && !clearButton.hasAttribute("type")) {
@@ -332,6 +352,10 @@ export function createCombobox(
       isOpen = true;
       openRenderedSide = null;
       setAria(input, "expanded", true);
+      if (isPopupInputMode && trigger) {
+        trigger.setAttribute("aria-controls", listId);
+        setAria(trigger, "expanded", true);
+      }
       portal.mount();
       const style = (portal.container as HTMLElement).style;
       style.position = "absolute";
@@ -357,6 +381,10 @@ export function createCombobox(
       isOpen = false;
       openRenderedSide = null;
       setAria(input, "expanded", false);
+      if (isPopupInputMode && trigger) {
+        setAria(trigger, "expanded", false);
+        trigger.removeAttribute("aria-controls");
+      }
       setDataState("closed");
       collection.clearHighlight();
       keyboardMode = false;
@@ -375,6 +403,17 @@ export function createCombobox(
 
     emit(root, "combobox:open-change", { open: isOpen });
     onOpenChange?.(isOpen);
+  };
+
+  // In popup-input mode the input is hidden on close, so focus would fall to
+  // the body. Return it to the trigger after a close the user made from inside
+  // the popup (Escape, selection) or from the trigger itself, unless focus has
+  // already moved somewhere else.
+  const returnFocusToTrigger = () => {
+    if (!isPopupInputMode || !trigger || isOpen) return;
+    const active = doc.activeElement;
+    if (active && active !== doc.body && !content.contains(active)) return;
+    trigger.focus();
   };
 
   const updateValue = (value: string | null, init = false) => {
@@ -435,6 +474,7 @@ export function createCombobox(
 
     updateValue(value);
     updateOpenState(false);
+    returnFocusToTrigger();
   };
 
   const clearFromButton = () => {
@@ -514,6 +554,7 @@ export function createCombobox(
         if (isOpen) {
           e.preventDefault();
           updateOpenState(false);
+          returnFocusToTrigger();
         } else if (currentValue !== null) {
           e.preventDefault();
           updateValue(null);
@@ -614,6 +655,7 @@ export function createCombobox(
         if (disabled) return;
         if (isOpen) {
           updateOpenState(false);
+          returnFocusToTrigger();
         } else {
           updateOpenState(true);
           input.focus();
@@ -659,8 +701,10 @@ export function createCombobox(
     on(content, "pointerleave", () => {
       if (!keyboardMode) collection.clearHighlight();
     }),
-    // Prevent mousedown on content from stealing focus from input
+    // Prevent mousedown on content from stealing focus from input, but let
+    // presses on the input itself place the caret and select text.
     on(content, "mousedown", (e) => {
+      if (e.target instanceof Node && input.contains(e.target)) return;
       e.preventDefault();
     })
   );

@@ -751,6 +751,247 @@ describe("Combobox", () => {
       expect(valueSlot.textContent).toBe("Selected: france");
       controller.destroy();
     });
+
+    describe("trigger accessibility", () => {
+      const pressKey = (target: HTMLElement, key: string) => {
+        target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+      };
+
+      const openFromTrigger = (triggerBtn: HTMLElement, input: HTMLInputElement) => {
+        triggerBtn.focus();
+        triggerBtn.click();
+        expect(document.activeElement).toBe(input);
+      };
+
+      it("keeps the trigger in the tab order", () => {
+        const { root, triggerBtn, controller: initial } = setupPopupInput();
+        initial.destroy();
+
+        // happy-dom neither reflects the tabIndex setter to the attribute nor
+        // reports 0 for a plain button, so record writes to tabIndex directly.
+        const tabIndexWrites: number[] = [];
+        Object.defineProperty(triggerBtn, "tabIndex", {
+          configurable: true,
+          get: () => 0,
+          set: (value: number) => { tabIndexWrites.push(value); },
+        });
+        const controller = createCombobox(root, { defaultValue: "canada" });
+        expect(tabIndexWrites).toEqual([]);
+        expect(triggerBtn.hasAttribute("tabindex")).toBe(false);
+        controller.destroy();
+      });
+
+      it("respects an authored trigger tabindex", () => {
+        document.body.innerHTML = `
+          <div data-slot="combobox" id="root">
+            <button data-slot="combobox-trigger" tabindex="-1">Pick</button>
+            <div data-slot="combobox-content" hidden>
+              <input data-slot="combobox-input" />
+              <div data-slot="combobox-list">
+                <div data-slot="combobox-item" data-value="a">A</div>
+              </div>
+            </div>
+          </div>
+        `;
+        const root = document.getElementById("root")!;
+        const trigger = root.querySelector('[data-slot="combobox-trigger"]') as HTMLElement;
+        const controller = createCombobox(root);
+        expect(trigger.getAttribute("tabindex")).toBe("-1");
+        controller.destroy();
+      });
+
+      it("does not mask the trigger's visible text with aria-label", () => {
+        const { triggerBtn, controller } = setupPopupInput({ defaultValue: "canada" });
+        expect(triggerBtn.textContent?.trim()).toBe("Canada");
+        expect(triggerBtn.hasAttribute("aria-label")).toBe(false);
+        controller.destroy();
+      });
+
+      it("preserves an authored trigger aria-label", () => {
+        document.body.innerHTML = `
+          <div data-slot="combobox" id="root">
+            <button data-slot="combobox-trigger" aria-label="Country">
+              <span data-slot="combobox-value">Select country...</span>
+            </button>
+            <div data-slot="combobox-content" hidden>
+              <input data-slot="combobox-input" />
+              <div data-slot="combobox-list">
+                <div data-slot="combobox-item" data-value="a">A</div>
+              </div>
+            </div>
+          </div>
+        `;
+        const root = document.getElementById("root")!;
+        const trigger = root.querySelector('[data-slot="combobox-trigger"]') as HTMLElement;
+        const controller = createCombobox(root);
+        expect(trigger.getAttribute("aria-label")).toBe("Country");
+        controller.destroy();
+        expect(trigger.getAttribute("aria-label")).toBe("Country");
+      });
+
+      it("exposes popup state on the trigger", () => {
+        const { triggerBtn, list, controller } = setupPopupInput({ defaultValue: "canada" });
+        expect(triggerBtn.getAttribute("aria-haspopup")).toBe("listbox");
+        expect(triggerBtn.getAttribute("aria-expanded")).toBe("false");
+        expect(triggerBtn.hasAttribute("aria-controls")).toBe(false);
+
+        controller.open();
+        expect(triggerBtn.getAttribute("aria-expanded")).toBe("true");
+        expect(triggerBtn.getAttribute("aria-controls")).toBe(list.id);
+        expect(list.id).not.toBe("");
+
+        controller.close();
+        expect(triggerBtn.getAttribute("aria-expanded")).toBe("false");
+        expect(triggerBtn.hasAttribute("aria-controls")).toBe(false);
+        controller.destroy();
+      });
+
+      it("returns focus to the trigger on Escape", () => {
+        const { triggerBtn, input, controller } = setupPopupInput({ defaultValue: "canada" });
+        openFromTrigger(triggerBtn, input);
+
+        pressKey(input, "Escape");
+        expect(controller.isOpen).toBe(false);
+        expect(document.activeElement).toBe(triggerBtn);
+        controller.destroy();
+      });
+
+      it("returns focus to the trigger after selecting with Enter", () => {
+        const { triggerBtn, input, controller } = setupPopupInput({ defaultValue: "canada" });
+        openFromTrigger(triggerBtn, input);
+
+        pressKey(input, "ArrowDown");
+        pressKey(input, "Enter");
+        expect(controller.value).toBe("france");
+        expect(controller.isOpen).toBe(false);
+        expect(document.activeElement).toBe(triggerBtn);
+        controller.destroy();
+      });
+
+      it("returns focus to the trigger after selecting with a click", () => {
+        const { triggerBtn, input, items, controller } = setupPopupInput({ defaultValue: "canada" });
+        openFromTrigger(triggerBtn, input);
+
+        items[0]!.click();
+        expect(controller.value).toBe("brazil");
+        expect(document.activeElement).toBe(triggerBtn);
+        controller.destroy();
+      });
+
+      it("returns focus to the trigger when toggled closed from the trigger", () => {
+        const { triggerBtn, input, controller } = setupPopupInput({ defaultValue: "canada" });
+        openFromTrigger(triggerBtn, input);
+
+        triggerBtn.click();
+        expect(controller.isOpen).toBe(false);
+        expect(document.activeElement).toBe(triggerBtn);
+        controller.destroy();
+      });
+
+      it("does not steal focus when closed by an outside press", () => {
+        const { triggerBtn, input, controller } = setupPopupInput({ defaultValue: "canada" });
+        const outside = document.createElement("button");
+        document.body.appendChild(outside);
+        openFromTrigger(triggerBtn, input);
+
+        outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+        outside.focus();
+        expect(controller.isOpen).toBe(false);
+        expect(document.activeElement).toBe(outside);
+        controller.destroy();
+      });
+
+      it("does not move focus to the trigger when closed by Tab", () => {
+        const { triggerBtn, input, controller } = setupPopupInput({ defaultValue: "canada" });
+        openFromTrigger(triggerBtn, input);
+
+        pressKey(input, "Tab");
+        expect(controller.isOpen).toBe(false);
+        expect(document.activeElement).not.toBe(triggerBtn);
+        controller.destroy();
+      });
+
+      it("lets mousedown on the popup input through, but not on items", () => {
+        const { input, items, controller } = setupPopupInput({ defaultValue: "canada" });
+        controller.open();
+
+        const inputDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+        input.dispatchEvent(inputDown);
+        expect(inputDown.defaultPrevented).toBe(false);
+
+        const itemDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+        items[0]!.dispatchEvent(itemDown);
+        expect(itemDown.defaultPrevented).toBe(true);
+        controller.destroy();
+      });
+
+      it("removes trigger attributes it added on destroy", () => {
+        const { triggerBtn, controller } = setupPopupInput({ defaultValue: "canada" });
+        controller.open();
+        controller.destroy();
+        expect(triggerBtn.hasAttribute("aria-haspopup")).toBe(false);
+        expect(triggerBtn.hasAttribute("aria-expanded")).toBe(false);
+        expect(triggerBtn.hasAttribute("aria-controls")).toBe(false);
+        expect(triggerBtn.hasAttribute("aria-label")).toBe(false);
+      });
+    });
+  });
+
+  describe("inline-input trigger labelling", () => {
+    const setupInlineTrigger = (triggerHtml: string) => {
+      document.body.innerHTML = `
+        <span id="ext-label">Show fruits</span>
+        <div data-slot="combobox" id="root">
+          <input data-slot="combobox-input" />
+          ${triggerHtml}
+          <div data-slot="combobox-content" hidden>
+            <div data-slot="combobox-list">
+              <div data-slot="combobox-item" data-value="apple">Apple</div>
+            </div>
+          </div>
+        </div>
+      `;
+      const root = document.getElementById("root")!;
+      const trigger = root.querySelector('[data-slot="combobox-trigger"]') as HTMLElement;
+      const controller = createCombobox(root);
+      return { trigger, controller };
+    };
+
+    it("preserves an authored aria-label", () => {
+      const { trigger, controller } = setupInlineTrigger(
+        `<button data-slot="combobox-trigger" aria-label="Show fruits"><svg></svg></button>`
+      );
+      expect(trigger.getAttribute("aria-label")).toBe("Show fruits");
+      controller.destroy();
+      expect(trigger.getAttribute("aria-label")).toBe("Show fruits");
+    });
+
+    it("does not add aria-label when aria-labelledby is authored", () => {
+      const { trigger, controller } = setupInlineTrigger(
+        `<button data-slot="combobox-trigger" aria-labelledby="ext-label"><svg></svg></button>`
+      );
+      expect(trigger.hasAttribute("aria-label")).toBe(false);
+      controller.destroy();
+    });
+
+    it("does not add aria-label when the trigger has text", () => {
+      const { trigger, controller } = setupInlineTrigger(
+        `<button data-slot="combobox-trigger">Show fruits</button>`
+      );
+      expect(trigger.hasAttribute("aria-label")).toBe(false);
+      controller.destroy();
+    });
+
+    it("adds the default label to an unlabelled icon trigger and removes it on destroy", () => {
+      const { trigger, controller } = setupInlineTrigger(
+        `<button data-slot="combobox-trigger"><svg></svg></button>`
+      );
+      expect(trigger.getAttribute("aria-label")).toBe("Toggle");
+      expect(trigger.getAttribute("tabindex")).toBe("-1");
+      controller.destroy();
+      expect(trigger.hasAttribute("aria-label")).toBe(false);
+      expect(trigger.hasAttribute("tabindex")).toBe(false);
+    });
   });
 
   describe("keyboard navigation", () => {
