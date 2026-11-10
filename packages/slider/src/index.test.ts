@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from "bun:test";
 import { createSlider, create } from "./index";
+import { clampAndSnap } from "./slider-math";
 import { clearRootBinding, setRootBinding } from "../../core/src/index";
 
 describe("Slider", () => {
@@ -604,7 +605,7 @@ describe("Slider", () => {
       expect(thumb.hasAttribute("data-dragging")).toBe(false);
     });
 
-    it("sets and clears touch-action during drag", () => {
+    it("sets touch-action on the control at init and keeps it through a drag", () => {
       const { track, control } = setupSingle();
 
       track.getBoundingClientRect = () => ({
@@ -614,19 +615,58 @@ describe("Slider", () => {
       control.setPointerCapture = () => {};
       control.releasePointerCapture = () => {};
 
-      // Before drag
-      expect(control.style.touchAction).toBe("");
+      // Browsers latch touch-action when the touch starts, so it must be set before any drag
+      expect(control.style.touchAction).toBe("none");
 
-      // During drag
       control.dispatchEvent(new PointerEvent("pointerdown", {
         clientX: 50, clientY: 10, pointerId: 1, bubbles: true
       }));
       expect(control.style.touchAction).toBe("none");
 
-      // After drag
       control.dispatchEvent(new PointerEvent("pointerup", {
         clientX: 50, clientY: 10, pointerId: 1, bubbles: true
       }));
+      expect(control.style.touchAction).toBe("none");
+    });
+
+    it("destroy() restores an empty inline touch-action", () => {
+      const { control, controller } = setupSingle();
+      expect(control.style.touchAction).toBe("none");
+
+      controller.destroy();
+      expect(control.style.touchAction).toBe("");
+    });
+
+    it("preserves an authored inline touch-action and restores it on destroy()", () => {
+      const { root, control } = mountSingle();
+      control.style.touchAction = "pan-y";
+      const controller = createSlider(root);
+
+      expect(control.style.touchAction).toBe("pan-y");
+
+      controller.destroy();
+      expect(control.style.touchAction).toBe("pan-y");
+    });
+
+    it("destroy() during a drag clears dragging state and restores touch-action", () => {
+      const { root, thumb, track, control, controller } = setupSingle();
+
+      track.getBoundingClientRect = () => ({
+        left: 0, right: 100, top: 0, bottom: 20,
+        width: 100, height: 20, x: 0, y: 0, toJSON() {}
+      } as DOMRect);
+      control.setPointerCapture = () => {};
+      control.releasePointerCapture = () => {};
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 50, clientY: 10, pointerId: 1, bubbles: true
+      }));
+      expect(root.hasAttribute("data-dragging")).toBe(true);
+
+      controller.destroy();
+
+      expect(root.hasAttribute("data-dragging")).toBe(false);
+      expect(thumb.hasAttribute("data-dragging")).toBe(false);
       expect(control.style.touchAction).toBe("");
     });
 
@@ -1481,6 +1521,294 @@ describe("Slider", () => {
     it("applies runtime-owned layout styles to the track", () => {
       const { track } = setupSingle('data-default-value="30"');
       expect(track.style.position).toBe("relative");
+    });
+  });
+
+  describe("Snapping precision", () => {
+    it("keeps the decimals of a fractional min that has more decimals than step", () => {
+      expect(clampAndSnap(0.25, 0.25, 5, 0.5)).toBe(0.25);
+      expect(clampAndSnap(0.5, 0.5, 10, 1)).toBe(0.5);
+      expect(clampAndSnap(2.2, 0.5, 10, 1)).toBe(2.5);
+    });
+
+    it("still removes floating-point noise for decimal steps", () => {
+      expect(clampAndSnap(0.1 + 0.2, 0, 1, 0.1)).toBe(0.3);
+      expect(clampAndSnap(0.7000000000000001, 0, 1, 0.1)).toBe(0.7);
+    });
+
+    it("handles steps written in exponent notation", () => {
+      expect(clampAndSnap(1.5e-7, 0, 1, 1e-7)).toBe(2e-7);
+      expect(clampAndSnap(3e-7, 0, 1, 1e-7)).toBe(3e-7);
+    });
+
+    it("initialises to a fractional min and keeps it reachable from the keyboard", () => {
+      const { thumb, controller } = setupSingle('data-min="0.5" data-max="10" data-step="1"');
+      expect(controller.value).toBe(0.5);
+
+      thumb.focus();
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      expect(controller.value).toBe(1.5);
+
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      expect(controller.value).toBe(2.5);
+
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+      expect(controller.value).toBe(0.5);
+    });
+
+    it("snaps range thumbs on a fractional-min grid", () => {
+      const { thumbs, controller } = setupRange('data-min="0.25" data-max="5" data-step="0.5"');
+      expect(controller.value).toEqual([0.25, 0.25]);
+
+      thumbs[1]!.focus();
+      thumbs[1]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      expect(controller.value).toEqual([0.25, 0.75]);
+    });
+  });
+
+  describe("RTL", () => {
+    const trackRect100 = () => ({
+      left: 0, right: 100, top: 0, bottom: 20,
+      width: 100, height: 20, x: 0, y: 0, toJSON() {}
+    } as DOMRect);
+
+    const setupRtl = (attrs = "", defaultValue?: number) => {
+      const parts = mountSingle(`dir="rtl" ${attrs}`);
+      parts.control.style.direction = "rtl";
+      parts.track.getBoundingClientRect = trackRect100;
+      parts.control.setPointerCapture = () => {};
+      parts.control.releasePointerCapture = () => {};
+      const controller = createSlider(
+        parts.root,
+        defaultValue !== undefined ? { defaultValue } : {},
+      );
+      return { ...parts, controller };
+    };
+
+    it("maps a pointer press from the right edge in RTL", () => {
+      const { control, controller } = setupRtl();
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 20, clientY: 10, pointerId: 1, bubbles: true
+      }));
+
+      expect(controller.value).toBe(80);
+    });
+
+    it("drags in the visual direction in RTL", () => {
+      const { control, controller } = setupRtl();
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 50, clientY: 10, pointerId: 1, bubbles: true
+      }));
+      expect(controller.value).toBe(50);
+
+      control.dispatchEvent(new PointerEvent("pointermove", {
+        clientX: 30, clientY: 10, pointerId: 1, bubbles: true
+      }));
+      expect(controller.value).toBe(70);
+
+      control.dispatchEvent(new PointerEvent("pointerup", {
+        clientX: 30, clientY: 10, pointerId: 1, bubbles: true
+      }));
+    });
+
+    it("picks the visually closest range thumb in RTL", () => {
+      const { root, track, control, thumbs } = mountRange('dir="rtl"');
+      control.style.direction = "rtl";
+      track.getBoundingClientRect = trackRect100;
+      control.setPointerCapture = () => {};
+      control.releasePointerCapture = () => {};
+      const controller = createSlider(root, { defaultValue: [20, 60] });
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 90, clientY: 10, pointerId: 1, bubbles: true
+      }));
+
+      expect(controller.value).toEqual([10, 60]);
+      expect(thumbs[0]!.hasAttribute("data-dragging")).toBe(true);
+    });
+
+    it("falls back to the closest dir attribute when computed direction is unavailable", () => {
+      const original = globalThis.getComputedStyle;
+      globalThis.getComputedStyle = (() => ({ direction: "" })) as unknown as typeof getComputedStyle;
+      try {
+        const { root, track, control } = mountSingle();
+        root.setAttribute("dir", "rtl");
+        track.getBoundingClientRect = trackRect100;
+        control.setPointerCapture = () => {};
+        control.releasePointerCapture = () => {};
+        const controller = createSlider(root);
+
+        control.dispatchEvent(new PointerEvent("pointerdown", {
+          clientX: 20, clientY: 10, pointerId: 1, bubbles: true
+        }));
+        expect(controller.value).toBe(80);
+      } finally {
+        globalThis.getComputedStyle = original;
+      }
+    });
+
+    it("ArrowLeft increases and ArrowRight decreases in RTL", () => {
+      const { thumb, controller } = setupRtl('data-step="5"', 50);
+
+      thumb.focus();
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+      expect(controller.value).toBe(55);
+
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      expect(controller.value).toBe(45);
+
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", shiftKey: true, bubbles: true }));
+      expect(controller.value).toBe(95);
+    });
+
+    it("leaves Home/End/PageUp/PageDown unchanged in RTL", () => {
+      const { thumb, controller } = setupRtl('data-step="5"', 50);
+
+      thumb.focus();
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "PageUp", bubbles: true }));
+      expect(controller.value).toBe(100);
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "PageDown", bubbles: true }));
+      expect(controller.value).toBe(50);
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+      expect(controller.value).toBe(0);
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+      expect(controller.value).toBe(100);
+    });
+
+    it("leaves vertical sliders unchanged in RTL", () => {
+      const { thumb, controller } = setupRtl('data-orientation="vertical" data-step="5"', 50);
+
+      thumb.focus();
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+      expect(controller.value).toBe(55);
+      thumb.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+      expect(controller.value).toBe(55);
+    });
+  });
+
+  describe("Pointer button and drag guards", () => {
+    const setupPointer = () => {
+      const parts = setupSingle('data-default-value="50"');
+      parts.track.getBoundingClientRect = () => ({
+        left: 0, right: 100, top: 0, bottom: 20,
+        width: 100, height: 20, x: 0, y: 0, toJSON() {}
+      } as DOMRect);
+      parts.control.setPointerCapture = () => {};
+      parts.control.releasePointerCapture = () => {};
+      return parts;
+    };
+
+    it("ignores secondary and middle mouse buttons", () => {
+      const { root, control, controller } = setupPointer();
+
+      for (const button of [1, 2]) {
+        control.dispatchEvent(new PointerEvent("pointerdown", {
+          clientX: 20, clientY: 10, pointerId: 1, pointerType: "mouse",
+          button, buttons: button === 1 ? 4 : 2, bubbles: true
+        }));
+        expect(controller.value).toBe(50);
+        expect(root.hasAttribute("data-dragging")).toBe(false);
+      }
+    });
+
+    it("starts a drag for the primary button and touch contact", () => {
+      const { root, control, controller } = setupPointer();
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 20, clientY: 10, pointerId: 1, pointerType: "mouse",
+        button: 0, buttons: 1, bubbles: true
+      }));
+      expect(controller.value).toBe(20);
+      control.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1, bubbles: true }));
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 70, clientY: 10, pointerId: 2, pointerType: "touch",
+        button: 0, buttons: 1, bubbles: true
+      }));
+      expect(controller.value).toBe(70);
+      expect(root.hasAttribute("data-dragging")).toBe(true);
+    });
+
+    it("ignores a second pointerdown while a drag is active", () => {
+      const { thumb, control, controller } = setupPointer();
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 30, clientY: 10, pointerId: 1, pointerType: "touch", bubbles: true
+      }));
+      expect(controller.value).toBe(30);
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 80, clientY: 10, pointerId: 2, pointerType: "touch", bubbles: true
+      }));
+      expect(controller.value).toBe(30);
+
+      control.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1, bubbles: true }));
+      expect(thumb.hasAttribute("data-dragging")).toBe(false);
+      expect(control.style.touchAction).toBe("none");
+    });
+
+    it("ignores mouse moves with no buttons pressed and ends the stale drag", () => {
+      const { root, control, controller } = setupPointer();
+      const commits: unknown[] = [];
+      root.addEventListener("slider:commit", (e) => commits.push((e as CustomEvent).detail.value));
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 30, clientY: 10, pointerId: 1, pointerType: "mouse",
+        button: 0, buttons: 1, bubbles: true
+      }));
+      expect(controller.value).toBe(30);
+
+      // pointerup was swallowed (e.g. by a context menu); the mouse now hovers
+      control.dispatchEvent(new PointerEvent("pointermove", {
+        clientX: 90, clientY: 10, pointerId: 1, pointerType: "mouse",
+        buttons: 0, bubbles: true
+      }));
+      expect(controller.value).toBe(30);
+      expect(root.hasAttribute("data-dragging")).toBe(false);
+      expect(commits).toEqual([30]);
+
+      control.dispatchEvent(new PointerEvent("pointermove", {
+        clientX: 60, clientY: 10, pointerId: 1, pointerType: "mouse",
+        buttons: 0, bubbles: true
+      }));
+      expect(controller.value).toBe(30);
+    });
+
+    it("still follows mouse moves while the primary button is held", () => {
+      const { control, controller } = setupPointer();
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 30, clientY: 10, pointerId: 1, pointerType: "mouse",
+        button: 0, buttons: 1, bubbles: true
+      }));
+      control.dispatchEvent(new PointerEvent("pointermove", {
+        clientX: 60, clientY: 10, pointerId: 1, pointerType: "mouse",
+        buttons: 1, bubbles: true
+      }));
+      expect(controller.value).toBe(60);
+    });
+
+    it("ends the drag on lostpointercapture", () => {
+      const { root, thumb, control, controller } = setupPointer();
+      const commits: unknown[] = [];
+      root.addEventListener("slider:commit", (e) => commits.push((e as CustomEvent).detail.value));
+
+      control.dispatchEvent(new PointerEvent("pointerdown", {
+        clientX: 40, clientY: 10, pointerId: 1, pointerType: "touch", bubbles: true
+      }));
+      control.dispatchEvent(new PointerEvent("lostpointercapture", { pointerId: 1, bubbles: true }));
+
+      expect(root.hasAttribute("data-dragging")).toBe(false);
+      expect(thumb.hasAttribute("data-dragging")).toBe(false);
+      expect(commits).toEqual([40]);
+
+      control.dispatchEvent(new PointerEvent("pointermove", {
+        clientX: 90, clientY: 10, pointerId: 1, pointerType: "touch", bubbles: true
+      }));
+      expect(controller.value).toBe(40);
     });
   });
 });
