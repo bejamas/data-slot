@@ -1,5 +1,6 @@
 import { on } from "./events.ts";
 import { containsWithPortals } from "./parts.ts";
+import { getSharedState } from "./shared-state.ts";
 
 export interface ModalStackItemOptions {
   content: HTMLElement;
@@ -25,7 +26,12 @@ interface ModalStackStore {
   updateIsolation(): void;
 }
 
-const modalStackStores = new WeakMap<Document, ModalStackStore>();
+// One stack per document, shared by all copies of core. The first copy to open
+// an item creates the store and owns its listener; other copies push entries
+// into it. Store and entry shapes are a cross-version contract.
+const MODAL_STACK_STORES = Symbol.for("data-slot.modal-stack-stores.v1");
+const getModalStackStores = () =>
+  getSharedState(MODAL_STACK_STORES, () => new WeakMap<Document, ModalStackStore>());
 
 const applyStackMetadata = (
   entry: ModalStackEntry,
@@ -140,11 +146,11 @@ const createModalStackStore = (doc: Document): ModalStackStore => {
 };
 
 const getModalStackStore = (doc: Document): ModalStackStore => {
-  const existing = modalStackStores.get(doc);
+  const existing = getModalStackStores().get(doc);
   if (existing) return existing;
 
   const created = createModalStackStore(doc);
-  modalStackStores.set(doc, created);
+  getModalStackStores().set(doc, created);
   return created;
 };
 
@@ -161,7 +167,7 @@ export function createModalStackItem(
   };
   let destroyed = false;
   const close = () => {
-    const store = modalStackStores.get(doc);
+    const store = getModalStackStores().get(doc);
     if (!store) return;
 
     const index = store.entries.indexOf(entry);
@@ -173,7 +179,7 @@ export function createModalStackItem(
 
     if (store.entries.length === 0) {
       store.cleanup();
-      modalStackStores.delete(doc);
+      getModalStackStores().delete(doc);
     }
   };
 
@@ -186,7 +192,7 @@ export function createModalStackItem(
       reindexModalStack(store);
     },
     close,
-    get isTopmost() { return modalStackStores.get(doc)?.entries.at(-1) === entry; },
+    get isTopmost() { return getModalStackStores().get(doc)?.entries.at(-1) === entry; },
     destroy: () => {
       if (destroyed) return;
       destroyed = true;
