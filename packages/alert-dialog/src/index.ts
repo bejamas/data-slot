@@ -20,6 +20,7 @@ import {
   focusElement,
   getAutofocusOrFirstFocusable,
   getTabbables,
+  containsWithPortals,
 } from "@data-slot/core";
 
 export interface AlertDialogOptions {
@@ -231,6 +232,9 @@ export function createAlertDialog(
     const first = focusables[0]!;
     const last = focusables[focusables.length - 1]!;
     const active = content.ownerDocument.activeElement;
+
+    // Nested popup widgets own their portaled tab sequence.
+    if (active && !content.contains(active) && containsWithPortals(content, active)) return;
 
     // Initial or programmatic focus may be inside the dialog but outside its tab order.
     if (!focusables.includes(active as HTMLElement)) {

@@ -99,6 +99,79 @@ describe("Dialog", () => {
     }
   });
 
+  describe("focus trap with portaled child popups", () => {
+    const setupWithPopover = async () => {
+      document.body.innerHTML = `
+        <button id="outside">Outside</button>
+        <div data-slot="dialog" id="dialog-root">
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">
+            <button id="dialog-first">First</button>
+            <div data-slot="popover" id="popover-root">
+              <button data-slot="popover-trigger" id="popover-trigger">Open popover</button>
+              <div data-slot="popover-content" id="popover-content">
+                <input id="popover-first" />
+                <input id="popover-second" />
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const dialogController = createDialog(document.getElementById("dialog-root")!);
+      const popoverController = createPopover(document.getElementById("popover-root")!);
+      dialogController.open();
+      await waitForRaf();
+      (document.getElementById("popover-trigger") as HTMLButtonElement).click();
+      await waitForRaf();
+      return {
+        dialogController,
+        popoverController,
+        content: document.querySelector('[data-slot="dialog-content"]') as HTMLElement,
+        popoverContent: document.getElementById("popover-content")!,
+        dialogFirst: document.getElementById("dialog-first") as HTMLButtonElement,
+        popoverFirst: document.getElementById("popover-first") as HTMLInputElement,
+        outside: document.getElementById("outside") as HTMLButtonElement,
+      };
+    };
+
+    it("lets Tab move through a portaled popover opened inside the dialog", async () => {
+      const { dialogController, popoverController, content, popoverContent, dialogFirst, popoverFirst } =
+        await setupWithPopover();
+      try {
+        expect(popoverController.isOpen).toBe(true);
+        expect(content.contains(popoverContent)).toBe(false);
+
+        popoverFirst.focus();
+        expect(document.activeElement).toBe(popoverFirst);
+        const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+        popoverFirst.dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(document.activeElement).not.toBe(dialogFirst);
+        expect(document.activeElement).toBe(popoverFirst);
+      } finally {
+        popoverController.destroy();
+        dialogController.destroy();
+      }
+    });
+
+    it("still traps Tab from focus outside the dialog that no portal owns", async () => {
+      const { dialogController, popoverController, dialogFirst, outside } = await setupWithPopover();
+      try {
+        outside.focus();
+        expect(document.activeElement).toBe(outside);
+        const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+        outside.dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(dialogFirst);
+      } finally {
+        popoverController.destroy();
+        dialogController.destroy();
+      }
+    });
+  });
+
   beforeEach(() => {
     document.body.innerHTML = "";
   });
