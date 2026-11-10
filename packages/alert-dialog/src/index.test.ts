@@ -462,3 +462,87 @@ describe("AlertDialog", () => {
     expect(document.documentElement.style.overflow).toBe("");
   });
 });
+
+describe("AlertDialog button types", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+    document.documentElement.style.overflow = "";
+    document.documentElement.style.scrollbarGutter = "";
+  });
+
+  const mount = (triggerHtml: string, footerHtml: string) => {
+    document.body.innerHTML = `
+      <form id="form">
+        <div data-slot="alert-dialog" id="root">
+          ${triggerHtml}
+          <div data-slot="alert-dialog-overlay"></div>
+          <div data-slot="alert-dialog-content">
+            <h2 data-slot="alert-dialog-title">Delete?</h2>
+            <div data-slot="alert-dialog-footer">${footerHtml}</div>
+          </div>
+        </div>
+      </form>
+    `;
+    const root = document.getElementById("root")!;
+    let submits = 0;
+    document.getElementById("form")!.addEventListener("submit", (e) => {
+      e.preventDefault();
+      submits += 1;
+    });
+    const controller = createAlertDialog(root);
+    return {
+      controller,
+      trigger: root.querySelector('[data-slot="alert-dialog-trigger"]') as HTMLElement,
+      cancel: root.querySelector('[data-slot="alert-dialog-cancel"]') as HTMLElement,
+      action: root.querySelector('[data-slot="alert-dialog-action"]') as HTMLElement,
+      submits: () => submits,
+    };
+  };
+
+  it('sets type="button" on trigger, cancel and action buttons without a type', () => {
+    const { controller, trigger, cancel, action } = mount(
+      '<button data-slot="alert-dialog-trigger">Delete</button>',
+      '<button data-slot="alert-dialog-cancel">Cancel</button><button data-slot="alert-dialog-action">Delete</button>'
+    );
+    expect(trigger.getAttribute("type")).toBe("button");
+    expect(cancel.getAttribute("type")).toBe("button");
+    expect(action.getAttribute("type")).toBe("button");
+    controller.destroy();
+  });
+
+  it("preserves an authored type, including a submit action", () => {
+    const { controller, trigger, cancel, action } = mount(
+      '<button data-slot="alert-dialog-trigger" type="submit">Delete</button>',
+      '<button data-slot="alert-dialog-cancel" type="reset">Cancel</button><button data-slot="alert-dialog-action" type="submit">Delete</button>'
+    );
+    expect(trigger.getAttribute("type")).toBe("submit");
+    expect(cancel.getAttribute("type")).toBe("reset");
+    expect(action.getAttribute("type")).toBe("submit");
+    controller.destroy();
+  });
+
+  it("does not add type to non-button parts", () => {
+    const { controller, trigger, cancel, action } = mount(
+      '<div data-slot="alert-dialog-trigger" role="button">Delete</div>',
+      '<a data-slot="alert-dialog-cancel" href="#">Cancel</a><a data-slot="alert-dialog-action" href="#">Delete</a>'
+    );
+    expect(trigger.hasAttribute("type")).toBe(false);
+    expect(cancel.hasAttribute("type")).toBe(false);
+    expect(action.hasAttribute("type")).toBe(false);
+    controller.destroy();
+  });
+
+  it("does not submit a surrounding form when trigger, action and cancel are clicked", () => {
+    const { controller, trigger, cancel, action, submits } = mount(
+      '<button data-slot="alert-dialog-trigger">Delete</button>',
+      '<button data-slot="alert-dialog-cancel">Cancel</button><button data-slot="alert-dialog-action">Delete</button>'
+    );
+    trigger.click();
+    expect(controller.isOpen).toBe(true);
+    action.click();
+    cancel.click();
+    expect(controller.isOpen).toBe(false);
+    expect(submits()).toBe(0);
+    controller.destroy();
+  });
+});
