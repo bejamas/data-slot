@@ -640,6 +640,7 @@ export function createTooltip(
       closeOnClickOutside: false,
       closeOnEscape: true,
       preventEscapeDefault: false,
+      transparent: true,
     })
   );
 

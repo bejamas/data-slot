@@ -147,6 +147,15 @@ Coordinate outside presses, Escape, and focus moving into an outside iframe.
 activation click; iframe dismissal reports the window blur event. Callbacks that
 do not need these details can continue to take no arguments.
 
+Open layers are stacked in the order they open; layers that open together are
+ordered by containment, so a nested layer sits above its container. Escape goes
+to the topmost layer (preferring layers that contain the event target), and a
+layer with `closeOnEscape: false` keeps Escape from closing layers beneath it.
+Likewise, a layer with `closeOnClickOutside: false` protects layers beneath it
+from outside presses. Set `transparent: true` for transient layers such as
+tooltips and hover cards: when they ignore an outside press or Escape, the
+interaction goes to the next layer down.
+
 ### Swipe Gesture
 
 #### `createSwipeGesture(options)`
