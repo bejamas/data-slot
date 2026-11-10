@@ -463,6 +463,10 @@ export function createCombobox(
   // Keyboard navigation
   const handleKeydown = (e: KeyboardEvent) => {
     if (disabled) return;
+    // Keys pressed while an IME is composing belong to the IME (candidate
+    // navigation, committing the composition), not to the listbox.
+    const isComposing = e.isComposing || (e as KeyboardEvent & { keyCode?: number }).keyCode === 229;
+    if (isComposing) return;
 
     switch (e.key) {
       case "ArrowDown": {

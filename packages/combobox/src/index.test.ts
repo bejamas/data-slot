@@ -3228,6 +3228,97 @@ describe("Combobox", () => {
     });
   });
 
+  describe("IME composition", () => {
+    const highlightedValue = (items: NodeListOf<HTMLElement>) =>
+      [...items].find((item) => item.hasAttribute("data-highlighted"))?.dataset.value ?? null;
+
+    const composingKeydown = (key: string, mode: "isComposing" | "keyCode") => {
+      const init: KeyboardEventInit = { key, bubbles: true, cancelable: true };
+      if (mode === "isComposing") init.isComposing = true;
+      const event = new KeyboardEvent("keydown", init);
+      if (mode === "keyCode") Object.defineProperty(event, "keyCode", { value: 229 });
+      return event;
+    };
+
+    for (const mode of ["isComposing", "keyCode"] as const) {
+      describe(`while composing (${mode === "isComposing" ? "isComposing" : "keyCode 229"})`, () => {
+        it("ArrowDown does not open, move highlight, or preventDefault", () => {
+          const { input, items, controller } = setup();
+
+          const closedEvent = composingKeydown("ArrowDown", mode);
+          input.dispatchEvent(closedEvent);
+          expect(controller.isOpen).toBe(false);
+          expect(closedEvent.defaultPrevented).toBe(false);
+
+          controller.open();
+          const openEvent = composingKeydown("ArrowDown", mode);
+          input.dispatchEvent(openEvent);
+          expect(openEvent.defaultPrevented).toBe(false);
+          expect(highlightedValue(items)).toBe(null);
+          controller.destroy();
+        });
+
+        it("Enter does not select the highlighted item or close", () => {
+          const { input, items, controller } = setup({ autoHighlight: true });
+          input.value = "a";
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          expect(controller.isOpen).toBe(true);
+          expect(highlightedValue(items)).toBe("apple");
+
+          const event = composingKeydown("Enter", mode);
+          input.dispatchEvent(event);
+          expect(event.defaultPrevented).toBe(false);
+          expect(controller.value).toBe(null);
+          expect(controller.isOpen).toBe(true);
+          expect(input.value).toBe("a");
+          controller.destroy();
+        });
+
+        it("Escape does not close the popup or clear the value", () => {
+          const { input, controller } = setup({ defaultValue: "banana" });
+
+          const closedEvent = composingKeydown("Escape", mode);
+          input.dispatchEvent(closedEvent);
+          expect(closedEvent.defaultPrevented).toBe(false);
+          expect(controller.value).toBe("banana");
+
+          controller.open();
+          const openEvent = composingKeydown("Escape", mode);
+          input.dispatchEvent(openEvent);
+          expect(openEvent.defaultPrevented).toBe(false);
+          expect(controller.isOpen).toBe(true);
+          expect(controller.value).toBe("banana");
+          controller.destroy();
+        });
+      });
+    }
+
+    it("handles the same keys normally after composition ends", () => {
+      const { input, items, controller } = setup();
+      input.value = "a";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(controller.isOpen).toBe(true);
+
+      const down = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true });
+      input.dispatchEvent(down);
+      expect(down.defaultPrevented).toBe(true);
+      expect(highlightedValue(items)).toBe("apple");
+
+      const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      input.dispatchEvent(enter);
+      expect(enter.defaultPrevented).toBe(true);
+      expect(controller.value).toBe("apple");
+      expect(controller.isOpen).toBe(false);
+
+      controller.open();
+      const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+      input.dispatchEvent(escape);
+      expect(escape.defaultPrevented).toBe(true);
+      expect(controller.isOpen).toBe(false);
+      controller.destroy();
+    });
+  });
+
   describe("parity adapter", () => {
     it("tracks 13 targeted combobox scenarios", () => {
       expect(comboboxParityScenarios).toHaveLength(13);
