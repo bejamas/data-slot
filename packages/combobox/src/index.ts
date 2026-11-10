@@ -121,6 +121,7 @@ export function createCombobox(
   let lastTabKeydownAt = -Infinity;
   let openOnNextFocusFromPointer = false;
   let suppressOpenOnNextFocus = false;
+  let openingFromInput = false;
 
   let formField: FormFieldAdapter | null = null;
 
@@ -315,7 +316,10 @@ export function createCombobox(
     if (isPopupInputMode) {
       input.value = "";
     }
-    collection.filter(input.value);
+    // Inline input text that still equals the committed label is not a query:
+    // show every item so the selection can be changed without deleting text.
+    const showsCommittedLabel = !openingFromInput && input.value === collection.labelFor(currentValue);
+    collection.filter(showsCommittedLabel ? "" : input.value);
     collection.highlight(collection.enabled.findIndex((item) => collection.valueOf(item) === currentValue));
   };
 
@@ -541,7 +545,12 @@ export function createCombobox(
     onInputValueChange?.(val);
 
     if (!isOpen) {
-      updateOpenState(true);
+      openingFromInput = true;
+      try {
+        updateOpenState(true);
+      } finally {
+        openingFromInput = false;
+      }
     } else {
       collection.filter(val);
       // Update position after filter changes content size
