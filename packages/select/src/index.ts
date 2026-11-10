@@ -20,6 +20,7 @@ import {
   createTerminalLifecycle,
   registerFloatingTerminalResources,
   createDismissLayer,
+  containsWithPortals,
 } from "@data-slot/core";
 import type { SelectController, SelectOptions } from "./types";
 import { resolveSelectConfiguration } from "./configuration";
@@ -297,13 +298,19 @@ export function createSelect(
 
   let pendingFocusRestore = false;
   let focusRestoreRaf: number | null = null;
+  // Focus left on body or inside the closing content needs a new home; focus
+  // the user already moved elsewhere (e.g. by clicking an input) stays put.
+  const isFocusRestorable = (el: Element | null) =>
+    !el || el === document.body || containsWithPortals(content, el);
   const restoreFocusNow = () => {
     pendingFocusRestore = false;
     focusRestoreRaf = null;
-    if (previousActiveElement && document.contains(previousActiveElement)) {
-      focusElement(previousActiveElement);
-    } else if (trigger && document.contains(trigger)) {
-      focusElement(trigger);
+    if (isFocusRestorable(document.activeElement)) {
+      if (previousActiveElement && document.contains(previousActiveElement)) {
+        focusElement(previousActiveElement);
+      } else if (trigger && document.contains(trigger)) {
+        focusElement(trigger);
+      }
     }
     previousActiveElement = null;
   };
@@ -361,8 +368,11 @@ export function createSelect(
       const activeElement = document.activeElement as HTMLElement | null;
       // An immediate selection close queues focus restoration. Reopening must
       // cancel that work and retain its target if detachment moved focus to body.
-      if (!pendingFocusRestore || (activeElement !== document.body && !content.contains(activeElement))) {
+      // Body or our own content is no target and falls back to the trigger.
+      if (!isFocusRestorable(activeElement)) {
         previousActiveElement = activeElement;
+      } else if (!pendingFocusRestore) {
+        previousActiveElement = null;
       }
       terminalLifecycle.cancelRaf(focusRestoreRaf);
       focusRestoreRaf = null;

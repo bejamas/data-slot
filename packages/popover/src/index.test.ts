@@ -729,6 +729,39 @@ describe('Popover', () => {
         controller.destroy()
       }
     })
+
+    it('keeps focus on an outside element that was focused by the dismissing click', async () => {
+      const { trigger, content, controller } = setup()
+      const outside = document.createElement('input')
+      document.body.append(outside)
+
+      trigger.focus()
+      controller.open()
+      await waitForRaf()
+      expect(content.contains(document.activeElement)).toBe(true)
+
+      outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+      outside.focus()
+      expect(controller.isOpen).toBe(false)
+      await waitForClose()
+
+      expect(document.activeElement === outside).toBe(true)
+      controller.destroy()
+    })
+
+    it('falls back to the trigger when body was focused at open', async () => {
+      const { trigger, controller } = setup()
+      ;(document.activeElement as HTMLElement | null)?.blur()
+      expect(document.activeElement === document.body).toBe(true)
+
+      controller.open()
+      await waitForRaf()
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      await waitForClose()
+
+      expect(document.activeElement === trigger).toBe(true)
+      controller.destroy()
+    })
   })
 
   // Data attribute tests

@@ -25,6 +25,7 @@ import {
   registerFloatingTerminalResources,
   createDismissLayer,
   createTypeahead,
+  containsWithPortals,
 } from "@data-slot/core";
 import { resolveDropdownMenuOptions } from "./dropdown-menu-options";
 import { createDropdownItemCollection } from "./dropdown-menu-items";
@@ -259,18 +260,26 @@ export function createDropdownMenu(
     onUpdate: updatePosition,
   });
   let pendingFocusRestore = false;
+  let focusRestoreRaf: number | null = null;
+  // Focus left on body or inside the closing content needs a new home; focus
+  // the user already moved elsewhere (e.g. by clicking an input) stays put.
+  const isFocusRestorable = (el: Element | null) =>
+    !el || el === document.body || containsWithPortals(content, el);
   const restoreFocusNow = () => {
     pendingFocusRestore = false;
-    if (previousActiveElement && document.contains(previousActiveElement)) {
-      focusElement(previousActiveElement);
-    } else if (document.contains(trigger)) {
-      focusElement(trigger);
+    focusRestoreRaf = null;
+    if (isFocusRestorable(document.activeElement)) {
+      if (previousActiveElement && document.contains(previousActiveElement)) {
+        focusElement(previousActiveElement);
+      } else if (document.contains(trigger)) {
+        focusElement(trigger);
+      }
     }
     previousActiveElement = null;
   };
   const restoreFocus = () => {
     pendingFocusRestore = true;
-    terminalLifecycle.trackRaf(restoreFocusNow);
+    focusRestoreRaf = terminalLifecycle.trackRaf(restoreFocusNow);
   };
   terminalLifecycle.onBeforeDestroy(() => {
     if (pendingFocusRestore) terminalLifecycle.trackFinalRaf(restoreFocusNow);
@@ -409,7 +418,16 @@ export function createDropdownMenu(
     if (isOpen === open) return;
     const previousOpen = isOpen;
     if (open) {
-      previousActiveElement = document.activeElement as HTMLElement | null;
+      const activeElement = document.activeElement as HTMLElement | null;
+      // Body or our own content is no target; keep a queued close's target.
+      if (!isFocusRestorable(activeElement)) {
+        previousActiveElement = activeElement;
+      } else if (!pendingFocusRestore) {
+        previousActiveElement = null;
+      }
+      terminalLifecycle.cancelRaf(focusRestoreRaf);
+      focusRestoreRaf = null;
+      pendingFocusRestore = false;
       isOpen = true;
       setAria(trigger, "expanded", true);
       portal.mount();
