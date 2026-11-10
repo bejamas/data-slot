@@ -96,7 +96,7 @@ function runPublish(registryStatus: string) {
     curl: 'case "$*" in *carousel*) if [ -f "$REGISTRY_STATE" ]; then printf 200; else printf "%s" "$REGISTRY_STATUS"; fi;; *) printf 200;; esac',
     bunx: `set -eu
 test "$*" = "npm publish --access public --provenance --registry https://registry.npmjs.org"
-test "$(jq -r '.dependencies["@data-slot/core"]' package.json)" = "1.0.0"
+test "$(jq -r '.dependencies["@data-slot/core"]' package.json)" = "^1.0.0"
 jq -r .name package.json >> "$PUBLISHED_LOG"
 touch "$REGISTRY_STATE"`,
   };
