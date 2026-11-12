@@ -28,6 +28,18 @@ export function isRange(value: SliderValue): value is [number, number] {
 }
 
 /**
+ * Count the decimal places of a number, including exponent notation (e.g. 1e-7 -> 7)
+ */
+export function countDecimals(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  const [mantissa = "", exponent] = String(Math.abs(value)).split("e");
+  const mantissaDecimals = mantissa.split(".")[1]?.length ?? 0;
+  const decimals = mantissaDecimals - (exponent ? Number(exponent) : 0);
+  // toFixed accepts 0..100
+  return Math.min(100, Math.max(0, decimals));
+}
+
+/**
  * Clamp and snap a value to step
  */
 export function clampAndSnap(
@@ -38,8 +50,9 @@ export function clampAndSnap(
 ): number {
   // Snap to step first
   const snapped = Math.round((val - min) / step) * step + min;
-  // Handle floating point precision
-  const decimals = step.toString().split(".")[1]?.length ?? 0;
+  // Handle floating point precision. Values on the grid are min + n * step,
+  // so they need as many decimals as the more precise of the two.
+  const decimals = Math.max(countDecimals(step), countDecimals(min));
   const rounded = parseFloat(snapped.toFixed(decimals));
   // Clamp to range
   return Math.min(max, Math.max(min, rounded));

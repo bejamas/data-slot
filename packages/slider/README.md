@@ -252,6 +252,14 @@ range's start/size positioning, and the thumb's absolute position / translate, s
 authors only need to supply visual styles unless they intentionally want to override
 that layout behavior.
 
+The interactive control surface (`slider-control`, or the track's parent) gets
+`touch-action: none` at init so touch drags are never taken over by page panning. An
+inline `touch-action` you set on it is kept, and the original value is restored on
+`destroy()`. Only the primary mouse button starts a drag.
+
+Horizontal sliders follow the control's writing direction: with `dir="rtl"`, `min` is
+on the right and pointer input maps from the right edge.
+
 When `thumbAlignment` is `"edge"` or `"edge-client-only"`, the runtime measures the
 track and thumb size to keep the thumb inside the visible track. In those modes,
 `--position` and the range start/size vars represent rendered layout positions rather
@@ -288,7 +296,7 @@ createSlider(element, {
 
 | Key | Action |
 |-----|--------|
-| `ArrowRight` / `ArrowLeft` | Increase / decrease by step in horizontal sliders |
+| `ArrowRight` / `ArrowLeft` | Increase / decrease by step in horizontal sliders (reversed in RTL, so the thumb moves in the arrow's direction) |
 | `ArrowUp` / `ArrowDown` | Increase / decrease by step in vertical sliders |
 | `PageUp` | Increase by largeStep |
 | `PageDown` | Decrease by largeStep |
