@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import { createAlertDialog, create } from "./index";
 import { createDialog } from "../../dialog/src/index";
+import { createPopover } from "../../popover/src/index";
 
 describe("AlertDialog", () => {
   const waitForRaf = () =>
@@ -99,6 +100,79 @@ describe("AlertDialog", () => {
     } finally {
       controller.destroy();
     }
+  });
+
+  describe("focus trap with portaled child popups", () => {
+    const setupWithPopover = async () => {
+      document.body.innerHTML = `
+        <button id="outside">Outside</button>
+        <div data-slot="alert-dialog" id="alert-root">
+          <div data-slot="alert-dialog-overlay"></div>
+          <div data-slot="alert-dialog-content">
+            <button id="alert-first">First</button>
+            <div data-slot="popover" id="popover-root">
+              <button data-slot="popover-trigger" id="popover-trigger">Open popover</button>
+              <div data-slot="popover-content" id="popover-content">
+                <input id="popover-first" />
+                <input id="popover-second" />
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const alertController = createAlertDialog(document.getElementById("alert-root")!);
+      const popoverController = createPopover(document.getElementById("popover-root")!);
+      alertController.open();
+      await waitForRaf();
+      (document.getElementById("popover-trigger") as HTMLButtonElement).click();
+      await waitForRaf();
+      return {
+        alertController,
+        popoverController,
+        content: document.querySelector('[data-slot="alert-dialog-content"]') as HTMLElement,
+        popoverContent: document.getElementById("popover-content")!,
+        alertFirst: document.getElementById("alert-first") as HTMLButtonElement,
+        popoverFirst: document.getElementById("popover-first") as HTMLInputElement,
+        outside: document.getElementById("outside") as HTMLButtonElement,
+      };
+    };
+
+    it("lets Tab move through a portaled popover opened inside the alert dialog", async () => {
+      const { alertController, popoverController, content, popoverContent, alertFirst, popoverFirst } =
+        await setupWithPopover();
+      try {
+        expect(popoverController.isOpen).toBe(true);
+        expect(content.contains(popoverContent)).toBe(false);
+
+        popoverFirst.focus();
+        expect(document.activeElement).toBe(popoverFirst);
+        const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+        popoverFirst.dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(document.activeElement).not.toBe(alertFirst);
+        expect(document.activeElement).toBe(popoverFirst);
+      } finally {
+        popoverController.destroy();
+        alertController.destroy();
+      }
+    });
+
+    it("still traps Tab from focus outside the alert dialog that no portal owns", async () => {
+      const { alertController, popoverController, alertFirst, outside } = await setupWithPopover();
+      try {
+        outside.focus();
+        expect(document.activeElement).toBe(outside);
+        const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+        outside.dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(alertFirst);
+      } finally {
+        popoverController.destroy();
+        alertController.destroy();
+      }
+    });
   });
 
   beforeEach(() => {
