@@ -348,6 +348,89 @@ describe("DropdownMenu", () => {
 
       controller.destroy();
     });
+
+    it("keeps focus on an outside element that was focused by the dismissing click", async () => {
+      const { trigger, items, controller } = setup();
+      const outside = document.createElement("input");
+      document.body.append(outside);
+
+      trigger.focus();
+      controller.open();
+      await waitForRaf();
+      items[0]!.focus();
+
+      outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      outside.focus();
+      expect(controller.isOpen).toBe(false);
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(document.activeElement === outside).toBe(true);
+      controller.destroy();
+    });
+
+    it("falls back to the trigger when body was focused at open", async () => {
+      const { trigger, items, controller } = setup();
+      (document.activeElement as HTMLElement | null)?.blur();
+      expect(document.activeElement === document.body).toBe(true);
+
+      controller.open();
+      await waitForRaf();
+      items[0]!.focus();
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(document.activeElement === trigger).toBe(true);
+      controller.destroy();
+    });
+
+    it("restores to the trigger after reopening during the exit animation", async () => {
+      const { trigger, content, items, controller } = setup();
+      content.style.transitionProperty = "opacity";
+      content.style.transitionDuration = "200ms";
+
+      trigger.focus();
+      controller.open();
+      await waitForRaf();
+      items[0]!.focus();
+      controller.close();
+      controller.open();
+      await waitForRaf();
+      items[0]!.focus();
+
+      controller.close();
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      content.dispatchEvent(new Event("transitionend", { bubbles: true }));
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(content.hidden).toBe(true);
+      expect(document.activeElement === trigger).toBe(true);
+      controller.destroy();
+    });
+
+    it("does not move focus out of a menu reopened before the queued restore runs", async () => {
+      const { trigger, content, items, controller } = setup();
+
+      trigger.focus();
+      controller.open();
+      await waitForRaf();
+      items[0]!.focus();
+      controller.close();
+      controller.open();
+      await waitForRaf();
+      await waitForRaf();
+
+      expect(controller.isOpen).toBe(true);
+      expect(content.contains(document.activeElement)).toBe(true);
+
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      await waitForRaf();
+      await waitForRaf();
+      expect(document.activeElement === trigger).toBe(true);
+      controller.destroy();
+    });
   });
 
   describe("escape key", () => {
