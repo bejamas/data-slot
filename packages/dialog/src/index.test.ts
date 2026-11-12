@@ -676,6 +676,48 @@ describe("Dialog", () => {
     dialogController.destroy();
   });
 
+  it("Escape closes a nested popover created before its dialog", () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog" id="dialog-root">
+        <button data-slot="dialog-trigger" id="dialog-trigger">Open dialog</button>
+        <div data-slot="dialog-overlay"></div>
+        <div data-slot="dialog-content">
+          <div data-slot="popover" id="popover-root">
+            <button data-slot="popover-trigger" id="popover-trigger">Open popover</button>
+            <div data-slot="popover-content"><button id="popover-button">Inside</button></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Popover registers its dismiss layer first, so registration order is wrong.
+    const popoverController = createPopover(document.getElementById("popover-root")!);
+    const dialogController = createDialog(document.getElementById("dialog-root")!);
+    const popoverButton = document.getElementById("popover-button") as HTMLButtonElement;
+
+    (document.getElementById("dialog-trigger") as HTMLButtonElement).click();
+    (document.getElementById("popover-trigger") as HTMLButtonElement).click();
+    expect(dialogController.isOpen).toBe(true);
+    expect(popoverController.isOpen).toBe(true);
+
+    popoverButton.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })
+    );
+    expect(popoverController.isOpen).toBe(false);
+    expect(dialogController.isOpen).toBe(true);
+
+    // The order sticks for the rest of the session.
+    (document.getElementById("popover-trigger") as HTMLButtonElement).click();
+    popoverButton.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })
+    );
+    expect(popoverController.isOpen).toBe(false);
+    expect(dialogController.isOpen).toBe(true);
+
+    popoverController.destroy();
+    dialogController.destroy();
+  });
+
   it("opening dialog does not auto-open nested hover-card from initial focus", async () => {
     document.body.innerHTML = `
       <div data-slot="dialog" id="dialog-root">
