@@ -111,6 +111,7 @@ describe("tooltip mounting", () => {
 
 it("mounts on keyboard focus and removes its description on Escape", async () => {
   const { content, trigger, controller } = setup({ delay: 0 });
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
   trigger.focus();
   expect(controller.isOpen).toBe(true);
   expect(document.getElementById(trigger.getAttribute("aria-describedby")!)).toBe(content);

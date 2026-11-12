@@ -49,6 +49,7 @@ import { createTooltip } from "@data-slot/tooltip";
 const tooltip = createTooltip(element, {
   delay: 300,
   skipDelayDuration: 300,
+  closeDelay: 100,
   side: "top",
   align: "center",
   onOpenChange: (open) => console.log(open),
@@ -60,7 +61,7 @@ const tooltip = createTooltip(element, {
 #### Runtime Slots
 
 - `tooltip` - Root element that manages the open state and hover delays.
-- `tooltip-trigger` - Required element that opens the tooltip on hover or focus and is linked to its description.
+- `tooltip-trigger` - Required element that opens the tooltip on hover or keyboard focus and is linked to its description.
 - `tooltip-content` - Required floating panel with tooltip semantics.
 - `tooltip-arrow` - Optional arrow inside the content, positioned against the trigger by the runtime.
 - `tooltip-positioner` - Optional authored positioning wrapper around the content, reused instead of a generated wrapper.
@@ -109,6 +110,7 @@ Placement attributes (`data-side`, `data-align`, `data-side-offset`, `data-align
 |-----------|------|---------|-------------|
 | `data-delay` | number | `300` | Delay before showing tooltip (ms) |
 | `data-skip-delay-duration` | number | `300` | Duration to skip delay after closing (ms) |
+| `data-close-delay` | number | `100` | Grace period before closing after the pointer leaves the trigger or content (ms) |
 | `data-side` | string | `"top"` | Side relative to trigger (`top`, `right`, `bottom`, `left`, `inline-start`, `inline-end`) |
 | `data-align` | string | `"center"` | Alignment along the side |
 | `data-side-offset` | number | `4` | Distance from trigger (px) |
@@ -177,6 +179,7 @@ The component sets these attributes automatically:
 |--------|------|---------|-------------|
 | `delay` | `number` | `300` | Delay before showing tooltip (ms) |
 | `skipDelayDuration` | `number` | `300` | Duration to skip delay after closing (ms). Set to `0` to disable warm-up. |
+| `closeDelay` | `number` | `100` | Grace period before closing after the pointer leaves the trigger or content (ms), so the pointer can reach the content. Set to `0` to hide immediately. |
 | `side` | `"top" \| "right" \| "bottom" \| "left" \| "inline-start" \| "inline-end"` | `"top"` | Preferred side relative to trigger |
 | `align` | `"start" \| "center" \| "end"` | `"center"` | Preferred alignment |
 | `sideOffset` | `number` | `4` | Distance from trigger in pixels |
@@ -461,18 +464,21 @@ When a user closes one tooltip and quickly hovers another, the second tooltip sh
 | Input | Behavior |
 |-------|----------|
 | Pointer enter trigger (mouse/pen) | Show after delay |
-| Pointer leave trigger | Hide immediately (unless entering content) |
-| Pointer enter content | Keep open (hoverable content) |
-| Pointer leave content | Hide immediately (unless entering trigger) |
+| Pointer leave trigger | Hide after `closeDelay` (immediately when entering content keeps it open, or when moving to another tooltip trigger) |
+| Pointer enter content | Keep open, cancelling a pending close (hoverable content) |
+| Pointer leave content | Hide after `closeDelay` (unless returning to the trigger) |
 | Touch hover | Ignored (focus-only on touch devices) |
 | Click trigger | Cancel a pending delayed open, or dismiss an already-open tooltip |
-| Focus | Show after delay (immediately during the warm-up window) |
+| Keyboard focus | Show after delay (immediately during the warm-up window) |
+| Pointer or programmatic focus | Ignored |
 | Blur | Hide immediately |
 | `Escape` | Hide immediately (listener only active when open) |
 
-**Hoverable Content:** Moving the pointer from trigger to content (or vice versa) keeps the tooltip open. This allows users to interact with links or selectable text in tooltips.
+**Hoverable Content:** Moving the pointer from trigger to content (or vice versa) keeps the tooltip open. Leaving either one starts a short `closeDelay` grace period that is cancelled when the pointer enters the content or returns to the trigger, so the pointer can cross the `sideOffset` gap. This allows users to interact with links or selectable text in tooltips.
 
-**Focus Priority:** While the trigger has keyboard focus, the tooltip stays open even if the pointer leaves. This prevents jarring closures during keyboard navigation.
+**Keyboard Focus:** Focus opens the tooltip only shortly after a keyboard navigation key (`Tab`, arrow keys, `Home`, `End`). Mouse focus and programmatic focus, such as a dialog focusing its first control or restoring focus to its trigger on close, do not open it, so the first `Escape` reaches the dialog.
+
+**Focus Priority:** While the trigger has keyboard focus, the tooltip stays open even if the pointer leaves. This prevents jarring closures during keyboard navigation. Clicking the trigger still dismisses it, and it stays closed until the next hover or keyboard focus.
 
 ## License
 
