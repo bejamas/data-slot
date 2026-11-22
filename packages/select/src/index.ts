@@ -514,9 +514,16 @@ export function createSelect(
         updateHighlight(len - 1);
         break;
       case "Enter":
-      case " ":
         e.preventDefault();
         if (highlightedIndex >= 0) selectItem(enabledItems[highlightedIndex]!);
+        break;
+      case " ":
+        e.preventDefault();
+        if (typeahead.isActive) {
+          handleTypeahead(" ");
+        } else if (highlightedIndex >= 0) {
+          selectItem(enabledItems[highlightedIndex]!);
+        }
         break;
       case "Tab":
         // Skip focus restore to allow normal tab navigation
