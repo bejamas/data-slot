@@ -931,6 +931,36 @@ describe("Select", () => {
       controller.destroy();
     });
 
+    it.each(["Escape", "Tab"])(
+      "closes on %s when all items are disabled",
+      (key) => {
+        const { trigger, content, controller } = setup(
+          {},
+          `
+          <div data-slot="select" id="root">
+            <button data-slot="select-trigger">
+              <span data-slot="select-value"></span>
+            </button>
+            <div data-slot="select-content">
+              <div data-slot="select-item" data-value="apple" data-disabled>Apple</div>
+              <div data-slot="select-item" data-value="banana" data-disabled>Banana</div>
+            </div>
+          </div>
+        `
+        );
+
+        trigger.click();
+        expect(controller.isOpen).toBe(true);
+
+        content.dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true })
+        );
+        expect(controller.isOpen).toBe(false);
+
+        controller.destroy();
+      }
+    );
+
     it("highlights selected item when opening", () => {
       const { trigger, items, controller } = setup({ defaultValue: "banana" });
 
