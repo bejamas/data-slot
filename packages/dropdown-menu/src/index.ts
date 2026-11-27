@@ -545,6 +545,7 @@ export function createDropdownMenu(
   const contentId = ensureId(content, "dropdown-menu-content");
   trigger.setAttribute("aria-haspopup", "menu");
   trigger.setAttribute("aria-controls", contentId);
+  if (trigger.tagName === "BUTTON" && !trigger.hasAttribute("type")) trigger.setAttribute("type", "button");
   content.setAttribute("role", "menu");
   content.setAttribute("aria-labelledby", triggerId);
   content.tabIndex = -1;

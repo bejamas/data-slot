@@ -1,5 +1,6 @@
 import {
   getPart,
+  getParts,
   getRoots,
   getDataBool,
   reuseRootBinding,
@@ -120,6 +121,14 @@ export function createAlertDialog(
     trigger.setAttribute("aria-haspopup", "dialog");
     trigger.setAttribute("aria-controls", content.id);
     setAria(trigger, "expanded", false);
+  }
+
+  for (const button of [
+    trigger,
+    ...getParts<HTMLElement>(root, "alert-dialog-cancel"),
+    ...getParts<HTMLElement>(root, "alert-dialog-action"),
+  ]) {
+    if (button?.tagName === "BUTTON" && !button.hasAttribute("type")) button.setAttribute("type", "button");
   }
 
   let addedTabIndex = false;

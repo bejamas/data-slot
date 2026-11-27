@@ -112,6 +112,7 @@ export const createDropdownItemCollection = (root: Element, content: HTMLElement
           item.type === "radio" ? "menuitemradio" : item.type === "checkbox" ? "menuitemcheckbox" : "menuitem",
         );
         item.el.tabIndex = -1;
+        if (item.el.tagName === "BUTTON" && !item.el.hasAttribute("type")) item.el.setAttribute("type", "button");
         item.el.removeAttribute("data-checked");
         setAria(item.el, "checked", item.type !== "item" && item.value !== null ? false : null);
       }

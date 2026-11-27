@@ -993,3 +993,72 @@ describe('Popover', () => {
     })
   })
 })
+
+describe('Popover button types', () => {
+  const mount = (triggerHtml: string, closeHtml: string) => {
+    document.body.innerHTML = `
+      <form id="form">
+        <div data-slot="popover" id="root">
+          ${triggerHtml}
+          <div data-slot="popover-content">
+            Popover content
+            ${closeHtml}
+          </div>
+        </div>
+      </form>
+    `
+    const root = document.getElementById('root')!
+    let submits = 0
+    document.getElementById('form')!.addEventListener('submit', (e) => {
+      e.preventDefault()
+      submits += 1
+    })
+    const trigger = root.querySelector('[data-slot="popover-trigger"]') as HTMLElement
+    const closeBtn = root.querySelector('[data-slot="popover-close"]') as HTMLElement
+    const controller = createPopover(root)
+    return { controller, trigger, closeBtn, submits: () => submits }
+  }
+
+  it('sets type="button" on trigger and close buttons without a type', () => {
+    const { controller, trigger, closeBtn } = mount(
+      '<button data-slot="popover-trigger">Open</button>',
+      '<button data-slot="popover-close">Close</button>'
+    )
+    expect(trigger.getAttribute('type')).toBe('button')
+    expect(closeBtn.getAttribute('type')).toBe('button')
+    controller.destroy()
+  })
+
+  it('preserves an authored type', () => {
+    const { controller, trigger, closeBtn } = mount(
+      '<button data-slot="popover-trigger" type="submit">Open</button>',
+      '<button data-slot="popover-close" type="reset">Close</button>'
+    )
+    expect(trigger.getAttribute('type')).toBe('submit')
+    expect(closeBtn.getAttribute('type')).toBe('reset')
+    controller.destroy()
+  })
+
+  it('does not add type to non-button parts', () => {
+    const { controller, trigger, closeBtn } = mount(
+      '<div data-slot="popover-trigger" role="button">Open</div>',
+      '<a data-slot="popover-close" href="#">Close</a>'
+    )
+    expect(trigger.hasAttribute('type')).toBe(false)
+    expect(closeBtn.hasAttribute('type')).toBe(false)
+    controller.destroy()
+  })
+
+  it('does not submit a surrounding form when the trigger is clicked', () => {
+    const { controller, trigger, submits } = mount(
+      '<button data-slot="popover-trigger">Open</button>',
+      '<button data-slot="popover-close">Close</button>'
+    )
+    trigger.click()
+    expect(controller.isOpen).toBe(true)
+    trigger.click()
+    expect(controller.isOpen).toBe(false)
+    expect(submits()).toBe(0)
+    controller.destroy()
+  })
+})

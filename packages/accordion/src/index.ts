@@ -662,6 +662,7 @@ export function createAccordion(
     const contentId = ensureId(content, "accordion-content");
     const triggerId = ensureId(trigger, "accordion-trigger");
     trigger.setAttribute("aria-controls", contentId);
+    if (trigger.tagName === "BUTTON" && !trigger.hasAttribute("type")) trigger.setAttribute("type", "button");
     content.setAttribute("aria-labelledby", triggerId);
     content.setAttribute("role", "region");
 

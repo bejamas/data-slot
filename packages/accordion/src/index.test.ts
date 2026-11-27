@@ -946,3 +946,74 @@ describe("Accordion", () => {
     });
   });
 });
+
+describe("Accordion button types", () => {
+  const mount = (triggerOne: string, triggerTwo: string) => {
+    document.body.innerHTML = `
+      <form id="form">
+        <div data-slot="accordion" id="root">
+          <div data-slot="accordion-item" data-value="one">
+            ${triggerOne}
+            <div data-slot="accordion-content">Content One</div>
+          </div>
+          <div data-slot="accordion-item" data-value="two">
+            ${triggerTwo}
+            <div data-slot="accordion-content">Content Two</div>
+          </div>
+        </div>
+      </form>
+    `;
+    const root = document.getElementById("root")!;
+    let submits = 0;
+    document.getElementById("form")!.addEventListener("submit", (e) => {
+      e.preventDefault();
+      submits += 1;
+    });
+    const controller = createAccordion(root);
+    return {
+      controller,
+      triggers: [...root.querySelectorAll<HTMLElement>('[data-slot="accordion-trigger"]')],
+      submits: () => submits,
+    };
+  };
+
+  it('sets type="button" on every trigger button without a type', () => {
+    const { controller, triggers } = mount(
+      '<button data-slot="accordion-trigger">One</button>',
+      '<button data-slot="accordion-trigger">Two</button>'
+    );
+    expect(triggers).toHaveLength(2);
+    for (const trigger of triggers) expect(trigger.getAttribute("type")).toBe("button");
+    controller.destroy();
+  });
+
+  it("preserves an authored type", () => {
+    const { controller, triggers } = mount(
+      '<button data-slot="accordion-trigger" type="submit">One</button>',
+      '<button data-slot="accordion-trigger">Two</button>'
+    );
+    expect(triggers[0]!.getAttribute("type")).toBe("submit");
+    expect(triggers[1]!.getAttribute("type")).toBe("button");
+    controller.destroy();
+  });
+
+  it("does not add type to non-button triggers", () => {
+    const { controller, triggers } = mount(
+      '<div data-slot="accordion-trigger" role="button" tabindex="0">One</div>',
+      '<a data-slot="accordion-trigger" href="#">Two</a>'
+    );
+    for (const trigger of triggers) expect(trigger.hasAttribute("type")).toBe(false);
+    controller.destroy();
+  });
+
+  it("does not submit a surrounding form when a trigger is clicked", () => {
+    const { controller, triggers, submits } = mount(
+      '<button data-slot="accordion-trigger">One</button>',
+      '<button data-slot="accordion-trigger">Two</button>'
+    );
+    triggers[0]!.click();
+    expect(controller.value).toEqual(["one"]);
+    expect(submits()).toBe(0);
+    controller.destroy();
+  });
+});

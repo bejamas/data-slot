@@ -224,6 +224,9 @@ export function createPopover(
   const contentId = ensureId(content, "popover-content");
   trigger.setAttribute("aria-haspopup", "dialog");
   trigger.setAttribute("aria-controls", contentId);
+  for (const button of [trigger, closeBtn]) {
+    if (button?.tagName === "BUTTON" && !button.hasAttribute("type")) button.setAttribute("type", "button");
+  }
   content.setAttribute("data-side", preferredSide);
   content.setAttribute("data-align", preferredAlign);
   // TODO(next-major): stop writing legacy `data-position`; keep only `data-side`.

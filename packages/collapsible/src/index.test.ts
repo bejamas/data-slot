@@ -800,3 +800,57 @@ describe('Collapsible', () => {
     })
   })
 })
+
+describe('Collapsible button types', () => {
+  const mount = (triggerHtml: string) => {
+    document.body.innerHTML = `
+      <form id="form">
+        <div data-slot="collapsible" id="root">
+          ${triggerHtml}
+          <div data-slot="collapsible-content">Content here</div>
+        </div>
+      </form>
+    `
+    const root = document.getElementById('root')!
+    let submits = 0
+    document.getElementById('form')!.addEventListener('submit', (e) => {
+      e.preventDefault()
+      submits += 1
+    })
+    const trigger = root.querySelector('[data-slot="collapsible-trigger"]') as HTMLElement
+    const controller = createCollapsible(root)
+    return { controller, trigger, submits: () => submits }
+  }
+
+  it('sets type="button" on a trigger button without a type', () => {
+    const { controller, trigger } = mount('<button data-slot="collapsible-trigger">Toggle</button>')
+    expect(trigger.getAttribute('type')).toBe('button')
+    controller.destroy()
+  })
+
+  it('preserves an authored type', () => {
+    const { controller, trigger } = mount(
+      '<button data-slot="collapsible-trigger" type="submit">Toggle</button>'
+    )
+    expect(trigger.getAttribute('type')).toBe('submit')
+    controller.destroy()
+  })
+
+  it('does not add type to a non-button trigger', () => {
+    const { controller, trigger } = mount(
+      '<div data-slot="collapsible-trigger" role="button" tabindex="0">Toggle</div>'
+    )
+    expect(trigger.hasAttribute('type')).toBe(false)
+    controller.destroy()
+  })
+
+  it('does not submit a surrounding form when the trigger is clicked', () => {
+    const { controller, trigger, submits } = mount(
+      '<button data-slot="collapsible-trigger">Toggle</button>'
+    )
+    trigger.click()
+    expect(controller.isOpen).toBe(true)
+    expect(submits()).toBe(0)
+    controller.destroy()
+  })
+})

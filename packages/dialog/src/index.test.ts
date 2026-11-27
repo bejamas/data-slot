@@ -1333,3 +1333,83 @@ describe("Dialog", () => {
     });
   });
 });
+
+describe("Dialog button types", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+    document.documentElement.style.overflow = "";
+    document.documentElement.style.scrollbarGutter = "";
+  });
+
+  const mount = (triggerHtml: string, closeHtml: string) => {
+    document.body.innerHTML = `
+      <form id="form">
+        <div data-slot="dialog" id="root">
+          ${triggerHtml}
+          <div data-slot="dialog-overlay"></div>
+          <div data-slot="dialog-content">
+            <h2 data-slot="dialog-title">Title</h2>
+            ${closeHtml}
+          </div>
+        </div>
+      </form>
+    `;
+    const root = document.getElementById("root")!;
+    let submits = 0;
+    document.getElementById("form")!.addEventListener("submit", (e) => {
+      e.preventDefault();
+      submits += 1;
+    });
+    const controller = createDialog(root);
+    return {
+      controller,
+      trigger: root.querySelector('[data-slot="dialog-trigger"]') as HTMLElement,
+      closes: [...root.querySelectorAll<HTMLElement>('[data-slot="dialog-close"]')],
+      submits: () => submits,
+    };
+  };
+
+  it('sets type="button" on trigger and close buttons without a type', () => {
+    const { controller, trigger, closes } = mount(
+      '<button data-slot="dialog-trigger">Open</button>',
+      '<button data-slot="dialog-close">Close</button><button data-slot="dialog-close">X</button>'
+    );
+    expect(trigger.getAttribute("type")).toBe("button");
+    expect(closes).toHaveLength(2);
+    for (const close of closes) expect(close.getAttribute("type")).toBe("button");
+    controller.destroy();
+  });
+
+  it("preserves an authored type", () => {
+    const { controller, trigger, closes } = mount(
+      '<button data-slot="dialog-trigger" type="submit">Open</button>',
+      '<button data-slot="dialog-close" type="reset">Close</button>'
+    );
+    expect(trigger.getAttribute("type")).toBe("submit");
+    expect(closes[0]!.getAttribute("type")).toBe("reset");
+    controller.destroy();
+  });
+
+  it("does not add type to non-button parts", () => {
+    const { controller, trigger, closes } = mount(
+      '<div data-slot="dialog-trigger" role="button">Open</div>',
+      '<a data-slot="dialog-close" href="#">Close</a>'
+    );
+    expect(trigger.hasAttribute("type")).toBe(false);
+    expect(closes[0]!.hasAttribute("type")).toBe(false);
+    controller.destroy();
+  });
+
+  it("does not submit a surrounding form when trigger and close are clicked", () => {
+    const { controller, trigger, closes, submits } = mount(
+      '<button data-slot="dialog-trigger">Open</button>',
+      '<button data-slot="dialog-close">Close</button>'
+    );
+    trigger.click();
+    expect(controller.isOpen).toBe(true);
+    closes[0]!.click();
+    expect(controller.isOpen).toBe(false);
+    expect(submits()).toBe(0);
+    controller.destroy();
+  });
+});

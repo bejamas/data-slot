@@ -147,6 +147,7 @@ export function createCollapsible(
   const contentId = ensureId(content, "collapsible-content");
   const triggerId = ensureId(trigger, "collapsible-trigger");
   trigger.setAttribute("aria-controls", contentId);
+  if (trigger.tagName === "BUTTON" && !trigger.hasAttribute("type")) trigger.setAttribute("type", "button");
   content.setAttribute("role", "region");
   content.setAttribute("aria-labelledby", triggerId);
 

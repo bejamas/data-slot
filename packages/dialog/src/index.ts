@@ -1,5 +1,6 @@
 import {
   getPart,
+  getParts,
   getRoots,
   getDataBool,
   reuseRootBinding,
@@ -153,6 +154,10 @@ export function createDialog(
     trigger.setAttribute("aria-haspopup", "dialog");
     trigger.setAttribute("aria-controls", content.id);
     setAria(trigger, "expanded", false);
+  }
+
+  for (const button of [trigger, ...getParts<HTMLElement>(root, "dialog-close")]) {
+    if (button?.tagName === "BUTTON" && !button.hasAttribute("type")) button.setAttribute("type", "button");
   }
 
   // Track if we added tabindex (so we can clean it up)

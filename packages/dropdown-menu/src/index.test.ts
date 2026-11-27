@@ -2282,3 +2282,96 @@ describe("DropdownMenu", () => {
     inner.destroy();
   });
 });
+
+describe("DropdownMenu button types", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    resetScrollLock();
+  });
+
+  const mount = (triggerHtml: string, itemsHtml: string) => {
+    document.body.innerHTML = `
+      <form id="form">
+        <div data-slot="dropdown-menu" id="root">
+          ${triggerHtml}
+          <div data-slot="dropdown-menu-content">${itemsHtml}</div>
+        </div>
+      </form>
+    `;
+    const root = document.getElementById("root")!;
+    let submits = 0;
+    document.getElementById("form")!.addEventListener("submit", (e) => {
+      e.preventDefault();
+      submits += 1;
+    });
+    const controller = createDropdownMenu(root);
+    return {
+      root,
+      controller,
+      trigger: root.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLElement,
+      items: [...root.querySelectorAll<HTMLElement>(
+        '[data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-checkbox-item"]'
+      )],
+      submits: () => submits,
+    };
+  };
+
+  it('sets type="button" on trigger and item buttons without a type', () => {
+    const { controller, trigger, items } = mount(
+      '<button data-slot="dropdown-menu-trigger">Options</button>',
+      `<button data-slot="dropdown-menu-item" data-value="edit">Edit</button>
+       <button data-slot="dropdown-menu-radio-item" data-value="a">A</button>
+       <button data-slot="dropdown-menu-checkbox-item" data-value="b">B</button>`
+    );
+    expect(trigger.getAttribute("type")).toBe("button");
+    expect(items).toHaveLength(3);
+    for (const item of items) expect(item.getAttribute("type")).toBe("button");
+    controller.destroy();
+  });
+
+  it("sets type on item buttons added after init when the menu opens", () => {
+    const { root, controller } = mount(
+      '<button data-slot="dropdown-menu-trigger">Options</button>',
+      '<button data-slot="dropdown-menu-item" data-value="edit">Edit</button>'
+    );
+    const added = document.createElement("button");
+    added.setAttribute("data-slot", "dropdown-menu-item");
+    added.dataset.value = "late";
+    root.querySelector('[data-slot="dropdown-menu-content"]')!.appendChild(added);
+    controller.open();
+    expect(added.getAttribute("type")).toBe("button");
+    controller.destroy();
+  });
+
+  it("preserves an authored type", () => {
+    const { controller, trigger, items } = mount(
+      '<button data-slot="dropdown-menu-trigger" type="submit">Options</button>',
+      '<button data-slot="dropdown-menu-item" data-value="save" type="submit">Save</button>'
+    );
+    expect(trigger.getAttribute("type")).toBe("submit");
+    expect(items[0]!.getAttribute("type")).toBe("submit");
+    controller.destroy();
+  });
+
+  it("does not add type to non-button parts", () => {
+    const { controller, trigger, items } = mount(
+      '<div data-slot="dropdown-menu-trigger" role="button">Options</div>',
+      '<div data-slot="dropdown-menu-item" data-value="edit">Edit</div><a data-slot="dropdown-menu-item" href="#">Link</a>'
+    );
+    expect(trigger.hasAttribute("type")).toBe(false);
+    for (const item of items) expect(item.hasAttribute("type")).toBe(false);
+    controller.destroy();
+  });
+
+  it("does not submit a surrounding form when the trigger and an item are clicked", () => {
+    const { controller, trigger, items, submits } = mount(
+      '<button data-slot="dropdown-menu-trigger">Options</button>',
+      '<button data-slot="dropdown-menu-item" data-value="edit">Edit</button>'
+    );
+    trigger.click();
+    expect(controller.isOpen).toBe(true);
+    items[0]!.click();
+    expect(submits()).toBe(0);
+    controller.destroy();
+  });
+});
