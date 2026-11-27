@@ -110,7 +110,7 @@ jobs:
                 if type == "object" then
                   with_entries(
                     if (.key | startswith("@data-slot/")) and (.key != ($manifest.name // ""))
-                    then .value = $v
+                    then .value = ("^" + $v)
                     else .
                     end
                   )

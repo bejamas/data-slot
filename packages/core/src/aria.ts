@@ -1,10 +1,13 @@
-let idCounter = 0;
+import { getSharedState } from "./shared-state.ts";
+
+// Shared by all copies of core so generated ids never collide. Shape: { value }.
+const ID_COUNTER = Symbol.for("data-slot.id-counter.v1");
 
 /**
  * Ensure an element has an id, generating one if needed
  */
 export const ensureId = (el: Element, prefix: string): string =>
-  el.id || (el.id = `${prefix}-${++idCounter}`);
+  el.id || (el.id = `${prefix}-${++getSharedState(ID_COUNTER, () => ({ value: 0 })).value}`);
 
 /**
  * Set or remove an ARIA attribute

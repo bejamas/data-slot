@@ -2,6 +2,7 @@ import { on } from "./events.ts";
 import { containsWithPortals, portalToBody, restorePortal } from "./parts.ts";
 import type { PortalState } from "./parts.ts";
 import type { ModalStackItemController } from "./modal-stack";
+import { getSharedState } from "./shared-state.ts";
 
 export * from "./popup-geometry";
 export * from "./modal-stack";
@@ -328,7 +329,13 @@ interface DismissLayerStore {
   cleanup: () => void;
 }
 
-const dismissLayerStores = new WeakMap<Document, DismissLayerStore>();
+// One store per document, shared by all copies of core so layers from every copy
+// share one ordering. The first copy to create a document's store owns its
+// listeners; other copies register layers into it. Store and layer shapes are a
+// cross-version contract: bump the suffix on an incompatible change.
+const DISMISS_LAYER_STORES = Symbol.for("data-slot.dismiss-layer-stores.v1");
+const getDismissLayerStores = () =>
+  getSharedState(DISMISS_LAYER_STORES, () => new WeakMap<Document, DismissLayerStore>());
 
 const syncLayerOpenState = (store: DismissLayerStore, layer: DismissLayerEntry): boolean => {
   const open = layer.isOpen();
@@ -460,10 +467,10 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
 };
 
 const getDismissLayerStore = (doc: Document): DismissLayerStore => {
-  const existing = dismissLayerStores.get(doc);
+  const existing = getDismissLayerStores().get(doc);
   if (existing) return existing;
   const created = createDismissLayerStore(doc);
-  dismissLayerStores.set(doc, created);
+  getDismissLayerStores().set(doc, created);
   return created;
 };
 
@@ -495,7 +502,7 @@ export function createDismissLayer(options: DismissLayerOptions): () => void {
     }
     if (store.layers.length === 0) {
       store.cleanup();
-      dismissLayerStores.delete(doc);
+      getDismissLayerStores().delete(doc);
     }
   };
 }
