@@ -307,15 +307,25 @@ export interface DismissLayerOptions {
   closeOnEscape?: boolean;
   preventEscapeDefault?: boolean;
   isInside?: (target: Node | null) => boolean;
+  /**
+   * Transient layer (tooltip, hover card) that does not shield the layers
+   * beneath it. An outside press or Escape that this layer ignores goes to the
+   * next layer down instead of being swallowed. Defaults to `false`, so a
+   * layer with `closeOnClickOutside: false` or `closeOnEscape: false` blocks
+   * those interactions for everything beneath it (dialogs, alert dialogs).
+   */
+  transparent?: boolean;
 }
 
 interface DismissLayerEntry {
+  root: Element;
   isOpen: () => boolean;
   onDismiss: (details: DismissLayerDetails) => void;
   isInside: (target: Node | null) => boolean;
   closeOnClickOutside: boolean;
   closeOnEscape: boolean;
   preventEscapeDefault: boolean;
+  transparent: boolean;
   wasOpen: boolean;
   openOrder: number;
 }
@@ -330,30 +340,63 @@ interface DismissLayerStore {
 
 const dismissLayerStores = new WeakMap<Document, DismissLayerStore>();
 
-const syncLayerOpenState = (store: DismissLayerStore, layer: DismissLayerEntry): boolean => {
-  const open = layer.isOpen();
-  if (open && !layer.wasOpen) {
+/**
+ * Stamp open order on layers that opened since the last sync. Layers found
+ * newly open in the same pass are ordered by containment, so a layer nested
+ * inside another one goes on top of it regardless of registration order.
+ */
+const syncOpenLayers = (store: DismissLayerStore): void => {
+  let opened: DismissLayerEntry[] | null = null;
+  for (const layer of store.layers) {
+    const open = layer.isOpen();
+    if (open && !layer.wasOpen) (opened ??= []).push(layer);
+    layer.wasOpen = open;
+  }
+  if (!opened) return;
+  if (opened.length > 1) {
+    const depth = new Map<DismissLayerEntry, number>();
+    for (const layer of opened) {
+      let count = 0;
+      for (const other of opened) {
+        if (other !== layer && other.isInside(layer.root)) count += 1;
+      }
+      depth.set(layer, count);
+    }
+    opened.sort((a, b) => depth.get(a)! - depth.get(b)!);
+  }
+  for (const layer of opened) {
     store.openSequence += 1;
     layer.openOrder = store.openSequence;
   }
-  layer.wasOpen = open;
-  return open;
 };
 
 const getTopmostOpenLayer = (
   store: DismissLayerStore,
   predicate?: (layer: DismissLayerEntry) => boolean
 ): DismissLayerEntry | null => {
+  syncOpenLayers(store);
   let topmost: DismissLayerEntry | null = null;
   for (const layer of store.layers) {
-    const open = syncLayerOpenState(store, layer);
-    if (!open) continue;
+    if (!layer.wasOpen) continue;
     if (predicate && !predicate(layer)) continue;
     if (!topmost || layer.openOrder > topmost.openOrder) {
       topmost = layer;
     }
   }
   return topmost;
+};
+
+/**
+ * The layer that decides an outside interaction: the topmost one that either
+ * dismisses on outside press or blocks layers beneath it. Transparent layers
+ * that ignore outside presses are skipped.
+ */
+const getOutsidePressLayer = (store: DismissLayerStore): DismissLayerEntry | null => {
+  const layer = getTopmostOpenLayer(
+    store,
+    (entry) => entry.closeOnClickOutside || !entry.transparent
+  );
+  return layer?.closeOnClickOutside ? layer : null;
 };
 
 const createDismissLayerStore = (doc: Document): DismissLayerStore => {
@@ -372,10 +415,18 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
     store.pendingIframeBlur = null;
   };
 
+  // Record open order as soon as possible. Layers opened by keyboard or
+  // programmatically are picked up before the next interaction reaches any
+  // component handler, so they are ordered by when they opened rather than by
+  // when they were registered.
+  const syncCleanups = (["pointerdown", "keydown", "focusin"] as const).map((type) =>
+    on(doc, type, () => syncOpenLayers(store), { capture: true })
+  );
+
   const pointerCleanup = on(doc, "pointerdown", (event) => {
     const target = event.target as Node | null;
-    const topmost = getTopmostOpenLayer(store);
-    if (!topmost || !topmost.closeOnClickOutside || topmost.isInside(target)) {
+    const topmost = getOutsidePressLayer(store);
+    if (!topmost || topmost.isInside(target)) {
       store.pendingTouchOutside = false;
       return;
     }
@@ -394,9 +445,8 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
     store.pendingTouchOutside = false;
 
     const target = event.target as Node | null;
-    const topmost = getTopmostOpenLayer(store);
-    if (!topmost || !topmost.closeOnClickOutside) return;
-    if (topmost.isInside(target)) return;
+    const topmost = getOutsidePressLayer(store);
+    if (!topmost || topmost.isInside(target)) return;
     topmost.onDismiss({ reason: "outside-press", originalEvent: event });
   });
 
@@ -405,7 +455,7 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
   });
 
   const blurCleanup = on(win, "blur", (event) => {
-    const topmost = getTopmostOpenLayer(store, (layer) => layer.closeOnClickOutside);
+    const topmost = getOutsidePressLayer(store);
     if (!topmost) return;
 
     store.pendingTouchOutside = false;
@@ -413,7 +463,7 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
     store.pendingIframeBlur = win.setTimeout(() => {
       store.pendingIframeBlur = null;
 
-      const refreshedTopmost = getTopmostOpenLayer(store, (layer) => layer.closeOnClickOutside);
+      const refreshedTopmost = getOutsidePressLayer(store);
       if (!refreshedTopmost) return;
 
       const iframeCtor = win.HTMLIFrameElement;
@@ -432,12 +482,16 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
     if (event.defaultPrevented) return;
 
     const target = event.target as Node | null;
+    // Choose the topmost layer first, then honour its own flag: a layer that
+    // does not close on Escape keeps Escape from reaching layers beneath it.
+    // Transparent layers that ignore Escape are skipped.
+    const handlesEscape = (layer: DismissLayerEntry) => layer.closeOnEscape || !layer.transparent;
     const topmostFromTarget = getTopmostOpenLayer(
       store,
-      (layer) => layer.closeOnEscape && layer.isInside(target)
+      (layer) => handlesEscape(layer) && layer.isInside(target)
     );
-    const topmost = topmostFromTarget ?? getTopmostOpenLayer(store, (layer) => layer.closeOnEscape);
-    if (!topmost) return;
+    const topmost = topmostFromTarget ?? getTopmostOpenLayer(store, handlesEscape);
+    if (!topmost || !topmost.closeOnEscape) return;
 
     if (topmost.preventEscapeDefault) {
       event.preventDefault();
@@ -446,6 +500,7 @@ const createDismissLayerStore = (doc: Document): DismissLayerStore => {
   });
 
   store.cleanup = () => {
+    syncCleanups.forEach((fn) => fn());
     pointerCleanup();
     clickCleanup();
     pointerCancelCleanup();
@@ -471,22 +526,22 @@ export function createDismissLayer(options: DismissLayerOptions): () => void {
   const doc = options.root.ownerDocument ?? document;
   const store = getDismissLayerStore(doc);
   const entry: DismissLayerEntry = {
+    root: options.root,
     isOpen: options.isOpen,
     onDismiss: options.onDismiss,
     isInside: options.isInside ?? ((target: Node | null) => containsWithPortals(options.root, target)),
     closeOnClickOutside: options.closeOnClickOutside ?? true,
     closeOnEscape: options.closeOnEscape ?? true,
     preventEscapeDefault: options.preventEscapeDefault ?? true,
+    transparent: options.transparent ?? false,
     wasOpen: false,
     openOrder: 0,
   };
 
-  if (syncLayerOpenState(store, entry)) {
-    // Layer starts open (e.g. defaultOpen).
-    entry.wasOpen = true;
-  }
-
   store.layers.push(entry);
+  // Stamp the layer if it starts open (e.g. defaultOpen), together with any
+  // other layer that opened since the last sync.
+  syncOpenLayers(store);
 
   return () => {
     const idx = store.layers.indexOf(entry);

@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { createTooltip, create } from './index'
 import { clearRootBinding, setRootBinding } from '../../core/src/index'
+import { createPopover } from '../../popover/src/index'
 
 describe('Tooltip', () => {
   const ROOT_BINDING_KEY = '@data-slot/tooltip'
@@ -1360,6 +1361,37 @@ describe('Tooltip', () => {
       expect(controller.isOpen).toBe(false)
 
       controller.destroy()
+    })
+  })
+
+  describe('dismiss layer stacking', () => {
+    it('does not keep an open popover from closing when an outside tooltip trigger is pressed', () => {
+      document.body.innerHTML = `
+        <div data-slot="popover" id="popover-root">
+          <button data-slot="popover-trigger" id="popover-trigger">Open popover</button>
+          <div data-slot="popover-content">Popover content</div>
+        </div>
+        <div data-slot="tooltip" id="tooltip-root">
+          <button data-slot="tooltip-trigger" id="tooltip-trigger">Hover me</button>
+          <div data-slot="tooltip-content">Tooltip text</div>
+        </div>
+      `
+      const popoverController = createPopover(document.getElementById('popover-root')!)
+      const tooltipController = createTooltip(document.getElementById('tooltip-root')!)
+      const tooltipTrigger = document.getElementById('tooltip-trigger')!
+
+      ;(document.getElementById('popover-trigger') as HTMLButtonElement).click()
+      expect(popoverController.isOpen).toBe(true)
+      tooltipController.show()
+      expect(tooltipController.isOpen).toBe(true)
+
+      tooltipTrigger.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' })
+      )
+      expect(popoverController.isOpen).toBe(false)
+
+      tooltipController.destroy()
+      popoverController.destroy()
     })
   })
 

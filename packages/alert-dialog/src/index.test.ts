@@ -363,6 +363,33 @@ describe("AlertDialog", () => {
     dialogController.destroy();
   });
 
+  it("Escape does not close a dialog beneath an alert dialog that ignores Escape", () => {
+    document.body.innerHTML = `
+      <div data-slot="dialog" id="dialog-root">
+        <div data-slot="dialog-overlay"></div>
+        <div data-slot="dialog-content"><button id="dialog-a">Dialog A</button></div>
+      </div>
+      <div data-slot="alert-dialog" id="alert-root" data-close-on-escape="false">
+        <div data-slot="alert-dialog-overlay"></div>
+        <div data-slot="alert-dialog-content"><button id="alert-a">Alert A</button></div>
+      </div>
+    `;
+
+    const dialogController = createDialog(document.getElementById("dialog-root")!);
+    const alertController = createAlertDialog(document.getElementById("alert-root")!);
+
+    dialogController.open();
+    alertController.open();
+
+    const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    document.getElementById("alert-a")!.dispatchEvent(escape);
+    expect(alertController.isOpen).toBe(true);
+    expect(dialogController.isOpen).toBe(true);
+
+    alertController.destroy();
+    dialogController.destroy();
+  });
+
   it("recreates shared modal stack routing after the last modal closes", async () => {
     document.body.innerHTML = `
       <div data-slot="alert-dialog" id="alert-root">

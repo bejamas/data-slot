@@ -618,6 +618,7 @@ export function createHoverCard(
       onDismiss: () => requestClosedState("dismiss"),
       closeOnClickOutside,
       closeOnEscape,
+      transparent: true,
     })
   );
 
