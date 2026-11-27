@@ -141,6 +141,9 @@ In popup-input mode (`combobox-input` inside `combobox-content`):
 - Selection text is synced to `combobox-value`.
 - Search input is cleared each time the popup opens.
 - Closing keeps the popup input empty.
+- The trigger stays in the tab order and is named by its visible text (no `aria-label` is added). It gets `aria-haspopup="listbox"`, `aria-expanded`, and `aria-controls` (pointing at the list while open).
+- Clicking the input inside the popup places the caret and selects text normally.
+- Closing with `Escape`, by selecting an item, or by clicking the trigger returns focus to the trigger. Closing by pressing outside or tabbing away leaves focus where the user moved it.
 
 #### Clear Button (Optional)
 
@@ -164,6 +167,7 @@ When `combobox-clear` is clicked:
 - `combobox-input` is the primary keyboard tab stop.
 - `combobox-trigger` and `combobox-clear` are out of tab order by default.
 - To opt into keyboard tabbing for either control, author `tabindex="0"` on that element.
+- In popup-input composition, `combobox-trigger` is the tab stop instead (its tab order is left as authored).
 
 #### Native Label Support
 
@@ -325,6 +329,8 @@ root.dispatchEvent(new CustomEvent('combobox:set', {
 - List: `role="listbox"`, `aria-labelledby`
 - Item: `role="option"`, `aria-selected`, `aria-disabled`
 - Group: `role="group"`, `aria-labelledby`
+- Trigger (input outside the popup): authored `aria-label`/`aria-labelledby` is kept; `aria-label="Toggle"` is added only when the trigger has no label and no text
+- Trigger (popup-input composition): `aria-haspopup="listbox"`, `aria-expanded`, `aria-controls`
 - Disabled items are skipped during keyboard navigation
 
 ### Form Integration
