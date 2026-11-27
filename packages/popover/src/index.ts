@@ -19,6 +19,7 @@ import {
   getAutofocusOrFirstFocusable,
   createTerminalLifecycle,
   registerFloatingTerminalResources,
+  containsWithPortals,
 } from "@data-slot/core";
 import { setAria, ensureId } from "@data-slot/core";
 import { on, onRoot, emit } from "@data-slot/core";
@@ -302,18 +303,26 @@ export function createPopover(
   };
 
   let pendingFocusRestore = false;
+  let focusRestoreRaf: number | null = null;
+  // Focus left on body or inside the closing content needs a new home; focus
+  // the user already moved elsewhere (e.g. by clicking an input) stays put.
+  const isFocusRestorable = (el: Element | null) =>
+    !el || el === document.body || containsWithPortals(content, el);
   const restoreFocusNow = () => {
     pendingFocusRestore = false;
-    if (previousActiveElement && previousActiveElement.isConnected) {
-      focusElement(previousActiveElement);
-    } else {
-      focusElement(trigger);
+    focusRestoreRaf = null;
+    if (isFocusRestorable(document.activeElement)) {
+      if (previousActiveElement && previousActiveElement.isConnected) {
+        focusElement(previousActiveElement);
+      } else {
+        focusElement(trigger);
+      }
     }
     previousActiveElement = null;
   };
   const restoreFocus = () => {
     pendingFocusRestore = true;
-    terminalLifecycle.trackRaf(restoreFocusNow);
+    focusRestoreRaf = terminalLifecycle.trackRaf(restoreFocusNow);
   };
   terminalLifecycle.onBeforeDestroy(() => {
     if (pendingFocusRestore) terminalLifecycle.trackFinalRaf(restoreFocusNow);
@@ -343,7 +352,16 @@ export function createPopover(
 
     // Save focus target before opening
     if (open) {
-      previousActiveElement = document.activeElement as HTMLElement | null;
+      const activeElement = document.activeElement as HTMLElement | null;
+      // Body or our own content is no target; keep a queued close's target.
+      if (!isFocusRestorable(activeElement)) {
+        previousActiveElement = activeElement;
+      } else if (!pendingFocusRestore) {
+        previousActiveElement = null;
+      }
+      terminalLifecycle.cancelRaf(focusRestoreRaf);
+      focusRestoreRaf = null;
+      pendingFocusRestore = false;
     }
 
     isOpen = open;

@@ -461,4 +461,113 @@ describe("AlertDialog", () => {
     expect(document.activeElement).toBe(outside);
     expect(document.documentElement.style.overflow).toBe("");
   });
+
+  describe("focus restoration after close", () => {
+    const markup = (id: string, extra = "") => `
+      <div data-slot="alert-dialog" id="${id}" ${extra}>
+        <button data-slot="alert-dialog-trigger">Open ${id}</button>
+        <div data-slot="alert-dialog-overlay" style="transition-property: opacity; transition-duration: 200ms"></div>
+        <div data-slot="alert-dialog-content" style="transition-property: opacity; transition-duration: 200ms">
+          <button class="inside">Inside ${id}</button>
+        </div>
+      </div>
+    `;
+    const parts = (id: string) => {
+      const root = document.getElementById(id)!;
+      return {
+        root,
+        trigger: root.querySelector('[data-slot="alert-dialog-trigger"]') as HTMLButtonElement,
+        overlay: root.querySelector('[data-slot="alert-dialog-overlay"]') as HTMLElement,
+        content: root.querySelector('[data-slot="alert-dialog-content"]') as HTMLElement,
+        inside: root.querySelector(".inside") as HTMLButtonElement,
+      };
+    };
+    const finishExit = async (...elements: HTMLElement[]) => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      for (const element of elements) {
+        element.dispatchEvent(new Event("transitionend", { bubbles: true }));
+      }
+      await waitForRaf();
+      await waitForRaf();
+    };
+
+    it("does not pull focus back to the first trigger when a chained modal opens", async () => {
+      document.body.innerHTML = markup("a") + markup("b");
+      const a = parts("a");
+      const b = parts("b");
+      const dialogA = createAlertDialog(a.root);
+      const dialogB = createAlertDialog(b.root);
+
+      a.trigger.focus();
+      dialogA.open();
+      await waitForRaf();
+      a.inside.focus();
+
+      dialogA.close();
+      dialogB.open();
+      await waitForRaf();
+      expect(b.content.contains(document.activeElement)).toBe(true);
+
+      await finishExit(a.overlay, a.content);
+      expect(a.content.hidden).toBe(true);
+      expect(b.content.contains(document.activeElement)).toBe(true);
+
+      dialogA.destroy();
+      dialogB.destroy();
+    });
+
+    it("restores to the original target after reopening during the exit", async () => {
+      document.body.innerHTML = markup("a");
+      const a = parts("a");
+      const controller = createAlertDialog(a.root);
+
+      a.trigger.focus();
+      controller.open();
+      await waitForRaf();
+      a.inside.focus();
+      controller.close();
+      controller.open();
+      await waitForRaf();
+      a.inside.focus();
+
+      controller.close();
+      await finishExit(a.overlay, a.content);
+
+      expect(a.content.hidden).toBe(true);
+      expect(document.activeElement === a.trigger).toBe(true);
+      controller.destroy();
+    });
+
+    it("falls back to the trigger when body was focused at open", async () => {
+      document.body.innerHTML = markup("a", "data-default-open");
+      (document.activeElement as HTMLElement | null)?.blur();
+      const a = parts("a");
+      const controller = createAlertDialog(a.root);
+      await waitForRaf();
+      expect(a.content.contains(document.activeElement)).toBe(true);
+
+      controller.close();
+      await finishExit(a.overlay, a.content);
+
+      expect(document.activeElement === a.trigger).toBe(true);
+      controller.destroy();
+    });
+
+    it("keeps focus that moved outside the dialog before the exit finished", async () => {
+      document.body.innerHTML = `<input id="outside" />` + markup("a");
+      const outside = document.getElementById("outside") as HTMLInputElement;
+      const a = parts("a");
+      const controller = createAlertDialog(a.root);
+
+      a.trigger.focus();
+      controller.open();
+      await waitForRaf();
+      controller.close();
+      outside.focus();
+      await finishExit(a.overlay, a.content);
+
+      expect(document.activeElement === outside).toBe(true);
+      controller.destroy();
+    });
+  });
 });

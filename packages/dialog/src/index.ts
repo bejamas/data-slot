@@ -20,6 +20,7 @@ import {
   focusElement,
   getAutofocusOrFirstFocusable,
   getTabbables,
+  containsWithPortals,
 } from "@data-slot/core";
 
 export interface DialogOptions {
@@ -184,9 +185,17 @@ export function createDialog(
     portalLifecycle?.mount();
   };
 
+  // Focus left on body or inside the closing content needs a new home; focus
+  // already moved elsewhere (e.g. into a dialog opened next) stays put.
+  const isFocusRestorable = (el: Element | null) =>
+    !el || el === document.body || containsWithPortals(content, el);
+  let focusRestoreRaf: number | null = null;
   const restoreFocus = () => {
-    terminalLifecycle.trackRaf(() => {
-      if (
+    focusRestoreRaf = terminalLifecycle.trackRaf(() => {
+      focusRestoreRaf = null;
+      if (!isFocusRestorable(document.activeElement)) {
+        // Leave focus where it moved.
+      } else if (
         previousActiveElement &&
         document.contains(previousActiveElement) &&
         typeof previousActiveElement.focus === "function"
@@ -265,7 +274,12 @@ export function createDialog(
       mountPortal();
 
       // Store current focus
-      previousActiveElement = document.activeElement as HTMLElement;
+      // Body or our own content is no target: keep the target of a close still
+      // in flight, otherwise fall back to the trigger.
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (!isFocusRestorable(activeElement)) previousActiveElement = activeElement;
+      terminalLifecycle.cancelRaf(focusRestoreRaf);
+      focusRestoreRaf = null;
 
       modalStack.open();
 
