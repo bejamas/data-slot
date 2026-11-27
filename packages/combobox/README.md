@@ -319,6 +319,8 @@ root.dispatchEvent(new CustomEvent('combobox:set', {
 | `Escape` | Close popup, restore input to committed value |
 | `Tab` | Close popup, restore input, allow normal tab flow |
 
+Opening the popup while the input still shows the selected item's label (trigger click, arrow keys, focus, or `open()`) shows every item and highlights the selected one. Typing filters by the typed text.
+
 ### Accessibility
 
 - Input: `role="combobox"`, `aria-expanded`, `aria-controls`, `aria-activedescendant`, `aria-autocomplete="list"`

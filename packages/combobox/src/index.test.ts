@@ -1542,7 +1542,8 @@ describe("Combobox", () => {
         expect(controller.isOpen).toBe(true);
         expect(input.value).toBe(mode === "popup" ? "" : "Banana");
         expect(root.querySelector('[data-slot="combobox-value"]')?.textContent).toBe("Banana");
-        expect(items[0]?.hidden).toBe(mode === "inline");
+        // The restored committed label is not a query, so every item is shown.
+        expect(items[0]?.hidden).toBe(false);
         expect(items[1]?.hidden).toBe(false);
         expect(items[0]?.hasAttribute("data-highlighted")).toBe(false);
         expect(items[1]?.hasAttribute("data-highlighted")).toBe(true);
@@ -3224,6 +3225,201 @@ describe("Combobox", () => {
       expect(dispatchResult).toBe(false);
       expect(event.defaultPrevented).toBe(true);
       expect(document.activeElement).toBe(input);
+      controller.destroy();
+    });
+  });
+
+  describe("IME composition", () => {
+    const highlightedValue = (items: NodeListOf<HTMLElement>) =>
+      [...items].find((item) => item.hasAttribute("data-highlighted"))?.dataset.value ?? null;
+
+    const composingKeydown = (key: string, mode: "isComposing" | "keyCode") => {
+      const init: KeyboardEventInit = { key, bubbles: true, cancelable: true };
+      if (mode === "isComposing") init.isComposing = true;
+      const event = new KeyboardEvent("keydown", init);
+      if (mode === "keyCode") Object.defineProperty(event, "keyCode", { value: 229 });
+      return event;
+    };
+
+    for (const mode of ["isComposing", "keyCode"] as const) {
+      describe(`while composing (${mode === "isComposing" ? "isComposing" : "keyCode 229"})`, () => {
+        it("ArrowDown does not open, move highlight, or preventDefault", () => {
+          const { input, items, controller } = setup();
+
+          const closedEvent = composingKeydown("ArrowDown", mode);
+          input.dispatchEvent(closedEvent);
+          expect(controller.isOpen).toBe(false);
+          expect(closedEvent.defaultPrevented).toBe(false);
+
+          controller.open();
+          const openEvent = composingKeydown("ArrowDown", mode);
+          input.dispatchEvent(openEvent);
+          expect(openEvent.defaultPrevented).toBe(false);
+          expect(highlightedValue(items)).toBe(null);
+          controller.destroy();
+        });
+
+        it("Enter does not select the highlighted item or close", () => {
+          const { input, items, controller } = setup({ autoHighlight: true });
+          input.value = "a";
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          expect(controller.isOpen).toBe(true);
+          expect(highlightedValue(items)).toBe("apple");
+
+          const event = composingKeydown("Enter", mode);
+          input.dispatchEvent(event);
+          expect(event.defaultPrevented).toBe(false);
+          expect(controller.value).toBe(null);
+          expect(controller.isOpen).toBe(true);
+          expect(input.value).toBe("a");
+          controller.destroy();
+        });
+
+        it("Escape does not close the popup or clear the value", () => {
+          const { input, controller } = setup({ defaultValue: "banana" });
+
+          const closedEvent = composingKeydown("Escape", mode);
+          input.dispatchEvent(closedEvent);
+          expect(closedEvent.defaultPrevented).toBe(false);
+          expect(controller.value).toBe("banana");
+
+          controller.open();
+          const openEvent = composingKeydown("Escape", mode);
+          input.dispatchEvent(openEvent);
+          expect(openEvent.defaultPrevented).toBe(false);
+          expect(controller.isOpen).toBe(true);
+          expect(controller.value).toBe("banana");
+          controller.destroy();
+        });
+      });
+    }
+
+    it("handles the same keys normally after composition ends", () => {
+      const { input, items, controller } = setup();
+      input.value = "a";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(controller.isOpen).toBe(true);
+
+      const down = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true });
+      input.dispatchEvent(down);
+      expect(down.defaultPrevented).toBe(true);
+      expect(highlightedValue(items)).toBe("apple");
+
+      const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      input.dispatchEvent(enter);
+      expect(enter.defaultPrevented).toBe(true);
+      expect(controller.value).toBe("apple");
+      expect(controller.isOpen).toBe(false);
+
+      controller.open();
+      const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+      input.dispatchEvent(escape);
+      expect(escape.defaultPrevented).toBe(true);
+      expect(controller.isOpen).toBe(false);
+      controller.destroy();
+    });
+  });
+
+  describe("reopening with a selected value", () => {
+    const ALL_VALUES = ["apple", "banana", "other", "disabled"];
+    const visibleValues = (items: NodeListOf<HTMLElement>) =>
+      [...items].filter((item) => !item.hidden).map((item) => item.dataset.value);
+    const highlightedValue = (items: NodeListOf<HTMLElement>) =>
+      [...items].find((item) => item.hasAttribute("data-highlighted"))?.dataset.value ?? null;
+    const typeInto = (input: HTMLInputElement, value: string) => {
+      input.value = value;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+
+    it("trigger click shows all items and highlights the selected one", () => {
+      const { input, triggerBtn, items, controller } = setup({ defaultValue: "banana" });
+      triggerBtn.click();
+      expect(controller.isOpen).toBe(true);
+      expect(input.value).toBe("Banana");
+      expect(visibleValues(items)).toEqual(ALL_VALUES);
+      expect(highlightedValue(items)).toBe("banana");
+      controller.destroy();
+    });
+
+    it("ArrowDown shows all items and highlights the selected one", () => {
+      const { input, items, controller } = setup({ defaultValue: "banana" });
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+      expect(controller.isOpen).toBe(true);
+      expect(visibleValues(items)).toEqual(ALL_VALUES);
+      expect(highlightedValue(items)).toBe("banana");
+      controller.destroy();
+    });
+
+    it("focus-open shows all items and highlights the selected one", () => {
+      const { input, items, controller } = setup({ defaultValue: "banana" });
+      input.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      input.dispatchEvent(new Event("focus", { bubbles: true }));
+      expect(controller.isOpen).toBe(true);
+      expect(visibleValues(items)).toEqual(ALL_VALUES);
+      expect(highlightedValue(items)).toBe("banana");
+      controller.destroy();
+    });
+
+    it("shows all items after selecting, closing, and reopening", () => {
+      const { triggerBtn, items, controller } = setup();
+      controller.open();
+      items[0]?.click();
+      expect(controller.value).toBe("apple");
+      expect(controller.isOpen).toBe(false);
+
+      triggerBtn.click();
+      expect(visibleValues(items)).toEqual(ALL_VALUES);
+      expect(highlightedValue(items)).toBe("apple");
+      controller.destroy();
+    });
+
+    it("filters by typed text after opening", () => {
+      const { input, triggerBtn, items, controller } = setup({ defaultValue: "banana" });
+      triggerBtn.click();
+      typeInto(input, "ot");
+      expect(visibleValues(items)).toEqual(["other"]);
+      controller.destroy();
+    });
+
+    it("clearing and reopening shows all items", () => {
+      const { input, triggerBtn, items, controller } = setup({ defaultValue: "banana" });
+      controller.clear();
+      expect(input.value).toBe("");
+      triggerBtn.click();
+      expect(visibleValues(items)).toEqual(ALL_VALUES);
+      expect(highlightedValue(items)).toBe(null);
+      controller.destroy();
+    });
+
+    it("opening by typing filters by the typed text", () => {
+      const { input, items, controller } = setup({ defaultValue: "banana", openOnFocus: false });
+      typeInto(input, "app");
+      expect(controller.isOpen).toBe(true);
+      expect(visibleValues(items)).toEqual(["apple"]);
+      controller.destroy();
+    });
+
+    it("opening by typing the selected label still filters by it", () => {
+      const { input, items, controller } = setup({ defaultValue: "banana", openOnFocus: false });
+      typeInto(input, "Banana");
+      expect(controller.isOpen).toBe(true);
+      expect(visibleValues(items)).toEqual(["banana"]);
+      controller.destroy();
+    });
+
+    it("keeps a non-label query when reopened programmatically", () => {
+      const { root, items, controller } = setup({ defaultValue: "banana" });
+      root.dispatchEvent(new CustomEvent("combobox:set", { detail: { inputValue: "ot" } }));
+      controller.open();
+      expect(visibleValues(items)).toEqual(["other"]);
+      controller.destroy();
+    });
+
+    it("popup-input mode shows all items and highlights the selected one", () => {
+      const { triggerBtn, items, controller } = setupPopupInput({ defaultValue: "canada" });
+      triggerBtn.click();
+      expect(visibleValues(items)).toEqual(["brazil", "canada", "france"]);
+      expect(highlightedValue(items)).toBe("canada");
       controller.destroy();
     });
   });
