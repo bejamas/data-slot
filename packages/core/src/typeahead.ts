@@ -18,6 +18,11 @@ export interface TypeaheadController {
    * Matching is case-insensitive. Returns the matched index or -1.
    */
   match(char: string, labels: readonly string[], currentIndex: number): number;
+  /**
+   * Whether a search session is active: true from the first typed character until the
+   * reset timer fires (or `reset()` is called).
+   */
+  readonly isActive: boolean;
   /** Clear the buffer and cancel the pending reset timer. */
   reset(): void;
   /** Alias of `reset`, for cleanup arrays. */
@@ -66,5 +71,5 @@ export function createTypeahead(options: TypeaheadOptions = {}): TypeaheadContro
     return matchIndex;
   };
 
-  return { match, reset, destroy: reset };
+  return { match, get isActive() { return timeoutId !== null; }, reset, destroy: reset };
 }
