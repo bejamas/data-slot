@@ -486,7 +486,7 @@ export function createSelect(
 
   const handleKeydown = (e: KeyboardEvent) => {
     const len = enabledItems.length;
-    if (len === 0) return;
+    if (len === 0 && e.key !== "Tab" && e.key !== "Escape") return;
 
     switch (e.key) {
       case "ArrowDown":
