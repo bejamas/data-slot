@@ -190,8 +190,9 @@ export function createSlider(
   let lastActiveThumbIndex = 0;
   // Track value at start of keyboard interaction for commit detection
   let valueAtInteractionStart: SliderValue | null = null;
-  // Store original touchAction to restore later
-  let prevTouchAction: string | null = null;
+  let draggingPointerId: number | null = null;
+  // Direction latched at pointerdown so a drag maps consistently
+  let dragIsRtl = false;
   let pressedThumbCenterOffset = 0;
   let layoutResizeObserver: ResizeObserver | null = null;
 
@@ -330,6 +331,32 @@ export function createSlider(
   };
 
   applyTrackLayoutStyles();
+
+  // Browsers decide touch-action when a touch starts, so it has to be in place
+  // before the first pointerdown or the browser may claim the gesture as a pan
+  // and cancel the drag. An author-set inline value is left alone.
+  const authoredTouchAction = control.style.touchAction;
+  if (!disabled && !authoredTouchAction) {
+    control.style.touchAction = "none";
+    cleanups.push(() => {
+      control.style.touchAction = authoredTouchAction;
+    });
+  }
+
+  // Thumbs and range are placed with inset-inline-start, so horizontal pointer
+  // and arrow-key mapping must follow the control's writing direction.
+  const isRtl = (): boolean => {
+    if (!isHorizontal) return false;
+    let direction = "";
+    try {
+      direction = getComputedStyle(control).direction;
+    } catch {
+      // Computed style unavailable; fall back to the dir attribute
+    }
+    if (direction === "rtl") return true;
+    if (direction === "ltr") return false;
+    return control.closest("[dir]")?.getAttribute("dir")?.toLowerCase() === "rtl";
+  };
 
   const getAxisSize = (rect: DOMRect | DOMRectReadOnly): number =>
     isHorizontal ? rect.width : rect.height;
@@ -619,7 +646,9 @@ export function createSlider(
 
     const adjustedPointerCoord = (isHorizontal ? e.clientX : e.clientY) - pressedThumbCenterOffset;
     const distanceFromTrackStart = isHorizontal
-      ? adjustedPointerCoord - rect.left
+      ? dragIsRtl
+        ? rect.right - adjustedPointerCoord
+        : adjustedPointerCoord - rect.left
       : rect.bottom - adjustedPointerCoord;
 
     let percent = (distanceFromTrackStart / trackSize) * 100;
@@ -716,8 +745,14 @@ export function createSlider(
   // Pointer event handlers - listen on control for bigger hit area
   const onPointerDown = (e: PointerEvent) => {
     if (disabled) return;
+    // Only the primary button (touch and pen contact also report 0) starts a drag
+    if (e.button !== 0) return;
+    // Ignore further pointers while one is already dragging
+    if (draggingThumbIndex !== null) return;
 
     e.preventDefault();
+
+    dragIsRtl = isRtl();
 
     // Check if user clicked directly on a thumb
     let thumbIndex = getThumbIndexFromTarget(e.target);
@@ -739,16 +774,13 @@ export function createSlider(
     }
 
     draggingThumbIndex = thumbIndex;
+    draggingPointerId = e.pointerId;
     lastActiveThumbIndex = thumbIndex;
 
     // Set dragging state
     root.setAttribute("data-dragging", "");
     thumbs[thumbIndex]?.setAttribute("data-dragging", "");
     thumbs[thumbIndex]?.focus();
-
-    // Store and set touch-action during drag to prevent scrolling
-    prevTouchAction = control.style.touchAction;
-    control.style.touchAction = "none";
 
     // Update value
     updateThumbValue(thumbIndex, value);
@@ -757,8 +789,47 @@ export function createSlider(
     control.setPointerCapture(e.pointerId);
   };
 
+  // Clear drag state without committing (shared by drag end and destroy)
+  const clearDrag = () => {
+    root.removeAttribute("data-dragging");
+    for (const thumb of thumbs) {
+      thumb.removeAttribute("data-dragging");
+    }
+
+    const pointerId = draggingPointerId;
+    draggingThumbIndex = null;
+    draggingPointerId = null;
+    pressedThumbCenterOffset = 0;
+
+    if (pointerId === null) return;
+    // Safe release - can throw if capture wasn't properly set
+    try {
+      control.releasePointerCapture(pointerId);
+    } catch {
+      // Ignore - capture may not have been set
+    }
+  };
+
+  const endDrag = () => {
+    if (draggingThumbIndex === null) return;
+
+    clearDrag();
+
+    // Emit commit event
+    emit(root, "slider:commit", { value: currentValue });
+    onValueCommit?.(currentValue);
+  };
+
   const onPointerMove = (e: PointerEvent) => {
     if (draggingThumbIndex === null || disabled) return;
+    if (e.pointerId !== draggingPointerId) return;
+
+    // A mouse with no buttons held means the release was missed (e.g. swallowed
+    // by a context menu): end the drag instead of letting hover move the thumb.
+    if (e.pointerType === "mouse" && e.buttons === 0) {
+      endDrag();
+      return;
+    }
 
     e.preventDefault();
     const value = getValueFromPointer(e, draggingThumbIndex);
@@ -767,38 +838,16 @@ export function createSlider(
     updateThumbValue(draggingThumbIndex, value);
   };
 
-  const onPointerUp = (e: PointerEvent) => {
-    if (draggingThumbIndex === null) return;
-
-    // Remove dragging state
-    root.removeAttribute("data-dragging");
-    for (const thumb of thumbs) {
-      thumb.removeAttribute("data-dragging");
-    }
-
-    // Restore touch-action
-    control.style.touchAction = prevTouchAction ?? "";
-    prevTouchAction = null;
-
-    // Emit commit event
-    emit(root, "slider:commit", { value: currentValue });
-    onValueCommit?.(currentValue);
-
-    draggingThumbIndex = null;
-    pressedThumbCenterOffset = 0;
-
-    // Safe release - can throw if capture wasn't properly set
-    try {
-      control.releasePointerCapture(e.pointerId);
-    } catch {
-      // Ignore - capture may not have been set
-    }
+  const onPointerEnd = (e: PointerEvent) => {
+    if (e.pointerId !== draggingPointerId) return;
+    endDrag();
   };
 
   cleanups.push(on(control, "pointerdown", onPointerDown));
   cleanups.push(on(control, "pointermove", onPointerMove));
-  cleanups.push(on(control, "pointerup", onPointerUp));
-  cleanups.push(on(control, "pointercancel", onPointerUp));
+  cleanups.push(on(control, "pointerup", onPointerEnd));
+  cleanups.push(on(control, "pointercancel", onPointerEnd));
+  cleanups.push(on(control, "lostpointercapture", onPointerEnd));
 
   // Keyboard navigation
   const onKeyDown = (e: KeyboardEvent) => {
@@ -813,14 +862,14 @@ export function createSlider(
 
     switch (e.key) {
       case "ArrowRight":
-        // Only for horizontal sliders
+        // Only for horizontal sliders; follows the visual direction in RTL
         if (!isHorizontal) return;
-        delta = step;
+        delta = isRtl() ? -step : step;
         break;
       case "ArrowLeft":
-        // Only for horizontal sliders
+        // Only for horizontal sliders; follows the visual direction in RTL
         if (!isHorizontal) return;
-        delta = -step;
+        delta = isRtl() ? step : -step;
         break;
       case "ArrowUp":
         // Only for vertical sliders
@@ -940,7 +989,7 @@ export function createSlider(
       return disabled;
     },
     destroy: () => {
-      pressedThumbCenterOffset = 0;
+      clearDrag();
       cleanups.forEach((fn) => fn());
       cleanups.length = 0;
       clearRootBinding(root, ROOT_BINDING_KEY, controller);
